@@ -874,7 +874,7 @@ Use the parameterized `verifyInlineMsLabels` helper on `SyntheticsPage` — work
 
 ### Pre-seeded monitor exception (WebSocket)
 
-Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the [`websocket-monitor-detail-view.spec.ts`](../../../tests/app/functional/monitoring-service/synthetics/websocket-monitor-detail-view.spec.ts) targets a **pre-seeded monitor** (default name `"[todor] postman wss"`, overridable via `WS_FIXTURE_MONITOR_NAME` env var). If the named monitor is missing, the spec **skips with a clear message** in `beforeAll` (via `listSynthetics`) rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
+Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the [`websocket-monitor-detail-view.spec.ts`](../../../tests/app/functional/monitoring-service/synthetics/websocket-monitor-detail-view.spec.ts) targets a **pre-seeded monitor** named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If the named monitor is missing, the spec **skips with a clear message** in `beforeAll` (via `listSynthetics`) rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
 
 ---
 

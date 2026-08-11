@@ -16,7 +16,7 @@ metadata:
 - **Pair the two sources.** Stable artifact (testid, route, component shape) → frontend source. Runtime behavior (state changes, timing) → live app via `npx playwright open`. Do not pick one and ignore the other.
 - **When the frontend source contradicts a skill,** surface the drift in the same edit — fix the skill text, do not silently work around the contradiction. (Example: if `selectors` says `field-field-${path}` and the source emits `schema-field-${name}`, the skill is wrong, not the source.)
 - **Do not edit the frontend repo.** This skill is read-only — grep, read, audit, report. Frontend changes go through the frontend team.
-- **Frontend lives at** `<sibling-repos>/frontend`. Stack: React 19 + TanStack Start/Router/Query/Table + TypeScript + Tailwind + shadcn/ui + Radix UI + Paraglide JS for i18n + Sonner for toasts.
+- **Frontend lives at** `<sibling-repos>/<frontend-repo>`. Read its `package.json` before grepping: the component conventions, i18n mechanism and toast library decide where testids and strings actually come from.
 
 ## When to cross-check
 

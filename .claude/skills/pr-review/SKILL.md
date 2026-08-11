@@ -86,7 +86,7 @@ Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../sele
 - [ ] Form/CRUD POMs include feedback locators (success toast, error toast, field validation, empty state, loading).
 - [ ] New POMs are registered on `FrameworkFixtures` in [`fixtures/pom/page-object-fixture.ts`](../../../fixtures/pom/page-object-fixture.ts).
 - [ ] Radix trigger-swallow `try/catch` (the one allowed exception) is annotated `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`.
-- [ ] **Substring match guard:** Every `filter({ hasText: value })` and `getByText(value)` in a dynamic method (where `value` is a parameter) uses `{ exact: true }` or wraps in `filter({ has: page.getByText(value, { exact: true }) })`. Substring matching causes false positives when one name is a prefix of another (e.g., "QATest9" matching "QATest99").
+- [ ] **Substring match guard:** Every `filter({ hasText: value })` and `getByText(value)` in a dynamic method (where `value` is a parameter) uses `{ exact: true }` or wraps in `filter({ has: page.getByText(value, { exact: true }) })`. Substring matching causes false positives when one name is a prefix of another (e.g., "Item9" matching "Item90").
 - [ ] **Post-action table stabilization:** Any action method that triggers a data reload (pagination click, sort header click, page-size change, filter toggle) ends with `await this.waitForTableSettled()` or equivalent. Asserting only the UI control change (e.g., page counter updated) without waiting for rows to reload is a flake source.
 - [ ] **Cross-POM duplication check:** If the PR adds the same method body to 2+ POMs, flag it. Identical logic belongs in `DataTableBase` (for table-bearing pages) or a shared base class / utility. One implementation, one place to fix.
 
@@ -194,7 +194,7 @@ Need a check before pushing?
 - ❌ Pushing a PR description that says "small fixes" with no test plan. Reviewers (and your future self) need to know what was tested.
 - ❌ Using `pr-review` as a replacement for `/code-review`. The two answer different questions.
 - ❌ Using `pr-review` on a draft that's still mid-change. Run it on the last commit before push — running mid-stream wastes effort because the next commit may invalidate findings.
-- ❌ `filter({ hasText: name })` without `exact: true` — substring collision risk. "QATest9" matches "QATest99". Always use `filter({ has: page.getByText(name, { exact: true }) })` for dynamic values.
+- ❌ `filter({ hasText: name })` without `exact: true` — substring collision risk. "Item9" matches "Item90". Always use `filter({ has: page.getByText(name, { exact: true }) })` for dynamic values.
 - ❌ Copy-pasting methods (`cellForRow`, `getColumnTexts`, pagination helpers) into multiple POMs instead of extracting to `DataTableBase` or a shared component. One copy drifts, one gets updated — guaranteed divergence.
 
 ## Self-review checklist

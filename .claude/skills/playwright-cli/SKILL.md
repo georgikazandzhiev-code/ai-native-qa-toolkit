@@ -159,7 +159,7 @@ This is the **stop-and-notify** path:
 | `npx playwright open` itself fails to start | Playwright install broken, browser not downloaded | Run `npx playwright install chromium` (re-downloads the bundled browser). If that fails, see the `debugging` skill. |
 | `--load-storage` path not found | Auth setup hasn't run; the storage state file doesn't exist yet | Run the auth-bootstrap setup (e.g. `login.setup.ts`) per the project's auth flow. Confirm the path matches what `playwright.config.ts` writes. |
 | Logged in via `--load-storage`, but redirected to login mid-exploration | Storage state expired (Keycloak session timeout) | Re-run auth-bootstrap to re-mint the storage state. Do not extend session timeouts in code. |
-| Self-signed cert errors against the dev cluster | TLS validation rejecting dev-cluster cert | `--ignore-https-errors` flag. The test suite already disables TLS validation via `NODE_TLS_REJECT_UNAUTHORIZED="0"` in `playwright.config.ts`. |
+| Self-signed certificate errors | TLS validation rejecting the certificate | `--ignore-https-errors`. Check whether the suite already sets a TLS override in `playwright.config.ts` before adding another. |
 | Can't tell whether a button has a testid from observation alone | Browser dev tools' Elements panel hides `data-testid` attributes by default in some configs | Hover the button → inspect element → look at attributes; OR ask the FE team for a testid if none exists (do not substitute a CSS-class selector). |
 | Page renders differently in `npx playwright open` vs in `npx playwright test` | Different viewport, locale, or storage state | Match the test config: use `--viewport-size`, `--device`, or `--lang` flags to mirror what `playwright.config.ts` sets for the project. |
 

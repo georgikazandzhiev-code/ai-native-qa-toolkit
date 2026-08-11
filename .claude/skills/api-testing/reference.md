@@ -582,8 +582,7 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Helpers:** `createTenant`, `getTenant`, `patchTenant`, `deleteTenant`, `createUser`, `listUsers`, `getUser`, `deleteUser`, `extractLinkFromEmail`, `MailpitHelper`.
 - **Cleanup order:** Mailpit emails → Users → Tenant. Each step guarded by `if (tenantId)` so a partial failure still cleans whatever made it through.
 - **Mailpit recipe:** `deleteEmailsForRecipient` before AND after, `getLastEmail(email, 10, 2000)` (10 polls, 2s interval), guard with `To.length > 0` before reading.
-- **AC gap:** AC 4 ("tenant requires primary user") is not enforced by backend yet — current behavior allows tenant creation without a primary user. Don't write a test that asserts the AC; surface the gap in the test plan.
-
+- 
 ### Synthetic Monitor Metrics
 
 - **Metrics API** (tenant-scoped): `GET /api/v1/synthetics/:id/metrics`. Returns metric **definitions** (name, unit, dataType, monitorType) available for a synthetic monitor based on its type. Includes traceroute metrics when traceroute is enabled.

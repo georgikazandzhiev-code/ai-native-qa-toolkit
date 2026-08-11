@@ -2,7 +2,7 @@
 
 This document decides four things: **who may change what**, **what evidence a change owes**, **how the toolkit reaches engineers**, and **which numbers are allowed to mean progress**. Everything else — the rules themselves — lives in `.claude/CLAUDE.md` and the skills it routes to.
 
-It exists because the alternative is already visible in this repository's own history. On the day the eval harness was built, eight separate claims in the README and `BENCHMARK.md` were measurably false: the rule-suite count, the invalid-case count, how many rules fire end to end, a defect count that disagreed with its own table, and a coverage denominator of 28 in a repository shipping 26 skills. None of it was dishonest. All of it was uncontrolled. Documentation drifts at the speed of editing, and nothing was watching.
+It exists because the alternative is already visible in this repository's own history. On the day the eval harness was built, eight separate claims in the README and `BENCHMARK.md` were measurably false: the rule-suite count, the invalid-case count, how many rules fire end to end, a defect count that disagreed with its own table, and a coverage denominator copied from the other repository. None of it was dishonest. All of it was uncontrolled. Documentation drifts at the speed of editing, and nothing was watching.
 
 ## The one rule
 
@@ -46,16 +46,19 @@ The class is decided by **what the change does to output that was previously cor
 | **A rule changes meaning or is removed** | `major` | **re-measure the skill** and append to `evals/history.json` | CI green + owner, and the history entry in the same PR |
 | A new skill | starts at `1.0.0` | `npm run validate` green + a routing row in `CLAUDE.md § Routed Skill Index` | CI green + owner |
 | A new or changed lint rule | plugin `minor` / `major` | a `RuleTester` suite **and** a fault-injection case | CI green + owner |
-| Promoting a pattern to `canonical` | n/a | the pattern's counters, its evidence label, and the diff | **PR only, human, never an agent** |
-| A number stated in the docs | n/a | either a validator check that recomputes it, or a sentence naming it as unverified | CI green |
+| Promoting a pattern to `canonical` | n/a | the pattern's counters, its evidence label, and the diff | **PR only, human, never an agent** — convention, checked by a reviewer against the PR template. Nothing mechanical reads pattern tiers |
+| A push to the public mirror | n/a | `python scripts/build-public.py <public-repo>` exits 0 — which means every scrub still matched and the leak audit found nothing | CI green + owner |
+| A number stated in the docs | n/a | either a validator check that recomputes it, or a sentence naming it as unverified | CI green for the eight claim shapes check 7 recognises; any number in a shape it does not match is a reviewer's job |
 
-A `major` bump with no history entry is the failure this table exists to prevent. The version is what a score is attributed to; a version that no longer describes the file makes the whole history lie, silently and retroactively.
+A `major` bump with no history entry is the failure this table exists to prevent, and it is only half-caught: where a skill already has history, `validate` warns when the declared version and the newest entry disagree on major.minor; where a skill has none — 25 of 28 — nothing fires at all. The version is what a score is attributed to, and a version that no longer describes its file makes the history lie retroactively, so treat this row as a reviewer's job until every skill is measured.
 
 ## What CI refuses, and what it cannot
 
 Three jobs run on every push and every pull request (`.github/workflows/validate.yml`).
 
-| Blocking — a merge cannot proceed | Advisory — reported, never blocks |
+**Read the left column as "fails the run", not "blocks the merge".** Required status checks need the same protected branch that Code Owner review needs, and it is unavailable on this plan. A red run is an annotation until Phase 1 puts a protected branch behind it.
+
+| Fails the CI run | Reported, never fails the run |
 |---|---|
 | `npm run validate` — front matter, required sections, semver, cross-reference integrity, `mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
 | `node tests/rules.test.js` — 21 `RuleTester` suites, 40 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
@@ -99,7 +102,7 @@ Phases advance on **measured criteria, never on dates**. Each names what must be
 
 **Entry:** Phase 0 exit met, **and a second person holds merge rights.** This is the bus-factor-1 exit condition; it gates widening past one team.
 **Exit:** the gate runs as a blocking check in that team's CI on a protected branch; two consecutive weeks with no bypass; at least **five** skills carry a lint-gate eval case, so a claim about "the toolkit" stops being a claim about three tasks.
-**Stop:** more than one `--no-verify` or gate-disable in a week. That is evidence the gate is wrong or too slow, and widening a gate people route around multiplies the routing around.
+**Stop:** any `--no-verify` or gate-disable. The constitution lists bypassing hooks under "forbidden, refuse even if asked", so there is no budget of one — a single bypass is either a constitution violation or evidence the gate is wrong, and both stop the widening until answered.
 
 ### Phase 2 — The QA organisation
 
@@ -110,6 +113,8 @@ Phases advance on **measured criteria, never on dates**. Each names what must be
 ## Capability matrix
 
 Levels are demonstrated by **a merged artifact**, never by a quiz or a self-assessment. The artifact is the assessment.
+
+**Nothing records who holds which level.** There is no ledger, no check, no warning — which also leaves § Who decides what's "any engineer at L3+" and Phase 2's "three people assessed at L3" resting on a level stored nowhere. The first grant should create a `LEVELS.md` with one row per person, level, the PR that demonstrated it, and who signed; until it exists the column below is an intention.
 
 | Level | Can | Demonstrated by | Signed off by |
 |---|---|---|---|
@@ -139,10 +144,10 @@ Inventory is not achievement. The skill count may be **reported**; it may never 
 | When | What | Who |
 |---|---|---|
 | Every PR | The template checklist; CI's five blocking checks | Reviewer |
-| Monthly | Warning debt — currently 6 skills over the 380-line budget. The number may not grow between reviews | Owner |
-| Every major Playwright or ESLint release | Re-run the gate and the fault-injection harness against the new version | Owner |
+| Monthly, by hand — nothing schedules it | Warning debt: 6 skills are over the 380-line budget. The count is recomputed by check 7, so the number in this document cannot drift; what is unenforced is the ceiling itself | Owner |
+| Every major Playwright or ESLint release — by hand, and nothing watches for the release | Re-run the gate and the fault-injection harness against the new version. The pinned ranges mean CI will never see a new major on its own | Owner |
 
-Out of band, immediately, on any of: a `canonical` pattern falsified; an eval regression beyond the noise floor; a validator or lint-rule false positive found in real use; **or a claim in the documentation found to be untrue.** The last trigger has fired once, on the day this document was written, and it is why the ninth validator check exists.
+Out of band, immediately, on any of: a `canonical` pattern falsified; an eval regression beyond the noise floor; a validator or lint-rule false positive found in real use; **or a claim in the documentation found to be untrue.** The last trigger has fired once, on the day this document was written, and it is why the seventh validator check exists.
 
 ## What this document cannot enforce
 

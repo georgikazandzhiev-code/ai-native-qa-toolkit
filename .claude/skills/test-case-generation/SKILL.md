@@ -19,8 +19,8 @@ The skill turns the user story into something an Automation Engineer can execute
 - **NEVER** invent UI design elements (colors, layouts, button text) unless they appear in the user story. Why: the requirement layer must remain technology-agnostic so it survives a UI redesign.
 - **ALWAYS** use precise terminology from `master-context` (probe, collector, scheduler, monitor type, JetStream stream, tenant_id, realm). Why: drift between the test-case package and the platform vocabulary causes downstream misinterpretation.
 - **ALWAYS** trace every functional requirement back to the user story's intent. Why: requirements that aren't anchored to the story produce gold-plating; the test cases over-cover and under-test what the user actually asked for.
-- **ALWAYS** consider the Known Platform Issues from `master-context` § Known Issues when generating edge cases — ICMP traceroute kills the poll, TCP timeout returns silence, JetStream `DiscardOld` missing, etc. Why: edge cases that ignore the bugs already in production produce false-positive coverage.
-- **ALWAYS** verify the inline Hardcoded Defaults and Known Platform Issues against the actual repos (`git pull` first) before a critical test case relies on them. Why: the inline context is a snapshot — collectors/backend evolve, and a test case anchored to a stale default or an already-fixed issue produces wrong coverage.
+- **ALWAYS** consider the Known Platform Issues from `master-context` § Known Issues when generating edge cases Why: edge cases that ignore the bugs already in production produce false-positive coverage.
+- **ALWAYS** verify any inline platform snapshot against the actual repos (`git pull` first) before a critical test case relies on them. Why: the inline context is a snapshot — collectors/backend evolve, and a test case anchored to a stale default or an already-fixed issue produces wrong coverage.
 - **ALWAYS** tag every test case with a priority and trace it to the requirements it covers (e.g. `TC-07 [API] (P1, covers R2, R4)`). Why: priority tells the Automation Engineer what to automate first; traceability makes coverage gaps visible — a requirement with zero test cases must jump out.
 - **ALWAYS** flag every API endpoint or data flow that matches a Performance Testing Trigger (see § Performance Testing Triggers below) for a k6 candidate. Why: performance regressions discovered post-deploy are 100× more expensive than ones caught at requirement-time.
 - **NEVER** skip Section 4 (Security & Compliance) for a user story that touches tenant data, auth, or probe communication. Tenant isolation, JWT validation, probe outbound-only constraint, and input validation are platform-wide invariants — every story that interacts with them must be checked.
@@ -59,7 +59,7 @@ For full cross-repo context, load `master-context` (project repo only — trimme
 - **Communication:** Probe ↔ Backend over NATS JetStream (bidirectional via proxy relay; no HTTP on probes). Backend internal: Kafka (KRaft) for events, Go Fiber REST APIs for sync ops.
 - **Data stores:** PostgreSQL 16 (configuration), VictoriaMetrics (metrics, 10d retention), Redis 7 (cache), NATS JetStream KV (scheduler state).
 - **Auth:** Keycloak (multi-realm JWT/JWKS, RBAC). Platform admin → master realm. Service-to-service via client credentials.
-- **Key services:** Proxy (edge gateway), Scheduler (`jobs.poll`), Collectors (icmp/http/tcp/traceroute), Tenant Service (port 8995), API Gateway (port 8996, `api.dev.example.com`), Keycloak (port 8080, `auth.dev.example.com`).
+- **Key services:** an edge gateway, a scheduler, per-protocol collectors, a tenant service, an API gateway and an identity provider.
 
 ### Data Pipeline
 
@@ -70,7 +70,7 @@ Backend → Remote NATS → Proxy → jobs.poll stream → Scheduler → {pollTy
 
 ### JetStream Streams
 
-- `jobs` — WorkQueuePolicy, DiscardOld, 10K msgs, 10MB, 24h max age.
+- a work-queue stream for jobs, with a retention policy and size limits.
 - `results`, `stats`, `metrics` — retained, 1M msgs, 1GB, 7d max age, 50KB max msg size.
 
 ### Result Structures
@@ -78,28 +78,8 @@ Backend → Remote NATS → Proxy → jobs.poll stream → Scheduler → {pollTy
 - **ICMP:** `avg_rtt`, `packet_loss`, `traceroute_data` (HopStats array with `hop_number`, `hop_ip`, `hop_hostname`, `hop_latency_ms`, `hop_status`, `packet_loss_pct`).
 - **HTTP:** `dns_lookup_ms`, `tcp_connect_ms`, `tls_handshake_ms`, `ttfb_ms`, `download_ms`, `total_time_ms`, `status_code`, `response_size`, `conn_reused`.
 - **TCP:** `dns_lookup_ms`, `tcp_connect_ms`, `port_available`, `service_responding`, `ttfb_ms`, `time_to_last_byte_ms`, `transaction_time_ms`, `status_code`.
-- **Traceroute:** `jobID`, `traceroute` (with `Hops` array, `RouteHash` MD5).
+- **Traceroute:** a job id plus a hop list and a route fingerprint.
 
-### Known Platform Issues (consider in edge cases)
-
-> Snapshot — before anchoring a critical test case to one of these (or to the Hardcoded Defaults below), verify it still holds in the relevant repo (`git pull` first). An already-fixed issue or changed default produces wrong coverage.
-
-1. ICMP traceroute failure kills entire poll — valid ping data discarded.
-2. ICMP result missing `min_rtt`, `max_rtt`, `jitter`, `packets_sent`, `packets_received` (exist in internal `PingStats`).
-3. TCP timeout returns error with no result published — backend gets silence instead of `port_available=0`.
-4. JetStream results/stats/metrics streams missing `DiscardOld` — `DiscardNew` rejects new data when full.
-5. Inconsistent timestamp field naming across collector types.
-6. `TracerouteStats` uses PascalCase (`Hops`/`RouteHash`) vs snake_case elsewhere.
-7. Traceroute probe count is 3 in code, 1 in spec.
-
-### Hardcoded Defaults
-
-- ICMP: count=5 (first discarded), size=56 bytes, TTL=64, interval=1s, timeout=5s.
-- Traceroute: maxTTL=30, timeout=1s/hop, probeCount=3, destPort=33434.
-- HTTP: method=GET, timeout=30s, followRedirects=true, maxRedirects=10.
-- TCP: connTimeout=10s, readWriteDeadline=5s, readLimit=1024 bytes.
-- Collector pool: 100 concurrent jobs. Stats: every 60s.
-- JetStream: maxMsgs=1M, maxBytes=1GB, maxAge=7d, maxMsgSize=50KB.
 
 ## Performance Testing Triggers
 
@@ -204,7 +184,7 @@ If no candidates: "No performance testing candidates identified for this user st
 - ❌ **Skipping Section 5 because "performance feels like overkill".** If the story touches an endpoint or flow matching a Performance Testing Trigger, k6 candidates must be flagged — the platform's 10K-probe / 1M-metrics-per-second targets demand it.
 - ❌ **Section 3 covering only happy path + one error case.** The bar is "exhaustive edge cases" — distributed failure modes, multi-tenant concurrency, race conditions, metric accuracy under load.
 - ❌ **Treating Section 4 as optional for stories that touch tenant data or auth.** Tenant isolation, JWT/JWKS, IDOR are platform invariants every story must check.
-- ❌ **Ignoring Known Platform Issues when listing edge cases.** The ICMP traceroute bug, TCP-timeout silence, JetStream DiscardOld drift, etc. are real production behaviors — edge cases that don't account for them produce false-positive coverage.
+- ❌ **Ignoring Known Platform Issues when listing edge cases.** Unfixed production behaviour is still behaviour — edge cases that don't account for them produce false-positive coverage.
 - ❌ **Tagging a test case as `[E2E]` when it's actually direct service-to-service communication.** `[Integration]` is the right tag for probe ↔ backend NATS, Kafka, JetStream operations. `[E2E]` is reserved for the user's perspective via Playwright.
 - ❌ **Delivering an unranked, untraceable case dump.** 25 cases with no priority and no requirement mapping forces the Automation Engineer to re-derive both. Every case: priority + covered requirements.
 - ❌ **Marking a tenant-isolation or data-loss case P3.** Those are platform invariants — always P1.
@@ -238,7 +218,7 @@ The generator produces:
 - **Section 3** — `[API] (P1, covers R1, R2)` happy path (`POST /admin/tenant/{tenant}/monitors/bulk`), `[API] (P2, covers R4)` malformed CSV row, `[API] (P2, covers R1)` >200 row payload, `[API] (P1, covers R1)` 401 / 403, `[Integration] (P1, covers R3)` scheduler picks up bulk batch from `jobs.poll`, `[Integration] (P2, covers R3)` JetStream `jobs` stream behavior when bulk batch exceeds 10MB, `[Integration] (P1, covers R4)` partial failure emits per-row error metric — no silent drops, `[E2E] (P1, covers R5)` admin uploads CSV via UI, sees per-row result, `[E2E] (P2, covers R4, R5)` retry partial-failure rows.
 - **Section 4** — tenant isolation (admin can only target tenants in their realm), CSV injection / formula attacks, oversized payload (>50KB JetStream max), IDOR on `tenant` path param.
 - **Section 5** — `POST /admin/tenant/{tenant}/monitors/bulk` flagged for **Stress test** (write-heavy, cascade-prone — fan-out to scheduler) + **Spike test** (admin uploads 200 rows in a burst). Thresholds: p95 < 5s for 200-row payload, error rate < 1%, JetStream `jobs` stream queue depth < 5K. Risk if untested: bulk batch overwhelms scheduler, KV state corruption, partial onboarding leaves orphan monitors.
-- **Section 6** — flag Known Issue #4 (JetStream `DiscardOld` missing) — bulk burst could trigger `DiscardNew` and reject the tail of the upload silently. Dependency: scheduler must support batch ingestion (verify with collectors team).
+- **Section 6** — flag the known stream-retention issue: a bulk burst could reject the tail of the upload silently. Dependency: scheduler must support batch ingestion (verify with collectors team).
 
 ### Example 2 — User story with no performance dimension
 

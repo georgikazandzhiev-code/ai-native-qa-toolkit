@@ -18,6 +18,7 @@
 - [ ] `node eslint-plugin-qa-constitution/tests/rules.test.js` — if a rule changed
 - [ ] `version:` moved in every `SKILL.md` whose rules changed
 - [ ] **major only:** the skill was re-measured and this PR contains the `evals/history.json` entry
+- [ ] **new skill only:** a routing row exists in `.claude/CLAUDE.md § Routed Skill Index`
 - [ ] **new lint rule only:** it has a `RuleTester` suite **and** a fault-injection case
 - [ ] Every number this PR states in prose is either recomputed by a validator check or labelled in its own sentence as unverified
 
