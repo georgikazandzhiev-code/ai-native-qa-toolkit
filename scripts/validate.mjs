@@ -512,6 +512,47 @@ if (!existsSync(memoryPath)) {
   }
 }
 
+// ── 11. No gate may mask its own failure ────────────────────────────────────────
+//
+// `npm run something || echo "validation passed"` swallows the failure, prints a success message,
+// and exits 0. A gate that cannot fail is not a gate — and this one prints a claim about a tool
+// that never ran. It arrived in a proposed workflow on 2026-08-11 and is easy to write by
+// accident, so it is checked rather than remembered.
+//
+// The sanctioned way to say "this step does not gate yet" is `continue-on-error: true`, which makes
+// the log say exactly that instead of pretending otherwise.
+
+const CI_DIRS = [join(ROOT, '.github', 'workflows'), join(ROOT, 'templates')];
+const MASKING = [
+  { re: /\|\|\s*echo/, why: 'a failing command whose exit code is replaced by an echo' },
+  { re: /\|\|\s*true\b/, why: 'a failing command forced to exit 0 with `|| true`' },
+  { re: /\bset\s+\+e\b/, why: '`set +e`, which lets every later failure through silently' },
+];
+
+for (const dir of CI_DIRS) {
+  if (!existsSync(dir)) continue;
+  for (const f of readdirSync(dir)) {
+    if (!/\.ya?ml$/.test(f)) continue;
+    const p = join(dir, f);
+    read(p)
+      .split(/\r?\n/)
+      .forEach((line, i) => {
+        // A commented line is documentation — including the counter-example that explains this
+        // very rule, which lives in templates/agentic-qa-ci.yml.
+        if (/^\s*#/.test(line)) return;
+        for (const { re, why } of MASKING) {
+          if (re.test(line)) {
+            err(
+              `${basename(dir)}/${f}:${i + 1}`,
+              `masks a failure — ${why}. Use \`continue-on-error: true\` if the step is not ready ` +
+                `to block, so the log says it did not gate`
+            );
+          }
+        }
+      });
+  }
+}
+
 // ── report ──────────────────────────────────────────────────────────────────────
 
 const pad = (n) => String(n).padStart(3, ' ');

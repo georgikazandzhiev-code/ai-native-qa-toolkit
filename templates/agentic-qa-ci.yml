@@ -1,0 +1,114 @@
+# Agentic QA quality gate — drop-in workflow for a Playwright automation repository.
+#
+# Copy to `.github/workflows/agentic-qa-ci.yml` in the repo that HOLDS THE TESTS, not into the
+# toolkit repo. The toolkit ships rules, skills and a lint plugin; it contains no Playwright suite,
+# so a workflow that runs `npx playwright test` here would be red on every push. This repo's own
+# gate is `.github/workflows/validate.yml`.
+#
+# Five things in the obvious version of this file are wrong, and each one is worth knowing:
+#
+#   1. `node-size: 20`  — the input is `node-version`. `actions/setup-node` warns about an unknown
+#      input and carries on with the runner's default Node, so the workflow appears to work while
+#      silently testing on a version nobody chose.
+#   2. `cache: 'npm'` with no `package-lock.json` — hard-fails with "Dependencies lock file is not
+#      found". Same for `npm ci`. Both are correct HERE because a test repo has a lockfile; both
+#      fail in a repo that does not, which is why this file is a template and not a copy.
+#   3. `npx eslint .` — lints nothing useful without a config, and with one it lints the whole tree
+#      including build output. Point it at the directories that hold test code, and pass
+#      `--max-warnings 0` or a warning is just a comment.
+#   4. `npm run evaluate:spec || echo "DeepEval validation passed"` — **deleted, deliberately.**
+#      When the script is missing or fails, `|| echo` swallows the failure, prints the word
+#      "passed", and exits 0. That is a false-green generator, and it prints a claim about a tool
+#      that never ran. It is the exact pattern the constitution's Definition of Done forbids, one
+#      layer up: a gate that cannot fail is not a gate. If a step is not ready to block, mark it
+#      `continue-on-error: true` so the log says "this did not gate" instead of "this passed".
+#   5. No artifact upload — a failed Playwright run whose trace is discarded costs a second run to
+#      diagnose. The report is uploaded on failure, which is when it is worth having.
+
+name: Agentic QA quality gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch makes the first run's result irrelevant. Without this, a busy
+# branch queues runs that report on code nobody is looking at any more.
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Constitution gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # NOT node-size — an unknown input is ignored, not rejected
+          cache: npm # requires a committed package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The mechanically checkable half of the constitution. `--max-warnings 0` is what makes it a
+      # gate: without it a violation configured as a warning is a comment nobody reads.
+      - name: QA constitution — lint gate
+        run: npx eslint "tests/**/*.ts" "pages/**/*.ts" "fixtures/**/*.ts" --max-warnings 0
+
+      # Type errors that the linter cannot see. `any` and `@ts-ignore` are constitution
+      # violations, so a suite that does not typecheck is not compliant either.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  tests:
+    name: Playwright
+    runs-on: ubuntu-latest
+    needs: quality-gate # do not spend browser minutes on code the gate already rejected
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run tests
+        run: npx playwright test
+        env:
+          # Never commit these. Set them as repository or environment secrets; the suite reads
+          # them via `process.env.X!` so a missing one fails at startup rather than mid-test.
+          API_URL: ${{ vars.API_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+
+      # `always()` rather than `failure()`: a flaky run that passed on retry is exactly the run
+      # whose trace you want, and it did not fail.
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+# Two things this file deliberately does NOT do:
+#
+# · It does not run an LLM judge over the specs. A grader that scores prose cannot fail a build on
+#   evidence — the toolkit's own two LLM-graded eval runs tied at 40/45 while a machine metric on
+#   the same skills found 17 violations against 0. Spend the CI minutes on the check that names a
+#   file and a line.
+# · It does not gate on a coverage or mutation-score threshold. Both are gameable by asserting on
+#   trivia until the number moves. Gate on regression against a recorded baseline instead — see
+#   GOVERNANCE.md § The metrics that govern.

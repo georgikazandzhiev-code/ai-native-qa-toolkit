@@ -88,7 +88,7 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 npm run validate
 ```
 
-Zero dependencies, so it runs on a fresh clone before anything is installed. Ten checks:
+Zero dependencies, so it runs on a fresh clone before anything is installed. Eleven checks:
 
 | # | Check | Why it is here |
 |---|---|---|
@@ -102,6 +102,7 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. Ten
 | 8 | **Every script the docs link to actually exists** | `skill-creator` asserted a `postToolUse` validation hook at `.cursor/hooks/skill-validate.py` for months. That file never existed, so nothing was validated — which is how checks 1 and 7 came to fail silently |
 | 9 | **Governance artifacts exist and bind** — `GOVERNANCE.md` is present, every `### Phase` in it states both an `**Exit:**` and a `**Stop:**` criterion, `CODEOWNERS` routes skills, the plugin and the scripts to a named owner, and the PR template exists | A rollout phase with no exit criterion advances on whoever is most confident that day, and one with no stop criterion cannot be rolled back |
 | 10 | **Session memory is present and bounded** — `.claude/memories/learned_patterns.md` exists, states its READ and WRITE rules, holds at most 12 cases, and every case carries an `**Evidence:**` label | The constitution and an always-applied Cursor rule both route every session to that file, so a missing one is a broken route. The cap is the point: a capture file with no drain becomes a landfill that still carries the authority of "we learned this" |
+| 11 | **No CI step masks its own failure** — no `|| echo`, `|| true` or `set +e` in any workflow or template | A proposed workflow carried `npm run evaluate:spec || echo "DeepEval validation passed"`. When the script is missing or fails, that swallows the exit code, prints the word "passed", and reports success for a tool that never ran. A gate that cannot fail is not a gate |
 
 Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 
@@ -178,6 +179,21 @@ All 16 rules pass all three. A rule with no fixture case **fails** here rather t
 **It found a defect on its first run** — the third in one rule, and the same root cause each time. `schema-parse-idiom` reported `Project.parse(body).id`, a parse whose field is read on the spot and therefore not discarded at all. The rule had been written as an allowlist of accepted parent node types, so every shape of *using* a parsed value that its author had not enumerated read as *discarding* it. It now asks the question it actually means — is this value read by nobody? — with the house idiom on `.toBeTruthy()` split into its own message so nothing was traded away. Assertion 2 is in the harness because of exactly this: five of the six defects in the eval harness were also rules firing on correct code, and a rule that cries wolf gets the whole gate turned off within a week.
 
 The harness is verified the same way it verifies the rules. Neuter a rule and it reports `NO BITE` and exits 1; add a violation to the compliant tree and it reports `FALSE +` and exits 1; delete a fixture tree and it fails hard rather than passing an empty run.
+
+## Wire it into a pipeline
+
+The lint gate is only a gate once something refuses to merge past it. **[`templates/agentic-qa-ci.yml`](templates/agentic-qa-ci.yml)** is a drop-in workflow for the repository that holds the tests — constitution lint and typecheck first, Playwright only if that passed, report uploaded on every attempt.
+
+It is a template rather than a workflow in this repo on purpose: the toolkit ships rules, skills and a lint plugin, and contains no Playwright suite. A `npx playwright test` step here would be red on every push.
+
+The file is commented with the five defects in the obvious version of it, because each is easy to write and hard to notice. The one worth repeating:
+
+```yaml
+# a false-green generator, and check 11 now fails the run on it
+run: npm run evaluate:spec || echo "DeepEval validation passed"
+```
+
+When the script is missing or fails, `|| echo` swallows the exit code, prints the word "passed", and exits 0 — reporting success for a tool that never ran. **A gate that cannot fail is not a gate.** If a step is not ready to block, `continue-on-error: true` says so in the log instead of pretending otherwise.
 
 ## Product-side constitutions (web + mobile)
 
