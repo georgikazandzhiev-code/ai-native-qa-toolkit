@@ -284,4 +284,47 @@ tester.run('regression/expect-soft-is-the-idiom', plugin.rules['schema-parse-idi
   ],
 });
 
+// ---------------------------------------------------------------------------
+// False-green detection — enforces definition_of_done.md § 2
+// ---------------------------------------------------------------------------
+
+tester.run('require-assertion-in-test', plugin.rules['require-assertion-in-test'], {
+  valid: [
+    `test('@App-API a', async () => { expect(status).toBe(200); });`,
+    // soft assertions in a negative-case loop
+    `test('@App-API a', async () => { for (const f of fields) expect.soft(S.parse(b), f).toBeTruthy(); });`,
+    // assertion nested inside a step or a loop still counts
+    `test('@App-API a', async () => { await test.step('check', async () => { expect(x).toBe(1); }); });`,
+    // a page-object assertion helper counts
+    `test('@App-E2E a', async ({ p }) => { await p.expectSaved(); });`,
+    `test('@App-E2E a', async ({ p }) => { await p.verifyToastVisible(); });`,
+    // explicit opt-out for a test that genuinely asserts through a helper
+    `// eslint-asserts-via-helper: assertProjectMatches does the checking
+     test('@App-API a', async () => { await assertProjectMatches(body); });`,
+    // hooks need no assertion
+    `test.beforeAll(async () => { await seed(); });`,
+    // a declaration with no body
+    `test.skip('@App-API not yet');`,
+  ],
+  invalid: [
+    // the false green: it runs, it passes, it proves nothing
+    { code: `test('@App-API a', async ({ apiRequest }) => { await createProject(apiRequest); });`, errors: [{ messageId: 'none' }] },
+    { code: `test('@App-E2E a', async ({ page }) => { await page.goto('/'); await page.getByRole('button').click(); });`, errors: [{ messageId: 'none' }] },
+  ],
+});
+
+tester.run('no-empty-catch', plugin.rules['no-empty-catch'], {
+  valid: [
+    `try { await f(); } catch (e) { throw e; }`,
+    `try { await f(); } catch (e) { logger.warn(e); }`,
+    `try { id = await create(); } catch { id = null; }`,
+  ],
+  invalid: [
+    { code: `try { await f(); } catch {}`, errors: [{ messageId: 'empty' }] },
+    { code: `try { await f(); } catch (e) {}`, errors: [{ messageId: 'empty' }] },
+    // a comment is not handling — core no-empty allows this, we do not
+    { code: `try { await f(); } catch { /* ignore */ }`, errors: [{ messageId: 'empty' }] },
+  ],
+});
+
 console.log('all rule tests passed');

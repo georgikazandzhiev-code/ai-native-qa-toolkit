@@ -1,6 +1,6 @@
 # eslint-plugin-qa-constitution
 
-Turns the mechanically checkable half of the [QA engineering constitution](../.claude/CLAUDE.md) into **14 enforceable ESLint rules**.
+Turns the mechanically checkable half of the [QA engineering constitution](../.claude/CLAUDE.md) into **16 enforceable ESLint rules**.
 
 The rest of this toolkit is prose that an agent is asked to follow. This is the part a pipeline can refuse to merge. Governance without an enforcement mechanism is advice.
 
@@ -40,6 +40,8 @@ export default [
 | `no-not-tothrow` | WON'T No `.not.toThrow()` | `expect(…).not.toThrow()` / `.not.rejects` |
 | `no-jsdoc-on-locator-getter` | WON'T No JSDoc on locator getters | JSDoc above a `get` accessor returning a locator chain |
 | `commented-test-needs-ticket` | WON'T No silent coverage drops | A commented-out `test(` block with no `TODO` / `FIXME` / `BUG` marker |
+| `require-assertion-in-test` | DoD § 2 False-Green | A test containing **no assertion at all** — it runs, it passes, it proves nothing |
+| `no-empty-catch` | DoD § 2 False-Green | An empty `catch` anywhere (spec, helper or page object), including one holding only a comment |
 
 ### Options worth setting
 
@@ -59,6 +61,23 @@ rules: {
 ```
 
 `single-tag-on-test` with no `whitelist` still enforces *exactly one* tag; add the whitelist to also enforce which ones.
+
+## False-green detection
+
+Two of the rules exist specifically to enforce `definition_of_done.md` § 2 — *"Empty runs or non-asserting dry-runs are flagged as False-Green defects"* — which until now was written down with nothing to enforce it.
+
+`require-assertion-in-test` walks the whole test body, so an assertion nested inside a `test.step`, a loop or a callback still counts. It recognises `expect`, `expect.soft`, `expect.poll`, `assert`, and page-object assertion helpers matching `expectX` / `assertX` / `verifyX`. When a test genuinely asserts through a helper the rule cannot see into, opt out explicitly:
+
+```ts
+// eslint-asserts-via-helper: assertProjectMatches does the checking
+test('@App-API creates a project', async ({ apiRequest }) => {
+  await assertProjectMatches(apiRequest, expected);
+});
+```
+
+`no-empty-catch` is stricter than core `no-empty`, which permits a catch containing only a comment. A comment does not re-throw, so an "// ignore" catch is exactly the swallowed failure this rule exists to stop.
+
+**Measured on real generated code:** across 1,158 lines produced by two independent arms in the lint-gate eval, both rules reported **zero** violations — no false positives. That is the number worth knowing about a rule that blocks a merge.
 
 ## The one sanctioned escape hatch
 
@@ -98,7 +117,7 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-14 rules, 14 `RuleTester` suites, 29 invalid-case assertions plus valid cases per rule:
+16 rules, 20 `RuleTester` suites (including four regression suites, one per false positive the eval exposed), plus valid cases per rule:
 
 ```bash
 npm test

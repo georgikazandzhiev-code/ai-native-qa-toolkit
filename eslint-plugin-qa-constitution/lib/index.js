@@ -518,6 +518,103 @@ rules['commented-test-needs-ticket'] = {
   },
 };
 
+/**
+ * DoD § 2 — "The test contains clear semantic assertions. Empty runs or non-asserting
+ * dry-runs are flagged as False-Green defects." This is the enforcement for that line.
+ */
+rules['require-assertion-in-test'] = {
+  meta: meta('Every test must contain at least one assertion; a passing test that asserts nothing is a false green.', {
+    messages: {
+      none: 'This test contains no assertion. A test that runs without asserting is a false green — it proves the code executes, not that it is correct. Add an {{names}} on the behaviour the requirement describes.',
+    },
+    schema: [{
+      type: 'object',
+      properties: {
+        assertFunctionNames: { type: 'array', items: { type: 'string' } },
+        allowComment: { type: 'string' },
+      },
+      additionalProperties: false,
+    }],
+  }),
+  create(context) {
+    const opt = context.options[0] ?? {};
+    const names = new Set(opt.assertFunctionNames ?? ['expect', 'assert']);
+    const marker = opt.allowComment ?? 'eslint-asserts-via-helper';
+    const src = context.sourceCode ?? context.getSourceCode();
+
+    /** expect(...), expect.soft(...), expect.poll(...), assert(...), this.expectX(...) */
+    function isAssertion(node) {
+      let c = node.callee;
+      if (c.type === 'MemberExpression') {
+        // walk to the root object: expect.soft(...) -> expect
+        let root = c;
+        while (root.type === 'MemberExpression') root = root.object;
+        if (root.type === 'Identifier' && names.has(root.name)) return true;
+        // a page-object assertion helper: page.expectSaved(), this.assertVisible()
+        const prop = c.property.name ?? '';
+        if (/^(expect|assert|verify)[A-Z]/.test(prop)) return true;
+        return false;
+      }
+      return c.type === 'Identifier' && names.has(c.name);
+    }
+
+    return {
+      CallExpression(node) {
+        if (!isTestCall(node)) return;
+        if (enclosingTest(node)) return; // a nested call, not a declaration
+        const body = node.arguments.find((a) =>
+          a.type === 'ArrowFunctionExpression' || a.type === 'FunctionExpression');
+        if (!body) return; // test.skip('title') and friends declare no body
+
+        // opt-out for a test whose assertions genuinely live in a helper
+        const cmts = [...src.getCommentsBefore(node), ...src.getCommentsInside(node)];
+        if (cmts.some((c) => c.value.includes(marker))) return;
+
+        let found = false;
+        const walk = (n) => {
+          if (found || !n || typeof n.type !== 'string') return;
+          if (n.type === 'CallExpression' && isAssertion(n)) { found = true; return; }
+          for (const k of Object.keys(n)) {
+            if (k === 'parent') continue;
+            const v = n[k];
+            if (Array.isArray(v)) v.forEach((x) => x && typeof x.type === 'string' && walk(x));
+            else if (v && typeof v.type === 'string') walk(v);
+          }
+        };
+        walk(body.body);
+        if (!found) {
+          context.report({
+            node: node.arguments[0] ?? node,
+            messageId: 'none',
+            data: { names: [...names].map((n) => n + '()').join(' / ') },
+          });
+        }
+      },
+    };
+  },
+};
+
+/**
+ * A swallowed exception anywhere — spec, helper or page object. Core `no-empty` permits a
+ * catch containing only a comment; a comment does not re-throw, so this is stricter on purpose.
+ */
+rules['no-empty-catch'] = {
+  meta: meta('Never swallow an exception; an empty catch hides the failure it caught.', {
+    messages: {
+      empty: 'This catch block swallows the exception. Either handle it, re-throw it, or let the call throw — a silent catch turns a failure into a false green.',
+    },
+  }),
+  create(context) {
+    return {
+      CatchClause(node) {
+        const stmts = node.body.body;
+        if (stmts.length > 0) return;
+        context.report({ node, messageId: 'empty' });
+      },
+    };
+  },
+};
+
 // ---------------------------------------------------------------------------
 // configs
 // ---------------------------------------------------------------------------

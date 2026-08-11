@@ -1,21 +1,21 @@
-import tsParser from '@typescript-eslint/parser';
+﻿import tsParser from '@typescript-eslint/parser';
 import playwright from 'eslint-plugin-playwright';
 import qa from '../lib/index.js';
 
 /**
- * Lint-gate eval config — CORRECTED after run 1.
+ * Lint-gate eval config â€” CORRECTED after run 1.
  *
  * Run 1 was invalid. Three defects in the harness, all mine:
  *
  *  1. FABRICATED WHITELIST. I invented @App-Critical / @App-regression / @smoke instead of
  *     reading the real list out of the test-standards skill. 29 of 41 reported violations were
- *     my invention rejecting both arms — including the skill arm's @App-API and @App-E2E, which
+ *     my invention rejecting both arms â€” including the skill arm's @App-API and @App-E2E, which
  *     are BOTH valid. The whitelist below is now quoted from
- *     ~/.claude/skills/test-standards/SKILL.md § Tag whitelist.
+ *     ~/.claude/skills/test-standards/SKILL.md Â§ Tag whitelist.
  *
  *  2. MISSING PLUGIN. A generated file carried an eslint-disable for
  *     playwright/no-force-option. With that plugin unregistered, ESLint reports
- *     "Definition for rule not found" as an error — an artifact, not a violation.
+ *     "Definition for rule not found" as an error â€” an artifact, not a violation.
  *     eslint-plugin-playwright is now registered with every rule OFF, so the directive
  *     resolves without adding any new check to the measurement.
  *
@@ -49,6 +49,8 @@ const QA_RULES = [
   'no-not-tothrow',
   'no-jsdoc-on-locator-getter',
   'commented-test-needs-ticket',
+  'require-assertion-in-test',
+  'no-empty-catch',
 ];
 
 export default [
@@ -57,7 +59,7 @@ export default [
     languageOptions: { parser: tsParser, ecmaVersion: 2022, sourceType: 'module' },
     plugins: { 'qa-constitution': qa, playwright },
     rules: {
-      // every playwright rule off — registered only so disable directives resolve
+      // every playwright rule off â€” registered only so disable directives resolve
       ...Object.fromEntries(Object.keys(playwright.rules).map((r) => [`playwright/${r}`, 'off'])),
       'qa-constitution/no-direct-playwright-import': [
         'error',

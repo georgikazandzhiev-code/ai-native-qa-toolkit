@@ -84,11 +84,11 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
-Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **14 ESLint rules** derived directly from the MUST and WON'T tables.
+Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **16 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.
 
 | Enforced mechanically | Stays a review responsibility |
 |---|---|
-| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · `process.env.X!` · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) |
+| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · `process.env.X!` · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket · **no test without an assertion** · **no empty catch anywhere** | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) |
 
 Roughly half the constitution is mechanically checkable. The plugin claims exactly that half and says so — a linter that claims more than it checks is worse than none.
 
