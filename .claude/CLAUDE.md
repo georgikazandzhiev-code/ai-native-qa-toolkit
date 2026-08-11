@@ -115,6 +115,22 @@ For **new files**, follow the canonical pattern **of the current repo**. Never i
 
 ---
 
+## Session Memory — read before writing test code
+
+`~/.claude/memories/learned_patterns.md` holds what previous sessions worked out the hard way: which locator survived a re-render, why a test was flaky and what fixed it, and the domain quirks a spec written from the story alone would miss. A project may keep its own copy at `memories/learned_patterns.md`.
+
+| Rule | Requirement |
+|------|-------------|
+| **Read** | Before generating or refactoring any spec, page object or selector, read it. Re-deriving a recorded lesson is wasted work; contradicting one without falsifying it in the same edit is a defect. |
+| **Write** | When you heal a selector, root-cause a flake, or hit a project edge case, record it **in the same edit as the fix**. Only if reusable, non-obvious and falsifiable — otherwise it goes in the PR description. |
+| **Label** | Every entry carries `EXECUTED` / `STATIC` / `INFERRED`. `INFERRED` may suggest; it may never gate a decision. |
+| **Cap** | 12 cases in § 2. Past that it is a landfill — merge or promote one out first. |
+| **Graduate** | Recurs and holds twice → the repo's `.qe-memory/` store (`qe-pattern-memory` skill). A convention for every repo → a rule in the matching skill. Mechanically checkable → a lint rule. |
+
+Every code snippet in that file is linted by `npm run test:memory` against the same rules as the test suite, because a bad pattern recorded there teaches every future session to write one.
+
+---
+
 ## Routed Skill Index
 
 Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their frontmatter description or forced by name. Read the matched skill **before** writing code.

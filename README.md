@@ -88,7 +88,7 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 npm run validate
 ```
 
-Zero dependencies, so it runs on a fresh clone before anything is installed. Nine checks:
+Zero dependencies, so it runs on a fresh clone before anything is installed. Ten checks:
 
 | # | Check | Why it is here |
 |---|---|---|
@@ -101,6 +101,7 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. Nin
 | 7 | **Stated numbers match recomputed facts**, in `README.md`, `BENCHMARK.md` and `GOVERNANCE.md` alike — skills, commands, lint rules, rule suites, invalid-case assertions, measured-skill coverage with its denominator, over-length skills, this script's own check count, and every repo-relative link | In the internal toolkit this began as a README claiming 25 skills while 28 shipped. Then, in one day, it drifted on eight more numbers — including a coverage denominator copied from the other repository |
 | 8 | **Every script the docs link to actually exists** | `skill-creator` asserted a `postToolUse` validation hook at `.cursor/hooks/skill-validate.py` for months. That file never existed, so nothing was validated — which is how checks 1 and 7 came to fail silently |
 | 9 | **Governance artifacts exist and bind** — `GOVERNANCE.md` is present, every `### Phase` in it states both an `**Exit:**` and a `**Stop:**` criterion, `CODEOWNERS` routes skills, the plugin and the scripts to a named owner, and the PR template exists | A rollout phase with no exit criterion advances on whoever is most confident that day, and one with no stop criterion cannot be rolled back |
+| 10 | **Session memory is present and bounded** — `.claude/memories/learned_patterns.md` exists, states its READ and WRITE rules, holds at most 12 cases, and every case carries an `**Evidence:**` label | The constitution and an always-applied Cursor rule both route every session to that file, so a missing one is a broken route. The cap is the point: a capture file with no drain becomes a landfill that still carries the authority of "we learned this" |
 
 Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 

@@ -469,6 +469,49 @@ if (!existsSync(prTemplatePath)) {
   );
 }
 
+// ── 10. Session memory ──────────────────────────────────────────────────────────
+//
+// The constitution and an always-applied Cursor rule both route every session to this file, so a
+// missing or malformed one is a broken route rather than a missing nicety. The cap is the point:
+// a capture file with no drain becomes a landfill, and a landfill nobody reads is worse than no
+// memory at all -- it carries the authority of "we learned this" while going unread.
+
+const memoryPath = join(ROOT, '.claude', 'memories', 'learned_patterns.md');
+const MAX_MEMORY_CASES = 12;
+
+if (!existsSync(memoryPath)) {
+  err('.claude/memories/learned_patterns.md', 'missing — the constitution and a Cursor rule both route to it');
+} else {
+  const mem = read(memoryPath);
+
+  if (!/\*\*READ RULE/.test(mem)) err('memories/learned_patterns.md', 'states no READ RULE');
+  if (!/\*\*WRITE RULE/.test(mem)) err('memories/learned_patterns.md', 'states no WRITE RULE');
+
+  // Split on the case heading so each entry can be checked for its evidence label.
+  const cases = mem.split(/^### .*Case #/m).slice(1);
+  if (cases.length > MAX_MEMORY_CASES) {
+    err(
+      'memories/learned_patterns.md',
+      `holds ${cases.length} cases, cap is ${MAX_MEMORY_CASES} — merge two or graduate one out ` +
+        `(see its § 5) before adding another`
+    );
+  }
+  for (const body of cases) {
+    const title = body.substring(0, body.indexOf(String.fromCharCode(10))).trim();
+    // An unlabelled entry is indistinguishable from a guess, which is the whole reason the
+    // label exists. INFERRED is allowed; absent is not.
+    if (!/\*\*Evidence:\*\*/.test(body)) {
+      err('memories/learned_patterns.md', `case "${title}" carries no **Evidence:** label`);
+    }
+    if (!/\*\*Learned fix:\*\*/.test(body)) {
+      warn('memories/learned_patterns.md', `case "${title}" records no **Learned fix:**`);
+    }
+  }
+  if (cases.length === 0) {
+    warn('memories/learned_patterns.md', 'records no cases yet — nothing has been captured');
+  }
+}
+
 // ── report ──────────────────────────────────────────────────────────────────────
 
 const pad = (n) => String(n).padStart(3, ' ');

@@ -1,6 +1,6 @@
 ---
 name: qe-pattern-memory
-version: 1.0.1
+version: 1.1.0
 description: Persist and reuse what the agent learns about a codebase across sessions — a git-tracked, human-reviewed pattern store with confidence scoring, tier promotion, and falsification. Use when a session discovers a reusable fact (a recurring flake cause, a locator that survives re-renders, an endpoint quirk, a cleanup ordering rule), when starting work on a repo the team has touched before, or when the same discovery is being re-derived a second time. Trigger phrases — "remember this pattern", "we already learned this", "load what we know about this repo", "why did we do it this way last time", "promote this pattern", "this pattern is wrong". Do NOT use for repo-specific static catalogs that never change (keep those in the repository's own repo-context skill). Do NOT use for one-off session notes with no reuse value (leave them in the PR description). Do NOT use for framework conventions that belong in a rule (use the `skill-creator` skill to author a skill instead).
 metadata:
   category: cross-cutting
@@ -76,6 +76,22 @@ Three integers and one derived value. No model, no embedding, nothing that canno
 | `success_rate` | `successes / uses`, recorded to 2 decimals. Recompute on every edit; never hand-wave it. |
 
 Promotion thresholds are deliberately boring: **`active` needs `uses ≥ 2` and `success_rate ≥ 0.80`.** Demotion is immediate — a single failure on a `canonical` pattern drops it to `active` and opens a falsification entry. Confidence is earned slowly and lost fast, because the cost of a wrong canonical pattern is much higher than the cost of re-proving a right one.
+
+## The capture inbox, and why it is a different file
+
+`~/.claude/memories/learned_patterns.md` is the **inbox**; this store is the **archive**. They are not competitors and neither replaces the other, because capture and curation have opposite frictions.
+
+| | Inbox (`learned_patterns.md`) | Store (`.qe-memory/`) |
+|---|---|---|
+| Written | mid-task, one entry, no schema beyond a shape and an evidence label | at the end of a session, one file per pattern, scored |
+| Costs | nothing — that is the point | a slug, counters, an index line, a commit alongside the code |
+| Carries | a lesson and the artifact that proved it | a tier, `uses` / `successes` / `failures`, a falsification history |
+| Read | every session, in full | `INDEX.md` every session, bodies on demand |
+| Cap | 12 cases | 60 lines of index |
+
+**The rule: an entry graduates out of the inbox into this store once it has recurred on the same repo and held twice.** That is the same evidence bar as `candidate → active` here, which is not a coincidence — the inbox is where a `candidate` lives before it has earned a file.
+
+Why not one file for both: a flat file cannot carry a confidence score, and a scored store is too expensive to write in the middle of fixing a bug. Forcing either job into the other's shape is how a memory system stops being used — the store because writing to it interrupts the work, or the inbox because it grows into a thousand-line document nobody opens.
 
 ## Workflow — reading (start of a session)
 

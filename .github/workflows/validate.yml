@@ -65,6 +65,13 @@ jobs:
       - name: Smoke test — the compliant tree must pass the gate
         run: npx eslint --config smoke/eslint.config.mjs "smoke/good/**/*.ts" --max-warnings 0
 
+      # The learned-patterns memory file is read at the start of every session by both Claude
+      # Code and Cursor, and its purpose is to teach. A bad pattern recorded there does not
+      # cause one bad test — it teaches every future session, carrying the authority of "we
+      # learned this". Two of the three snippets in its first draft broke the constitution.
+      - name: Memory snippets — the memory file obeys the rules it teaches
+        run: node tests/memory-snippets.test.mjs
+
   regression:
     name: Skill eval regression
     runs-on: ubuntu-latest
