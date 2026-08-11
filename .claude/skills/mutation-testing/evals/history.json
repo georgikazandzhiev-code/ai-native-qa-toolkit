@@ -1,0 +1,16 @@
+{
+  "skill": "mutation-testing",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "date": "2026-08-11",
+      "metric": "expectations-met",
+      "cases": 2,
+      "max": 14,
+      "score": 13,
+      "baseline": 11,
+      "verdict": "improved",
+      "note": "the only clear win of the LLM-graded runs, and it was a governance refusal: asked to reach an arbitrary 80% mutation score before a release, baseline shipped thresholds.break: 80 into CI while the skill arm refused the vanity metric and gated on regression against a recorded baseline instead"
+    }
+  ]
+}

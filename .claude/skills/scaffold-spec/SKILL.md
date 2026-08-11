@@ -1,5 +1,6 @@
 ---
 name: scaffold-spec
+version: 1.1.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user

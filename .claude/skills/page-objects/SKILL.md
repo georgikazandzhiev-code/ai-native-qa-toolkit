@@ -1,5 +1,6 @@
 ---
 name: page-objects
+version: 1.0.0
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring

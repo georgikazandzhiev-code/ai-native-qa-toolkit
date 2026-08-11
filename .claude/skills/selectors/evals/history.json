@@ -1,0 +1,27 @@
+{
+  "skill": "selectors",
+  "entries": [
+    {
+      "version": "1.1.0",
+      "date": "2026-08-11",
+      "metric": "expectations-met",
+      "cases": 2,
+      "max": 15,
+      "score": 12,
+      "baseline": 14,
+      "verdict": "worse than baseline",
+      "note": "skill arm made data-testid the default locator choice on a mostly-native form; the priority hierarchy section spent 18 of its mentions on the Radix exception against 3 on getByRole, so the exception read as the default"
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-08-11",
+      "metric": "expectations-met",
+      "cases": 2,
+      "max": 15,
+      "score": 13,
+      "baseline": 15,
+      "verdict": "within noise",
+      "note": "after moving the Radix rationale to recipes.md and rewriting the first three Critical rules. Targeted defect gone (grader reported testid-primary in NEITHER arm, both cases) but baseline also gained +1 with zero changes, so the score movement is run-to-run variance at n=2, not a demonstrated gain"
+    }
+  ]
+}

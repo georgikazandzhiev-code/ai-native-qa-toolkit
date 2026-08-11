@@ -1,5 +1,6 @@
 ---
 name: common-tasks
+version: 1.0.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring

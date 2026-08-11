@@ -1,5 +1,6 @@
 ---
 name: mutation-testing
+version: 1.0.0
 description: Prove a test suite actually catches defects by mutating the code under test and measuring what survives — plus the black-box substitute (deliberate fault injection) for repos that do not own the source. Use when coverage is high but confidence is low, when reviewing whether generated or AI-authored tests assert anything real, when a suite has never caught a regression, or before trusting a coverage number in a quality gate. Trigger phrases — "are these tests any good", "mutation score", "the tests pass but prove nothing", "prove the test fails on a bug", "false green", "weak assertions", "Stryker". Do NOT use for measuring line or branch coverage (that is a runner flag, see the `test-standards` skill). Do NOT use for diagnosing a failing test (use the `debugging` skill). Do NOT use for deciding which files to test first (use the `defect-prediction` skill).
 metadata:
   category: domain

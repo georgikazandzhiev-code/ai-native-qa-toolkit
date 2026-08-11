@@ -1,5 +1,6 @@
 ---
 name: enums
+version: 1.0.0
 description: Conventions for enums/app/ — where repeated string constants live (SUITES in qase-suites.ts, health states, inventory labels, report messages), the `as const` pattern, naming, and barrel exports. Use when adding a Qase suite, status value, or any repeated string constant. Triggers — "enum", "SUITES", "status value", "message string". Not for changing existing values (refactor-values) or endpoint paths (config — paths live in appConfig).
 metadata:
   category: domain

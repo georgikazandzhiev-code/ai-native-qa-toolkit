@@ -1,0 +1,27 @@
+{
+  "skill": "api-testing",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "date": "2026-08-11",
+      "metric": "expectations-met",
+      "cases": 2,
+      "max": 16,
+      "score": 15,
+      "baseline": 15,
+      "verdict": "parity",
+      "note": "both arms broke the same rule \u2014 conditional logic in a test body"
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-08-11",
+      "metric": "lint-gate-violations",
+      "cases": 2,
+      "max": null,
+      "score": 0,
+      "baseline": 15,
+      "verdict": "improved",
+      "note": "machine-graded. Cases 1 and 3 of the lint gate. Baseline invented a tag absent from the whitelist and used try/catch in a test body; the skill arm produced 537 lines with zero constitution violations"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 ---
 name: k6-load-testing
+version: 1.1.0
 description: Author and run k6 load, stress, spike, and soak tests in TypeScript against the platform APIs — bundler setup, executors, thresholds, custom metrics, auth, Grafana/InfluxDB output. Use for any performance-testing request. Triggers — "load test", "stress test", "spike", "soak", "k6", "SLO", "performance benchmark". Not for functional API tests (api-testing).
 metadata:
   category: domain

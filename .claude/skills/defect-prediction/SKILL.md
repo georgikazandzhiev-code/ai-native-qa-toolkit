@@ -1,5 +1,6 @@
 ---
 name: defect-prediction
+version: 1.0.0
 description: Rank files and changesets by defect risk using signals computable from git history, complexity and coverage — then spend test effort where the risk is, and calibrate the ranking against what actually broke. Use when deciding what to test first on a large surface, when scoping regression effort for a release, when reviewing a PR that touches many files, when a test budget will not cover everything, or when asked where the quality risk sits. Trigger phrases — "what should we test first", "where is the risk", "regression scope for this release", "which files are risky", "prioritise the test effort", "risk-based testing". Do NOT use for classifying an already-failing test (use the `flakiness-triage` skill). Do NOT for measuring whether existing tests assert anything (use the `mutation-testing` skill). Do NOT use for security-specific threat surfaces (use the `owasp-security-testing` skill).
 metadata:
   category: domain

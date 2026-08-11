@@ -126,6 +126,28 @@ for (const folder of skillDirs) {
     if (!/Do NOT use for|Not for /i.test(desc)) warn(where, 'description has no "Do NOT use for X" disclaimer — expect false-positive triggering');
   }
 
+  // version — required, so a regression compare has something to attribute a score to
+  if (!fm.version) {
+    err(where, 'front matter has no `version` — eval history cannot be attributed without one');
+  } else if (!/^\d+\.\d+\.\d+$/.test(String(fm.version))) {
+    err(where, `version "${fm.version}" is not major.minor.patch`);
+  }
+
+  // If a history file exists, its newest entry must name the version the skill declares.
+  const histFile = join(SKILLS, folder, 'evals', 'history.json');
+  if (existsSync(histFile) && fm.version) {
+    try {
+      const h = JSON.parse(read(histFile));
+      const entries = Array.isArray(h.entries) ? h.entries : [];
+      const newest = entries.length ? entries[entries.length - 1].version : null;
+      if (newest && newest !== String(fm.version)) {
+        warn(where, `declares v${fm.version} but the newest eval history entry is v${newest} — bumped without re-measuring, or the measurement was not recorded`);
+      }
+    } catch (e) {
+      err(where, `evals/history.json is not valid JSON: ${e.message}`);
+    }
+  }
+
   // category
   const cat = fm.metadata && typeof fm.metadata === 'object' ? fm.metadata.category : undefined;
   if (!cat) err(where, 'front matter has no `metadata.category`');

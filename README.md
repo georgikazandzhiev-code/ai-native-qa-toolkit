@@ -113,6 +113,37 @@ What closing that gap involved, because none of it was cosmetic:
 
 Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 20 rule suites and a smoke test asserting that a deliberately non-compliant fixture still gets rejected. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
 
+## Skill versions and regression tracking
+
+Every skill declares a `version` in its front matter, and the meaning of a bump is fixed:
+
+| Bump | Means |
+|---|---|
+| **major** | a rule changes meaning or is removed — output that was previously correct may now be wrong |
+| **minor** | a rule or section is added — nothing previously correct becomes incorrect |
+| **patch** | wording, examples, cross-references — no rule changes |
+
+Skills that have been measured carry an append-only `evals/history.json`: one entry per version per metric, with the score, the baseline arm's score in the same run, and a note on what changed.
+
+```bash
+npm run eval:compare
+```
+
+Compares the two most recent entries for each metric and reports **IMPROVED / REGRESSION / WITHIN NOISE / FIRST RUN**. It exits non-zero only on a regression that clears the noise floor, so it can gate a merge.
+
+Two things it deliberately refuses to do, both learned from getting them wrong:
+
+- **It will not call a small delta an improvement.** When `selectors` moved 12 → 13 after a fix, the *baseline* arm also moved 14 → 15 with nothing changed on its side. At two cases, ±1 is run-to-run variance. The noise floor is ±2 below three cases, ±1 below five, and 0 at five or more — so that result reads `WITHIN NOISE`, which is what it is.
+- **It will not assume a direction.** `expectations-met` improves upward; `lint-gate-violations` improves downward. Each metric declares its own direction, because hardcoding one silently inverts the verdict for the other.
+
+It also reports which skills are measured **only** by LLM rubric and have no machine metric yet — those rubrics tied twice and are known to measure general competence rather than house convention, so a score from them should not be cited as evidence the skill works.
+
+Verified by fault injection rather than assumption: a 13 → 6 drop across six cases is reported as `REGRESSION` and exits 1; the same direction at −1 across two cases is reported as `WITHIN NOISE` and exits 0; and a version in `SKILL.md` that disagrees with the newest history entry is reported as a bookkeeping problem.
+
+`npm run check:bump` is the advisory companion — it warns when a `SKILL.md` changed against the base ref while its `version` did not. Never blocking: failing CI over a forgotten patch bump trains people to bump meaninglessly. What it prevents is the version quietly ceasing to describe the file, which is the point at which eval history starts to lie.
+
+**Current coverage: 3 of 28 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
+
 ## Enforcement — the rules a pipeline can refuse to merge
 
 Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **16 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.

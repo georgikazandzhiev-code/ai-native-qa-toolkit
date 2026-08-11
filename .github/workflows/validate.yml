@@ -51,3 +51,27 @@ jobs:
           else
             echo "Known-bad fixture correctly rejected."
           fi
+
+  regression:
+    name: Skill eval regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # check:bump needs history to diff against the base ref
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Fails only on a score drop that clears the noise floor. A delta inside the floor
+      # is reported as noise, deliberately: at two cases per skill, +-1 is variance, and a
+      # tool that calls variance progress teaches you to trust it.
+      - name: Compare eval history
+        run: npm run eval:compare
+
+      # Advisory. Warns when a SKILL.md changed and its version did not, because that is
+      # the moment the eval history stops describing the file it claims to score.
+      - name: Version bump reminder
+        run: npm run check:bump origin/${{ github.base_ref || 'main' }}
+        continue-on-error: true

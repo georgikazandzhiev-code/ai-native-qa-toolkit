@@ -1,5 +1,6 @@
 ---
 name: refactor-values
+version: 1.0.0
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring

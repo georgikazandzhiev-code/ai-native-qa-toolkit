@@ -1,5 +1,6 @@
 ---
 name: skill-creator
+version: 1.1.0
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -26,6 +27,7 @@ Non-negotiable. Every rule below was learned from a real drift incident in this 
 - **CROSS-REFERENCES MUST BE VERIFIED AND BIDIRECTIONAL.** When you cite a sibling skill in `See Also`, confirm the sibling exists (not a TBD placeholder), and update that sibling's `See Also` to mention the new skill back when relevant. Stale TBD references and one-way cross-links are the #1 source of audit churn.
 - **NO DRIFT TRIGGERS in any code example.** No `Zod 4` syntax in a Zod 3 codebase. No `field-field-` when frontend emits `schema-field-`. No bare `process.env.X` propagation when the canonical access is `!`. No `??` defaulting at call sites when defaults belong in `config/util/<service>.ts`. Verify every snippet against `type-safety` skill conventions and the actual codebase.
 - **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. `npm run validate` errors on an empty description and warns on a thin one; neither blocks a weak but present one — that's on the author.
+- **EVERY SKILL DECLARES A `version` IN FRONT MATTER, AND A CHANGE TO THE RULES MOVES IT.** `major` when a rule changes meaning or is removed — output that was previously correct may now be wrong. `minor` when a rule or section is added. `patch` for wording, examples and cross-references. The version is what an eval score is attributed to: `npm run eval:compare` compares scores across versions, and a version that no longer describes the file makes the history lie. `npm run check:bump` warns when a `SKILL.md` changed and the version did not.
 - **NEW SKILLS START FROM `assets/SKILL-template.md`.** The template encodes the standardized structure. Copying from another skill is acceptable but you must verify every section is present.
 - **UPDATE `~/.claude/CLAUDE.md § Routed Detail Index`** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's Routed Detail Index is the live human-readable map; if it drifts, every model loading the orchestrator routes wrong.
 

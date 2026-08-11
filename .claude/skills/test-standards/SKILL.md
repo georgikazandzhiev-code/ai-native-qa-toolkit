@@ -1,5 +1,6 @@
 ---
 name: test-standards
+version: 1.0.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
