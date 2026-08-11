@@ -1,0 +1,223 @@
+'use strict';
+
+const { RuleTester } = require('eslint');
+const tsParser = require('@typescript-eslint/parser');
+const plugin = require('../lib/index.js');
+
+const tester = new RuleTester({
+  languageOptions: {
+    parser: tsParser,
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    parserOptions: { ecmaFeatures: { jsx: false } },
+  },
+});
+
+const SPEC = 'tests/app/api/projects.spec.ts';
+const POM = 'pages/app/SettingsPage.ts';
+
+// ---------------------------------------------------------------------------
+
+tester.run('no-direct-playwright-import', plugin.rules['no-direct-playwright-import'], {
+  valid: [
+    { filename: SPEC, code: `import { test, expect } from '../../../fixtures/pom/test-options';` },
+    // a non-spec file may legitimately import from @playwright/test (e.g. the barrel itself)
+    { filename: 'fixtures/pom/test-options.ts', code: `import { test as base, expect } from '@playwright/test';` },
+    // importing a type, not the guarded runtime bindings
+    { filename: SPEC, code: `import type { Page } from '@playwright/test';` },
+  ],
+  invalid: [
+    { filename: SPEC, code: `import { test, expect } from '@playwright/test';`, errors: [{ messageId: 'direct' }] },
+    { filename: SPEC, code: `import { expect } from '@playwright/test';`, errors: [{ messageId: 'direct' }] },
+  ],
+});
+
+tester.run('no-xpath', plugin.rules['no-xpath'], {
+  valid: [
+    `page.getByRole('button', { name: 'Save' });`,
+    `page.locator('[data-state="checked"]');`,
+    `row.locator('input');`,
+  ],
+  invalid: [
+    { code: `page.locator('//div[@id="x"]');`, errors: [{ messageId: 'xpath' }] },
+    { code: `page.locator('xpath=//button');`, errors: [{ messageId: 'xpath' }] },
+    { code: `card.locator('(//tr)[1]');`, errors: [{ messageId: 'xpath' }] },
+  ],
+});
+
+tester.run('no-hard-waits', plugin.rules['no-hard-waits'], {
+  valid: [
+    `await expect(row).toBeVisible();`,
+    `await page.waitForResponse((r) => r.url().includes('/api/v1/projects'));`,
+  ],
+  invalid: [{ code: `await page.waitForTimeout(2000);`, errors: [{ messageId: 'hardWait' }] }],
+});
+
+tester.run('no-page-evaluate', plugin.rules['no-page-evaluate'], {
+  valid: [
+    `await expect(el).toHaveText('x');`,
+    // not a Playwright surface
+    `schema.evaluate(input);`,
+  ],
+  invalid: [
+    { code: `await page.evaluate(() => document.title);`, errors: [{ messageId: 'evaluate' }] },
+    { code: `await this.page.evaluate(() => 1);`, errors: [{ messageId: 'evaluate' }] },
+  ],
+});
+
+tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
+  valid: [
+    `test('@App-regression creates a project', async () => { await go(); });`,
+    { code: `test('creates a project', { tag: '@App-regression' }, async () => {});`, options: [{ whitelist: ['@App-regression'] }] },
+    // describe with no tag is fine
+    `describe('projects', () => { test('@smoke a', async () => {}); });`,
+  ],
+  invalid: [
+    { code: `test('creates a project', async () => {});`, errors: [{ messageId: 'none' }] },
+    { code: `test('@a @b creates', async () => {});`, errors: [{ messageId: 'many' }] },
+    { code: `describe('@App-regression projects', () => {});`, errors: [{ messageId: 'onDescribe' }] },
+    {
+      code: `test('@nope creates', async () => {});`,
+      options: [{ whitelist: ['@App-regression', '@smoke'] }],
+      errors: [{ messageId: 'notWhitelisted' }],
+    },
+  ],
+});
+
+tester.run('no-conditional-in-test', plugin.rules['no-conditional-in-test'], {
+  valid: [
+    `test('@t a', async () => { await expect(x).toBe(1); });`,
+    // conditionals outside a test body are fine (helpers, setup)
+    `beforeAll(async () => { if (!seeded) await seed(); });`,
+    `function pick(a) { return a ? 1 : 2; }`,
+  ],
+  invalid: [
+    { code: `test('@t a', async () => { if (x) await y(); });`, errors: [{ messageId: 'conditional' }] },
+    { code: `test('@t a', async () => { const v = x ? 1 : 2; });`, errors: [{ messageId: 'conditional' }] },
+    { code: `test('@t a', async () => { test.skip(); });`, errors: [{ messageId: 'skip' }] },
+    { code: `test('@t a', async () => { switch (x) { default: break; } });`, errors: [{ messageId: 'conditional' }] },
+  ],
+});
+
+tester.run('no-try-catch-in-test', plugin.rules['no-try-catch-in-test'], {
+  valid: [
+    `test('@t a', async () => { await expect(x).toBe(1); });`,
+    `test('@t a', async () => {
+       // eslint-allow-cleanup-capture: keep the id so afterEach can delete the leaked row
+       try { id = await create(); } catch { id = null; }
+     });`,
+    // outside a test body
+    `afterEach(async () => { try { await cleanup(); } catch {} });`,
+  ],
+  invalid: [
+    { code: `test('@t a', async () => { try { await expect(x).toBe(1); } catch {} });`, errors: [{ messageId: 'tryCatch' }] },
+  ],
+});
+
+tester.run('no-not-tothrow', plugin.rules['no-not-tothrow'], {
+  valid: [`expect(() => f()).toThrow();`, `await doThing();`],
+  invalid: [
+    { code: `expect(() => f()).not.toThrow();`, errors: [{ messageId: 'notToThrow' }] },
+    { code: `await expect(p).not.rejects();`, errors: [{ messageId: 'notToThrow' }] },
+  ],
+});
+
+tester.run('require-strict-object', plugin.rules['require-strict-object'], {
+  valid: [`const S = z.strictObject({ id: z.string() });`, `const A = z.array(z.string());`],
+  invalid: [
+    {
+      code: `const S = z.object({ id: z.string() });`,
+      output: `const S = z.strictObject({ id: z.string() });`,
+      errors: [{ messageId: 'loose' }],
+    },
+  ],
+});
+
+tester.run('schema-parse-idiom', plugin.rules['schema-parse-idiom'], {
+  valid: [
+    `expect(ProjectResponse.parse(body)).toBeTruthy();`,
+    // assigning the parsed value is a different, legitimate intent
+    `const parsed = ProjectResponse.parse(body);`,
+    // lowercase receiver is not a schema by convention
+    `payload.parse(raw);`,
+  ],
+  invalid: [
+    { code: `ProjectResponse.parse(body);`, errors: [{ messageId: 'bare' }] },
+    { code: `expect(ProjectResponse.parse(body)).toBeDefined();`, errors: [{ messageId: 'bare' }] },
+  ],
+});
+
+tester.run('no-jsdoc-on-locator-getter', plugin.rules['no-jsdoc-on-locator-getter'], {
+  valid: [
+    { filename: POM, code: `class P { get saveButton() { return this.page.getByRole('button', { name: 'Save' }); } }` },
+    // JSDoc on an action method is correct
+    {
+      filename: POM,
+      code: `class P {
+        /** Fills the form and submits it. */
+        async save(v) { await this.input.fill(v); await this.saveButton.click(); }
+      }`,
+    },
+  ],
+  invalid: [
+    {
+      filename: POM,
+      code: `class P {
+        /** The save button. */
+        get saveButton() { return this.page.getByRole('button', { name: 'Save' }); }
+      }`,
+      errors: [{ messageId: 'jsdoc' }],
+    },
+  ],
+});
+
+tester.run('no-pom-instantiation-in-test', plugin.rules['no-pom-instantiation-in-test'], {
+  valid: [
+    `test('@t a', async ({ settingsPage }) => { await settingsPage.save(); });`,
+    // instantiation inside a fixture is exactly right
+    `const settingsPage = new SettingsPage(page);`,
+  ],
+  invalid: [
+    {
+      code: `test('@t a', async ({ page }) => { const p = new SettingsPage(page); });`,
+      errors: [{ messageId: 'instantiate' }],
+    },
+  ],
+});
+
+tester.run('require-env-non-null', plugin.rules['require-env-non-null'], {
+  valid: [
+    `const token = process.env.API_TOKEN!;`,
+    `if ('CI' in process.env) {}`,
+    `if (typeof process.env.CI === 'string') {}`,
+  ],
+  invalid: [
+    { code: `const token = process.env.API_TOKEN;`, errors: [{ messageId: 'bare' }] },
+    { code: `const url = process.env.BASE_URL ?? 'http://localhost';`, errors: [{ messageId: 'defaulted' }] },
+    { code: `const url = process.env.BASE_URL || 'x';`, errors: [{ messageId: 'defaulted' }] },
+  ],
+});
+
+tester.run('commented-test-needs-ticket', plugin.rules['commented-test-needs-ticket'], {
+  valid: [
+    `// TODO: FIXME: PROJ-123 API returns 500 on empty body
+     // test('@t a', async () => { await go(); });
+     const x = 1;`,
+    `// a plain explanatory comment about tests
+     const x = 1;`,
+  ],
+  invalid: [
+    {
+      code: `// test('@t a', async () => { await go(); });
+             const x = 1;`,
+      errors: [{ messageId: 'noTicket' }],
+    },
+    {
+      code: `/* test('@t b', async () => {}); */
+             const x = 1;`,
+      errors: [{ messageId: 'noTicket' }],
+    },
+  ],
+});
+
+console.log('all rule tests passed');

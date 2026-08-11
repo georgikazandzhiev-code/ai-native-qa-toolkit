@@ -85,6 +85,25 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 | **`qe-pattern-memory`** | Cross-session learning as a git-tracked pattern store: confidence scoring, tier promotion, and *mandatory falsification*. A store that only counts successes converges on false confidence, so recording failures is a hard rule. Promotion to canonical is a pull-request review, never a self-assessment. |
 | **`owasp-security-testing`** | OWASP Top 10 and API Security Top 10 mapped to concrete QA test targets, layered on the negative-test matrix. |
 
+## Enforcement — the rules a pipeline can refuse to merge
+
+Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **14 ESLint rules** derived directly from the MUST and WON'T tables.
+
+| Enforced mechanically | Stays a review responsibility |
+|---|---|
+| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · `process.env.X!` · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) |
+
+Roughly half the constitution is mechanically checkable. The plugin claims exactly that half and says so — a linter that claims more than it checks is worse than none.
+
+```yaml
+- name: QA constitution
+  run: npx eslint "tests/**/*.ts" "pages/**/*.ts" --max-warnings 0
+```
+
+Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
+
+The rules ship with 14 `RuleTester` suites and 29 invalid-case assertions, **fault-injected to prove they bite** — disabling a rule's report yields `Should have 1 error but had 0`; corrupting the `require-strict-object` autofix yields `Output is incorrect`. Against a deliberately non-compliant spec, 13 of the 14 fire end to end through the ESLint CLI.
+
 ## Product-side constitutions (web + mobile)
 
 The skills govern how *tests* are written. Two further constitutions govern how the *application* is written, so those tests can exist at all — the shift-left half of the same contract:
