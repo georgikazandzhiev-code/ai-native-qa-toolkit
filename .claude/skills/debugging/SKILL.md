@@ -1,6 +1,8 @@
 ---
 name: debugging
 description: Investigate any Playwright test failure — failure-mode taxonomy (TimeoutError, strict mode, ZodError, detachment, network race, stale storage state), trace capture/replay, and choosing UI Mode vs Trace Viewer vs Inspector. Load whenever a test fails or behaves unexpectedly. Triggers — "test fails", "timeout", "ZodError", "trace". Never to silence a failure; for intermittent failures use flakiness-triage first.
+metadata:
+  category: running
 ---
 
 # Debugging Skill

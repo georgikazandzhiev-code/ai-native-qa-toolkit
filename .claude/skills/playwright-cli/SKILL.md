@@ -1,6 +1,8 @@
 ---
 name: playwright-cli
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
+metadata:
+  category: running
 ---
 
 # UI Exploration (`npx playwright open`)

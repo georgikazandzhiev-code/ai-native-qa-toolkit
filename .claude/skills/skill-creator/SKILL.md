@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Manual-only meta-skill for authoring and refactoring skills inside `~/.claude/skills/`. Invoke with `/skill-creator`. The built-in `~/.cursor/skills-cursor/create-skill/` covers generic Cursor format; this skill layers the project's **paired-rule pattern**, **layered topology**, **standardized SKILL.md structure**, **boundary discipline**, **project-truthful policy**, and **surface-drift policy** — all of which were learned the hard way through Tier 1 cleanup of 16 skills.
 
-A `postToolUse` hook ([.cursor/hooks/skill-validate.py](../../hooks/skill-validate.py)) validates every write under `~/.claude/skills/**/*.md` and surfaces frontmatter / length / structural defects back to the agent in the same turn.
+Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic `postToolUse` hook at `.cursor/hooks/skill-validate.py`; that file never existed, so nothing was checked — which is how 19 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
 
 > **Truth source.** Skill topology, rule disposition, migration sequence: [docs/cursor-skills-orchestration.md](../../../docs/cursor-skills-orchestration.md). Companion plan: [docs/framework-alignment-plan.md](../../../docs/framework-alignment-plan.md).
 
@@ -25,7 +25,7 @@ Non-negotiable. Every rule below was learned from a real drift incident in this 
 - **NO PAIRED RULES — rule content lives in skills.** This repo retired the fat per-area glob rules — invariants and workflow live in the matching skill (`api-testing`, `selectors`, `page-objects`, `test-standards`, etc.). The always-on rule file is `~/.claude/CLAUDE.md` (orchestrator with MUST/SHOULD/WON'T tables and the Routed Skill Index); `api-tests.mdc` / `ui-tests.mdc` exist only as thin glob routers (folder maps + skill pointers). New skills must NOT introduce new paired glob rules with rule content; consolidate everything into the skill.
 - **CROSS-REFERENCES MUST BE VERIFIED AND BIDIRECTIONAL.** When you cite a sibling skill in `See Also`, confirm the sibling exists (not a TBD placeholder), and update that sibling's `See Also` to mention the new skill back when relevant. Stale TBD references and one-way cross-links are the #1 source of audit churn.
 - **NO DRIFT TRIGGERS in any code example.** No `Zod 4` syntax in a Zod 3 codebase. No `field-field-` when frontend emits `schema-field-`. No bare `process.env.X` propagation when the canonical access is `!`. No `??` defaulting at call sites when defaults belong in `config/util/<service>.ts`. Verify every snippet against `type-safety` skill conventions and the actual codebase.
-- **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. The hook blocks writes with empty descriptions; nothing blocks weak descriptions — that's on the author.
+- **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. `npm run validate` errors on an empty description and warns on a thin one; neither blocks a weak but present one — that's on the author.
 - **NEW SKILLS START FROM `assets/SKILL-template.md`.** The template encodes the standardized structure. Copying from another skill is acceptable but you must verify every section is present.
 - **UPDATE `~/.claude/CLAUDE.md § Routed Detail Index`** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's Routed Detail Index is the live human-readable map; if it drifts, every model loading the orchestrator routes wrong.
 
@@ -55,7 +55,7 @@ The skill folder splits across three layers: **rules** (this `SKILL.md` + `refer
 | **[`references/schemas.md`](references/schemas.md)** | Schemas for `evals.json`, `eval_metadata.json`, `grading.json`, `benchmark.json`, `feedback.json`. | Phase 9 — when authoring assertions or interpreting tool output. |
 | **[`assets/eval_review.html`](assets/eval_review.html)** | Static / standalone review HTML for headless environments. | Phase 9 — when `webbrowser.open()` is unavailable. |
 
-**Boundary rule:** the authoring layer is loaded on every session; the measurement layer is opt-in for Phase 9 only. Don't load the measurement files unless the user wants quantitative validation. New `references/<topic>.md` files are added only when SKILL.md exceeds 380 lines or content is rarely-read background. **No nested `references/foo/bar.md`** — the hook blocks it.
+**Boundary rule:** the authoring layer is loaded on every session; the measurement layer is opt-in for Phase 9 only. Don't load the measurement files unless the user wants quantitative validation. New `references/<topic>.md` files are added only when SKILL.md exceeds 380 lines or content is rarely-read background. **No nested `references/foo/bar.md`.**
 
 ## Standardized SKILL.md structure
 
@@ -87,7 +87,7 @@ Every skill in this repo follows this exact section order. The template encodes 
 | `disable-model-invocation` | optional | `true` for manual-only (`/skill-name`) workflows. Default false. Skills with `true` skip the Phase 6 subagent test (discoverability is trivially "selected when typed"). |
 | `license`, `compatibility` | optional | Use only when needed. |
 
-The hook ([skill-validate.py](../../hooks/skill-validate.py)) enforces the hard items on write.
+`npm run validate` enforces the mechanically checkable items. It is a command you run, not a hook that fires — so running it is on you, and CI.
 
 ## Description recipe
 
@@ -436,7 +436,7 @@ User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) int
 - [`references/schemas.md`](references/schemas.md) — JSON schemas for evals / grading / benchmark / feedback (Phase 9)
 - [`assets/SKILL-template.md`](assets/SKILL-template.md) — Phase 3 starter
 - [`scripts/`](scripts/), [`agents/`](agents/), [`eval-viewer/`](eval-viewer/) — Phase 9 measurement pipeline
-- [`.cursor/hooks/skill-validate.py`](../../hooks/skill-validate.py) — automatic frontmatter / structure validation on save
+- `scripts/validate.mjs` — front-matter / structure / count / cross-reference validation, run via `npm run validate`
 
 **Orchestration:**
 

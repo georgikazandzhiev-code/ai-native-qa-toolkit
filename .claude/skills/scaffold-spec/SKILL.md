@@ -4,6 +4,8 @@ description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
   asks to add tests for a new endpoint, feature, or monitor type.
+metadata:
+  category: authoring
 ---
 
 # Scaffold Test Spec Files

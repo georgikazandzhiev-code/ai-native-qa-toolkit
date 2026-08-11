@@ -82,6 +82,29 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 | **`qe-pattern-memory`** | Cross-session learning as a git-tracked pattern store: confidence scoring, tier promotion, and *mandatory falsification*. A store that only counts successes converges on false confidence, so recording failures is a hard rule. Promotion to canonical is a pull-request review, never a self-assessment. |
 | **`owasp-security-testing`** | OWASP Top 10 and API Security Top 10 mapped to concrete QA test targets, layered on the negative-test matrix. |
 
+## Self-validation
+
+```bash
+npm run validate
+```
+
+Zero dependencies, so it runs on a fresh clone before anything is installed. Eight checks:
+
+| # | Check | Why it is here |
+|---|---|---|
+| 1 | Every skill has a parseable `SKILL.md` with `name` matching its folder, a non-empty `description` under 1024 chars, and a canonical `metadata.category` | 19 skills were missing `metadata.category` and nothing noticed |
+| 2 | No duplicate skill names | |
+| 3 | All six required sections present (`Critical`, `Anti-patterns`, `Self-review checklist`, `Examples`, `Troubleshooting`, `See Also`) | |
+| 4 | `mcp.json` is valid JSON, BOM-free, every server has a `command` or `url`, and no literal secret sits in `env` | |
+| 5 | `.cursor/rules/*.mdc` have front matter with a `description` unless `alwaysApply: true` | |
+| 6 | `.cursorignore` exists and excludes `node_modules` and `.env` | |
+| 7 | **README counts match the filesystem** — skills, commands, and the plugin's rule count | The README claimed 25 skills while 28 shipped |
+| 8 | **Every script the docs link to actually exists** | `skill-creator` asserted a `postToolUse` validation hook at `.cursor/hooks/skill-validate.py` for months. That file never existed, so nothing was validated — which is how checks 1 and 7 came to fail silently |
+
+Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Sixteen missing categories and five non-canonical ones were mechanical and are fixed; the false hook claim is replaced with a pointer to this command.
+
+**Known remaining failures, not hidden:** a handful of skills that predate the standardized structure are still missing `Examples` / `Troubleshooting` / `See Also`. That is content to write, not metadata to patch, so `npm run validate` currently exits non-zero on purpose. Wiring it into CI as a blocking gate is the step after those sections are written — a gate that is red on arrival gets disabled in a week.
+
 ## Enforcement — the rules a pipeline can refuse to merge
 
 Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **16 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.

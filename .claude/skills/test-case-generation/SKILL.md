@@ -2,7 +2,7 @@
 name: test-case-generation
 description: Generate requirements and test cases from a user story or acceptance criteria — 6-section package: story analysis, functional requirements, categorized test cases, security & compliance, k6 candidates, unclear requirements. Use when a story/AC is pasted and the user wants test cases or a test plan. Triggers — "generate test cases", "test plan", "user story", "acceptance criteria". Produces documents, not Playwright code (scaffold-spec for code).
 metadata:
-  category: domain
+  category: authoring
 disable-model-invocation: true
 ---
 
