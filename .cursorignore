@@ -1,0 +1,70 @@
+# Keep out of Cursor's index. Two reasons: cost and correctness.
+#
+# Cost — indexing generated trees and vendored code burns embedding budget on files nobody
+# will ever ask about.
+# Correctness — an agent that retrieves a staged package, a build artifact or a backup will
+# happily present stale content as current. Excluding them is a quality control, not tidiness.
+
+# ── dependencies & build output ────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+out/
+coverage/
+.turbo/
+.next/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ── secrets: never index, never retrieve ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets.json
+load-secrets.ps1
+
+# ── staged / generated QA packages ────────────────────────────────────────────
+# Generated per ticket and superseded constantly. Indexing them means an agent can
+# quote last sprint's spec as though it were the current one.
+packages/staged_*/
+allure-results/
+allure-report/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# ── backups & local state ─────────────────────────────────────────────────────
+*.bak
+*.bak-*
+*.orig
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# ── the eval harness's own fixtures ───────────────────────────────────────────
+# eslint-plugin-qa-constitution/smoke/ holds a deliberately non-compliant spec, and
+# lint-gate-eval/ holds generated files kept as evidence. Both are correct as artifacts
+# and wrong as examples — an agent must not learn locator or assertion style from them.
+eslint-plugin-qa-constitution/smoke/
+eslint-plugin-qa-constitution/lint-gate-eval/
+
+# ── large binaries ────────────────────────────────────────────────────────────
+*.zip
+*.7z
+*.mp4
+*.webm
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.docx
+*.xlsx
+*.pptx
