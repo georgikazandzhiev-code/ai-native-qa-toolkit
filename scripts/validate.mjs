@@ -21,30 +21,53 @@ const SKILLS = join(ROOT, '.claude', 'skills');
 
 const errors = [];
 const warnings = [];
+const exempt = [];
 const err = (where, msg) => errors.push(`${where}: ${msg}`);
 const warn = (where, msg) => warnings.push(`${where}: ${msg}`);
 
 const read = (p) => readFileSync(p, 'utf8');
 const dirs = (p) => (existsSync(p) ? readdirSync(p).filter((d) => statSync(join(p, d)).isDirectory()) : []);
 
-/** Minimal YAML front-matter reader — enough for the flat keys a SKILL.md uses. */
+/**
+ * Minimal YAML front-matter reader — enough for the keys a SKILL.md uses.
+ *
+ * Handles block scalars (`>-`, `>`, `|`, `|-`). Reading `description: >-` as the literal
+ * two-character value ">-" was a bug in this script: it reported a perfectly good
+ * three-line description as "only 2 chars". Fixed after the first run flagged it.
+ */
 function frontmatter(text) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
   if (!m) return null;
   const out = {};
+  const lines = m[1].split(/\r?\n/);
   let lastKey = null;
-  for (const raw of m[1].split(/\r?\n/)) {
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     if (!raw.trim() || raw.trim().startsWith('#')) continue;
+
+    const top = /^([\w-]+):\s*(.*)$/.exec(raw);
+    if (top) {
+      lastKey = top[1];
+      const val = top[2].trim();
+
+      // Block scalar: the value is the indented lines that follow.
+      if (/^[|>][-+]?$/.test(val)) {
+        const parts = [];
+        while (i + 1 < lines.length && (/^\s{2,}\S/.test(lines[i + 1]) || lines[i + 1].trim() === '')) {
+          parts.push(lines[++i].trim());
+        }
+        out[lastKey] = parts.join(' ').replace(/\s+/g, ' ').trim();
+        continue;
+      }
+      out[lastKey] = val === '' ? {} : val;
+      continue;
+    }
+
     const nested = /^\s+([\w-]+):\s*(.*)$/.exec(raw);
     if (nested && lastKey) {
       out[lastKey] = out[lastKey] && typeof out[lastKey] === 'object' ? out[lastKey] : {};
       out[lastKey][nested[1]] = nested[2].trim();
-      continue;
-    }
-    const top = /^([\w-]+):\s*(.*)$/.exec(raw);
-    if (top) {
-      lastKey = top[1];
-      out[lastKey] = top[2].trim() === '' ? {} : top[2].trim();
     }
   }
   return out;
@@ -110,9 +133,30 @@ for (const folder of skillDirs) {
     warn(where, `category "${cat}" is not canonical (${CANONICAL_CATEGORIES.join(' | ')}) — drift, fix on next touch`);
   }
 
-  // required sections
-  const missing = REQUIRED_SECTIONS.filter((s) => !text.includes(`\n${s}`) && !text.startsWith(s));
-  if (missing.length) err(where, `missing required section(s): ${missing.join(', ')}`);
+  // Required sections. A skill may declare itself a catalog or a pointer and be held to a
+  // reduced set — the template's "fill them or mark them explicitly absent" escape hatch.
+  // Deliberately narrow so it cannot become a way to opt out of writing docs:
+  //   · the opt-out must be declared in front matter, never inferred from size or shape
+  //   · `## See Also` is still required — cross-references matter most in a pointer
+  //   · every use is listed in the report, so the exemptions stay visible
+  const structure = fm.metadata && typeof fm.metadata === 'object' ? fm.metadata.structure : undefined;
+  const REDUCED = ['## See Also'];
+
+  if (structure && !['catalog', 'pointer'].includes(structure)) {
+    err(where, `metadata.structure "${structure}" is not recognised (catalog | pointer)`);
+  }
+
+  const applicable = structure ? REDUCED : REQUIRED_SECTIONS;
+  const missing = applicable.filter((s) => !text.includes(`\n${s}`) && !text.startsWith(s));
+  if (missing.length) {
+    err(where, `missing required section(s): ${missing.join(', ')}${structure ? ` (structure: ${structure})` : ''}`);
+  }
+  if (structure) {
+    if (!/^>\s|Why the full structure does not apply|structure: /m.test(text)) {
+      warn(where, `declares metadata.structure "${structure}" but states no reason in the body — say why the full structure does not apply`);
+    }
+    exempt.push(`${folder} (${structure})`);
+  }
 
   // length threshold
   const lines = text.split(/\r?\n/).length;
@@ -256,6 +300,12 @@ const pad = (n) => String(n).padStart(3, ' ');
 console.log('');
 console.log(`Toolkit validation — ${skillDirs.length} skills, root ${basename(ROOT)}`);
 console.log('');
+
+if (exempt.length) {
+  console.log(`STRUCTURE EXEMPTIONS (${exempt.length}) — held to See Also only, by explicit declaration:`);
+  for (const e of exempt) console.log(`  ~ ${e}`);
+  console.log('');
+}
 
 if (warnings.length) {
   console.log(`WARNINGS (${warnings.length}) — do not fail the run:`);

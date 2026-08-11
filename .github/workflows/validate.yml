@@ -1,0 +1,53 @@
+name: Validate
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  toolkit:
+    name: Toolkit structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Zero dependencies by design, so this runs before any install.
+      - name: Validate toolkit structure
+        run: npm run validate
+
+  plugin:
+    name: Lint plugin rules
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: eslint-plugin-qa-constitution
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install plugin dev dependencies
+        run: npm install --no-audit --no-fund
+
+      # 20 RuleTester suites, including the regression suites for every false
+      # positive the lint-gate eval exposed. Fault-injected to prove they bite.
+      - name: Run rule tests
+        run: node tests/rules.test.js
+
+      # The plugin must not violate the constitution it enforces: a deliberately
+      # non-compliant fixture has to be reported, not pass.
+      - name: Smoke test — the bad spec must fail the gate
+        run: |
+          if npx eslint --config smoke/eslint.config.mjs "smoke/tests/**/*.ts"; then
+            echo "::error::The known-bad fixture passed the gate — a rule has stopped firing."
+            exit 1
+          else
+            echo "Known-bad fixture correctly rejected."
+          fi

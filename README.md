@@ -101,9 +101,17 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. Eig
 | 7 | **README counts match the filesystem** — skills, commands, and the plugin's rule count | The README claimed 25 skills while 28 shipped |
 | 8 | **Every script the docs link to actually exists** | `skill-creator` asserted a `postToolUse` validation hook at `.cursor/hooks/skill-validate.py` for months. That file never existed, so nothing was validated — which is how checks 1 and 7 came to fail silently |
 
-Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Sixteen missing categories and five non-canonical ones were mechanical and are fixed; the false hook claim is replaced with a pointer to this command.
+Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 
-**Known remaining failures, not hidden:** a handful of skills that predate the standardized structure are still missing `Examples` / `Troubleshooting` / `See Also`. That is content to write, not metadata to patch, so `npm run validate` currently exits non-zero on purpose. Wiring it into CI as a blocking gate is the step after those sections are written — a gate that is red on arrival gets disabled in a week.
+What closing that gap involved, because none of it was cosmetic:
+
+- Sixteen skills had no `metadata.category` and five carried a non-canonical one (`workflow` is not in the set). Mechanical, fixed.
+- `scaffold-spec` was not missing content at all — it had `Checklist`, `Incorrect Usage` and `Edge Cases & Gotchas`, which are three required sections under non-canonical headings. Renamed, then `Critical`, `Examples` and `See Also` written.
+- `data-strategy` and `k6-load-testing` genuinely lacked sections; they are written. `k6` also went from 412 lines to 334 by moving four catalogs into a `reference.md`, which fixed the length warning at the same time.
+- The validator supports **declared exemptions, never silent ones.** A skill that is genuinely a catalog (a folder map, a test-id inventory) or a pointer into another project may declare `metadata.structure: catalog|pointer`. It is still required to carry `See Also`, must state in its body why the full structure does not apply, and is **listed in every validation run** so the exemption cannot hide. The two skills using it in the internal toolkit are client-specific and are not shipped here.
+- The validator found two bugs in itself along the way: it read `description: >-` as the literal two-character value `>-` and reported a good three-line description as "only 2 chars", and it needed to be pointed at the synced repo copy rather than the live `~/.claude/skills`.
+
+Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 20 rule suites and a smoke test asserting that a deliberately non-compliant fixture still gets rejected. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
 
 ## Enforcement — the rules a pipeline can refuse to merge
 

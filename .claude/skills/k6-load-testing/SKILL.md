@@ -9,6 +9,27 @@ metadata:
 
 Write realistic k6 performance tests in TypeScript for the platform APIs. Keep them deterministic, SLO-driven, and runnable locally or in CI.
 
+## What's in each file
+
+| File | Purpose | Load when |
+|------|---------|-----------|
+| **`SKILL.md`** (this file) | Rules, test-type decision, SLO workflow, anti-patterns. | **Always** — on any performance-testing task. |
+| **[`reference.md`](reference.md)** | Catalogs: executor choice, threshold and custom-metric syntax, shared helpers, helper scripts. | When configuring a run or reaching for a specific executor or metric. |
+
+**Boundary rule:** decisions and rules here; syntax and catalogs in `reference.md`.
+
+## Critical
+
+Non-negotiable. A load test that breaks these produces a number nobody can act on.
+
+- **NEVER run a load test against production without written authorisation naming the window.** A load generator is indistinguishable from an attack. Authorisation, the environment, and the agreed window go in the ticket before the first run.
+- **ALWAYS define thresholds before the first run, derived from the SLO.** A run with no threshold cannot fail, so it cannot tell you anything. Numbers invented after seeing the result are a description, not a test.
+- **NEVER report a percentile from a run whose error rate was non-trivial.** Latency measured while requests are failing is the latency of the failure path. Resolve or explain the errors first, then read the timing.
+- **ALWAYS warm up before measuring, and state for how long.** Cold caches, JIT and connection setup make the first seconds unrepresentative; including them silently inflates every percentile.
+- **NEVER share one data value across virtual users on a uniqueness-constrained field.** Every VU creating the same row measures the conflict path at scale. Parameterise per VU — see the `data-strategy` skill.
+- **ALWAYS state the shape of the load, not just the total.** "1000 requests" is not reproducible; "100 VUs ramping over 2 minutes, held for 5" is. The executor choice is part of the result.
+- **NEVER point a load test at a shared functional-test environment mid-suite.** It produces flake in the functional suite that reads as a product defect.
+
 ## When to use which test type
 
 | Type | Goal | Duration | VUs / rate | Pass criteria |
@@ -146,151 +167,6 @@ export default function () {
 
 ---
 
-## Executor choice
-
-| Executor | Use for |
-|----------|---------|
-| `constant-arrival-rate` | Hold a fixed RPS — the "real" load pattern. **Default for load tests.** |
-| `ramping-arrival-rate` | Ramp RPS up/down — load with warm-up, stress to find the knee. |
-| `constant-vus` | Hold N concurrent users — use when measuring concurrency, not throughput. |
-| `ramping-vus` | Ramp VUs up/down — legacy; prefer arrival-rate variants unless modelling user sessions. |
-| `per-vu-iterations` | Smoke tests with deterministic iteration count per VU. |
-| `externally-controlled` | Grafana k6 Cloud / CLI-driven scaling. |
-
-**Rule of thumb:** arrival-rate executors decouple target RPS from VU count. Use them whenever you care about throughput SLOs.
-
----
-
-## Thresholds & custom metrics
-
-### Built-in metrics to threshold
-
-- `http_req_failed` — error rate (`rate<0.01`)
-- `http_req_duration` — latency percentiles (`p(95)<500`)
-- `checks` — assertion pass rate (`rate>0.99`)
-- `iteration_duration` — end-to-end scenario time (`p(95)<2000`)
-
-### Custom metrics
-
-```ts
-// tests/perf/lib/metrics.ts
-import { Trend, Counter, Rate } from "k6/metrics";
-
-export const createLatency = new Trend("create_monitor_latency", true);
-export const createFailures = new Rate("create_monitor_failures");
-export const createdMonitors = new Counter("created_monitors_total");
-```
-
-Use them to threshold business-level SLOs that HTTP latency alone doesn't capture (e.g., end-to-end "monitor created & visible in listing" time).
-
-### Threshold tagging pattern
-
-Tag each request with `name` (endpoint identity) **and** `operation` (business action):
-
-```ts
-http.get(url, { tags: { name: "list_monitors", operation: "read" } });
-```
-
-Then threshold by both:
-
-```ts
-thresholds: {
-  "http_req_duration{operation:read}":  ["p(95)<300"],
-  "http_req_duration{operation:write}": ["p(95)<800"],
-}
-```
-
----
-
-## Shared helpers
-
-### `lib/env.ts` — centralised env loading
-
-```ts
-export const BASE_URL = __ENV.BASE_URL ?? "https://staging.example.com";
-export const TOKEN    = __ENV.TOKEN    ?? "";
-export const TENANT   = __ENV.TENANT   ?? "default";
-
-if (!TOKEN) throw new Error("TOKEN env var is required");
-```
-
-### `lib/http.ts` — checked HTTP client
-
-```ts
-import http, { RefinedParams, ResponseType } from "k6/http";
-import { check } from "k6";
-import { TOKEN, TENANT } from "./env";
-
-const defaultHeaders = {
-  "Authorization": `Bearer ${TOKEN}`,
-  "X-Tenant":      TENANT,
-  "Content-Type":  "application/json",
-};
-
-type Params = RefinedParams<ResponseType> & { name: string };
-
-export function getJson(url: string, { name, ...rest }: Params) {
-  const res = http.get(url, {
-    ...rest,
-    headers: { ...defaultHeaders, ...rest.headers },
-    tags: { name, ...rest.tags },
-  });
-  check(res, { [`${name} status 2xx`]: (r) => r.status >= 200 && r.status < 300 });
-  return res;
-}
-
-export function postJson<T>(url: string, body: T, { name, ...rest }: Params) {
-  const res = http.post(url, JSON.stringify(body), {
-    ...rest,
-    headers: { ...defaultHeaders, ...rest.headers },
-    tags: { name, ...rest.tags },
-  });
-  check(res, { [`${name} status 2xx`]: (r) => r.status >= 200 && r.status < 300 });
-  return res;
-}
-```
-
-### Data-driven fixtures — `SharedArray`
-
-`SharedArray` loads the file **once per test run** and shares the read-only copy across all VUs — critical for large fixtures (otherwise each VU copies the data and memory blows up).
-
-```ts
-import { SharedArray } from "k6/data";
-import { randomItem } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
-
-const postcodes = new SharedArray("postcodes", () =>
-  JSON.parse(open("../fixtures/postcodes.json")) as string[]
-);
-
-export default function () {
-  const pc = randomItem(postcodes);
-  // ...
-}
-```
-
-### Auth — login once, reuse per VU
-
-```ts
-import { postJson } from "./http";
-
-let cachedToken: string | null = null;
-
-export function getToken(): string {
-  if (cachedToken) return cachedToken;
-  const res = postJson(`${__ENV.AUTH_URL}/token`, {
-    client_id: __ENV.CLIENT_ID,
-    client_secret: __ENV.CLIENT_SECRET,
-    grant_type: "client_credentials",
-  }, { name: "auth_token" });
-  cachedToken = res.json("access_token") as string;
-  return cachedToken;
-}
-```
-
-Note: `cachedToken` is per-VU (each VU has its own module state), **not** global — which is what you want for realistic session modelling.
-
----
-
 ## Running tests
 
 ### Locally (k6 binary)
@@ -357,20 +233,6 @@ Copy this checklist for every new perf test:
 
 ---
 
-## Helper scripts
-
-Three scripts in `scripts/` (sibling to this SKILL.md). **Execute them**; don't copy their content into tests.
-
-| Script | Purpose |
-|--------|---------|
-| `scripts/bundle.sh <entry.ts> <out.js>` | Bundle a single TS entrypoint via esbuild into k6-runnable JS |
-| `scripts/run.sh <entry.ts> [k6-args...]` | Bundle + run with k6 binary (auto-detects Docker if k6 not installed) |
-| `scripts/check-thresholds.sh <summary.json>` | Parse k6 summary.json, exit nonzero if any threshold failed |
-
-All scripts are bash + POSIX-compatible. Run from repo root.
-
----
-
 ## Anti-patterns
 
 - ❌ **Sleeps to pace load** — use arrival-rate executors instead. `sleep()` is for think-time between user actions, not throughput control.
@@ -409,3 +271,63 @@ export default function () {
 
 Bundle: `scripts/bundle.sh test.ts dist/test.js`
 Run: `k6 run dist/test.js`
+
+## Self-review checklist
+
+- [ ] Authorisation for the target environment exists in writing, with the window named.
+- [ ] Thresholds derived from the SLO and committed **before** the first run.
+- [ ] Executor and load shape stated explicitly: VUs, ramp, hold, iterations.
+- [ ] Warm-up period defined and excluded from the reported percentiles.
+- [ ] Per-VU data parameterised; no shared value on a uniqueness-constrained field.
+- [ ] Error rate reported alongside every latency figure, never latency alone.
+- [ ] Run reproducible from the committed script and config, with no local edits.
+- [ ] Result recorded with date, build, environment and load shape. A number missing any of the four is not comparable to the next run.
+- [ ] Environment left as found; nothing the run seeded survives it.
+
+## Examples
+
+### Example 1 — turning "the API is slow" into a test that can fail
+
+**Ask:** load-test the projects list endpoint, it feels slow.
+
+"Feels slow" is not a threshold. Turn it into one before writing the script:
+
+1. **Find the SLO.** If none exists, that is the first finding — propose one from current behaviour and get it agreed, rather than inventing a number inside the script.
+2. **Pick the shape.** A steady read endpoint under normal traffic is a ramp-and-hold, not a spike. State it: 50 VUs, 1-minute ramp, 5-minute hold.
+3. **Set both thresholds** — the latency percentile and the error rate. Both, or the run cannot distinguish fast-and-broken from slow-and-correct.
+4. **Warm up** for 30 seconds and exclude it from the reported figures.
+5. **Run, then read the error rate first.** If it is non-trivial, the latency number is not reportable yet.
+
+The deliverable is a threshold that fails when the SLO is missed, not a graph.
+
+### Example 2 — a spike test that only measured the conflict path
+
+**Symptom:** a create-project spike test reports a percentile comfortably inside the SLO, and a 60% error rate.
+
+**Cause:** every VU posted the same project name. The endpoint enforces uniqueness, so most requests short-circuited on a conflict — cheap, fast, and unrepresentative. The flattering percentile was the latency of a validation rejection.
+
+**Fix:** parameterise the name per VU and per iteration, then re-run. The percentile rises, the error rate collapses, and only now is the number about the behaviour under test.
+
+**The general lesson:** read the error rate before the percentile, every time. A good latency figure beside a bad error rate almost always means the load never reached the code path you cared about.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Latency looks excellent and the error rate is high | The load never reached the intended code path; requests are failing early and cheaply | Resolve the errors first. Read the error rate before any percentile. |
+| Results differ substantially run to run on the same build | No warm-up, too short a hold, or a noisy shared environment | Add warm-up, lengthen the hold, and record which environment produced the number. |
+| The run cannot fail | No thresholds, or thresholds set from the observed result after the fact | Derive thresholds from the SLO and commit them before running. |
+| The functional suite turns flaky while a load test runs | The load test is writing to a shared environment | Isolate the target, or schedule outside the functional window. |
+| Fine locally, terrible in CI | Different generator resources, or the generator itself is saturated | Check generator CPU and network before concluding anything about the service under test. |
+| The first run after a deploy is much worse | Cold caches and connection setup | Expected; that is what warm-up excludes. Report cold-start separately if it matters. |
+| Cannot compare this run to an earlier one | The earlier result lacks build, environment or load shape | Record all four with every result. Without them a number is not a baseline. |
+
+## See Also
+
+- [`api-testing`](../api-testing/SKILL.md) — functional API correctness. Load testing assumes the endpoint is already correct; verify that first.
+- [`data-strategy`](../data-strategy/SKILL.md) — per-VU parameterisation. Shared fixed data is the most common cause of a meaningless load result.
+- [`config`](../config/SKILL.md) — environment URLs and tokens come from configuration, never from the script.
+- [`defect-prediction`](../defect-prediction/SKILL.md) — which endpoint to load-test first when the budget covers only a few.
+- [`flakiness-triage`](../flakiness-triage/SKILL.md) — when a load run destabilises the functional suite, that skill classifies the fallout.
+- [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — a load generator against an unauthorised target is an attack; the authorisation discipline is shared.
+- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — Sources of Truth applies to thresholds and URLs alike.

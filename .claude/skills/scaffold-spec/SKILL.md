@@ -20,6 +20,17 @@ This skill exists so that **every new spec starts identical** regardless of who 
 
 The steps are ordered deliberately: determine type → read the rule → study a real example → generate → create supporting files → update the rule. Skipping "study an existing spec" (Step 3) is the #1 cause of specs that look right but violate project patterns in subtle ways.
 
+## Critical
+
+Non-negotiable. A scaffolded spec that breaks any of these is worse than no spec, because it looks finished.
+
+- **NEVER scaffold from memory of the conventions — read them.** The spec type decides which rule applies, and the rules differ per type. Guessing produces a file that lints clean and violates the framework.
+- **NEVER scaffold a UI spec before exploring the live app.** Locators invented from a description are placeholders wearing the costume of real selectors. Use `npx playwright open` per the `playwright-cli` skill; if it cannot reach the app, stop and say so rather than shipping guesses.
+- **ALWAYS study an existing spec of the same type first.** The scaffold must match what is already there — import paths, tag, `qase.suite` placement, cleanup shape — not a generic template.
+- **ALWAYS enumerate the coverage plan before writing test bodies** for an API spec: every status code from the contract, as a comment block at the top. A scaffold that covers only the happy path has silently redefined "done".
+- **NEVER leave a scaffolded spec with placeholder assertions.** `expect(true).toBe(true)`, an empty body, or a TODO where an assertion belongs is a false green — the `require-assertion-in-test` lint rule will reject it, and it should.
+- **ALWAYS run the spec before reporting the scaffold complete.** A scaffold that has never executed is a draft. See the constitution's Verification Standard.
+
 ## Step 1: Determine Spec Type
 
 Ask the user (or infer from context) which type of spec to create:
@@ -207,7 +218,7 @@ After creating the spec, update the matching router in the repository's repo-con
 - Helpers and schemas created
 - Known bugs found
 
-## Checklist
+## Self-review checklist
 
 - [ ] Imports follow the project pattern exactly
 - [ ] Tags match the spec type (`@App-API`, `@App-E2E`, `@App-regression`)
@@ -218,7 +229,7 @@ After creating the spec, update the matching router in the repository's repo-con
 - [ ] No `any` types — explicit generics on `apiRequest<T>()`
 - [ ] `test.step` used for multi-phase tests with GIVEN/WHEN/THEN
 
-## Incorrect Usage — Don't Do This
+## Anti-patterns
 
 ### Wrong: Cleanup inside the test body
 
@@ -395,7 +406,7 @@ test("Verify unsupported methods return 405", { tag: "@App-API" }, async ({ apiR
 });
 ```
 
-## Edge Cases & Gotchas
+## Troubleshooting
 
 Things that will bite you if you don't account for them upfront:
 
@@ -447,3 +458,38 @@ E2E CRUD flows need `test.setTimeout(300_000)` at the describe level. Without it
 ### Functional tests: always close the sheet
 
 Every functional test that opens a form/sheet must close it at the end — even if the test fails partway through. Use `test.afterEach` or ensure the `beforeEach` navigation resets state. Leaving a sheet open breaks the next test's navigation.
+
+## Examples
+
+### Example 1 — API spec for a new endpoint
+
+**Ask:** "scaffold the spec for POST /api/v1/projects."
+
+1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@App-API`.
+2. **Conventions** — read `api-testing` and `test-standards` before writing anything.
+3. **Contract first** — the OpenAPI document is the source of truth; enumerate 201, 400, 401, 403/404, 409 as a coverage-plan comment block.
+4. **Study a sibling** — open the nearest existing API spec and copy its shape: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
+5. **Negative matrix** — one test per required field omitted, plus an invalid-type loop. Not a single empty-body test.
+6. **Cleanup** — every created project deleted in `afterEach`/`afterAll`.
+7. **Run it.** Then report.
+
+The scaffold is finished when `npx eslint` is clean and the spec has executed — not when the file exists.
+
+### Example 2 — UI spec where exploration is blocked
+
+**Ask:** "scaffold the E2E spec for the settings screen."
+
+`npx playwright open` cannot reach the environment — auth fails. **Stop.** Do not scaffold locators from the ticket description.
+
+Report the blocker with the exact failure, and offer what can be done without the live app: the spec skeleton with its tag, describe block, fixture wiring and cleanup, with the locator layer explicitly left unwritten and the page object not created. That is an honest partial deliverable. A file full of `getByTestId('save-button')` guesses is not — it will pass review, fail on first run, and cost more to debug than it saved.
+
+## See Also
+
+- [`test-standards`](../test-standards/SKILL.md) — spec-file conventions: barrel imports, the single-tag whitelist, Qase wiring, placement by type. Read before scaffolding anything.
+- [`api-testing`](../api-testing/SKILL.md) — the negative matrix, schema validation idiom and cleanup rules an API scaffold must satisfy.
+- [`selectors`](../selectors/SKILL.md) — locator priority for any UI scaffold.
+- [`page-objects`](../page-objects/SKILL.md) — when the scaffold needs a POM alongside the spec.
+- [`playwright-cli`](../playwright-cli/SKILL.md) — the mandatory explore-before-generate step for UI work.
+- [`fixtures`](../fixtures/SKILL.md) — registering a new page object for injection.
+- [`pr-review`](../pr-review/SKILL.md) — run before pushing the scaffold.
+- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — the pre-edit checklist and the Verification Standard both apply to a scaffold.

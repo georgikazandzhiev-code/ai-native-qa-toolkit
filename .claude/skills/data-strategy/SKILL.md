@@ -300,6 +300,53 @@ Before finishing any data-related change, confirm:
 - [ ] If your test needs a fresh user, it uses Pattern 7. If it needs a fixed persona, it uses storage state + env token.
 - [ ] Object Mothers delegate to factories; factories have not been duplicated to fit a scenario.
 
+## Examples
+
+### Example 1 — a new endpoint needs a payload, and the temptation is a fixture file
+
+**Ask:** "add the create-project API tests; the body needs `name`, `description`, `ownerId`."
+
+The instinct is a `test-data/app/projects.json` with a ready payload. That is the wrong default here, and the seven patterns say why:
+
+1. **`name` must be unique per run.** Two workers, or one rerun before cleanup, and a fixed name collides on the 409 path. Faker, not JSON.
+2. **`ownerId` must reference a row that actually exists.** A hardcoded uuid is a hardcoded id — forbidden, and it rots the first time the environment is reset. Resolve it in `beforeAll` by listing users and taking the first, failing loudly if none exists.
+3. **`description` is genuinely fixed** — it is not asserted on and not unique. A constant is fine; it belongs with the body builder, not in its own file.
+4. **The token comes from `process.env.X!`**, never a file.
+
+The finished shape: a body builder in `helpers/app/` that takes the resolved `ownerId` and a faker name, plus one `beforeAll` that resolves the owner. No new JSON file — which is what § Search-before-write is for.
+
+### Example 2 — two specs start failing on each other
+
+**Symptom:** `projects-crud.spec.ts` passes alone and fails in the suite with a `409` on create.
+
+**Cause, per § Parallel-safety rules:** both specs create a project with a name taken from the same fixed JSON value. Worker A's row still exists when worker B creates, so B collides. The suite is green single-worker and red in CI, which is the signature of shared fixed data.
+
+**Fix:** the name becomes faker-generated per test; the fixed JSON value is deleted rather than renamed, so nothing can reach for it again. Cleanup stays as it was — the bug was never in teardown, it was in the data being shared in the first place.
+
+**Verify:** 5 consecutive isolated runs plus one full-tag run, per `flakiness-triage`.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `409 Conflict` on create, only in CI or only at parallelism | A fixed name from JSON, shared across workers | Faker per test. Delete the JSON value so it cannot be reused. |
+| A hardcoded uuid stops resolving after an environment reset | An id was treated as fixed data; ids are environment state, not data | Resolve it at runtime in `beforeAll` and fail loudly when the lookup returns nothing. |
+| Test passes locally, `401` in CI | Credentials read from a file, or a storage state older than its token TTL | Tokens come from `process.env.X!`. Re-run the auth setup project before assuming a code bug. |
+| Faker produced a value the API rejects | Unconstrained generator against a validated field — a name too long, an email shape the backend refuses | Constrain the generator to the contract, do not loosen the assertion. |
+| Two JSON files hold the same constant | § Search-before-write was skipped | Grep before adding. Consolidate into one, then update both consumers atomically per `refactor-values`. |
+| Cleanup deletes a row another spec is mid-read on | Data is shared where it should be per-test | Per-test data is the fix; ordering teardown around a shared row only moves the race. |
+| A seeded entity survives the run | Creation is not paired with teardown for the failure path | Capture the id at creation and delete in `afterEach`, so an assertion failure still cleans up. |
+
+## See Also
+
+- [`api-testing`](../api-testing/SKILL.md) — where the payloads this skill decides about are consumed, and the cleanup rules that pair with seeding.
+- [`helpers`](../helpers/SKILL.md) — body builders and CRUD wrappers are the right home for generated data; signature shape and cleanup ordering live there.
+- [`fixtures`](../fixtures/SKILL.md) — per-test users and storage states are injected, not constructed in a test.
+- [`config`](../config/SKILL.md) — environment variables and URLs; this skill covers data, that one covers configuration.
+- [`enums`](../enums/SKILL.md) — repeated strings belong there, not in a test-data file.
+- [`refactor-values`](../refactor-values/SKILL.md) — read before changing any existing fixed value; consumers must update atomically.
+- [`flakiness-triage`](../flakiness-triage/SKILL.md) — shared fixed data is a leading cause of the cross-test interference that skill diagnoses.
+- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Sources of Truth and the WON'T rule against hardcoded ids both constrain every decision here.
 ## Additional resources
 
 - [reference.md](reference.md) — env-token catalog, JSON file catalog, helper catalog, storage state catalog, faker recipes.
