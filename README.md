@@ -12,6 +12,12 @@ An agent with no rules does not save time. It produces confidently wrong code an
 
 So the interesting question is not *how do we get AI to write tests*. It is **what has to be true before we trust the output.** That is what this repository answers.
 
+## See it work — one requirement traced to a passing test
+
+Before reading 16,000 lines of rules, read the **[worked example](examples/README.md)**. A real feature built through the full loop: 14 requirements → 29 documented test cases → 66 tasks → 49 passing tests, with one security requirement traced end to end from a single sentence in the spec to six named, green tests.
+
+The short version of why it matters: `FR-009` said a user must not learn that another user's record exists. That became a documented decision to return `404` rather than `403`, which is now mechanically verifiable in the API contract — `openapi.yaml` documents `404` on every affected operation and contains **zero** occurrences of `403`. One sentence, one decision, six tests, all greppable.
+
 ## How it works
 
 Three layers, loaded progressively:
