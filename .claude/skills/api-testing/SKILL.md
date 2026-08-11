@@ -235,14 +235,14 @@ Every CRUD spec covers these scenarios. Use the matrix as a checklist when autho
 
 | Status | Trigger | Schema / Body assertion | Notes |
 |--------|---------|-------------------------|-------|
-| `200/201` | Happy path with full body | `<Resource>Schema.parse(body)` + field assertions | Synthetics `POST` returns **201**, admin tenants/users `POST` returns **200** — match the actual endpoint |
-| `400` | Invalid payload, invalid path id, missing required field, empty body `{}` | `APIErrorSchema.parse(body)` | One `test()` per validation concern; loop over `invalidString`/`invalidIntegerTypes`/etc. **inside** the test with `expect.soft`. See § Per-field invalid-type loop |
-| `401` | Omit `headers` entirely | `GatewayErrorSchema.parse(body)` | Do NOT pass an empty string token; **omit the property** |
-| `401` | Wrong-realm / wrong-issuer token | `GatewayErrorSchema.parse(body)` | Distinct from "no token" — both return 401 with the gateway shape |
+| `200/201` | Happy path with full body | `expect(<Resource>Schema.parse(body)).toBeTruthy()` + field assertions | Synthetics `POST` returns **201**, admin tenants/users `POST` returns **200** — match the actual endpoint |
+| `400` | Invalid payload, invalid path id, missing required field, empty body `{}` | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | One `test()` per validation concern; loop over `invalidString`/`invalidIntegerTypes`/etc. **inside** the test with `expect.soft`. See § Per-field invalid-type loop |
+| `401` | Omit `headers` entirely | `expect(GatewayErrorSchema.parse(body)).toBeTruthy()` | Do NOT pass an empty string token; **omit the property** |
+| `401` | Wrong-realm / wrong-issuer token | `expect(GatewayErrorSchema.parse(body)).toBeTruthy()` | Distinct from "no token" — both return 401 with the gateway shape |
 | `403` | Valid token without required scope (`USER_ACCESS_TOKEN_ZERO`) | `expect(body).toBeNull()` | Only when ZERO env var is provisioned for the test environment |
-| `404` | Non-existent uuid (`test-data/app/<resource>.json` `nonExistentId`) | `APIErrorSchema.parse(body)` | Distinct from 400 invalid-format id |
+| `404` | Non-existent uuid (`test-data/app/<resource>.json` `nonExistentId`) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Distinct from 400 invalid-format id |
 | `405` | Wrong verb on a real path (loop **inside** a single test, not outside) | `expect(body).toBeNull()` | See `tests/app/api/tenant-service/admin-realms.spec.ts` for the canonical loop |
-| `409` | Duplicate name / conflicting state (e.g. probe still bound to synthetic) | `APIErrorSchema.parse(body)` | Synthetics-then-probes cleanup ordering exists because of this |
+| `409` | Duplicate name / conflicting state (e.g. probe still bound to synthetic) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Synthetics-then-probes cleanup ordering exists because of this |
 
 Project-specific quirks:
 - `PATCH /synthetics/:id`: an invalid body fails validation **before** the resource lookup (400), while a valid body with a non-existent uuid returns 404 — both branches are covered by an active test in `icmp-synthetic-monitor.spec.ts`.

@@ -146,10 +146,10 @@ test(
 
 ### What to test
 
-1. **Happy path** — `200` + `Get<Resource>ResponseSchema.parse(body)` + every echoed field equals the request payload (see § 12 for setup-then-read).
+1. **Happy path** — `200` + `expect(Get<Resource>ResponseSchema.parse(body)).toBeTruthy()` + every echoed field equals the request payload (see § 12 for setup-then-read).
 2. **Identity** — `expect(body.<resource>.id).toBe(<resourceId>)` so a cross-tenant or wrong-id leak fails loudly.
-3. **Invalid id format** — loop over `["!@#$%", "null", "<script>"]` (or use `invalidString` from [`fixtures/api/invalid-types`](../../../fixtures/api/invalid-types.ts)). Each must return **400** with `APIErrorSchema.parse(body)`.
-4. **Non-existent id** — use `nonExistentId` from `test-data/app/<resource>.json` (or a fresh `faker.string.uuid()`). Returns **404** with `APIErrorSchema.parse(body)`.
+3. **Invalid id format** — loop over `["!@#$%", "null", "<script>"]` (or use `invalidString` from [`fixtures/api/invalid-types`](../../../fixtures/api/invalid-types.ts)). Each must return **400** with `expect(APIErrorSchema.parse(body)).toBeTruthy()`.
+4. **Non-existent id** — use `nonExistentId` from `test-data/app/<resource>.json` (or a fresh `faker.string.uuid()`). Returns **404** with `expect(APIErrorSchema.parse(body)).toBeTruthy()`.
 5. **Cross-tenant access** — Tenant A's token on Tenant B's resource → **404, not 403**. See [`tests/app/api/shared/cross-tenant-isolation.spec.ts`](../../../tests/app/api/shared/cross-tenant-isolation.spec.ts) and [`tests/app/api/shared/cross-tenant-metrics-isolation.spec.ts`](../../../tests/app/api/shared/cross-tenant-metrics-isolation.spec.ts) for both shapes (tenant-scoped via token, admin-scoped via tenantId-in-path).
 6. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped resource), 403 (ZERO if provisioned).
 7. **GET-after-DELETE** — covered by the DELETE spec (see § 9), not duplicated here.
@@ -227,7 +227,7 @@ test(
 
 ### What to test
 
-1. **Happy path with full body** — send every required field, `200` + `Update<Resource>ResponseSchema.parse(body)`. Then `GET /<resource>/{id}` and assert **every** field equals the new body (not the old state).
+1. **Happy path with full body** — send every required field, `200` + `expect(Update<Resource>ResponseSchema.parse(body)).toBeTruthy()`. Then `GET /<resource>/{id}` and assert **every** field equals the new body (not the old state).
 2. **Field-by-field replacement** — one test per field: send all required fields but vary one. GET-after to prove only that field changed and the rest match the new body.
 3. **Cleared fields** — fields **not** in the PUT body must be reset / cleared (the distinguishing PUT trait vs PATCH). Verify with GET-after.
 4. **Missing required field** → 400 (PUT requires the complete object).
@@ -305,7 +305,7 @@ When the API uses JSON-Schema `allOf` discriminated by a field (synthetics dispa
 
 ### What to test
 
-1. **Happy path** — `200` + `Delete<Resource>ResponseSchema.parse(body)` + `body.<resource>Id === <deletedId>` + `body.status === "deleted"`. Capture into a multi-step test that also covers items 2–3.
+1. **Happy path** — `200` + `expect(Delete<Resource>ResponseSchema.parse(body)).toBeTruthy()` + `body.<resource>Id === <deletedId>` + `body.status === "deleted"`. Capture into a multi-step test that also covers items 2–3.
 2. **GET-after-DELETE** → 404 + `APIErrorSchema` (the entity is gone).
 3. **Re-DELETE same id** → 404 + `APIErrorSchema` (idempotency-as-404, not idempotency-as-200). See [`icmp-synthetic-monitor.spec.ts:1847`](../../../tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts) and [`admin-tenants.spec.ts:1139`](../../../tests/app/api/tenant-service/admin-tenants.spec.ts).
 4. **Invalid id format** → 400. Loop `["!@#$%", "null", "<script>"]`.

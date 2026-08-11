@@ -44,27 +44,24 @@ Not aspirations — these are the rules the agent is held to, and the reason the
 
 ## Does it work? Measured, not asserted
 
-The toolkit argues that AI output must be proven rather than asserted, so the skills were measured the same way. Blind A/B: 6 eval cases, 45 checkable expectations, `claude-opus-5` at `effort: high` on both arms — one arm reads the skill in full, the other has the skill and constitution withheld — then a grader scores both without knowing which is which.
+The toolkit argues that AI output must be proven rather than asserted, so the skills were measured the same way — three times, with the method itself corrected between runs.
 
-| | Expectations met | Rate |
+**The metric that finally worked is a machine one.** Both arms generate a real `.ts` file from an identical prompt; the score is the violation count from `eslint-plugin-qa-constitution`. No rubric, no LLM grader, no grader variance. The prompts deliberately withhold the fixtures-barrel path and the tag whitelist, because whether the skill transmits house conventions is the thing being measured.
+
+| Task | Baseline | With skill |
 |---|---:|---:|
-| **With skill** | 40 / 45 | **88.9%** |
-| **Baseline** (no skill) | 40 / 45 | **88.9%** |
+| API endpoint spec | **12** | **0** |
+| Settings page object | **2** | **0** |
+| Four-call lifecycle spec | **3** | **0** |
+| **Total** | **17** violations / 416 lines | **0** violations / 742 lines |
 
-**No measured lift overall**, and one skill measurably *hurt*:
+The skill arm produced 78% more code and broke no rule. The baseline invented a tag that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a test body, and left a test untagged — conventions it had no way to know.
 
-| Skill | With skill | Baseline | Δ |
-|---|---:|---:|---:|
-| `api-testing` | 15/16 | 15/16 | 0 |
-| `selectors` | **12/15** | 14/15 | **−2** |
-| `mutation-testing` | **13/14** | 11/14 | **+2** |
+**The earlier runs found no lift, and that result stands as published.** Two LLM-graded runs over 45 written expectations tied at 40/45, because most of those expectations measured general competence rather than house convention. Run 2 also caught a real content defect in `selectors` — it was reaching for `data-testid` against its own priority hierarchy — which is fixed and documented.
 
-Published unchanged. Two things the numbers actually say:
+**The harness was wrong six times before it was right.** The first pass of run 3 reported the skill arm as *worse*; every extra finding turned out to be a defect in the linter or the eval config, not in the skill. The most consequential: five "discarded schema parse" findings were `expect.soft(Schema.parse(body), label).toBeTruthy()` — the correct form for a negative-case loop. Published as first reported, this repository would have claimed authoritatively that its own skill violates the rule it exists to enforce. What prevented that is a metric which names a file and a line, and a line that said the opposite when opened. **A report is not evidence; the line is.** All six defects are fixed and locked in with regression suites.
 
-- **`selectors` has a real content defect.** In both its cases the skill arm reached for `data-testid` and CSS structural selectors — against the skill's own priority hierarchy — while the baseline used roles. The working hypothesis is that the long Radix-recipe and test-id-taxonomy sections drown the hierarchy: volume beating precedence.
-- **The rubric partly measures the wrong thing.** A strong model already knows Playwright and Zod, so expectations covering general good practice pass unaided. The one clear win came on a governance expectation: asked to hit an arbitrary 80% mutation score before a release, the baseline shipped `thresholds.break: 80` into CI while the skill arm refused the vanity metric and gated on regression against a baseline instead. **These skills do not teach the model test automation — they constrain what it will agree to.**
-
-Full per-case detail, limitations, and the resulting fix backlog: **[BENCHMARK.md](BENCHMARK.md)**. Eval definitions and machine-readable results live at `.claude/skills/<skill>/evals/`.
+Full per-case detail, every defect, and the remaining work: **[BENCHMARK.md](BENCHMARK.md)**. Machine-readable results at `.claude/skills/<skill>/evals/`.
 
 ## The skills
 

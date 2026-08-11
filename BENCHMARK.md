@@ -97,6 +97,87 @@ Both were fixed after run 2: the exception is now explicitly scoped to the **tri
 
 The loop works: a published number exposed a real content defect, the defect was diagnosed from the skill's own text, the fix was applied, and the re-run confirmed the specific behaviour changed. What it did **not** establish is a score gain — and at two cases per skill it could not have. The next honest step is more cases per skill, not another tweak.
 
+## Run 3 — the lint gate: an objective metric, and four defects it found in itself
+
+Runs 1 and 2 graded with an LLM against written expectations. Most of those expectations measured
+general competence, which a capable model already has, so the arms tied. Run 3 replaced the grader
+with a **machine**: both arms generate a real `.ts` file, and the score is the violation count from
+`eslint-plugin-qa-constitution`. No judgement, no rubric, no grader variance.
+
+Three tasks — a POST endpoint spec, a page object, a four-call lifecycle spec. Identical prompts for
+both arms. The prompts deliberately withhold the barrel path and the tag whitelist, because whether
+the skill transmits house conventions is the thing being measured.
+
+### Result
+
+| Case | Baseline | With skill |
+|---|---:|---:|
+| 1 — API spec | **12** | **0** |
+| 2 — Page object | **2** | **0** |
+| 3 — Lifecycle spec | **3** | **0** |
+| **Total** | **17** violations / 416 lines | **0** violations / 742 lines |
+
+The skill arm produced 78% more code and zero constitution violations. The baseline invented a tag
+(`@api`) that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a
+test body, and left a test untagged — every one of them a convention it had no way to know.
+
+**This is the first measured lift in the whole exercise, and the metric that produced it is the one
+that cannot flatter anybody.**
+
+### The part worth reading: the harness was wrong four times
+
+The first pass of run 3 reported the skill arm as **worse** than baseline — 23 violations against 18.
+Every one of those extra findings was a defect in the linter or the harness, not in the skill. They
+were caught by opening the flagged line instead of trusting the report.
+
+| # | Defect | What it falsely accused |
+|---|---|---|
+| 1 | Fabricated tag whitelist in the harness config | The skill arm chose `@App-API` and `@App-E2E` — both valid, both semantically right. The invented whitelist rejected them, and 29 of 41 reported violations were this one mistake. |
+| 2 | `eslint-plugin-playwright` not registered | A generated file's `eslint-disable` for one of its rules made ESLint report "Definition for rule not found" as an error. |
+| 3 | `isTestCall` did not exclude lifecycle hooks | `test.beforeAll` / `test.afterAll` reported as "a test with no tag". |
+| 4 | `enclosingTest` did not stop at a hook | An `if` inside `beforeAll` reported as forbidden conditional logic — when seeding a precondition there is exactly what the constitution *requires*. |
+| 5 | `no-conditional-in-test` too broad | `body: method === 'DELETE' ? undefined : {}` — shaping a payload in a 405 loop — reported as steering around missing data. |
+| 6 | `schema-parse-idiom` accepted only bare `expect(...)` | **The most consequential.** All five "discarded parse result" findings were `expect.soft(Schema.parse(body), label).toBeTruthy()` — the correct form for a negative-case loop, modelled five times in the skill's own `templates.md`. |
+
+Defect 6 is the one to dwell on. Had run 3 been published as first reported, this repository would
+have claimed — authoritatively, with a number — that its own `api-testing` skill violates the MUST
+rule it exists to enforce. An LLM grader would have agreed. What prevented it was that `npx eslint`
+names a file and a line number, and the line, when opened, said the opposite.
+
+**A report is not evidence. The line is.**
+
+All six are fixed. Defects 3–6 are locked in with regression suites: 18 `RuleTester` blocks now,
+including one per false positive, each carrying the code that was wrongly flagged.
+
+### One change to the skill, and it was not a fix
+
+The negative-matrix table in `api-testing/SKILL.md` listed its validation column as a bare
+`APIErrorSchema.parse(body)` — the shorthand, not the mandated idiom. Eleven such forms across two
+files are now written out in full. The generated code was already correct, so this repaired no
+defect; an example that shows shorthand where a rule demands a full form is still worth removing,
+because an agent copies examples far more reliably than it follows prose.
+
+### Limitations
+
+1. **Three cases, one run each.** No variance estimate. A rerun could move a number.
+2. **The metric only covers the enforceable half.** Zero lint violations does not mean the spec is
+   good — it means it breaks no mechanically checkable rule. Selector quality, coverage adequacy and
+   cleanup correctness are still unmeasured.
+3. **Two skills of 26 have lint-gate coverage.** The others are still asserted.
+4. **The baseline is uninformed by construction.** Withholding the conventions is the point, but it
+   means the result measures *convention transmission*, not whether the conventions are good ones.
+
+### What changes next
+
+1. Extend the lint gate to the remaining skills, five cases each, so a claim about "the toolkit"
+   stops being a claim about three tasks.
+2. Add rules for the constitution items still unenforced but checkable: `test.step` per API call
+   when a test makes two or more, and `qase.suite` as the first statement in a test body.
+3. Re-run runs 1 and 2 with rubrics rewritten to measure conventions rather than competence — the
+   old expectations are known to be uninformative and their tie result should not be cited.
+4. Wire the gate into CI on the automation repo with branch protection, so the number stops being a
+   report and starts being a merge condition.
+
 ## Reproducing
 
 Eval definitions live beside each skill at `.claude/skills/<skill>/evals/evals.json`. Machine-readable results: `.claude/skills/<skill>/evals/results.json`.

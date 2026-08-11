@@ -220,4 +220,68 @@ tester.run('commented-test-needs-ticket', plugin.rules['commented-test-needs-tic
   ],
 });
 
+// ---------------------------------------------------------------------------
+// Regression suite — each case below is a FALSE POSITIVE the lint-gate eval
+// exposed on 2026-08-11. A generated spec was reported as non-compliant when it
+// was in fact correct; these lock the fixes in.
+// ---------------------------------------------------------------------------
+
+tester.run('regression/hooks-are-not-tests', plugin.rules['single-tag-on-test'], {
+  valid: [
+    // test.beforeAll / afterAll are setup, not tests — they carry no tag
+    `test.beforeAll(async ({ apiRequest }) => { await seed(apiRequest); });`,
+    `test.afterAll(async ({ apiRequest }) => { await cleanup(apiRequest); });`,
+    `test.beforeEach(async () => { await reset(); });`,
+    `beforeAll(async () => { await seed(); });`,
+  ],
+  invalid: [],
+});
+
+tester.run('regression/setup-may-branch', plugin.rules['no-conditional-in-test'], {
+  valid: [
+    // the constitution REQUIRES seeding preconditions in setup, and fail-fast there
+    `test.beforeAll(async ({ apiRequest }) => {
+       const { body } = await listUsers(apiRequest);
+       if (body.users.length === 0) throw new Error('needs at least one user');
+       ownerId = body.users[0].id;
+     });`,
+    // guarded cleanup in teardown is the sanctioned pattern
+    `test.afterAll(async ({ apiRequest }) => { if (tenantId) await deleteTenant(apiRequest, tenantId); });`,
+    // a ternary that SHAPES data is construction, not conditional test logic
+    `test('@App-API a', async ({ apiRequest }) => {
+       await apiRequest({ method, url: u, body: method === 'DELETE' ? undefined : {} });
+     });`,
+    `test('@App-API a', async () => { await f(cond ? 'a' : 'b'); });`,
+    `test('@App-API a', async () => { const s = \`x\${cond ? 1 : 2}\`; });`,
+  ],
+  invalid: [
+    // control flow that steers around missing state is still forbidden
+    { code: `test('@App-API a', async () => { if (existing) await use(existing); else await create(); });`, errors: [{ messageId: 'conditional' }] },
+    { code: `test('@App-API a', async () => { const id = maybe ? await create() : existing; });`, errors: [{ messageId: 'conditional' }] },
+  ],
+});
+
+tester.run('regression/setup-may-catch', plugin.rules['no-try-catch-in-test'], {
+  valid: [
+    `test.afterAll(async () => { try { await cleanup(); } catch {} });`,
+    `test.beforeAll(async () => { try { await seed(); } catch (e) { throw e; } });`,
+  ],
+  invalid: [],
+});
+
+console.log('regression suite passed');
+
+tester.run('regression/expect-soft-is-the-idiom', plugin.rules['schema-parse-idiom'], {
+  valid: [
+    // a negative-case loop uses expect.soft so one bad input does not abort the rest
+    "expect.soft(APIErrorSchema.parse(body), `omit ${field}`).toBeTruthy();",
+    "expect.soft(APIErrorSchema.parse(body), 'label').toBeTruthy();",
+    "expect.poll(() => 1).toBeTruthy(); expect.soft(ErrSchema.parse(b), 'x').toBeTruthy();",
+  ],
+  invalid: [
+    // still caught: a soft assertion that does not end in toBeTruthy
+    { code: `expect.soft(APIErrorSchema.parse(body), 'x').toBeDefined();`, errors: [{ messageId: 'bare' }] },
+  ],
+});
+
 console.log('all rule tests passed');

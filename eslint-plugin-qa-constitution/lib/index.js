@@ -13,6 +13,9 @@
 // helpers
 // ---------------------------------------------------------------------------
 
+/** Lifecycle hooks — setup/teardown, never a test. */
+const HOOKS = new Set(['beforeAll', 'afterAll', 'beforeEach', 'afterEach']);
+
 /** Playwright/Vitest test-declaring callees: test(), it(), test.only(), it.each()`...` */
 function isTestCall(node) {
   if (node.type !== 'CallExpression') return false;
@@ -24,6 +27,9 @@ function isTestCall(node) {
     const prop = c.property.name;
     // describe is NOT a test; skip/todo/fixme declare no runnable body we police
     if (prop === 'describe') return false;
+    // Lifecycle hooks are setup/teardown, not tests. They carry no tag, and the
+    // constitution explicitly REQUIRES seeding (and therefore branching) in them.
+    if (HOOKS.has(prop)) return false;
     c = c.object;
   }
   return c.type === 'Identifier' && (c.name === 'test' || c.name === 'it');
@@ -36,9 +42,22 @@ function isDescribeCall(node) {
   return c.type === 'Identifier' && c.name === 'describe';
 }
 
-/** Nearest enclosing test() call, or null. */
+/** True for a lifecycle hook call in either form: beforeAll(...) or test.beforeAll(...). */
+function isHookCall(node) {
+  if (node.type !== 'CallExpression') return false;
+  const c = node.callee;
+  if (c.type === 'Identifier') return HOOKS.has(c.name);
+  if (c.type === 'MemberExpression') return HOOKS.has(c.property.name);
+  return false;
+}
+
+/**
+ * Nearest enclosing test() call, or null. Stops at a lifecycle hook: code inside
+ * beforeAll/afterEach is setup, and setup is allowed to branch and to catch.
+ */
 function enclosingTest(node) {
   for (let n = node.parent; n; n = n.parent) {
+    if (isHookCall(n)) return null;
     if (isTestCall(n)) return n;
   }
   return null;
@@ -256,7 +275,19 @@ rules['no-conditional-in-test'] = {
         if (enclosingTest(node)) context.report({ node, messageId: 'conditional', data: { kind: 'An if statement' } });
       },
       ConditionalExpression(node) {
-        if (enclosingTest(node)) context.report({ node, messageId: 'conditional', data: { kind: 'A ternary' } });
+        if (!enclosingTest(node)) return;
+        // A ternary used to SHAPE a value — an object property, a call argument, a
+        // template placeholder — is data construction, not conditional test logic.
+        // The rule targets control flow that steers around missing state, e.g.
+        // `const x = maybe ? await create() : existing;` at statement level.
+        const p = node.parent;
+        const shaping =
+          (p.type === 'Property' && p.value === node) ||
+          (p.type === 'CallExpression' && p.arguments.includes(node)) ||
+          p.type === 'TemplateLiteral' ||
+          (p.type === 'ArrayExpression');
+        if (shaping) return;
+        context.report({ node, messageId: 'conditional', data: { kind: 'A ternary' } });
       },
       SwitchStatement(node) {
         if (enclosingTest(node)) context.report({ node, messageId: 'conditional', data: { kind: 'A switch statement' } });
@@ -340,11 +371,24 @@ rules['schema-parse-idiom'] = {
     messages: { bare: 'A bare {{name}}.parse(...) result is discarded. Use the canonical idiom: expect({{name}}.parse(body)).toBeTruthy();' },
   }),
   create(context) {
-    /** Is this parse() call the argument of an expect(...) that ends in .toBeTruthy()? */
+    /**
+     * Is this parse() call an argument of an expect-family call that ends in .toBeTruthy()?
+     * Accepts expect(...), and the soft/poll variants: a negative-case loop uses
+     * `expect.soft(Schema.parse(body), label).toBeTruthy()` so one bad input does not
+     * abort the remaining iterations. Rejecting that form was a rule defect caught by
+     * the lint-gate eval on 2026-08-11.
+     */
     function insideExpectToBeTruthy(node) {
       const call = node.parent;
       if (!call || call.type !== 'CallExpression') return false;
-      if (call.callee.type !== 'Identifier' || call.callee.name !== 'expect') return false;
+      const cal = call.callee;
+      const isExpectFamily =
+        (cal.type === 'Identifier' && cal.name === 'expect') ||
+        (cal.type === 'MemberExpression' &&
+          cal.object.type === 'Identifier' &&
+          cal.object.name === 'expect' &&
+          ['soft', 'poll'].includes(cal.property.name));
+      if (!isExpectFamily) return false;
       // walk out to find .toBeTruthy on the expect chain
       for (let n = call.parent; n; n = n.parent) {
         if (n.type === 'MemberExpression') {

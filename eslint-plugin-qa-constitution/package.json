@@ -2,12 +2,25 @@
   "name": "eslint-plugin-qa-constitution",
   "version": "0.1.0",
   "description": "Turns the QA engineering constitution's MUST and WON'T rules into enforceable ESLint rules for Playwright + TypeScript test suites.",
-  "keywords": ["eslint", "eslintplugin", "playwright", "qa", "testing", "zod", "typescript"],
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "playwright",
+    "qa",
+    "testing",
+    "zod",
+    "typescript"
+  ],
   "license": "MIT",
   "type": "commonjs",
   "main": "lib/index.js",
-  "exports": { ".": "./lib/index.js" },
-  "files": ["lib", "README.md"],
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test tests/"
   },
@@ -16,6 +29,7 @@
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "eslint-plugin-playwright": "^2.11.0"
   }
 }
