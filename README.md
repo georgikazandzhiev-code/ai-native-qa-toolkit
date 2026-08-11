@@ -36,6 +36,30 @@ Not aspirations — these are the rules the agent is held to, and the reason the
 - **Evidence labels on findings.** `EXECUTED` / `STATIC` / `INFERRED` / `CONJECTURE`. Quality gates block only on executed or static evidence, so an inferred finding can never quietly become a fact.
 - **Verify before reporting done.** Added or modified tests are *run*. Failing tests mean the task is incomplete, and the fix is never to weaken the assertion.
 
+## Does it work? Measured, not asserted
+
+The toolkit argues that AI output must be proven rather than asserted, so the skills were measured the same way. Blind A/B: 6 eval cases, 45 checkable expectations, `claude-opus-5` at `effort: high` on both arms — one arm reads the skill in full, the other has the skill and constitution withheld — then a grader scores both without knowing which is which.
+
+| | Expectations met | Rate |
+|---|---:|---:|
+| **With skill** | 40 / 45 | **88.9%** |
+| **Baseline** (no skill) | 40 / 45 | **88.9%** |
+
+**No measured lift overall**, and one skill measurably *hurt*:
+
+| Skill | With skill | Baseline | Δ |
+|---|---:|---:|---:|
+| `api-testing` | 15/16 | 15/16 | 0 |
+| `selectors` | **12/15** | 14/15 | **−2** |
+| `mutation-testing` | **13/14** | 11/14 | **+2** |
+
+Published unchanged. Two things the numbers actually say:
+
+- **`selectors` has a real content defect.** In both its cases the skill arm reached for `data-testid` and CSS structural selectors — against the skill's own priority hierarchy — while the baseline used roles. The working hypothesis is that the long Radix-recipe and test-id-taxonomy sections drown the hierarchy: volume beating precedence.
+- **The rubric partly measures the wrong thing.** A strong model already knows Playwright and Zod, so expectations covering general good practice pass unaided. The one clear win came on a governance expectation: asked to hit an arbitrary 80% mutation score before a release, the baseline shipped `thresholds.break: 80` into CI while the skill arm refused the vanity metric and gated on regression against a baseline instead. **These skills do not teach the model test automation — they constrain what it will agree to.**
+
+Full per-case detail, limitations, and the resulting fix backlog: **[BENCHMARK.md](BENCHMARK.md)**. Eval definitions and machine-readable results live at `.claude/skills/<skill>/evals/`.
+
 ## The skills
 
 **Authoring** — `common-tasks` (routing) · `scaffold-spec` · `skill-creator` · `test-case-generation` · `ai-native-workflow`

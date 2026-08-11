@@ -1,0 +1,34 @@
+{
+  "skill_name": "selectors",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to click the 'Delete' button inside a specific row of a data table. The row is identified by the project name 'Apollo'. The table renders a loading skeleton first, then the real rows. My current locator page.locator('.row .btn-delete') keeps failing with a strict mode violation. Give me the locator.",
+      "expected_output": "An anchor-and-drill locator: scope to the row by its accessible content, then drill to the button by role. Uses getByRole over CSS, avoids XPath, and explains the skeleton/duplicate-element cause of the strict-mode violation.",
+      "expectations": [
+        "The proposed locator uses getByRole for the button rather than a CSS class selector",
+        "The locator is scoped (anchored) to the row container first and then drilled into, rather than addressing the button from the page root",
+        "The row is identified by accessible content (name/text/row role) rather than by a CSS class",
+        "No XPath is used anywhere in the answer",
+        "It explains that the strict-mode violation comes from more than one matching element, e.g. skeleton and real content briefly coexisting",
+        "It does not propose .first(), .nth(), or an index as the primary fix",
+        "It does not propose page.waitForTimeout or any hard wait",
+        "It does not propose page.evaluate or direct DOM manipulation"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write the locators for a page object for a settings form that has: a Save button, an email input labelled 'Email address', a Country dropdown (Radix UI), a validation error message, and a success toast.",
+      "expected_output": "Locator getters following the priority hierarchy (role > text > label > placeholder > alt > title > test-id as last resort), with the Radix dropdown handled by its documented recipe, and feedback selectors (error + success) present.",
+      "expectations": [
+        "The Save button uses getByRole",
+        "The email input uses getByLabel (or getByRole with an accessible name), not a CSS selector or placeholder",
+        "data-testid is used only where semantic locators genuinely cannot work, not as the default",
+        "No XPath appears anywhere",
+        "The Radix dropdown is handled with an explicit strategy for portalled or re-rendering content rather than a naive direct locator",
+        "Both a validation-error locator and a success-message locator are present",
+        "The locators are exposed as getters and carry no JSDoc comments on them"
+      ]
+    }
+  ]
+}

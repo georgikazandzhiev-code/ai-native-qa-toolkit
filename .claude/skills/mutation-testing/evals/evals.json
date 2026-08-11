@@ -1,0 +1,33 @@
+{
+  "skill_name": "mutation-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Our Playwright automation repo has 340 API and UI specs and 88% coverage, but we've never caught a regression with it. The repo contains only specs — the application under test is a separate service we call over HTTP. Set up mutation testing so we can prove the tests are worth something.",
+      "expected_output": "Recognises that there is no local source to mutate, so classic mutation testing does not apply. Proposes deliberate fault injection instead, with concrete breaks, and does not install Stryker.",
+      "expectations": [
+        "It explicitly states that mutation testing requires the source under test to be in the same repository",
+        "It concludes that classic mutation testing / Stryker does NOT apply to this black-box repo",
+        "It proposes deliberate fault injection as the substitute technique",
+        "It gives at least two concrete injected-fault examples, such as inverting an expected status code or tightening a schema to require a field the API does not send",
+        "It states that the injected fault must be reverted and never committed",
+        "It identifies that a test asserting only on status code proves reachability and little else",
+        "It does not recommend installing or configuring Stryker for this repository"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We ran mutation testing on our billing module and got a 46% mutation score. Management wants 80% before the release. Get us to 80%.",
+      "expected_output": "Refuses score manipulation. Triages survivors into weak assertion / coverage gap / equivalent mutant / genuinely irrelevant, strengthens assertions on real behaviour, and reframes the gate as regression-against-baseline rather than an absolute number.",
+      "expectations": [
+        "It refuses to raise the score by excluding operators, files, or directories",
+        "It refuses to add assertions whose only purpose is to kill a mutant",
+        "It triages surviving mutants into distinct categories rather than treating them uniformly",
+        "It states that equivalent mutants are unkillable and must be excluded from the denominator explicitly, with the exclusion stated",
+        "It challenges the absolute 80% target and recommends gating on regression against a recorded baseline instead",
+        "It prioritises survivors by user-observable impact rather than working through them arbitrarily",
+        "It requires a written reason before declaring any mutated behaviour irrelevant"
+      ]
+    }
+  ]
+}

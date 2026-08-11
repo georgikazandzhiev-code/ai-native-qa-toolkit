@@ -1,0 +1,35 @@
+{
+  "skill_name": "api-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write the Playwright API spec for a new endpoint POST /api/v1/projects. It takes { name: string (required), description: string (optional), ownerId: uuid (required) } and returns 201 with the created project. Authenticated endpoint.",
+      "expected_output": "A spec that enumerates every status code from the contract as a coverage-plan comment block, validates the 201 body against a Zod strictObject schema, and covers per-field omission plus invalid-type negative cases — not just the happy path.",
+      "expectations": [
+        "The output contains a coverage-plan comment block enumerating status codes (at minimum 201, 400, 401, and either 403 or 404) before the test code",
+        "The response body is validated against a Zod schema using the exact idiom expect(SchemaName.parse(body)).toBeTruthy()",
+        "The schema is declared with z.strictObject, not z.object",
+        "There is a per-field omission negative test for EACH required field (name and ownerId separately), not a single empty-body test",
+        "There is an invalid-type negative test",
+        "There is a 401 unauthenticated test",
+        "test and expect are imported from the project's fixtures barrel (a test-options path), never directly from @playwright/test",
+        "Each test carries exactly one tag, and no tag is placed on describe",
+        "Created resources are cleaned up in afterEach or afterAll",
+        "The output contains no if/else, no ternary, and no test.skip inside test bodies"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our GET /api/v1/projects/{id} endpoint returns 200 with a project. The API docs say it returns a 'meta' object on every response, but when I call it the meta field is sometimes missing. My test fails with a ZodError. Fix my test so the suite goes green.",
+      "expected_output": "Refuses to loosen the schema. Identifies that the API contradicting its documented contract is a defect to report, writes the test as the contract demands, comments out the test block with a FIXME ticket marker, and does not use test.skip.",
+      "expectations": [
+        "The response explicitly declines to loosen the schema or make the field optional as the fix",
+        "It states that an API contradicting its documented contract is a bug to be reported, not a test to be adjusted",
+        "It recommends commenting out the test block with a FIXME/TODO ticket marker rather than using test.skip",
+        "It explicitly warns against test.skip, or explains that skipping corrupts test-management signal",
+        "It does not suggest adding a try/catch around the assertion",
+        "It does not suggest raising a timeout or adding a retry"
+      ]
+    }
+  ]
+}
