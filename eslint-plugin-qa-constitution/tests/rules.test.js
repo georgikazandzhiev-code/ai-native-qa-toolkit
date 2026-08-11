@@ -143,7 +143,8 @@ tester.run('schema-parse-idiom', plugin.rules['schema-parse-idiom'], {
   ],
   invalid: [
     { code: `ProjectResponse.parse(body);`, errors: [{ messageId: 'bare' }] },
-    { code: `expect(ProjectResponse.parse(body)).toBeDefined();`, errors: [{ messageId: 'bare' }] },
+    // still caught, now under its own message: the value IS asserted, just not with the idiom
+    { code: `expect(ProjectResponse.parse(body)).toBeDefined();`, errors: [{ messageId: 'matcher' }] },
   ],
 });
 
@@ -280,7 +281,41 @@ tester.run('regression/expect-soft-is-the-idiom', plugin.rules['schema-parse-idi
   ],
   invalid: [
     // still caught: a soft assertion that does not end in toBeTruthy
-    { code: `expect.soft(APIErrorSchema.parse(body), 'x').toBeDefined();`, errors: [{ messageId: 'bare' }] },
+    { code: `expect.soft(APIErrorSchema.parse(body), 'x').toBeDefined();`, errors: [{ messageId: 'matcher' }] },
+  ],
+});
+
+/**
+ * Found by tests/fault-injection.test.mjs on its first run, 2026-08-11, against the compliant
+ * fixture. The rule used an allowlist of accepted parent node types — VariableDeclarator,
+ * AssignmentExpression, and an expect chain — so every other way of USING a parsed value read as
+ * "discarded". `Schema.parse(body).id`, which reads a field off the parse on the spot, was
+ * reported. The rule now asks the question it actually means: is the value read by nobody?
+ *
+ * Third defect in this one rule, all with the same cause. An allowlist enumerates the forms its
+ * author thought of; the forms they did not think of become false positives on correct code.
+ */
+tester.run('regression/a-used-parse-is-not-discarded', plugin.rules['schema-parse-idiom'], {
+  valid: [
+    // the original find: a field read straight off the parse
+    `const id = Project.parse(body).id;`,
+    `createdId = Project.parse(await response.json()).id;`,
+    // every other shape of "used" the old allowlist missed
+    `return Project.parse(body);`,
+    `await handle(Project.parse(body));`,
+    `const list = [Project.parse(body)];`,
+    `const wrapped = { project: Project.parse(body) };`,
+    `if (Project.parse(body).id) { done(); }`,
+    `const parsed = (Project.parse(body) as Parsed);`,
+    // a property assertion on a parsed value is a business assertion, not this rule's business
+    `expect(Project.parse(body).name).toBe('x');`,
+  ],
+  invalid: [
+    // the genuine false green survives: validated, then thrown away
+    { code: `Project.parse(body);`, errors: [{ messageId: 'bare' }] },
+    { code: `await Project.parse(body);`, errors: [{ messageId: 'bare' }] },
+    // discarded via the comma operator, where only the last value survives
+    { code: `(Project.parse(body), other());`, errors: [{ messageId: 'bare' }] },
   ],
 });
 

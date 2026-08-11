@@ -56,7 +56,7 @@ The pattern across all six cases: **the skills do not teach the model test autom
 1. **The baseline is strong.** Claude Opus 5 at high effort already knows Playwright, Zod and modern QA practice. Most of the 45 expectations measure general good practice, which the baseline satisfies unaided. The rubric therefore under-measures what these skills are actually for — house conventions and refusals — and over-measures what any capable model already does. That is a flaw in the eval design, not a caveat on the result.
 2. **Small n.** Six cases, three skills, one run each. No variance estimate. A rerun could move a case either way.
 3. **Single grader per case.** Blind to arm assignment (A/B order alternates by case index), but not adversarially verified by a second grader.
-4. **Two skills untested.** 23 of the 26 skills have no eval cases at all.
+4. **Twenty-three skills untested.** 23 of the 26 skills have no eval cases at all.
 5. **Cost.** The run took ~8 minutes across 18 agents and ~1.1M subagent tokens. Cheap enough to repeat, expensive enough to be deliberate about.
 
 ## What changes next
@@ -97,7 +97,7 @@ Both were fixed after run 2: the exception is now explicitly scoped to the **tri
 
 The loop works: a published number exposed a real content defect, the defect was diagnosed from the skill's own text, the fix was applied, and the re-run confirmed the specific behaviour changed. What it did **not** establish is a score gain — and at two cases per skill it could not have. The next honest step is more cases per skill, not another tweak.
 
-## Run 3 — the lint gate: an objective metric, and four defects it found in itself
+## Run 3 — the lint gate: an objective metric, and six defects it found in itself
 
 Runs 1 and 2 graded with an LLM against written expectations. Most of those expectations measured
 general competence, which a capable model already has, so the arms tied. Run 3 replaced the grader
@@ -124,7 +124,7 @@ test body, and left a test untagged — every one of them a convention it had no
 **This is the first measured lift in the whole exercise, and the metric that produced it is the one
 that cannot flatter anybody.**
 
-### The part worth reading: the harness was wrong four times
+### The part worth reading: the harness was wrong six times
 
 The first pass of run 3 reported the skill arm as **worse** than baseline — 23 violations against 18.
 Every one of those extra findings was a defect in the linter or the harness, not in the skill. They
@@ -146,7 +146,7 @@ names a file and a line number, and the line, when opened, said the opposite.
 
 **A report is not evidence. The line is.**
 
-All six are fixed. Defects 3–6 are locked in with regression suites: 18 `RuleTester` blocks now,
+All six are fixed. Defects 3–6 are locked in with regression suites: 21 `RuleTester` suites now,
 including one per false positive, each carrying the code that was wrongly flagged.
 
 ### One change to the skill, and it was not a fix

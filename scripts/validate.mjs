@@ -133,14 +133,20 @@ for (const folder of skillDirs) {
     err(where, `version "${fm.version}" is not major.minor.patch`);
   }
 
-  // If a history file exists, its newest entry must name the version the skill declares.
+  // If a history file exists, its newest entry must name the version series the skill declares.
+  //
+  // major.minor only, deliberately. A patch is wording, examples and cross-references — by
+  // definition it cannot change what the skill tells an agent to do, so a score recorded at
+  // 1.2.0 still describes 1.2.1. Warning on that would push people to skip patch bumps to keep
+  // the output quiet, which is the exact opposite of what the version exists for.
   const histFile = join(SKILLS, folder, 'evals', 'history.json');
   if (existsSync(histFile) && fm.version) {
     try {
       const h = JSON.parse(read(histFile));
       const entries = Array.isArray(h.entries) ? h.entries : [];
       const newest = entries.length ? entries[entries.length - 1].version : null;
-      if (newest && newest !== String(fm.version)) {
+      const series = (v) => String(v).split('.').slice(0, 2).join('.');
+      if (newest && series(newest) !== series(fm.version)) {
         warn(where, `declares v${fm.version} but the newest eval history entry is v${newest} — bumped without re-measuring, or the measurement was not recorded`);
       }
     } catch (e) {
@@ -263,43 +269,131 @@ if (!existsSync(ignorePath)) {
   }
 }
 
-// ── 7. README counts vs the filesystem ──────────────────────────────────────────
-// This is the check that earned the whole script: the count said 25 while 28 shipped.
+// ── 7. Stated numbers vs recomputed facts, in every document ────────────────────
+//
+// This is the check that earned the whole script: the count said 25 while 28 shipped. It has
+// since caught the same class of drift eight more times in a single day — the rule-suite count,
+// the invalid-case count, how many rules fire end to end, a defect count that disagreed with its
+// own table, and a coverage denominator of 28 in a repository shipping 26 skills. So it no
+// longer trusts one file or one number: every fact here is recomputed from the filesystem and
+// cross-checked against every document that states it.
+//
+// A number in prose is a claim. A number a script recomputes is a fact. Where the two can be
+// connected they must be, and this is where the connection is made.
 
-const readmePath = join(ROOT, 'README.md');
-if (!existsSync(readmePath)) {
-  err('README.md', 'missing');
-} else {
-  const readme = read(readmePath);
-  const actualSkills = skillDirs.length;
-  let claimsFound = 0;
+const cmdDir = join(ROOT, '.claude', 'commands');
+const pluginIndex = join(ROOT, 'eslint-plugin-qa-constitution', 'lib', 'index.js');
+const ruleTests = join(ROOT, 'eslint-plugin-qa-constitution', 'tests', 'rules.test.js');
+const selfPath = fileURLToPath(import.meta.url);
 
-  for (const m of readme.matchAll(/(\d+)\s+on-demand skills/g)) {
-    claimsFound++;
-    if (Number(m[1]) !== actualSkills) {
-      err('README.md', `claims ${m[1]} on-demand skills, filesystem has ${actualSkills}`);
-    }
-  }
-  for (const m of readme.matchAll(/\*\*(\d+)\s+ESLint rules\*\*/g)) {
-    const pluginIndex = join(ROOT, 'eslint-plugin-qa-constitution', 'lib', 'index.js');
-    if (existsSync(pluginIndex)) {
-      const actualRules = [...read(pluginIndex).matchAll(/^rules\['[a-z-]+'\]/gm)].length;
-      if (Number(m[1]) !== actualRules) {
-        err('README.md', `claims ${m[1]} ESLint rules, plugin defines ${actualRules}`);
+const countIn = (path, re) => (existsSync(path) ? [...read(path).matchAll(re)].length : null);
+
+/** The highest check number this script declares in its own section headers. */
+function ownCheckCount() {
+  const nums = [...read(selfPath).matchAll(/^\/\/ ── ([\d\s+]+)\./gm)].flatMap((m) =>
+    (m[1].match(/\d+/g) ?? []).map(Number)
+  );
+  return nums.length ? Math.max(...nums) : null;
+}
+
+const FACTS = {
+  skills: { value: skillDirs.length, of: 'skill directories under .claude/skills' },
+  commands: {
+    value: existsSync(cmdDir) ? readdirSync(cmdDir).filter((f) => f.endsWith('.md')).length : null,
+    of: '.md files in .claude/commands',
+  },
+  lintRules: { value: countIn(pluginIndex, /^rules\['[a-z-]+'\]/gm), of: "rules['…'] in the plugin" },
+  ruleSuites: { value: countIn(ruleTests, /^tester\.run\(/gm), of: 'tester.run( suites in rules.test.js' },
+  invalidCases: {
+    value: countIn(ruleTests, /errors:\s*(?:\[|\d)/g),
+    of: 'invalid-case assertions in rules.test.js',
+  },
+  measured: {
+    value: skillDirs.filter((d) => existsSync(join(SKILLS, d, 'evals', 'history.json'))).length,
+    of: 'skills with an evals/history.json',
+  },
+  overLength: {
+    value: skillDirs.filter((d) => {
+      const f = join(SKILLS, d, 'SKILL.md');
+      return existsSync(f) && read(f).split(/\r?\n/).length > MAX_SKILL_LINES;
+    }).length,
+    of: `skills whose SKILL.md exceeds ${MAX_SKILL_LINES} lines`,
+  },
+  validatorChecks: { value: ownCheckCount(), of: 'numbered check sections in this script' },
+};
+
+const WORDS = {
+  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+  seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+};
+const asNumber = (token) =>
+  /^\d+$/.test(token) ? Number(token) : (WORDS[token.toLowerCase()] ?? null);
+
+/** Prose shapes that state a fact. Each must capture the number in group 1. */
+const CLAIMS = [
+  { fact: 'skills', re: /(\d+)\s+on-demand skills/g },
+  { fact: 'lintRules', re: /\*\*(\d+)\s+ESLint rules\*\*/g },
+  { fact: 'commands', re: /(\d+)\s+(?:slash )?commands\b/g },
+  { fact: 'ruleSuites', re: /(\d+)\s+(?:`?RuleTester`?|plugin rule)\s+suites/g },
+  { fact: 'invalidCases', re: /(\d+)\s+invalid-case assertions/g },
+  { fact: 'validatorChecks', re: /\b([A-Za-z]+|\d+)\s+checks[:,]/g },
+  { fact: 'overLength', re: /(\d+)\s+skills?\s+(?:are\s+|is\s+)?over the \d+-line budget/g },
+];
+
+/** "3 of 28 skills have recorded history" — both numbers, and they must agree with each other. */
+const COVERAGE = /(\d+)\s+of\s+(\d+)\s+skills have recorded history/gi;
+
+const DOCS = ['README.md', 'BENCHMARK.md', 'GOVERNANCE.md'];
+
+if (!existsSync(join(ROOT, 'README.md'))) err('README.md', 'missing');
+
+let skillCountStated = false;
+
+for (const docName of DOCS) {
+  const docPath = join(ROOT, docName);
+  if (!existsSync(docPath)) continue;
+  const text = read(docPath);
+
+  for (const { fact, re } of CLAIMS) {
+    const { value, of } = FACTS[fact];
+    if (value === null) continue; // nothing to compare against — do not guess
+    for (const m of text.matchAll(re)) {
+      const stated = asNumber(m[1]);
+      if (stated === null) {
+        warn(docName, `states "${m[0].trim()}" — not a number this script can cross-check`);
+        continue;
+      }
+      if (fact === 'skills') skillCountStated = true;
+      if (stated !== value) {
+        err(docName, `claims "${m[0].trim()}" but there are ${value} ${of}`);
       }
     }
   }
-  if (claimsFound === 0) warn('README.md', 'states no skill count — nothing to cross-check');
 
-  // commands, if the README enumerates them
-  const cmdDir = join(ROOT, '.claude', 'commands');
-  if (existsSync(cmdDir)) {
-    const actualCmds = readdirSync(cmdDir).filter((f) => f.endsWith('.md')).length;
-    for (const m of readme.matchAll(/(\d+)\s+(?:slash )?commands/g)) {
-      if (Number(m[1]) !== actualCmds) err('README.md', `claims ${m[1]} commands, filesystem has ${actualCmds}`);
+  for (const m of text.matchAll(COVERAGE)) {
+    if (Number(m[1]) !== FACTS.measured.value) {
+      err(docName, `claims ${m[1]} skills have recorded history, filesystem has ${FACTS.measured.value}`);
+    }
+    if (Number(m[2]) !== FACTS.skills.value) {
+      err(
+        docName,
+        `states the coverage denominator as ${m[2]} while this repository ships ${FACTS.skills.value} skills — ` +
+          `a denominator copied from the other repository`
+      );
+    }
+  }
+
+  // Every repo-relative link must resolve. Anchors and external URLs are skipped.
+  for (const m of text.matchAll(/\]\(([^)#\s]+)(?:#[^)]*)?\)/g)) {
+    const target = m[1];
+    if (/^(?:https?:|mailto:)/.test(target)) continue;
+    if (!existsSync(join(ROOT, target))) {
+      err(docName, `links to a path that does not exist: ${target}`);
     }
   }
 }
+
+if (!skillCountStated) warn('README.md', 'states no skill count — nothing to cross-check');
 
 // ── 8. Claims of tooling that must actually exist ───────────────────────────────
 // skill-creator asserted a validation hook for months while no such file existed.
@@ -314,6 +408,65 @@ for (const folder of skillDirs) {
       err(`skills/${folder}`, `links to a script that does not exist: ${m[1]}`);
     }
   }
+}
+
+// ── 9. Governance artifacts ─────────────────────────────────────────────────────
+//
+// Governance without an enforcement mechanism is advice, and a governance document nothing
+// checks is the purest form of it. These are the parts of GOVERNANCE.md a script can hold to
+// account: that it exists, that its rollout phases cannot advance on opinion, and that the
+// review routing it describes is actually configured.
+
+const govPath = join(ROOT, 'GOVERNANCE.md');
+const ownersPath = join(ROOT, '.github', 'CODEOWNERS');
+const prTemplatePath = join(ROOT, '.github', 'pull_request_template.md');
+
+if (!existsSync(govPath)) {
+  err('GOVERNANCE.md', 'missing — ownership, change classes and rollout gates are undefined');
+} else {
+  const gov = read(govPath);
+
+  // A phase with no exit criterion advances on whoever is most confident that day; a phase with
+  // no stop criterion cannot be rolled back once it is wrong.
+  const phaseBlocks = gov.split(/^### (?=Phase )/gm).slice(1);
+  if (phaseBlocks.length === 0) {
+    err('GOVERNANCE.md', 'declares no "### Phase" rollout sections');
+  }
+  for (const block of phaseBlocks) {
+    const title = block.split(/\r?\n/)[0].trim();
+    if (!/^\*\*Exit:\*\*/m.test(block)) {
+      err('GOVERNANCE.md', `"${title}" states no **Exit:** criterion — it would advance on opinion`);
+    }
+    if (!/^\*\*Stop:\*\*/m.test(block)) {
+      err('GOVERNANCE.md', `"${title}" states no **Stop:** criterion — it could not be rolled back`);
+    }
+  }
+}
+
+if (!existsSync(ownersPath)) {
+  err('.github/CODEOWNERS', 'missing — nothing routes review of a skill or a lint rule to anyone');
+} else {
+  const lines = read(ownersPath)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
+
+  const MUST_ROUTE = ['/.claude/skills/', '/eslint-plugin-qa-constitution/', '/scripts/'];
+  for (const path of MUST_ROUTE) {
+    if (!lines.some((l) => l.startsWith(path))) {
+      err('.github/CODEOWNERS', `no rule covers ${path} — changes there would need no named reviewer`);
+    }
+  }
+  if (!lines.some((l) => /@[\w-]+/.test(l))) {
+    err('.github/CODEOWNERS', 'names no owner — every rule needs an @handle or a @org/team');
+  }
+}
+
+if (!existsSync(prTemplatePath)) {
+  err(
+    '.github/pull_request_template.md',
+    'missing — GOVERNANCE.md § Change classes has no delivery mechanism without it'
+  );
 }
 
 // ── report ──────────────────────────────────────────────────────────────────────

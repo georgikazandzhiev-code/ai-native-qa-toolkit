@@ -79,8 +79,11 @@ for (const skill of dirs(SKILLS)) {
 
   // The newest recorded version should match what the skill actually declares, or the
   // history is describing a version that no longer exists.
+  // major.minor only — a patch changes wording, not behaviour, so a score recorded at 1.2.0
+  // still describes 1.2.1. Same reasoning as validate.mjs.
+  const series = (v) => String(v).split('.').slice(0, 2).join('.');
   const newestVersion = entries[entries.length - 1].version;
-  if (declared && newestVersion !== declared) {
+  if (declared && series(newestVersion) !== series(declared)) {
     problems.push(
       `${skill}: SKILL.md declares ${declared} but the newest history entry is ${newestVersion} — ` +
       `either the version was bumped without re-measuring, or the measurement was not recorded`
@@ -154,8 +157,11 @@ console.log('Skill eval history — regression compare');
 console.log('');
 
 if (rows.length === 0) {
-  console.log('  No skill has an evals/history.json yet. 25 of 28 skills are unmeasured;');
-  console.log('  a claim about "the toolkit" is currently a claim about three of them.');
+  // Computed, not written down. A hardcoded "25 of 28" here was itself an instance of the drift
+  // this repository keeps finding: the moment a skill is added or dropped, the sentence lies.
+  const total = dirs(SKILLS).length;
+  console.log(`  No skill has an evals/history.json yet. All ${total} skills are unmeasured,`);
+  console.log('  so there is currently no evidence behind any claim about "the toolkit".');
   console.log('');
   process.exit(0);
 }

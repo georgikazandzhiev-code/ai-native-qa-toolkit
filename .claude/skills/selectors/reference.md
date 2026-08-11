@@ -466,6 +466,6 @@ Full canonical rules in [`page-objects`](../page-objects/SKILL.md). Quick recap:
 - [patterns.md](patterns.md) — good/bad examples.
 - [recipes.md](recipes.md) — end-to-end recipes for tables, dialogs, dropdowns, sheets, toasts.
 - [`page-objects`](../page-objects/SKILL.md) — POM class structure, action-method standards, fixture registration.
-- [~/.claude/CLAUDE.md](../../../~/.claude/CLAUDE.md) — always-applied invariants.
+- `~/.claude/CLAUDE.md` — always-applied invariants.
 - Sister: [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) (data sources), [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md) (API specs).
 - External: [Playwright Locators](https://playwright.dev/docs/locators), [Auto-waiting](https://playwright.dev/docs/actionability), [Web-first assertions](https://playwright.dev/docs/test-assertions), [Best practices](https://playwright.dev/docs/best-practices).

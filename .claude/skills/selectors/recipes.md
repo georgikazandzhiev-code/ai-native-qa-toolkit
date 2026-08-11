@@ -883,7 +883,7 @@ Some monitor types take too long for first probe data to land within reasonable 
 - [SKILL.md](SKILL.md) — decision tree, blessed patterns.
 - [reference.md](reference.md) — full Locator API, ARIA roles, testid taxonomy, FrameLocator.
 - [patterns.md](patterns.md) — good vs bad selector code.
-- [~/.claude/CLAUDE.md](../../../~/.claude/CLAUDE.md) — always-applied invariants and POM Method Standards.
+- `~/.claude/CLAUDE.md` — always-applied invariants and POM Method Standards.
 - Sister: [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) for data sources; [~/.claude/skills/page-objects/SKILL.md](../page-objects/SKILL.md) for POM class structure.
 
 ---

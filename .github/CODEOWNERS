@@ -1,0 +1,30 @@
+# Code owners — see GOVERNANCE.md § Who decides what
+#
+# HONEST LIMIT, read this before trusting the file: CODEOWNERS only *requests* review.
+# It becomes a requirement only behind a protected branch with "Require review from Code
+# Owners" enabled. On a free-plan private repository that setting is unavailable, so here
+# this file is a routing hint, not a gate. GOVERNANCE.md § What this document cannot
+# enforce says the same thing in prose; if the two ever disagree, this comment is the one
+# that was checked against the platform.
+
+# Everything, unless a more specific rule below wins.
+*                                   @georgikazandzhiev-code
+
+# The constitution. A change here changes every session in the org.
+/.claude/CLAUDE.md                  @georgikazandzhiev-code
+/.claude/constitutions/             @georgikazandzhiev-code
+
+# Skills. A rule change owes a version bump and, if it is a major, a recorded measurement.
+/.claude/skills/                    @georgikazandzhiev-code
+
+# The enforcement layer. A change here changes what a pipeline refuses to merge.
+/eslint-plugin-qa-constitution/     @georgikazandzhiev-code
+
+# The measuring instruments. Every defect this session found was in one of these, not in
+# the thing being measured — they get the same scrutiny as the rules.
+/scripts/                           @georgikazandzhiev-code
+/.github/workflows/                 @georgikazandzhiev-code
+
+# Governance itself.
+/GOVERNANCE.md                      @georgikazandzhiev-code
+/.github/CODEOWNERS                 @georgikazandzhiev-code

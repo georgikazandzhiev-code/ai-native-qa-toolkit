@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-qa-constitution",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turns the QA engineering constitution's MUST and WON'T rules into enforceable ESLint rules for Playwright + TypeScript test suites.",
   "keywords": [
     "eslint",

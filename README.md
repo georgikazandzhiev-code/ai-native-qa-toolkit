@@ -88,18 +88,19 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 npm run validate
 ```
 
-Zero dependencies, so it runs on a fresh clone before anything is installed. Eight checks:
+Zero dependencies, so it runs on a fresh clone before anything is installed. Nine checks:
 
 | # | Check | Why it is here |
 |---|---|---|
-| 1 | Every skill has a parseable `SKILL.md` with `name` matching its folder, a non-empty `description` under 1024 chars, and a canonical `metadata.category` | 19 skills were missing `metadata.category` and nothing noticed |
+| 1 | Every skill has a parseable `SKILL.md` with `name` matching its folder, a non-empty `description` under 1024 chars, a semver `version`, and a canonical `metadata.category` | 16 skills were missing `metadata.category` and 5 more carried a non-canonical one — 21 of 28, and nothing noticed |
 | 2 | No duplicate skill names | |
 | 3 | All six required sections present (`Critical`, `Anti-patterns`, `Self-review checklist`, `Examples`, `Troubleshooting`, `See Also`) | |
 | 4 | `mcp.json` is valid JSON, BOM-free, every server has a `command` or `url`, and no literal secret sits in `env` | |
 | 5 | `.cursor/rules/*.mdc` have front matter with a `description` unless `alwaysApply: true` | |
 | 6 | `.cursorignore` exists and excludes `node_modules` and `.env` | |
-| 7 | **README counts match the filesystem** — skills, commands, and the plugin's rule count | The README claimed 25 skills while 28 shipped |
+| 7 | **Stated numbers match recomputed facts**, in `README.md`, `BENCHMARK.md` and `GOVERNANCE.md` alike — skills, commands, lint rules, rule suites, invalid-case assertions, measured-skill coverage with its denominator, over-length skills, this script's own check count, and every repo-relative link | The README claimed 25 skills while 28 shipped. Then, in one day, it drifted on eight more numbers — including a coverage denominator of 28 in a repository shipping 26 |
 | 8 | **Every script the docs link to actually exists** | `skill-creator` asserted a `postToolUse` validation hook at `.cursor/hooks/skill-validate.py` for months. That file never existed, so nothing was validated — which is how checks 1 and 7 came to fail silently |
+| 9 | **Governance artifacts exist and bind** — `GOVERNANCE.md` is present, every `### Phase` in it states both an `**Exit:**` and a `**Stop:**` criterion, `CODEOWNERS` routes skills, the plugin and the scripts to a named owner, and the PR template exists | A rollout phase with no exit criterion advances on whoever is most confident that day, and one with no stop criterion cannot be rolled back |
 
 Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 
@@ -111,7 +112,7 @@ What closing that gap involved, because none of it was cosmetic:
 - The validator supports **declared exemptions, never silent ones.** A skill that is genuinely a catalog (a folder map, a test-id inventory) or a pointer into another project may declare `metadata.structure: catalog|pointer`. It is still required to carry `See Also`, must state in its body why the full structure does not apply, and is **listed in every validation run** so the exemption cannot hide. The two skills using it in the internal toolkit are client-specific and are not shipped here.
 - The validator found two bugs in itself along the way: it read `description: >-` as the literal two-character value `>-` and reported a good three-line description as "only 2 chars", and it needed to be pointed at the synced repo copy rather than the live `~/.claude/skills`.
 
-Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 20 rule suites and a smoke test asserting that a deliberately non-compliant fixture still gets rejected. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
+Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 21 rule suites, the fault-injection harness, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
 
 ## Skill versions and regression tracking
 
@@ -142,7 +143,7 @@ Verified by fault injection rather than assumption: a 13 → 6 drop across six c
 
 `npm run check:bump` is the advisory companion — it warns when a `SKILL.md` changed against the base ref while its `version` did not. Never blocking: failing CI over a forgotten patch bump trains people to bump meaninglessly. What it prevents is the version quietly ceasing to describe the file, which is the point at which eval history starts to lie.
 
-**Current coverage: 3 of 28 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
+**Current coverage: 3 of 26 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
@@ -161,7 +162,21 @@ Roughly half the constitution is mechanically checkable. The plugin claims exact
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 14 `RuleTester` suites and 29 invalid-case assertions, **fault-injected to prove they bite** — disabling a rule's report yields `Should have 1 error but had 0`; corrupting the `require-strict-object` autofix yields `Output is incorrect`. Against a deliberately non-compliant spec, 13 of the 14 fire end to end through the ESLint CLI.
+The rules ship with 21 `RuleTester` suites and 40 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other fifteen rules loaded alongside it.
+
+So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
+
+| | Assertion | Why it is not redundant |
+|---|---|---|
+| 1 | **Bites** — lint the known-bad tree with only this rule on, expect ≥ 1 error | The rule works end to end, not just in a unit harness |
+| 2 | **Silent** — lint the compliant tree with only this rule on, expect exactly 0 | The one that decides whether anyone leaves the gate switched on |
+| 3 | **Attributed** — lint the bad tree again with the rule's visitor emptied, expect exactly 0 | Assertion 1 alone passes for the wrong reason if a parse error or a leaked config produced the message |
+
+All 16 rules pass all three. A rule with no fixture case **fails** here rather than being skipped, so a new rule cannot land without something to catch and something to leave alone.
+
+**It found a defect on its first run** — the third in one rule, and the same root cause each time. `schema-parse-idiom` reported `Project.parse(body).id`, a parse whose field is read on the spot and therefore not discarded at all. The rule had been written as an allowlist of accepted parent node types, so every shape of *using* a parsed value that its author had not enumerated read as *discarding* it. It now asks the question it actually means — is this value read by nobody? — with the house idiom on `.toBeTruthy()` split into its own message so nothing was traded away. Assertion 2 is in the harness because of exactly this: five of the six defects in the eval harness were also rules firing on correct code, and a rule that cries wolf gets the whole gate turned off within a week.
+
+The harness is verified the same way it verifies the rules. Neuter a rule and it reports `NO BITE` and exits 1; add a violation to the compliant tree and it reports `FALSE +` and exits 1; delete a fixture tree and it fails hard rather than passing an empty run.
 
 ## Product-side constitutions (web + mobile)
 

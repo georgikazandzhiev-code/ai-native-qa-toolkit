@@ -1,6 +1,6 @@
 ---
 name: qe-pattern-memory
-version: 1.0.0
+version: 1.0.1
 description: Persist and reuse what the agent learns about a codebase across sessions — a git-tracked, human-reviewed pattern store with confidence scoring, tier promotion, and falsification. Use when a session discovers a reusable fact (a recurring flake cause, a locator that survives re-renders, an endpoint quirk, a cleanup ordering rule), when starting work on a repo the team has touched before, or when the same discovery is being re-derived a second time. Trigger phrases — "remember this pattern", "we already learned this", "load what we know about this repo", "why did we do it this way last time", "promote this pattern", "this pattern is wrong". Do NOT use for repo-specific static catalogs that never change (keep those in the repository's own repo-context skill). Do NOT use for one-off session notes with no reuse value (leave them in the PR description). Do NOT use for framework conventions that belong in a rule (use the `skill-creator` skill to author a skill instead).
 metadata:
   category: cross-cutting
@@ -81,7 +81,7 @@ Promotion thresholds are deliberately boring: **`active` needs `uses ≥ 2` and 
 
 1. **Check for a store.** `ls .qe-memory/` in the repo root. No store → nothing to load; consider creating one when the session ends with a real learning.
 2. **Read `INDEX.md` only.** Do not read every pattern file. The index carries slug, tier, one-line claim.
-3. **Open the pattern bodies that touch your task.** Matching on domain (`api`, `ui`, `flake`, `data`, `perf`, `security`) and on the files you are about to change.
+3. **Open the pattern bodies that touch your task.** Matching on domain (`api`, `ui`, `flake`, `data`, `perf`, `security`, `build`) and on the files you are about to change.
 4. **Treat `canonical` as a constraint, `active` as a strong default, `candidate` as a hint.** If your task requires contradicting a `canonical` pattern, stop and follow § Workflow — falsifying.
 
 ## Workflow — writing (end of a session)

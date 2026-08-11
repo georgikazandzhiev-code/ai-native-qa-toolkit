@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 1.2.0
+version: 1.2.1
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -13,7 +13,7 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 - [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) — where the data the UI is filled with comes from.
 - [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md) — for API specs (no locators).
 
-[~/.claude/CLAUDE.md](../../../~/.claude/CLAUDE.md) holds the always-applied invariants for the project (framework identity, MUST/SHOULD/WON'T tables, domain glossary). UI-specific Locator Priority Hierarchy + POM Method Standards live in this skill (consolidated from the previous `ui-tests.mdc` paired rule). For POM class structure see the sister skill [`page-objects`](../page-objects/SKILL.md).
+`~/.claude/CLAUDE.md` holds the always-applied invariants for the project (framework identity, MUST/SHOULD/WON'T tables, domain glossary). UI-specific Locator Priority Hierarchy + POM Method Standards live in this skill (consolidated from the previous `ui-tests.mdc` paired rule). For POM class structure see the sister skill [`page-objects`](../page-objects/SKILL.md).
 
 ## What's in each file (read this before reaching for another file)
 
@@ -413,5 +413,5 @@ User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
 - [patterns.md](patterns.md) — side-by-side good/bad examples drawn from real page objects.
 - [recipes.md](recipes.md) — end-to-end recipes for tables, sheets, dropdowns, dialogs, toasts, iframes, navigation.
 - [`page-objects`](../page-objects/SKILL.md) — POM/method standards (consolidated from the previous `ui-tests.mdc`).
-- [~/.claude/CLAUDE.md](../../../~/.claude/CLAUDE.md) — always-applied invariants (framework identity, MUST/SHOULD/WON'T tables, domain glossary).
+- `~/.claude/CLAUDE.md` — always-applied invariants (framework identity, MUST/SHOULD/WON'T tables, domain glossary).
 - Sister: [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) and [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md).

@@ -368,28 +368,76 @@ rules['require-strict-object'] = {
 /** MUST — Response Validation: a Schema.parse(body) result is asserted, not discarded. */
 rules['schema-parse-idiom'] = {
   meta: meta('Wrap a schema parse in the canonical assertion: expect(Schema.parse(body)).toBeTruthy().', {
-    messages: { bare: 'A bare {{name}}.parse(...) result is discarded. Use the canonical idiom: expect({{name}}.parse(body)).toBeTruthy();' },
+    messages: {
+      bare: 'A bare {{name}}.parse(...) result is discarded. Use the canonical idiom: expect({{name}}.parse(body)).toBeTruthy();',
+      matcher: 'expect({{name}}.parse(body)) must end in .toBeTruthy() — the project idiom. Any other matcher asserts something about the parsed value instead of the parse, which the constitution already covers.',
+    },
   }),
   create(context) {
     /**
-     * Is this parse() call an argument of an expect-family call that ends in .toBeTruthy()?
-     * Accepts expect(...), and the soft/poll variants: a negative-case loop uses
-     * `expect.soft(Schema.parse(body), label).toBeTruthy()` so one bad input does not
-     * abort the remaining iterations. Rejecting that form was a rule defect caught by
-     * the lint-gate eval on 2026-08-11.
+     * Is the parse result DISCARDED — read by nobody?
+     *
+     * That is the whole defect this rule exists to catch: `Schema.parse(body);` as a statement
+     * validates the shape and throws the proof away, so a changed response passes silently. Any
+     * use of the value — asserted, assigned, returned, member-read, passed on — is a legitimate
+     * intent and none of this rule's business.
+     *
+     * This replaced an allowlist of accepted parent node types, which was the wrong shape. It
+     * accepted `const x = Schema.parse(b)` and `expect(Schema.parse(b)).toBeTruthy()` and
+     * rejected everything else, so `Schema.parse(b).id` — a parse whose field is read on the
+     * spot — was reported as discarded. The fault-injection harness caught that on its first run
+     * against the compliant fixture, 2026-08-11. Two earlier defects in this same rule had the
+     * same root cause: an allowlist only ever enumerates the forms its author thought of, and
+     * every form it missed becomes a false positive on correct code.
+     *
+     * Note what this deliberately stops policing: whether the assertion wrapping the parse is
+     * `.toBeTruthy()` rather than `.toEqual(...)`. The constitution's WON'T table already forbids
+     * redundant assertions after a parse, so which matcher wraps a *used* value is a review
+     * question, not a false-green one.
      */
-    function insideExpectToBeTruthy(node) {
+    function isDiscarded(node) {
+      let child = node;
+      for (let p = node.parent; p; child = p, p = p.parent) {
+        switch (p.type) {
+          // Transparent wrappers — they do not consume the value themselves.
+          case 'AwaitExpression':
+          case 'ChainExpression':
+          case 'TSNonNullExpression':
+          case 'TSAsExpression':
+          case 'TSSatisfiesExpression':
+            continue;
+          case 'ExpressionStatement':
+            return true;
+          case 'SequenceExpression':
+            // Only the last element's value survives the comma operator.
+            if (p.expressions[p.expressions.length - 1] !== child) return true;
+            continue;
+          default:
+            return false;
+        }
+      }
+      return false;
+    }
+
+    /** The expect(...) / expect.soft(...) / expect.poll(...) call this parse is a DIRECT argument of. */
+    function expectFamilyWrapper(node) {
       const call = node.parent;
-      if (!call || call.type !== 'CallExpression') return false;
-      const cal = call.callee;
-      const isExpectFamily =
-        (cal.type === 'Identifier' && cal.name === 'expect') ||
-        (cal.type === 'MemberExpression' &&
-          cal.object.type === 'Identifier' &&
-          cal.object.name === 'expect' &&
-          ['soft', 'poll'].includes(cal.property.name));
-      if (!isExpectFamily) return false;
-      // walk out to find .toBeTruthy on the expect chain
+      if (!call || call.type !== 'CallExpression' || !call.arguments.includes(node)) return null;
+      const c = call.callee;
+      if (c.type === 'Identifier' && c.name === 'expect') return call;
+      if (
+        c.type === 'MemberExpression' &&
+        c.object.type === 'Identifier' &&
+        c.object.name === 'expect' &&
+        ['soft', 'poll'].includes(c.property.name)
+      ) {
+        return call;
+      }
+      return null;
+    }
+
+    /** Does the assertion chain hanging off this call end in .toBeTruthy()? */
+    function chainEndsInToBeTruthy(call) {
       for (let n = call.parent; n; n = n.parent) {
         if (n.type === 'MemberExpression') {
           if (n.property.name === 'toBeTruthy') return true;
@@ -400,6 +448,7 @@ rules['schema-parse-idiom'] = {
       }
       return false;
     }
+
     return {
       CallExpression(node) {
         if (node.callee.type !== 'MemberExpression') return;
@@ -407,10 +456,20 @@ rules['schema-parse-idiom'] = {
         const obj = node.callee.object;
         // only flag SchemaName.parse(...) — PascalCase identifier, the project convention
         if (obj.type !== 'Identifier' || !/^[A-Z]/.test(obj.name)) return;
-        if (insideExpectToBeTruthy(node)) return;
-        // assigning the parsed value is a legitimate different intent
-        if (node.parent && (node.parent.type === 'VariableDeclarator' || node.parent.type === 'AssignmentExpression')) return;
-        context.report({ node, messageId: 'bare', data: { name: obj.name } });
+
+        // The false green: nobody reads the result.
+        if (isDiscarded(node)) {
+          context.report({ node, messageId: 'bare', data: { name: obj.name } });
+          return;
+        }
+
+        // The house idiom: when the parse IS the asserted value, the matcher is toBeTruthy.
+        // Note `expect(Schema.parse(body).name).toBe('x')` is not caught here and must not be —
+        // there the asserted value is a property, which is a business assertion, not this parse.
+        const wrapper = expectFamilyWrapper(node);
+        if (wrapper && !chainEndsInToBeTruthy(wrapper)) {
+          context.report({ node, messageId: 'matcher', data: { name: obj.name } });
+        }
       },
     };
   },
@@ -619,7 +678,7 @@ rules['no-empty-catch'] = {
 // configs
 // ---------------------------------------------------------------------------
 
-const plugin = { meta: { name: 'eslint-plugin-qa-constitution', version: '0.1.0' }, rules };
+const plugin = { meta: { name: 'eslint-plugin-qa-constitution', version: '0.2.0' }, rules };
 
 /** Every rule at error, plus the core/TS rules the constitution also mandates. */
 const all = Object.fromEntries(Object.keys(rules).map((r) => [`qa-constitution/${r}`, 'error']));

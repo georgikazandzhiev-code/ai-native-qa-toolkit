@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.0
+version: 1.1.1
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -11,9 +11,9 @@ disable-model-invocation: true
 
 Manual-only meta-skill for authoring and refactoring skills inside `~/.claude/skills/`. Invoke with `/skill-creator`. The built-in `~/.cursor/skills-cursor/create-skill/` covers generic Cursor format; this skill layers the project's **paired-rule pattern**, **layered topology**, **standardized SKILL.md structure**, **boundary discipline**, **project-truthful policy**, and **surface-drift policy** — all of which were learned the hard way through Tier 1 cleanup of 16 skills.
 
-Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic `postToolUse` hook at `.cursor/hooks/skill-validate.py`; that file never existed, so nothing was checked — which is how 19 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
+Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic `postToolUse` hook at `.cursor/hooks/skill-validate.py`; that file never existed, so nothing was checked — which is how 16 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
 
-> **Truth source.** Skill topology, rule disposition, migration sequence: [docs/cursor-skills-orchestration.md](../../../docs/cursor-skills-orchestration.md). Companion plan: [docs/framework-alignment-plan.md](../../../docs/framework-alignment-plan.md).
+> **Truth source.** Skill topology, rule disposition, migration sequence: the Routed Skill Index in `~/.claude/CLAUDE.md`. Companion plan: [docs/framework-alignment-plan.md](../../../docs/framework-alignment-plan.md).
 
 ## Critical
 
@@ -29,7 +29,7 @@ Non-negotiable. Every rule below was learned from a real drift incident in this 
 - **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. `npm run validate` errors on an empty description and warns on a thin one; neither blocks a weak but present one — that's on the author.
 - **EVERY SKILL DECLARES A `version` IN FRONT MATTER, AND A CHANGE TO THE RULES MOVES IT.** `major` when a rule changes meaning or is removed — output that was previously correct may now be wrong. `minor` when a rule or section is added. `patch` for wording, examples and cross-references. The version is what an eval score is attributed to: `npm run eval:compare` compares scores across versions, and a version that no longer describes the file makes the history lie. `npm run check:bump` warns when a `SKILL.md` changed and the version did not.
 - **NEW SKILLS START FROM `assets/SKILL-template.md`.** The template encodes the standardized structure. Copying from another skill is acceptable but you must verify every section is present.
-- **UPDATE `~/.claude/CLAUDE.md § Routed Detail Index`** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's Routed Detail Index is the live human-readable map; if it drifts, every model loading the orchestrator routes wrong.
+- **UPDATE `~/.claude/CLAUDE.md § Routed Skill Index`** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's Routed Skill Index is the live human-readable map; if it drifts, every model loading the orchestrator routes wrong.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -41,7 +41,7 @@ The skill folder splits across three layers: **rules** (this `SKILL.md` + `refer
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Rules, workflow, decisions, anti-patterns. Teaches the model how to think about authoring a skill. | Always, on any skill-authoring task. Invoked manually via `/skill-creator`. |
 | **[`references/patterns.md`](references/patterns.md)** | Catalog of body-text patterns (Workflow checklist / Examples / Conditional decision / Feedback-loop) with project examples. Pick the patterns that fit Phase 5 (author body). | Phase 5 — choosing how to structure the body. |
-| **[`references/checklist.md`](references/checklist.md)** | Quality gates the skill must pass: hook-enforced (automatic), body quality (manual), project fit (manual), discoverability (subagent test), pre-merge. The single source of truth for "is this skill ready to ship". | Phase 8 — verification. Also for any "is this skill done?" question. |
+| **[`references/checklist.md`](references/checklist.md)** | Quality gates the skill must pass: `npm run validate` (automatic), body quality (manual), project fit (manual), discoverability (subagent test), pre-merge. The single source of truth for "is this skill ready to ship". | Phase 8 — verification. Also for any "is this skill done?" question. |
 | **[`assets/SKILL-template.md`](assets/SKILL-template.md)** | Copy-paste starter for a new skill. Encodes the standardized structure (Critical / What's in each file / workflow / Anti-patterns / Self-review / Examples / Troubleshooting / See Also). | Phase 3 — drafting the new skill. |
 
 ### Measurement layer (Phase 9, optional — Anthropic's eval pipeline)
@@ -61,7 +61,7 @@ The skill folder splits across three layers: **rules** (this `SKILL.md` + `refer
 
 ## Standardized SKILL.md structure
 
-Every skill in this repo follows this exact section order. The template encodes it; the checklist verifies it; the hook does not yet enforce it (manual review is the gate). When you author or refactor a skill, the structure below is mandatory — Tier 1 audits caught dozens of inconsistencies because earlier skills predated this standardization.
+Every skill in this repo follows this exact section order. The template encodes it, the checklist verifies it, and `npm run validate` fails on a missing required section. When you author or refactor a skill, the structure below is mandatory — Tier 1 audits caught dozens of inconsistencies because earlier skills predated this standardization.
 
 | Section | Required? | Purpose |
 |---------|-----------|---------|
@@ -74,18 +74,19 @@ Every skill in this repo follows this exact section order. The template encodes 
 | **`## Self-review checklist`** | Yes | Checkboxes the model walks through before declaring done. High-level; deep checklist for skill-creator itself lives in `references/checklist.md`. |
 | **`## Examples`** | Yes (2-3) | Worked walkthroughs that cite the workflow steps. Use REAL names from this codebase, never placeholders. |
 | **`## Troubleshooting`** | Yes | Table: symptom → cause → fix. Lists real failure modes a future author will hit. |
-| **`## Gotchas`** | Optional, session-grown | Dated bullets of non-obvious environment quirks, API surprises, and workarounds discovered during real sessions (`- **YYYY-MM-DD:** <gotcha>`). Agents append here when a session hits one (the stop hook reminds them). Promote a gotcha into `## Critical` / `## Troubleshooting` once it recurs or stabilizes; prune entries that a fix upstream made obsolete. |
+| **`## Gotchas`** | Optional, session-grown | Dated bullets of non-obvious environment quirks, API surprises, and workarounds discovered during real sessions (`- **YYYY-MM-DD:** <gotcha>`). Agents append here when a session hits one. Promote a gotcha into `## Critical` / `## Troubleshooting` once it recurs or stabilizes; prune entries that a fix upstream made obsolete. |
 | **`## See Also`** | Yes | Cross-skill links (paired rule, sibling skills in cluster, orchestration doc). Must be verified — no TBD references for now-populated skills. |
 
-**Why this structure is non-negotiable:** every Tier 1 audit found drift caused by skills that used a different structure. Models reading skills route by section name; deviations break routing. The hook does not enforce section presence today — manual review is the gate.
+**Why this structure is non-negotiable:** every Tier 1 audit found drift caused by skills that used a different structure. Models reading skills route by section name; deviations break routing. `npm run validate` fails on a missing required section; what stays manual is whether the content under each heading earns it.
 
 ## Frontmatter spec (inline so you never need to leave this file)
 
 | Field | Required | Constraint |
 |-------|----------|-----------|
-| `name` | yes | Lowercase + hyphens, ≤ 64 chars, equals folder name, no `anthropic`/`claude`, no XML angle brackets. Hook blocks violations. |
+| `name` | yes | Lowercase + hyphens, ≤ 64 chars, equals folder name, no `anthropic`/`claude`, no XML angle brackets. `npm run validate` fails on violations. |
 | `description` | yes | ≤ 1024 chars, third person, includes WHAT + WHEN + 3-7 quoted trigger phrases + "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. The "Do NOT" disclaimers prevent over-routing — without them, the skill catches false positives. |
-| `metadata.category` | project | One of `authoring | running | domain | cross-cutting`. Maps to topology subgraphs in [orchestration doc §6.2.4](../../../docs/cursor-skills-orchestration.md). |
+| `version` | yes | `major.minor.patch`. A rule change moves it — see the Critical block for which part. `npm run validate` fails on a missing or malformed version; `npm run check:bump` warns when a `SKILL.md` changed and the version did not. |
+| `metadata.category` | project | One of `authoring | running | domain | cross-cutting`. Maps to topology subgraphs in the four canonical categories. |
 | `disable-model-invocation` | optional | `true` for manual-only (`/skill-name`) workflows. Default false. Skills with `true` skip the Phase 6 subagent test (discoverability is trivially "selected when typed"). |
 | `license`, `compatibility` | optional | Use only when needed. |
 
@@ -120,8 +121,8 @@ This file's own description is a worked example.
 - [ ] 4. Progressive disclosure decisions  (need references/, assets/, scripts/?)
 - [ ] 5. Author the body  (pick patterns from references/patterns.md, follow standardized structure)
 - [ ] 6. Test via subagent  (3 prompts; discoverability + quality)
-- [ ] 7. Cross-link  (paired rule, sibling skills, orchestration doc, rules.mdc Routed Detail Index)
-- [ ] 8. Verify  (run references/checklist.md; hook errors zero)
+- [ ] 7. Cross-link  (paired rule, sibling skills, orchestration doc, rules.mdc Routed Skill Index)
+- [ ] 8. Verify  (run references/checklist.md; `npm run validate` reports zero errors)
 ```
 
 ### Phase 1: Capture intent
@@ -130,11 +131,11 @@ Five questions. Use `AskQuestion` only when more than one answer is genuinely am
 
 1. **What** is the skill's job in one sentence? (Verb-led, no filler.)
 2. **When** should the agent reach for it?
-3. **Where** does it land — populating an existing empty placeholder ([orchestration §6.2.2](../../../docs/cursor-skills-orchestration.md)), creating a new folder, or refactoring a rule via `/migrate-to-skills`?
+3. **Where** does it land — populating an existing empty placeholder (the Routed Skill Index in `~/.claude/CLAUDE.md`), creating a new folder, or refactoring a rule via `/migrate-to-skills`?
 4. **Paired rule** — this repo has no fat per-area glob rules (they were consolidated into the matching skills; `api-tests.mdc` / `ui-tests.mdc` survive only as thin routers with folder maps). Do NOT introduce new paired glob rules with rule content; everything lives in the skill. The always-on rule file is `~/.claude/CLAUDE.md`.
 5. **Output shape** — what does success look like (scaffolded spec / diagnostic / decision / refactor)?
 
-If the user asks "what skills do we still need", route directly to [orchestration §6.2.2](../../../docs/cursor-skills-orchestration.md) and the empty `~/.claude/skills/*` folders — that **is** the answer. The live list of populated skills is the Routed Detail Index in [`~/.claude/CLAUDE.md`](../../../~/.claude/CLAUDE.md).
+If the user asks "what skills do we still need", route directly to the Routed Skill Index in `~/.claude/CLAUDE.md` and the empty `~/.claude/skills/*` folders — that **is** the answer. The live list of populated skills is the Routed Skill Index in `~/.claude/CLAUDE.md`.
 
 ### Phase 2: Position in topology
 
@@ -157,7 +158,7 @@ Set `metadata.category` accordingly.
 3. Fill the frontmatter using the spec table above. Apply the description recipe — read it back; if it sounds passive, rewrite. Add the "Do NOT use for X" disclaimers.
 4. Pick the freedom level: **High** for judgment-heavy tasks (PR review, debugging), **Medium** for templated authoring (`scaffold-spec`), **Low** for fragile / consistency-critical operations.
 
-The hook will block on save if frontmatter is invalid; let it.
+`npm run validate` fails on invalid frontmatter. Run it before you open a PR — nothing fires on save.
 
 ### Phase 4: Progressive disclosure decisions
 
@@ -171,7 +172,7 @@ Default is **single SKILL.md**. Bias is to keep skills as one file until length 
 | `assets/` | The skill ships a literal file artifact (template, fixture, JSON sample). | The skill is purely procedural — no artifact to ship. |
 | `scripts/` | Deterministic CLI step (eval harness, repeatable command). | The agent already runs `npx playwright test` natively — no wrapper needed. |
 
-Anthropic constraints: each `references/<file>.md` is **one level deep**; reference files > 100 lines start with a `## Contents` block. The hook checks both.
+Anthropic constraints: each `references/<file>.md` is **one level deep**; reference files > 100 lines start with a `## Contents` block. **Neither is checked mechanically** — both are manual review, so read for them.
 
 ### Phase 5: Author the body
 
@@ -251,23 +252,23 @@ If `disable-model-invocation: true`, skip Phase 6 — the skill fires only on `/
 
 **In the same edit batch as the new SKILL.md write:**
 
-1. **Update [`~/.claude/CLAUDE.md § Routed Detail Index`](../../../~/.claude/CLAUDE.md)** — add the skill row with task signal + skill name + (optional) "Pairs with" rule. Mark TBD skills as **(TBD)** so the model doesn't route to empty placeholders. This is the single human-readable index.
+1. **Update `~/.claude/CLAUDE.md § Routed Skill Index`** — add the skill row with task signal + skill name + (optional) "Pairs with" rule. Mark TBD skills as **(TBD)** so the model doesn't route to empty placeholders. This is the single human-readable index.
 2. **Update siblings' `## See Also`** — when the new skill belongs to a cluster (per Phase 2), the existing cluster siblings should mention the new skill in their See Also. Cross-references are bidirectional.
-3. **Update [orchestration doc §6.2.2](../../../docs/cursor-skills-orchestration.md)** — if a previously-empty placeholder is now populated, flip the row's status. Also update §6.4 cross-reference matrix if cluster relationships changed.
+3. **Update the Routed Skill Index in `~/.claude/CLAUDE.md`** — if a previously-empty placeholder is now populated, flip the row's status. Also update §6.4 cross-reference matrix if cluster relationships changed.
 5. **If migrating from a rule**, leave a one-line breadcrumb in the original rule pointing at the new skill (mirrors `/migrate-to-skills`).
 
 In the new SKILL.md `## See Also` section:
 
 - Paired rule (or `(none)` explicitly).
 - Sibling skills in the chosen cluster from Phase 2 — verify each is **populated** (not TBD).
-- Orchestration doc — always cite [`docs/cursor-skills-orchestration.md`](../../../docs/cursor-skills-orchestration.md) §6.4 cross-reference matrix.
+- Orchestration doc — always cite the Routed Skill Index in `~/.claude/CLAUDE.md` §6.4 cross-reference matrix.
 - Companion plan — `docs/framework-alignment-plan.md` §N if applicable.
 
 ### Phase 8: Verify
 
-Run [`references/checklist.md`](references/checklist.md) end-to-end. The hook will have already enforced structural items on every save; the checklist covers what the hook can't (Critical block presence, Examples / Troubleshooting / See Also presence, drift-trigger absence, cross-reference verification).
+Run [`references/checklist.md`](references/checklist.md) end-to-end, then `npm run validate`. The command covers front matter, required-section presence, semver, duplicate names, `See Also` targets that resolve, and links to scripts that exist. The checklist covers what it cannot: whether the `## Critical` block holds 5-9 real rules, whether the examples use real names, drift-trigger absence, and whether each cross-reference points somewhere useful rather than merely somewhere real.
 
-Ship only when all gates pass and the hook reports zero errors. If any gate fails, return to the relevant phase.
+Ship only when all gates pass and `npm run validate` reports zero errors. If any gate fails, return to the relevant phase.
 
 ### Phase 9 (optional): Quantitative measurement
 
@@ -311,7 +312,7 @@ Abbreviated loop:
 2. **Pinpoint** — read only the failing section + the relevant inline guide above (frontmatter spec, description recipe, structural template, or [`patterns.md`](references/patterns.md)).
 3. **Edit** — minimum diff. Don't rewrite working sections.
 4. **Re-test** — re-run Phase 6 subagents against the affected gate.
-5. **Re-verify** — full checklist + hook clean.
+5. **Re-verify** — full checklist + `npm run validate` clean.
 
 Refactors that exceed 30% of the original `SKILL.md` line count usually mean the skill is mis-scoped — split into two or merge into a sibling.
 
@@ -322,7 +323,7 @@ When the source is `.cursor/rules/<name>.mdc`:
 1. Confirm the rule is **apply-intelligently** (no `globs:`, `alwaysApply: false`). Always-apply and glob-attached rules stay rules — those modes don't exist for skills.
 2. Run the built-in `/migrate-to-skills` skill — copies frontmatter, drafts the new SKILL.md, updates references.
 3. Resume **Phase 4** here: migrated bodies usually exceed 380 lines and need a `references/` split.
-4. Update the rule disposition row in [orchestration §6.2.2](../../../docs/cursor-skills-orchestration.md).
+4. Update the rule disposition row in the Routed Skill Index in `~/.claude/CLAUDE.md`.
 5. Run Phases 6-8.
 
 ## Anti-patterns
@@ -339,13 +340,13 @@ Each ❌ below was caught in real Tier 1 audits. The fix is named.
 - ❌ **Description without quoted trigger phrases.** Discoverability fails. Add 3-7 `"quoted phrases"` users would type.
 - ❌ **Description without "Do NOT use for X" disclaimers.** Skill catches false positives on adjacent tasks. Add 2-4 disclaimers at the end.
 - ❌ **Description in second person ("You should use this when…")** — undertriggers. Always third person.
-- ❌ **Folder name ≠ `name` field.** Cursor refuses to load. Hook catches this on save.
+- ❌ **Folder name ≠ `name` field.** Cursor refuses to load. `npm run validate` catches it.
 - ❌ **Paired rule duplicated in skill body.** Invariants belong in the rule (≤ 120 lines, glob-attached). Skill says "Read that rule first" and references rule sections; it does not restate them.
-- ❌ **`references/` more than one level deep** (`references/foo/bar.md`). Breaks Anthropic's progressive disclosure model. Hook catches this.
+- ❌ **`references/` more than one level deep** (`references/foo/bar.md`). Breaks Anthropic's progressive disclosure model. Not checked mechanically — catch it in review.
 - ❌ **Skill replicates a built-in** (e.g., a project skill that just re-wraps `/migrate-to-skills`). If the skill adds no project-specific structure on top, it shouldn't exist.
 - ❌ **Skill body over 380 lines on first draft** — usually two skills. Split before authoring further.
 - ❌ **Reference proliferation** — > 4 reference files for a single skill is almost always the wrong shape. Inline first; split only when length forces it.
-- ❌ **Skipping `~/.claude/CLAUDE.md § Routed Detail Index` update** when adding a skill. The orchestrator's index is the live route map — if it drifts, every model loading the orchestrator routes wrong.
+- ❌ **Skipping `~/.claude/CLAUDE.md § Routed Skill Index` update** when adding a skill. The orchestrator's index is the live route map — if it drifts, every model loading the orchestrator routes wrong.
 - ❌ **Pre-emptive bulk drift fix in a single PR** ("rewrite all camelCase helpers to kebab-case in one go"). The skill should mark drift as "fix on next touch" — not as a standalone refactor.
 - ❌ **Examples that use placeholder names** (`MyResource`, `<resource>`). Use REAL names from this codebase — `synthetics`, `probes`, `adminTenants`, etc. The model extrapolates better from real examples.
 
@@ -367,10 +368,10 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 - [ ] Every codebase claim verified by grep (helpers, paths, testids, env vars, npm scripts, schemas).
 - [ ] Every code snippet matches `type-safety` conventions (`process.env.X!`, `z.strictObject()`, no Zod 4 in Zod 3 codebase, no `field-field-`).
 - [ ] No drift baked in as the rule — drift is named explicitly with "fix on next touch".
-- [ ] `~/.claude/CLAUDE.md § Routed Detail Index` updated in same edit batch.
+- [ ] `~/.claude/CLAUDE.md § Routed Skill Index` updated in same edit batch.
 - [ ] Cluster siblings' `See Also` updated to mention the new skill back (bidirectional cross-links).
 - [ ] Phase 6 subagent test passed (direct + paraphrased = `selected`, negative = `not_selected`) — skip if `disable-model-invocation: true`.
-- [ ] Hook reports zero errors on the latest save.
+- [ ] `npm run validate` reports zero errors.
 
 ## Examples
 
@@ -384,8 +385,8 @@ User says: *"Populate the `page-objects` skill folder."*
 4. **Phase 4 (progressive disclosure)** — single SKILL.md to start. Add `references/method-standards.md` only if body exceeds 380 lines.
 5. **Phase 5 (author body)** — opener cites the always-on `~/.claude/CLAUDE.md` for framework invariants (no paired glob rule). `## Critical` block: 10 rules (PascalCase filename in `pages/app/`, extends `BasePage`, constructor takes `page: Page`, locator getters return `Locator` synchronously, action methods include post-condition assertion, JSDoc on action methods only, register in `page-object-fixture.ts`, never `new SyntheticsPage(page)` in spec, no `waitForTimeout`, exploration-first via `playwright-cli`). Pick patterns from `patterns.md`: Workflow (Adding a new POM), Conditional (when to use anchor + drill, sub-component scoping). Add `## Anti-patterns`, `## Self-review checklist`, `## Examples` (use REAL POM names: `SyntheticsPage`, `CreateMonitorPage`, `ProbesPage`), `## Troubleshooting`, `## See Also`.
 6. **Phase 6 (subagent test)** — three prompts: "Add a page object for the new alerts page" (direct → `selected`), "Wire up a POM for the dashboard" (paraphrased → `selected`), "Fix a flaky locator" (negative → `not_selected`, should route to `selectors` or `debugging`).
-7. **Phase 7 (cross-link)** — update `~/.claude/CLAUDE.md § Routed Detail Index` (remove `(TBD)` marker on the `page-objects` row, fill in description). Update `selectors`, `playwright-cli`, `fixtures`, `frontend-cross-check`, `debugging`, `ai-native-workflow` See Also sections to mention `page-objects` (no longer TBD). Update `orchestration §6.2.2` row to "populated".
-8. **Phase 8 (verify)** — run `references/checklist.md` end-to-end. Confirm hook is green.
+7. **Phase 7 (cross-link)** — add the `page-objects` row to `~/.claude/CLAUDE.md § Routed Skill Index` with its routing signal. Update `selectors`, `playwright-cli`, `fixtures`, `frontend-cross-check`, `debugging`, `ai-native-workflow` See Also sections to mention `page-objects` (no longer TBD). 
+8. **Phase 8 (verify)** — run `references/checklist.md` end-to-end. Confirm `npm run validate` is green.
 
 ### Example 2 — Fixing a structural drift in an existing skill
 
@@ -394,7 +395,7 @@ User says: *"`enums/SKILL.md` is missing the `## Examples` section."*
 1. **Phase 1 (diagnose)** — checklist gate failing: project-fit (signature device may be present, but Examples section absent).
 2. **Phase 5 only** — open the skill, identify the right insertion point (after `## Self-review checklist`, before `## Troubleshooting`). Author 2-3 worked walkthroughs using REAL enum names from `enums/app/qase-suites.ts` (`SUITES.API_SYNTHETICS`) and `enums/util/statuses.ts` (`Status.ACTIVE`, `UserStatus.PENDING_VERIFICATION`).
 3. **Phase 7 (cross-link)** — no orchestrator-level changes (the skill was already in the index). No sibling-See-Also updates needed (the skill name is unchanged).
-4. **Phase 8 (verify)** — re-run checklist; confirm `## Examples` is now present, hook is green.
+4. **Phase 8 (verify)** — re-run checklist; confirm `## Examples` is now present and `npm run validate` is green.
 
 ### Example 3 — Migrating an apply-intelligently rule to a skill
 
@@ -405,18 +406,18 @@ User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) int
 3. **Run `/migrate-to-skills`** — drafts the new `SKILL.md`, copies frontmatter, suggests references.
 4. **Phase 4 (progressive disclosure)** — migrated bodies usually exceed 380 lines; split out a `references/<topic>.md` per Anthropic's one-level-deep rule.
 5. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original rule was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
-6. **Phase 7 (cross-link)** — leave a one-line breadcrumb in the original rule (e.g. "Migrated to `~/.claude/skills/<name>/SKILL.md`"). Update `~/.claude/CLAUDE.md § Routed Detail Index`. Update orchestration §6.2.2 row to flip the rule disposition.
+6. **Phase 7 (cross-link)** — leave a one-line breadcrumb in the original rule (e.g. "Migrated to `~/.claude/skills/<name>/SKILL.md`"). Update `~/.claude/CLAUDE.md § Routed Skill Index`. Update orchestration §6.2.2 row to flip the rule disposition.
 7. **Phase 8 (verify)** — run the full checklist + Phase 6 subagent test.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Hook reports `name "X" must equal folder name "Y"` | Folder name ≠ frontmatter `name` field | Rename the folder OR fix the `name` field. Cursor refuses to load mismatched skills. |
-| Hook reports `description NN chars exceeds 1024 limit` | Description too long | Tighten — keep WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers. Strip filler. |
-| Hook reports `description appears to use first/second person` | "You should use this when…" or "We use this for…" | Rewrite in third person: "Authors / Generates / Reach for this when…". |
-| Hook reports `no signature device detected` | Body missing table / mermaid / numbered checklist | Add the project signature: an architecture map, decision tree, or numbered workflow checklist. Mirror `api-testing` / `selectors` / `data-strategy`. |
-| Hook reports `SKILL.md body is NN lines (project guideline 380)` | Skill is too long | Move catalog content to `references/<topic>.md`; move skeletons to `templates.md`. Apply boundary discipline. |
+| `validate` reports `name "X" must equal folder name "Y"` | Folder name ≠ frontmatter `name` field | Rename the folder OR fix the `name` field. Cursor refuses to load mismatched skills. |
+| `validate` reports `description NN chars exceeds 1024 limit` | Description too long | Tighten — keep WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers. Strip filler. |
+| Review flags a description in first or second person | "You should use this when…" or "We use this for…" | Rewrite in third person: "Authors / Generates / Reach for this when…". |
+| Review flags a body with no signature device | Body missing table / mermaid / numbered checklist | Add the project signature: an architecture map, decision tree, or numbered workflow checklist. Mirror `api-testing` / `selectors` / `data-strategy`. |
+| `validate` warns `SKILL.md is NN lines (> 380)` | Skill is too long | Move catalog content to `references/<topic>.md`; move skeletons to `templates.md`. Apply boundary discipline. |
 | Subagent test: direct prompt fails (`new_skill_status: not_selected`) | Description fundamentally broken | Rewrite description: more pushy, more trigger phrases, sharper WHAT clause. |
 | Subagent test: paraphrased fails | Trigger phrases too narrow | Add 2-3 more `"quoted phrases"` covering paraphrases the user might actually type. |
 | Subagent test: negative trips (`new_skill_status: selected` on adjacent task) | Scope too wide; missing "Do NOT use for X" disclaimers | Add disclaimers at the end of the description. Tighten the WHEN clause. |
@@ -429,7 +430,7 @@ User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) int
 
 **Sibling skills (populated, standardized structure — mirror their shape):** `scaffold-spec`, `api-testing`, `selectors`, `data-strategy`, `enums`, `config`, `type-safety`, `refactor-values`, `debugging`, `fixtures`, `helpers`, `playwright-cli`, `frontend-cross-check`, `ai-native-workflow`.
 
-**TBD placeholders (do NOT route to — author them via this skill):** `page-objects`, `test-standards`, `common-tasks`.
+**No TBD placeholders remain.** Every row in the Routed Skill Index points at a populated skill; `npm run validate` fails on a `See Also` link whose target does not exist.
 
 **This skill's bundled resources:**
 
@@ -442,8 +443,8 @@ User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) int
 
 **Orchestration:**
 
-- [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — always-on orchestrator. § Routed Detail Index lives here; every new skill updates it.
-- [`docs/cursor-skills-orchestration.md`](../../../docs/cursor-skills-orchestration.md) — orchestration master. §4 layered model, §6.2 final shape, §6.4 cross-reference matrix.
+- `~/.claude/CLAUDE.md` — always-on orchestrator. § Routed Skill Index lives here; every new skill updates it.
+- the Routed Skill Index in `~/.claude/CLAUDE.md` — orchestration master. §4 layered model, §6.2 final shape, §6.4 cross-reference matrix.
 - [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — companion plan, drift inventory, sequenced fix order.
 - [`AGENTS.md`](../../../AGENTS.md) — repo-root cross-tool entrypoint.
 
