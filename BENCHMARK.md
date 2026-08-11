@@ -69,6 +69,34 @@ Ordered by the evidence above, not by preference:
 4. **Add cases for the remaining skills**, starting with `test-standards`, `type-safety` and `qe-pattern-memory`.
 5. **Add a second grader** and count only expectations both graders agree on.
 
+## Run 2 — after fixing `selectors` (same day)
+
+The `selectors` regression was diagnosed and fixed, then the same two cases were re-run with **byte-identical prompts and rubric**. Only the skill changed.
+
+**Diagnosis.** The `Priority hierarchy` section carried 18 mentions of the Radix exception against 3 of `getByRole`. The section meant to establish *role first, test-id last* spent three quarters of itself arguing for the exception, and the Critical block stated "`getByTestId` jumps to priority 4" as its second rule. Agents were reading the exception as the default.
+
+**Fix.** Moved the exception's full rationale to `recipes.md`, restated the rule narrowly in `SKILL.md` (per element, never above priority 4), and rewrote the first three Critical rules to lead with `getByRole` and to forbid generalising the exception to a page or form.
+
+| | Run 1 | Run 2 | |
+|---|---:|---:|---|
+| `selectors` with skill | 12/15 | **13/15** | +1 |
+| `selectors` baseline | 14/15 | **15/15** | +1 |
+| Gap | −2 | **−2** | unchanged |
+
+**Honest reading: the targeted defect is fixed; the score is not yet.**
+
+- **The defect itself is gone.** The grader was asked separately which answer made `data-testid` the *default* locator choice. Run 1: the skill arm did. Run 2: **"neither", in both cases.** That is the specific failure the fix targeted, and it no longer occurs.
+- **The score movement is inside the noise.** Baseline improved by exactly the same +1 with *zero* changes to it, so ±1 at n=1 per case is run-to-run variance. The skill's +1 cannot be claimed as a real gain on this evidence.
+- **Two narrower failures replaced the big one.** In case 2 the skill arm still promoted test-ids for the Radix *popover content, options, and validation message* — where `role="listbox"`, `role="option"` and `role="alert"` exist — and attached JSDoc to locator getters, which the convention forbids.
+
+Both were fixed after run 2: the exception is now explicitly scoped to the **trigger** rather than the component subtree, with the portal's real ARIA roles named, and the no-JSDoc-on-getters rule was added to the skill itself (it existed only in the constitution, which the eval deliberately withholds from the skill arm).
+
+**Not re-measured.** Those two fixes have no run behind them yet. They are recorded as changed-but-unverified rather than counted as an improvement.
+
+### What this run actually established
+
+The loop works: a published number exposed a real content defect, the defect was diagnosed from the skill's own text, the fix was applied, and the re-run confirmed the specific behaviour changed. What it did **not** establish is a score gain — and at two cases per skill it could not have. The next honest step is more cases per skill, not another tweak.
+
 ## Reproducing
 
 Eval definitions live beside each skill at `.claude/skills/<skill>/evals/evals.json`. Machine-readable results: `.claude/skills/<skill>/evals/results.json`.

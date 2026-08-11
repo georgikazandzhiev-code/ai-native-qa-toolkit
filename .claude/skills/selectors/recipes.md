@@ -885,3 +885,58 @@ Some monitor types take too long for first probe data to land within reasonable 
 - [patterns.md](patterns.md) — good vs bad selector code.
 - [~/.claude/CLAUDE.md](../../../~/.claude/CLAUDE.md) — always-applied invariants and POM Method Standards.
 - Sister: [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) for data sources; [~/.claude/skills/page-objects/SKILL.md](../page-objects/SKILL.md) for POM class structure.
+
+---
+
+## Radix — full rationale for the priority exception
+
+> Moved out of `SKILL.md` on 2026-08-11 after a blind A/B eval showed the skill arm reaching for
+> `data-testid` and CSS on **non-Radix** elements. The rule was correct; its placement in the
+> priority-hierarchy section made agents read the exception as the default. `SKILL.md` now carries
+> the narrow rule; the argument lives here. Evidence: `evals/results.json`, `BENCHMARK.md`.
+
+This codebase uses **Radix UI primitives** (via shadcn/ui) for nearly every interactive component:
+`<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`, `<Accordion>`. Radix is
+"headless" — it provides accessible behaviour but renders complex DOM. A Radix `<Select>` is a
+`role="combobox"` trigger button, a portal-rendered `role="listbox"` popover, a hidden form input,
+and assorted state attributes — not a native `<select>`.
+
+### Why the default order breaks on these components
+
+1. **Visible text changes with state.** A button labelled `Refresh` becomes `Refreshing…` mid-action;
+   a Radix `<Select>` placeholder `Pick a probe` disappears once a value is picked. `getByText('Refresh')`
+   and `getByText('Pick a probe')` work for two seconds and then break.
+2. **The role is right, but the accessible name is unreliable.** Radix wrappers nest the user-facing
+   label deep — `getByRole('combobox', { name: 'Target' })` works only when Radix exposes the name
+   correctly, which varies by component version and prop usage. **Try the role first anyway**; fall
+   back only once you have seen it fail.
+3. **There is a test-id contract.** The frontend systematically emits stable test-ids, agreed between
+   FE and QA, which do not change without coordination. Prefixes and the field-wrapper vs
+   input/trigger distinction: [reference.md § 4](reference.md).
+
+### Promote `getByTestId` to priority 4 — only when ANY of these hold, for THAT element
+
+- The element is a Radix primitive (`<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`)
+- Its visible text changes with state (loading labels, Radix placeholders, dynamic counts)
+- A test-id contract exists for it (see the prefixes in `reference.md`)
+
+### Keep the default order (semantic above test-id) when ALL of these hold
+
+- The element renders as plain HTML rather than through a Radix primitive — login forms, raw
+  `<button>` / `<input>`, static page content
+- Its visible text is part of the contract — page headings, success and error message strings,
+  empty-state markers
+- No test-id exists for it and adding one is out of scope
+
+### The trap this exception creates
+
+Existing page objects use `getByTestId` far more often than `getByText`. That ratio is a **description
+of accumulated Radix handling, not a target to match.** Two failure modes follow from misreading it:
+
+- **Page-level promotion.** Applying the exception to every locator in a page object because one
+  element in it is Radix. Decide per element.
+- **Skipping the role attempt.** Reaching for a test-id on a Radix trigger without first trying
+  `getByRole('combobox', { name })`. The role often works; the fallback exists for when it does not.
+
+A new page object that leads with test-ids is a defect even where an old one next to it does the same.
+

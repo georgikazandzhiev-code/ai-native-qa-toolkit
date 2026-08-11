@@ -29,13 +29,16 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 
 Non-negotiable. Violating any of these breaks the framework's contract.
 
-- **Default selector priority follows Playwright's recommendation: `getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > getByAltText / getByTitle > page.locator(css)`.** Tests built this way double as accessibility audits. See § Priority hierarchy.
-- **Radix exception:** when the element is a Radix primitive (Select, Switch, Dialog, DropdownMenu, Popover, Tabs), OR the visible text changes with state, OR the team has a testid contract (`field-field-*`, `schema-field-*`, `error-*`, `monitor-actions-*`, `data-sonner-toast`), **`getByTestId` jumps to priority 4 (above `getByText`)**. See § Priority hierarchy → The Radix exception.
+- **ALWAYS start from `getByRole`, and reach for a test-id only after a semantic locator has been tried and found wanting.** The order is `getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > getByAltText / getByTitle > page.locator(css)`. Tests built this way double as accessibility audits — if `getByRole('button', { name: 'Save' })` fails, screen-reader users are broken too and the test catches it. See § Priority hierarchy.
+- **The one exception is narrow, per-element, and never reaches above priority 4.** A *single* locator may promote `getByTestId` above `getByText` when **that element** is a headless primitive whose visible text or accessible name is unstable (in this codebase: Radix Select / Switch / Dialog / DropdownMenu / Popover / Tabs). `getByRole` and `getByLabel` still come first. Rationale and the test-id contract prefixes: [recipes.md § Radix](recipes.md).
+- **The exception covers the trigger, not the whole component subtree.** Radix renders real ARIA roles inside the portal: the popover is a `listbox`, its items are `option`s, a dialog is a `dialog`, a validation message is an `alert`, a toast is a `status`. Address those **by role**. A second eval re-run showed the skill arm promoting test-ids for popover content, options and error messages where `getByRole('option', { name })` and `getByRole('alert')` work — a narrower version of the same over-generalisation.
+- **NEVER generalise that exception to a page, a file, or a form.** A form with one Radix dropdown and four native inputs gets **one** promoted locator and four semantic ones. A blind A/B eval caught exactly this failure: the skill arm made `data-testid` primary for nearly every element on a mostly-native form and scored *below* an unaided baseline (`evals/results.json`, `BENCHMARK.md`). Leading with a test-id where a role would work is a defect, even where existing page objects next to it do the same.
 - **NEVER use XPath.** Not `page.locator('//...')`, not `'xpath=...'`. No exceptions.
 - **NEVER use top-level CSS class / id selectors.** `page.locator('.btn-primary')`, `page.locator('#submit')` are forbidden as the **start** of a chain. CSS is acceptable only when chained off a higher-priority anchor (`getByTestId('x').locator('input')`) or anchored on a documented Radix data-attribute (`[data-state="checked"]`, `[data-sonner-toast]`). See § Last-resort CSS.
 - **Live-app exploration is mandatory** before writing any selectors — use `npx playwright open` (built into `@playwright/test`). No guessing from wireframes, docs, or screenshots. If `npx playwright open` cannot reach the app or auth fails, **stop and notify the human** — never ship placeholder locators with guessed names. Read the `playwright-cli` skill for the full workflow.
 - **String values inside `getByText(...)` come from `enums/app/*` or `enums/util/*`.** Never hardcode repeated UI strings. See the `enums` skill.
 - **Every page object covering a form or CRUD operation MUST include feedback selectors** — success, error, field validation, toast, loading, empty state as applicable. See § Feedback & Validation Message Selectors. A POM without feedback selectors is incomplete.
+- **NEVER put JSDoc on a locator getter.** JSDoc belongs on action methods only. A comment restating what `getByRole('button', { name: 'Save' })` returns is noise, and the eval re-run caught it as a scored miss. See the `page-objects` skill.
 - **Locators are `get` accessors returning `Locator`.** Not async. Not `Promise<Locator>`. Playwright's `Locator` is lazy — it re-queries on every action. See § The nine blessed patterns.
 - **Locators interacted with (`click`, `fill`, `hover`, `press`, `setInputFiles`) live in a page object, never inline in a spec.** Inline `page.getBy*` in specs is reserved for one-off arrival markers and toast assertions only. See § Where selectors live — POM vs spec.
 - **No `waitForTimeout`, ever.** Use a web-first assertion, `waitForResponse` for known XHRs, or `expect.toPass({ timeout })` for genuinely-flaky reads. See § Web-first assertions.
@@ -123,29 +126,19 @@ The default order is Playwright's recommendation: **semantic-first, testid-last*
 | 6 | `getByAltText` / `getByTitle` | Images / elements with `title` attribute |
 | 7 | `page.locator(css)` | **Last resort**. Only acceptable when chained off a higher-priority anchor (e.g. `getByTestId('x').locator('input')`), or anchored on a Radix data-attribute (`[data-state="checked"]`, `[data-sonner-toast]`). Never as a top-level selector for app classes |
 
-### The Radix exception — when `getByTestId` jumps to priority 4
+### The one exception, stated narrowly
 
-This codebase uses **Radix UI primitives** (via shadcn/ui) for nearly every interactive component: `<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`, `<Accordion>`. Radix is "headless" — it provides accessible behavior but renders complex DOM (a Radix `<Select>` is a `role="combobox"` trigger button, a portal-rendered `role="listbox"` popover, a hidden form input, and assorted state attributes — not a native `<select>`).
+A **single** locator may promote `getByTestId` above `getByText` (to priority 4) when that **specific element** is a headless-primitive wrapper whose visible text or accessible name is unstable — in this codebase, a Radix `<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>` or `<Tabs>`.
 
-Three things break the Playwright-default order on Radix:
+**Three constraints on that exception, and they are the point of this section:**
 
-1. **Visible text changes with state.** A button labeled `Refresh` becomes `Refreshing…` mid-action; a Radix `<Select>` placeholder `Pick a probe` disappears once a value is picked. `getByText('Refresh')` and `getByText('Pick a probe')` work for two seconds and then break.
-2. **The role is right, but the accessible name is unreliable.** Radix wrappers nest the user-facing label deep — `getByRole('combobox', { name: 'Target' })` works only when Radix exposes the name correctly (varies by component version and prop usage).
-3. **The team has a testid contract.** The frontend systematically emits stable testids: `schema-field-<fieldName>` on every schema-form field **wrapper** and `field-field-<fieldPath>` on the **input/trigger** inside it (per `src/components/schema-form/schema-form.tsx`), `monitor-actions-<id>` on every per-row action button, `error-<fieldName>` on every validation message, `data-sonner-toast` on every toast. These are agreed contracts between FE and QA — they don't change without coordination.
+1. **It is decided per element, never per file.** A form with one Radix dropdown and four native inputs gets one promoted locator and four semantic ones. Promoting the whole page object is the single most common misuse.
+2. **It never promotes above priority 4.** `getByRole` and `getByLabel` stay ahead of it. A Radix `<Select>` trigger is still a `combobox` — try the role first and fall back only when the accessible name proves unreliable.
+3. **It requires a reason you can name.** "It is a component library" is not one. The reason is either *the visible text changes with state* or *the accessible name is not reliably exposed* — and you should be able to say which.
 
-**Promote `getByTestId` to priority 4 (above `getByText`) when ANY of these hold:**
+Full rationale, the FE test-id contract prefixes, and the per-primitive recipes: **[recipes.md § Radix](recipes.md)**. Read that when you are actually writing a Radix locator — not when deciding the default for a page.
 
-- The element is a Radix primitive (`<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`)
-- The visible text changes with state (button labels during loading, Radix placeholders, dynamic counts)
-- The team has emitted a testid contract for the element (the `field-field-*`, `schema-field-*`, `error-*`, `monitor-actions-*` prefixes — see [reference.md § 4](reference.md))
-
-**Keep the default order (text above testid) when ALL hold:**
-
-- The element renders as plain HTML, not through a Radix primitive (Keycloak login forms, raw `<button>`/`<input>`, static page content)
-- The visible text is part of the contract (page headings, success/error message strings — owned by `enums/app/messages.ts` *when* that file is created; until then, captured strings stay inline per the `enums` skill, single-use), empty-state markers
-- No testid exists for the element AND adding one is out of scope
-
-Why this matters: 284 of the locators currently in `pages/` use `getByTestId`, vs 25 that use `getByText`. The codebase already exercises this exception heavily — it's how the team has handled Radix instability without flake. Documenting the rule explicitly so the next author doesn't re-litigate it on every page object.
+> **This exception is descriptive, not aspirational.** It documents why existing page objects lean on test-ids for Radix components. It is **not** a licence to default to `getByTestId`, and a new page object that reaches for test-ids before trying roles is a defect regardless of how many existing locators do the same.
 
 ## Decision tree — pick the right locator
 

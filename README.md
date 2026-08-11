@@ -79,6 +79,19 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 | **`qe-pattern-memory`** | Cross-session learning as a git-tracked pattern store: confidence scoring, tier promotion, and *mandatory falsification*. A store that only counts successes converges on false confidence, so recording failures is a hard rule. Promotion to canonical is a pull-request review, never a self-assessment. |
 | **`owasp-security-testing`** | OWASP Top 10 and API Security Top 10 mapped to concrete QA test targets, layered on the negative-test matrix. |
 
+## Product-side constitutions (web + mobile)
+
+The skills govern how *tests* are written. Two further constitutions govern how the *application* is written, so those tests can exist at all — the shift-left half of the same contract:
+
+| File | Stack | Framework | Locator contract |
+|---|---|---|---|
+| `.claude/constitutions/web-testability.md` | Web frontend (HTML / React) | Playwright | Semantic roles and labels first, kebab-case `data-testid` as fail-safe |
+| `.claude/constitutions/mobile-testability.md` | Flutter | LeanCode Patrol | Centralised `Key`s — never visible or localised text |
+
+Drop the matching file into the **product** repo as its `CLAUDE.md`. The coding agent building the UI is then held to the locator contract at authoring time, instead of QA discovering an unaddressable component after merge. Both encode the same four ideas in their own idiom: nothing user-reachable may be unaddressable; never key on anything cosmetic; every collection row keyed on a business ID and never a loop index; loading, empty and error states first-class and addressable.
+
+See `.claude/constitutions/README.md`.
+
 ## Install
 
 ```bash

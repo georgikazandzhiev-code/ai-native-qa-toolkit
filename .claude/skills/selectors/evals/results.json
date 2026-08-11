@@ -6,10 +6,10 @@
   "effort": "high",
   "totals": {
     "expectations": 15,
-    "with_skill_met": 12,
-    "baseline_met": 14,
-    "with_skill_pct": 80.0,
-    "baseline_pct": 93.3,
+    "with_skill_met": 13,
+    "baseline_met": 15,
+    "with_skill_pct": 86.7,
+    "baseline_pct": 100.0,
     "delta_met": -2
   },
   "cases": [
@@ -27,5 +27,27 @@
       "base": 6,
       "winner": "baseline"
     }
+  ],
+  "runs": [
+    {
+      "run": 1,
+      "date": "2026-08-11",
+      "with_skill_met": 12,
+      "baseline_met": 14,
+      "expectations": 15,
+      "note": "skill arm made data-testid the default locator choice; scored below baseline"
+    },
+    {
+      "run": 2,
+      "date": "2026-08-11",
+      "with_skill_met": 13,
+      "baseline_met": 15,
+      "expectations": 15,
+      "note": "after priority-hierarchy fix. Targeted defect gone (grader: testid-primary in 'neither' arm, both cases). Score delta within noise \u2014 baseline also +1 with no changes."
+    }
+  ],
+  "unverified_changes_since_run_2": [
+    "Radix exception scoped to the trigger only; portal ARIA roles (listbox/option/alert/status) named explicitly",
+    "no-JSDoc-on-locator-getters rule added to the skill (previously only in the constitution)"
   ]
 }
