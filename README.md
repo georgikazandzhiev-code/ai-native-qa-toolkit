@@ -195,6 +195,30 @@ run: npm run evaluate:spec || echo "DeepEval validation passed"
 
 When the script is missing or fails, `|| echo` swallows the exit code, prints the word "passed", and exits 0 — reporting success for a tool that never ran. **A gate that cannot fail is not a gate.** If a step is not ready to block, `continue-on-error: true` says so in the log instead of pretending otherwise.
 
+## Session memory — what the last session learned, before you re-learn it
+
+**[`.claude/memories/learned_patterns.md`](.claude/memories/learned_patterns.md)** is where a lesson goes the moment it is paid for: the locator that survived a re-render, the root cause behind a flake, the domain quirk a spec written from the story alone would miss.
+
+Both surfaces route to it automatically — the constitution's § Session Memory for Claude Code, and `.cursor/rules/learned-patterns.mdc` with `alwaysApply: true` for Cursor. Neither needs to be asked.
+
+| Rule | |
+|---|---|
+| **Read** | before generating or refactoring any spec, page object or selector. Re-deriving a recorded lesson is wasted work; contradicting one without falsifying it in the same edit is a defect. |
+| **Write** | in the **same edit as the fix**, never "later" — a lesson recorded a day afterwards has already lost the artifact that proved it. |
+| **Label** | every entry carries `EXECUTED` / `STATIC` / `INFERRED`. `INFERRED` may suggest; it may never gate a decision. |
+| **Cap** | 12 cases. Past that it is a landfill that still carries the authority of "we learned this". |
+| **Graduate** | recurs and holds twice → the repo's `.qe-memory/` store as a scored pattern. A convention for every repo → a rule in the matching skill. Mechanically checkable → a lint rule. |
+
+Two things keep it from rotting, and both are checks rather than intentions:
+
+```bash
+npm run test:memory
+```
+
+**Every code snippet in the file is linted against the same 16 rules as the test suite.** A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
+
+> **The sync is one-directional, and this is the part that bites.** Agents read `~/.claude/memories/learned_patterns.md` — the copy in your home directory. The copy in this repo is what travels to other people. Write to the home copy; the copy here is a snapshot of it. Editing this one directly changes nothing about how any session behaves.
+
 ## Product-side constitutions (web + mobile)
 
 The skills govern how *tests* are written. Two further constitutions govern how the *application* is written, so those tests can exist at all — the shift-left half of the same contract:
