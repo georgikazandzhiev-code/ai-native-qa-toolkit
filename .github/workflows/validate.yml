@@ -20,6 +20,12 @@ jobs:
       - name: Validate toolkit structure
         run: npm run validate
 
+      # The defect-escape-rate gate, driven against a fake Jira. Asserts the exit code for every
+      # scenario it decides — including a rate under the 5% line that is still a regression, which
+      # an absolute threshold calls green. A gate never run against a violation is a hypothesis.
+      - name: Defect escape rate — gate behaviour
+        run: npm run test:der
+
   plugin:
     name: Lint plugin rules
     runs-on: ubuntu-latest

@@ -219,6 +219,28 @@ npm run test:memory
 
 > **The sync is one-directional, and this is the part that bites.** Agents read `~/.claude/memories/learned_patterns.md` — the copy in your home directory. The copy in this repo is what travels to other people. Write to the home copy; the copy here is a snapshot of it. Editing this one directly changes nothing about how any session behaves.
 
+## Defect escape rate — a metric that can be red
+
+```bash
+npm run der -- PROJECT --release v2.1.0
+```
+
+Escape rate is the metric most often quoted and least often trustworthy, because three things quietly break it. This implementation refuses each one.
+
+**It exits non-zero when the gate fails.** The version this replaced computed a `passed` field and then ignored it, so it could print CRITICAL and still let a pipeline through. A gate that cannot say no is not a gate — the same rule check 11 enforces on workflow files.
+
+**It does not read `total` from the search response.** Atlassian removed `GET /rest/api/3/search` in October 2025; it now returns `410 Gone`. The replacement is cursor-paginated and has no `total` field, so code that migrates the URL and nothing else reads `undefined`, coerces it to `0`, and reports **a 0% escape rate for ever** — a metric that can only be green. Counts come from `/search/approximate-count`.
+
+**It counts the bugs it could not classify.** A defect matching neither the internal nor the escaped filter silently shrinks the denominator and flatters the result; one matching both inflates it. Both are counted and shown, and if unclassified defects exceed 15% the run fails on **data quality** rather than publishing a rate built on a guess. Fix the labelling, not the threshold.
+
+And the thresholds are a starting position, not a law. What gates is a **regression against recorded history** — the same argument `mutation-testing` makes against an arbitrary 80% target. A release that moves 1.6% → 4.8% is still under the "excellent" line and is still twice as bad as the last one.
+
+```bash
+npm run test:der
+```
+
+Drives the script against a fake Jira and asserts the exit code for five scenarios, including that last one. Runs in CI.
+
 ## Product-side constitutions (web + mobile)
 
 The skills govern how *tests* are written. Two further constitutions govern how the *application* is written, so those tests can exist at all — the shift-left half of the same contract:
