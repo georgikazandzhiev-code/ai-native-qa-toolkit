@@ -149,7 +149,7 @@ Verified by fault injection rather than assumption: a 13 → 6 drop across six c
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
-Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **16 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.
+Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **17 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.
 
 | Enforced mechanically | Stays a review responsibility |
 |---|---|
