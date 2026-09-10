@@ -88,7 +88,7 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 npm run validate
 ```
 
-Zero dependencies, so it runs on a fresh clone before anything is installed. Eleven checks:
+Zero dependencies, so it runs on a fresh clone before anything is installed. Thirteen checks:
 
 | # | Check | Why it is here |
 |---|---|---|
@@ -103,6 +103,8 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. Ele
 | 9 | **Governance artifacts exist and bind** — `GOVERNANCE.md` is present, every `### Phase` in it states both an `**Exit:**` and a `**Stop:**` criterion, `CODEOWNERS` routes skills, the plugin and the scripts to a named owner, and the PR template exists | A rollout phase with no exit criterion advances on whoever is most confident that day, and one with no stop criterion cannot be rolled back |
 | 10 | **Session memory is present and bounded** — `.claude/memories/learned_patterns.md` exists, states its READ and WRITE rules, holds at most 12 cases, and every case carries an `**Evidence:**` label | The constitution and an always-applied Cursor rule both route every session to that file, so a missing one is a broken route. The cap is the point: a capture file with no drain becomes a landfill that still carries the authority of "we learned this" |
 | 11 | **No CI step masks its own failure** — no `|| echo`, `|| true` or `set +e` in any workflow or template | A proposed workflow carried `npm run evaluate:spec || echo "DeepEval validation passed"`. When the script is missing or fails, that swallows the exit code, prints the word "passed", and reports success for a tool that never ran. A gate that cannot fail is not a gate |
+| 12 | **Vendored third-party code has recorded provenance** — `skills-lock.json` hashes every file copied from upstream, `NOTICE.md` carries the attribution, and the Apache licence sits beside the copy | Parts of `skill-creator` come from [anthropics/skills](https://github.com/anthropics/skills) under Apache-2.0. Nothing recorded that, so a local edit was indistinguishable from upstream's own content and the next re-vendor reverted it silently — and a public repository shipping Apache-2.0 code without the licence is a breach that a vendor security review reads before it reads this file |
+| 13 | **Every constitution rule is owned by a skill** — each row of the `MUST` and `WON'T` tables maps to the skill whose `Critical` block carries it, or is declared cross-cutting with what enforces it instead | The rule list is derived **from** the constitution, so a rule routed nowhere fails the build. A hand-kept list has the opposite property: forget a line and the checker reports all-clear over a rule it never looked at. First run found a MUST rule — no conditional logic in a test body — that no skill's `Critical` block stated at all |
 
 Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 

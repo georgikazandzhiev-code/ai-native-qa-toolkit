@@ -26,6 +26,20 @@ jobs:
       - name: Defect escape rate — gate behaviour
         run: npm run test:der
 
+      # Check 12 verifies vendored provenance from inside `npm run validate`; this proves the
+      # verification can fail. Editing an Apache-2.0 file we copied from upstream, deleting the
+      # lock, or adding a file into a vendored directory must each stop the build — and it must
+      # stay silent when we edit our own SKILL.md, or it gets switched off within a week.
+      - name: Vendored provenance — the check must bite, and only there
+        run: npm run test:lock
+
+      # Check 13 the same way: a rule added to the constitution and routed to no skill, and a
+      # skill whose Critical block drifted away from the rule it owns, must both fail. The rule
+      # list is derived from the constitution precisely so that forgetting to route one cannot
+      # pass as "all clear".
+      - name: Constitution rule ownership — unrouted rules must fail
+        run: npm run test:rules-owned
+
   plugin:
     name: Lint plugin rules
     runs-on: ubuntu-latest
