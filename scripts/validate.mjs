@@ -761,6 +761,25 @@ for (const dir of CI_DIRS) {
   }
 }
 
+// ── 14. The version an install will report is the version this is ─────────────
+//
+// The toolkit is adopted by copying `.claude/` into a team repository, so `VERSION` at the
+// root never travels — the consumer takes the constitution, not the repo. The version stamp
+// therefore lives inside `.claude/CLAUDE.md`, and this check exists for the one way that can
+// go wrong: VERSION bumped, stamp not. Every install taken from that tree then reports the
+// old number, and `scripts/audit-installs.mjs` answers "who is current" with confidence and
+// the wrong answer.
+//
+// An audit that is absent is a gap. An audit that is wrong is worse, because it closes the
+// question.
+
+{
+  const stampResult = await import('./stamp-version.mjs')
+    .then((m) => m.checkStamp())
+    .catch((e) => ({ errors: [`scripts/stamp-version.mjs could not be loaded: ${e.message}`] }));
+  for (const e of stampResult.errors) err('version', e);
+}
+
 // ── report ──────────────────────────────────────────────────────────────────────
 
 const pad = (n) => String(n).padStart(3, ' ');

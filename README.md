@@ -88,7 +88,7 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 npm run validate
 ```
 
-Zero dependencies, so it runs on a fresh clone before anything is installed. Thirteen checks:
+Zero dependencies, so it runs on a fresh clone before anything is installed. Fourteen checks:
 
 | # | Check | Why it is here |
 |---|---|---|
@@ -105,6 +105,7 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. Thi
 | 11 | **No CI step masks its own failure** — no `|| echo`, `|| true` or `set +e` in any workflow or template | A proposed workflow carried `npm run evaluate:spec || echo "DeepEval validation passed"`. When the script is missing or fails, that swallows the exit code, prints the word "passed", and reports success for a tool that never ran. A gate that cannot fail is not a gate |
 | 12 | **Vendored third-party code has recorded provenance** — `skills-lock.json` hashes every file copied from upstream, `NOTICE.md` carries the attribution, and the Apache licence sits beside the copy | Parts of `skill-creator` come from [anthropics/skills](https://github.com/anthropics/skills) under Apache-2.0. Nothing recorded that, so a local edit was indistinguishable from upstream's own content and the next re-vendor reverted it silently — and a public repository shipping Apache-2.0 code without the licence is a breach that a vendor security review reads before it reads this file |
 | 13 | **Every constitution rule is owned by a skill** — each row of the `MUST` and `WON'T` tables maps to the skill whose `Critical` block carries it, or is declared cross-cutting with what enforces it instead | The rule list is derived **from** the constitution, so a rule routed nowhere fails the build. A hand-kept list has the opposite property: forget a line and the checker reports all-clear over a rule it never looked at. First run found a MUST rule — no conditional logic in a test body — that no skill's `Critical` block stated at all |
+| 14 | **The version an install will report is the version this is** — `VERSION` and the `<!-- toolkit-version: -->` stamp in `.claude/CLAUDE.md` must agree | Adoption happens by copying `.claude/` into a team repository, so root `VERSION` never travels. If the stamp lags a bump, every install taken from that tree reports the old number and `npm run audit` answers "who is current" confidently and wrongly. An absent audit is a gap; a wrong one closes the question |
 
 Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 
