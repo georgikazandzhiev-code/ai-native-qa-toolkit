@@ -553,6 +553,214 @@ for (const dir of CI_DIRS) {
   }
 }
 
+// ── 12. Vendored third-party code has recorded provenance ──────────────────────
+//
+// Parts of skill-creator come from Anthropic's public skills repo under Apache-2.0. Until
+// skills-lock.json existed nothing recorded that, with three consequences: a local edit to
+// vendored code was indistinguishable from upstream's own content so the next re-vendor
+// silently reverted it, upstream could move without anyone knowing which copy had gone stale,
+// and the licence obligation to carry the attribution had nowhere to live. A public repository
+// shipping Apache-2.0 code without the licence is a breach, and a bank's vendor review reads
+// NOTICE.md before it reads the README.
+//
+// Verification here is offline on purpose. A gate that needs the network is a gate that fails
+// when GitHub has a bad afternoon; `npm run skills:lock -- --verify-upstream` is the online
+// half, and it is advisory.
+
+{
+  const lockResult = await import('./skills-lock.mjs')
+    .then((m) => m.verifyLock())
+    .catch((e) => ({
+      errors: [`scripts/skills-lock.mjs could not be loaded: ${e.message}`],
+      warnings: [],
+    }));
+
+  for (const e of lockResult.errors) err('vendored', e);
+  for (const w of lockResult.warnings) warn('vendored', w);
+
+  // The licence text and the attribution must travel with the copy. Both are obligations
+  // rather than niceties, and both were absent from this repository until now.
+  const notice = join(ROOT, 'NOTICE.md');
+  if (!existsSync(notice)) {
+    err('NOTICE.md', 'missing — vendored Apache-2.0 code requires attribution to travel with it');
+  } else {
+    const text = read(notice);
+    for (const needle of ['anthropics/skills', 'Apache License 2.0', 'LICENSE.txt']) {
+      if (!text.includes(needle)) {
+        err('NOTICE.md', `does not mention "${needle}" — the attribution is incomplete`);
+      }
+    }
+  }
+  const vendoredLicence = join(SKILLS, 'skill-creator', 'LICENSE.txt');
+  if (!existsSync(vendoredLicence)) {
+    err('skill-creator/LICENSE.txt', 'missing — Apache-2.0 requires the licence text beside the copy');
+  } else if (!read(vendoredLicence).includes('Apache License')) {
+    err('skill-creator/LICENSE.txt', 'does not contain the Apache License text');
+  }
+}
+
+// ── 13. Every constitution rule is owned by a skill ────────────────────────────
+//
+// The constitution states its rules in the MUST and WON'T tables; the skills carry the detail.
+// Nothing connected the two, so a rule could be tightened in the constitution and left stale
+// in the skill implementing it — or added to the constitution and routed nowhere, which reads
+// to an agent as a rule with no instructions.
+//
+// The design point is the direction. The rule list is derived FROM the constitution, so a rule
+// with no manifest entry fails the build: forget the entry and CI stops. A hand-kept list of
+// rules to check has the opposite property — forget a line and the checker reports "all clear"
+// over a rule it never looked at, which is the same defect as a lint rule shipped with no
+// fixture case.
+//
+// `crossCutting` is the declared escape hatch: a claim that no single skill owns the rule,
+// which must say what enforces it instead. The exemption is spelled out rather than implied by
+// silence, because an undeclared gap is the thing being prevented.
+
+{
+  const CONSTITUTION = join(ROOT, '.claude', 'CLAUDE.md');
+
+  /** token: a distinctive substring the owning skill's Critical block must contain verbatim. */
+  const RULE_OWNERS = {
+    // MUST
+    Imports: { skill: 'fixtures', token: 'test-options' },
+    'Dependency Injection': { skill: 'fixtures' },
+    'Type Safety': { skill: 'type-safety', token: 'any' },
+    Selectors: { skill: 'selectors', token: 'getByRole' },
+    Schemas: { skill: 'type-safety', token: 'strictObject' },
+    'Response Validation': { skill: 'api-testing', token: 'toBeTruthy' },
+    'Sources of Truth': { skill: 'config', token: 'process.env' },
+    Tags: { skill: 'test-standards', token: 'tag' },
+    'Qase (when used)': { skill: 'test-standards', token: 'qase' },
+    Assertions: { skill: 'test-standards' },
+    // Cleanup lives in test-standards, not api-testing — the first run of this check pointed
+    // it at api-testing and reported drift that was a mismapping, not a gap.
+    Cleanup: { skill: 'test-standards', token: 'afterEach' },
+    'API Steps': { skill: 'api-testing', token: 'test.step' },
+    // The anchor is the obligation, not the rule's own title: the Critical block phrases the
+    // coverage plan as "every status code in the OpenAPI spec must be a ... test".
+    'Coverage Plan': { skill: 'api-testing', token: 'status code' },
+    'Explore Before Generate': { skill: 'playwright-cli' },
+    'Search Before Creating': { skill: 'common-tasks' },
+    'Lint & Format': { crossCutting: 'the eslint-plugin-qa-constitution gate, not one skill' },
+    Verification: { crossCutting: 'CLAUDE.md § Verification Standard, applied by every skill' },
+    // WON'T
+    'No XPath': { skill: 'selectors', token: 'XPath' },
+    'No hard waits': { skill: 'test-standards', token: 'waitForTimeout' },
+    'No `page.evaluate()` for DOM work': { skill: 'selectors' },
+    'No `any`': { skill: 'type-safety', token: 'any' },
+    'No hardcoded secrets / IDs / content': { skill: 'data-strategy' },
+    'No conditional test logic': { skill: 'test-standards', token: 'conditional' },
+    'No `try/catch` in tests': { skill: 'test-standards' },
+    'No `await expect(...).not.toThrow()`': { skill: 'api-testing' },
+    'No tags on `describe` / no multi-tag': { skill: 'test-standards', token: 'describe' },
+    'No magic numbers': { skill: 'enums' },
+    'No JSDoc on locator getters': { skill: 'page-objects', token: 'JSDoc' },
+    'No commented-out code': { skill: 'api-testing', token: 'TODO' },
+    'No silent coverage drops': { skill: 'api-testing', token: 'test.skip' },
+    'No substitute UI exploration': { skill: 'playwright-cli' },
+    'No empty-body-only 400 tests': { skill: 'api-testing' },
+    'No feedback-less POM': { skill: 'page-objects' },
+    'No explore-only files in commits': { skill: 'playwright-cli' },
+    'No redundant assertions after Zod parse': { skill: 'api-testing' },
+    'No assertion on exact error text': { skill: 'api-testing' },
+    'No bypassing hooks': { crossCutting: 'a git hook and CI, outside any skill' },
+  };
+
+  /**
+   * Rows of a `### <SECTION>` table, bounded by the next heading at level 2 OR 3.
+   *
+   * The level-3 boundary is the whole point. MUST, SHOULD and WON'T are all `###`, so stopping
+   * only at `##` makes the MUST slice swallow SHOULD and WON'T — which on the first run
+   * reported the seven SHOULD rows as unrouted MUST rules and listed one WON'T rule twice.
+   */
+  function ruleLabels(md, sectionRe) {
+    const lines = md.split('\n');
+    const start = lines.findIndex((l) => sectionRe.test(l));
+    if (start < 0) return null;
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i++) {
+      if (/^#{2,3} /.test(lines[i])) {
+        end = i;
+        break;
+      }
+    }
+    return lines
+      .slice(start, end)
+      .map((l) => l.match(/^\|\s*\*\*(.+?)\*\*\s*\|/))
+      .filter(Boolean)
+      .map((m) => m[1].trim());
+  }
+
+  /** The Critical block of a SKILL.md, up to the next level-2 heading. */
+  function criticalBlock(skill) {
+    const p = join(SKILLS, skill, 'SKILL.md');
+    if (!existsSync(p)) return null;
+    const lines = read(p).split('\n');
+    const start = lines.findIndex((l) => /^## (Critical|Mandatory)/.test(l));
+    if (start < 0) return null;
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i++) {
+      if (/^## /.test(lines[i])) {
+        end = i;
+        break;
+      }
+    }
+    return lines.slice(start + 1, end).join('\n');
+  }
+
+  if (!existsSync(CONSTITUTION)) {
+    err('.claude/CLAUDE.md', 'missing — the constitution is what every skill claims to implement');
+  } else {
+    const md = read(CONSTITUTION);
+    const must = ruleLabels(md, /^### MUST/);
+    const wont = ruleLabels(md, /^### WON'T/);
+
+    if (must === null) err('.claude/CLAUDE.md', 'no "### MUST" table found');
+    if (wont === null) err('.claude/CLAUDE.md', 'no "### WON\'T" table found');
+
+    const rules = [...(must ?? []), ...(wont ?? [])];
+
+    for (const label of rules) {
+      const owner = RULE_OWNERS[label];
+      if (!owner) {
+        err(
+          '.claude/CLAUDE.md',
+          `rule "${label}" has no owner in validate.mjs § RULE_OWNERS — route it to the skill ` +
+            `carrying its detail, or declare it crossCutting with what enforces it instead`
+        );
+        continue;
+      }
+      if (owner.crossCutting) continue;
+
+      const block = criticalBlock(owner.skill);
+      if (block === null) {
+        err(
+          `${owner.skill}/SKILL.md`,
+          `owns constitution rule "${label}" but has no "## Critical" block to carry it`
+        );
+        continue;
+      }
+      if (owner.token && !block.includes(owner.token)) {
+        err(
+          `${owner.skill}/SKILL.md`,
+          `Critical block does not mention "${owner.token}", the anchor for constitution rule ` +
+            `"${label}" — the rule and the skill that owns it have drifted apart`
+        );
+      }
+    }
+
+    // And the reverse: a manifest entry for a rule the constitution no longer states.
+    for (const label of Object.keys(RULE_OWNERS)) {
+      if (!rules.includes(label)) {
+        warn(
+          'validate.mjs',
+          `RULE_OWNERS names "${label}", which is no longer a constitution rule — prune it`
+        );
+      }
+    }
+  }
+}
+
 // ── report ──────────────────────────────────────────────────────────────────────
 
 const pad = (n) => String(n).padStart(3, ' ');

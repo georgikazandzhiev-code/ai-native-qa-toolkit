@@ -2,7 +2,7 @@
   "name": "ai-native-qa-toolkit",
   "version": "1.0.0",
   "private": true,
-  "description": "AI-native QA toolkit \u2014 engineering constitution, on-demand skills, product-side testability constitutions, and a lint gate that enforces the checkable half.",
+  "description": "AI-native QA toolkit — engineering constitution, on-demand skills, product-side testability constitutions, and a lint gate that enforces the checkable half.",
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate.mjs",
@@ -12,7 +12,10 @@
     "eval:compare": "node scripts/eval-compare.mjs",
     "check:bump": "node scripts/check-version-bump.mjs",
     "der": "node scripts/defect-escape-rate.mjs",
-    "test:der": "node scripts/tests/der-gate.test.mjs"
+    "test:der": "node scripts/tests/der-gate.test.mjs",
+    "skills:lock": "node scripts/skills-lock.mjs",
+    "test:lock": "node scripts/tests/skills-lock.test.mjs",
+    "test:rules-owned": "node scripts/tests/rule-ownership.test.mjs"
   },
   "engines": {
     "node": ">=18"

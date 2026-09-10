@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "generated": "2026-09-10",
+  "vendored": {
+    "skill-creator/eval-harness": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "upstreamPath": "skills/skill-creator",
+      "license": "Apache-2.0",
+      "copyright": "Anthropic, PBC",
+      "provenance": "filenameMatch",
+      "note": "SKILL.md, references/ and assets/SKILL-template.md are this repository's own work and are deliberately NOT tracked here — they carry the project's paired-rule pattern and boundary discipline, which upstream does not have.",
+      "paths": [
+        ".claude/skills/skill-creator/scripts",
+        ".claude/skills/skill-creator/eval-viewer",
+        ".claude/skills/skill-creator/agents",
+        ".claude/skills/skill-creator/assets/eval_review.html"
+      ],
+      "fileCount": 15,
+      "treeHash": "2dcdc1ebb00e15bcf5baa7cd68a73fcf7d5d589bf615e2e420b33cf0dc0c4566",
+      "files": {
+        ".claude/skills/skill-creator/scripts/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        ".claude/skills/skill-creator/scripts/aggregate_benchmark.py": "123ef128ea5ccc01a4b1ac212ef5567f21e9c13d3d240609780beeb3200c49aa",
+        ".claude/skills/skill-creator/scripts/generate_report.py": "13df7118a3c50c83c4c3250a606d5f2b20b25a3d44cbc392b3d669ec75281453",
+        ".claude/skills/skill-creator/scripts/improve_description.py": "87d864570220b699fac52da309d2d6efdb060647bfebc74f768128e646accf80",
+        ".claude/skills/skill-creator/scripts/package_skill.py": "1a33059b0db1ef73375d46d513e5ea81369d2e8838c970597b0d52ddef8d1c0f",
+        ".claude/skills/skill-creator/scripts/quick_validate.py": "67cf5703402013936c8fb75ad6a1afecd8841d45cc5e606b634eb05825fde365",
+        ".claude/skills/skill-creator/scripts/run_eval.py": "43e3b8f80dbf69c343967ba77e268fae991d9fa3ed68b32a0ff02532cd48657f",
+        ".claude/skills/skill-creator/scripts/run_loop.py": "7bd6f674203168520517eec94c55f493c0d154339b061b4d7c0f0dad187d0f21",
+        ".claude/skills/skill-creator/scripts/utils.py": "3af8ae62c40c73ab712207436a0d9a981e845f25c5a7040229eb189cc8e45bb1",
+        ".claude/skills/skill-creator/eval-viewer/generate_review.py": "fc9d1b9243fe5ab6012ebd579bd76d0035de1b79fd3b969de114defab26478fb",
+        ".claude/skills/skill-creator/eval-viewer/viewer.html": "a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa",
+        ".claude/skills/skill-creator/agents/analyzer.md": "bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a",
+        ".claude/skills/skill-creator/agents/comparator.md": "fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e",
+        ".claude/skills/skill-creator/agents/grader.md": "57134da0c1a4eea33fbd74a1c9c44aa814f07d6bc64de303edb586f941e5d21a",
+        ".claude/skills/skill-creator/assets/eval_review.html": "ce477dcc74dc1c0d1d3352646a79167b5a63634e936b1019160025065974e452"
+      }
+    }
+  }
+}
