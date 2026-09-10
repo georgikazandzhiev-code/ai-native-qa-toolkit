@@ -1,5 +1,7 @@
 # QA Automation — Global Constitution
 
+<!-- toolkit-version: 1.1.0 -->
+
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
 This file is always loaded. It is the single source of truth for **cross-project** QA-automation rules, workflow, and the skill index. Deep how-to knowledge lives in on-demand skills under `~/.claude/skills/`. Repo-specific facts (folder maps, test-ids, endpoints) live **per-project** — in that repo's own `CLAUDE.md`/rules, or in a dedicated repo-context skill for that repository. This constitution never hardcodes one repo's layout as universal truth.

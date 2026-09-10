@@ -40,6 +40,14 @@ jobs:
       - name: Constitution rule ownership — unrouted rules must fail
         run: npm run test:rules-owned
 
+      # Check 14 the same way. VERSION never travels to a consumer - they copy .claude/, not
+      # the repo - so the version lives as a stamp inside the constitution. If the stamp lags a
+      # bump, every install reports the old number and `npm run audit` answers "who is current"
+      # confidently and wrongly. A wrong audit is worse than an absent one: it closes the
+      # question.
+      - name: Version stamp — a stale stamp must not pass
+        run: npm run test:stamp
+
   plugin:
     name: Lint plugin rules
     runs-on: ubuntu-latest
