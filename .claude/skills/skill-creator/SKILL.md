@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.1
+version: 1.1.2
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -254,14 +254,14 @@ If `disable-model-invocation: true`, skip Phase 6 — the skill fires only on `/
 
 1. **Update `~/.claude/CLAUDE.md § Routed Skill Index`** — add the skill row with task signal + skill name + (optional) "Pairs with" rule. Mark TBD skills as **(TBD)** so the model doesn't route to empty placeholders. This is the single human-readable index.
 2. **Update siblings' `## See Also`** — when the new skill belongs to a cluster (per Phase 2), the existing cluster siblings should mention the new skill in their See Also. Cross-references are bidirectional.
-3. **Update the Routed Skill Index in `~/.claude/CLAUDE.md`** — if a previously-empty placeholder is now populated, flip the row's status. Also update §6.4 cross-reference matrix if cluster relationships changed.
+3. **Update the Routed Skill Index in `~/.claude/CLAUDE.md`** — add, rename or remove the skill's row in the same edit. If cluster relationships changed, update the `See Also` of the sibling skills too (bidirectional). `npm run validate` check 15 fails when the index and the skill folders disagree.
 5. **If migrating from a rule**, leave a one-line breadcrumb in the original rule pointing at the new skill (mirrors `/migrate-to-skills`).
 
 In the new SKILL.md `## See Also` section:
 
 - Paired rule (or `(none)` explicitly).
 - Sibling skills in the chosen cluster from Phase 2 — verify each is **populated** (not TBD).
-- Orchestration doc — always cite the Routed Skill Index in `~/.claude/CLAUDE.md` §6.4 cross-reference matrix.
+- Orchestration — always cite the Routed Skill Index in `~/.claude/CLAUDE.md`, the one skill index.
 - Companion plan — `docs/framework-alignment-plan.md` §N if applicable.
 
 ### Phase 8: Verify
@@ -444,7 +444,7 @@ User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) int
 **Orchestration:**
 
 - `~/.claude/CLAUDE.md` — always-on orchestrator. § Routed Skill Index lives here; every new skill updates it.
-- the Routed Skill Index in `~/.claude/CLAUDE.md` — orchestration master. §4 layered model, §6.2 final shape, §6.4 cross-reference matrix.
+- the Routed Skill Index in `~/.claude/CLAUDE.md` — the one skill index; every skill has exactly one row there.
 - [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — companion plan, drift inventory, sequenced fix order.
 - [`AGENTS.md`](../../../AGENTS.md) — repo-root cross-tool entrypoint.
 

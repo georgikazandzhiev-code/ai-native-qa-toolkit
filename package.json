@@ -17,6 +17,7 @@
     "skills:lock": "node scripts/skills-lock.mjs",
     "test:lock": "node scripts/tests/skills-lock.test.mjs",
     "test:rules-owned": "node scripts/tests/rule-ownership.test.mjs",
+    "test:xref": "node scripts/tests/cross-references.test.mjs",
     "stamp": "node scripts/stamp-version.mjs",
     "audit": "node scripts/audit-installs.mjs",
     "test:stamp": "node scripts/tests/version-stamp.test.mjs"

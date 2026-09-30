@@ -111,7 +111,7 @@ One-way and stale cross-references were the #1 source of audit churn in Tier 1.
 - [ ] **Paired rule cited** — explicit link if it exists, "(none)" if not. No omission.
 - [ ] **No broken markdown links** — every `[text](path)` resolves to a real file. Use `ls`, `cat`, or `Read` to verify.
 - [ ] **`~/.claude/CLAUDE.md § Routed Skill Index` updated** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's index is the live route map (and the only human-readable index — `project-identity.mdc` was retired in favor of consolidating into `~/.claude/CLAUDE.md`).
-- [ ] **`docs/cursor-skills-orchestration.md § 6.2.2`** row updated if a previously-empty placeholder is now populated, or if cluster relationships changed (also update §6.4 matrix).
+- [ ] Sibling skills' `See Also` updated if cluster relationships changed (bidirectional).
 - [ ] **Cluster siblings' `See Also` updated** when this skill belongs to a cluster — the existing siblings should mention this skill in their `See Also` so the cluster is internally connected.
 
 ---
@@ -153,7 +153,7 @@ If output drifts: body content thin (extend with more workflow / examples per `p
 - [ ] `git status` shows only intended new files; no stray edits.
 - [ ] PR description names the skill, the cluster, and the three subagent test outcomes.
 - [ ] If a paired rule was added: ≤ 120 lines, glob-attached, invariants only (no workflows).
-- [ ] If a placeholder folder is now populated: orchestration doc §6.2.2 row updated in the same PR.
+- [ ] `npm run validate` passes check 15 — the Routed Skill Index and the skill folders name the same skills.
 - [ ] Branch off main; commit message follows existing repo convention.
 
 When all sections pass, the skill is ready to merge.

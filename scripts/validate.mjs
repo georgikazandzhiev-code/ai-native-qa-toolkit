@@ -13,7 +13,7 @@
  */
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { join, dirname, basename } from 'node:path';
+import { join, dirname, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -778,6 +778,102 @@ for (const dir of CI_DIRS) {
     .then((m) => m.checkStamp())
     .catch((e) => ({ errors: [`scripts/stamp-version.mjs could not be loaded: ${e.message}`] }));
   for (const e of stampResult.errors) err('version', e);
+}
+
+// ── 15. Files that point at each other still agree ─────────────────────────────
+//
+// Skills, personas and the constitution are written at different times and cite each other.
+// When one of them changes, the files describing it do not change with it. On 2026-10-01 this
+// repository had nine files citing `CLAUDE.md § Routed Detail Index` (the section is "Routed
+// Skill Index"), an orientation skill calling three fully written skills "empty placeholders",
+// and a skill list naming skills that did not exist while missing four that did. Each file was
+// true when it was written. Nothing re-checked it afterwards.
+//
+// Deliberately narrow. Two kinds of reference can be resolved exactly, so they are errors:
+//   a. every `CLAUDE.md § <section>` names a real heading or MUST / SHOULD / WON'T rule;
+//   b. the Routed Skill Index, the persona list and the folders on disk name the same things.
+// A fuzzy matcher over every `§` in every file would also fire on correct references, and a
+// gate that cries wolf is switched off within a week — memory case #003 is that lesson.
+
+{
+  const CONSTITUTION_PATH = join(ROOT, '.claude', 'CLAUDE.md');
+  const norm = (s) =>
+    s
+      .replace(/[`*_"“”]/g, '')
+      .replace(/[’‘]/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  const stripFences = (t) => t.replace(/```[\s\S]*?```/g, '');
+  const mdFiles = (d) =>
+    existsSync(d)
+      ? readdirSync(d).flatMap((f) => {
+          const p = join(d, f);
+          return statSync(p).isDirectory() ? mdFiles(p) : p.endsWith('.md') ? [p] : [];
+        })
+      : [];
+
+  if (existsSync(CONSTITUTION_PATH)) {
+    const constitution = read(CONSTITUTION_PATH);
+
+    // a. `CLAUDE.md § <section>` references resolve.
+    const anchors = new Set();
+    for (const m of stripFences(constitution).matchAll(/^#{1,6}\s+(.+)$/gm)) {
+      const heading = norm(m[1].replace(/^[^\p{L}\p{N}]+/u, ''));
+      anchors.add(heading);
+      anchors.add(heading.split(' — ')[0].trim()); // "WON'T — Forbidden, …" is cited as "WON'T"
+    }
+    for (const m of constitution.matchAll(/^\|\s*\*\*(.+?)\*\*\s*\|/gm)) anchors.add(norm(m[1]));
+    const known = [...anchors].filter((a) => a.length >= 3);
+
+    const ref = /CLAUDE\.md`?\]?(?:\([^)]*\))?\s*(?:—\s*)?§\s*([^\n`|]+)/g;
+    for (const file of mdFiles(join(ROOT, '.claude'))) {
+      if (file === CONSTITUTION_PATH) continue;
+      for (const m of stripFences(read(file)).matchAll(ref)) {
+        const phrase = norm(m[1]);
+        if (!known.some((a) => phrase.startsWith(a))) {
+          err(
+            relative(ROOT, file).replace(/\\/g, '/'),
+            `cites "CLAUDE.md § ${m[1].trim().slice(0, 60)}" — no such section or rule in the constitution`
+          );
+        }
+      }
+    }
+
+    // b. The Routed Skill Index names exactly the skills on disk, and the persona line exactly
+    //    the commands on disk.
+    const indexStart = constitution.search(/^## Routed Skill Index/m);
+    if (indexStart < 0) {
+      err('.claude/CLAUDE.md', 'no "## Routed Skill Index" section — nothing routes to the skills');
+    } else {
+      const rest = constitution.slice(indexStart);
+      const next = rest.slice(1).search(/^## /m);
+      const index = next < 0 ? rest : rest.slice(0, next + 1);
+
+      const indexed = new Set([...index.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm)].map((m) => m[1]));
+      const onDisk = new Set(skillDirs.filter((d) => existsSync(join(SKILLS, d, 'SKILL.md'))));
+      for (const s of onDisk) {
+        if (!indexed.has(s)) err('.claude/CLAUDE.md', `skill "${s}" exists but is not in the Routed Skill Index`);
+      }
+      for (const s of indexed) {
+        if (!onDisk.has(s)) err('.claude/CLAUDE.md', `Routed Skill Index lists "${s}", which has no SKILL.md`);
+      }
+
+      const personaLine = index.match(/^Personas available as slash commands:(.*)$/m);
+      if (personaLine) {
+        const listed = new Set([...personaLine[1].matchAll(/`\/([a-z0-9-]+)`/g)].map((m) => m[1]));
+        const commands = new Set(
+          existsSync(cmdDir) ? readdirSync(cmdDir).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)) : []
+        );
+        for (const c of commands) {
+          if (!listed.has(c)) err('.claude/CLAUDE.md', `persona "/${c}" exists but is not listed with the personas`);
+        }
+        for (const c of listed) {
+          if (!commands.has(c)) err('.claude/CLAUDE.md', `lists persona "/${c}", which has no file in .claude/commands`);
+        }
+      }
+    }
+  }
 }
 
 // ── report ──────────────────────────────────────────────────────────────────────
