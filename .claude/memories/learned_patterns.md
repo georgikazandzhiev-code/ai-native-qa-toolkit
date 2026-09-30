@@ -14,12 +14,12 @@
 
 ## 🎯 1. Resilient selector catalog
 
-Locator priority is not negotiable: `getByRole` → `getByText` → `getByLabel` → `getByPlaceholder` → `getByAltText` → `getByTitle` → `data-testid` **last**. This table records which locator *won* for a given component shape, never a shortcut past the hierarchy.
+Locator priority is not negotiable: `getByRole` → `getByLabel` → `getByPlaceholder` → `getByText` → `getByAltText` → `getByTitle` → `data-testid` **last**. This table records which locator *won* for a given component shape, never a shortcut past the hierarchy.
 
 | Component | Use | Avoid | Why |
 |---|---|---|---|
 | Modal / dialog | `getByRole('dialog', { name: '…' })` | `div.modal-body > button` | The portal re-mounts on every open; a CSS path through it breaks on re-render. The role survives. |
-| Table row | `getByRole('row').filter({ has: getByRole('cell', { name: id, exact: true }) })` | `tr:nth-child(3) > td` — and `getByTestId('data-row-<id>')` as a *fallback*, not a default | Rows re-sort, so an index passes for the wrong row. A table renders real ARIA roles; reach for a test-id only when it does not. |
+| Table row | `getByRole('row').filter({ has: getByRole('cell', { name: id, exact: true }) })` | `tr:nth-child(3) > td` — and `getByTestId('<entity>-row-<id>')` as a *fallback*, not a default | Rows re-sort, so an index passes for the wrong row. A table renders real ARIA roles; reach for a test-id only when it does not, or when the business ID is not rendered in any cell. |
 | Action button | `getByRole('button', { name: 'Submit' })` | `button.btn-primary` | A complex form has several primary buttons. The accessible name is the thing the user actually distinguishes. |
 | Async input | `getByLabel('Search users')` | `input[name="search"]` | Label association is the accessibility contract; if the label is missing, that is a product bug worth filing, not a locator problem to route around. |
 | Dynamic value in a locator | always pass `{ exact: true }` | `filter({ hasText: value })` bare | Substring collision: `"Item9"` matches `"Item90"` silently. Passes locally, breaks on real data. **EXECUTED** — this is a lint rule, not advice. |

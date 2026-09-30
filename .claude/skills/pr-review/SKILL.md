@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 1.0.0
+version: 2.0.0
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -80,7 +80,7 @@ Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../sele
 - [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` field in constructor.**
 - [ ] **No JSDoc on locator getters.** JSDoc with `@param`/`@returns` is required only on public action methods.
 - [ ] Every public action method has a built-in wait: web-first assertion, `waitForResponse`, or toast check. **No "thin" methods** that only call `click()` / `fill()`.
-- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > getByAltText/Title > page.locator(css)`. **Radix exception:** `getByTestId` jumps above `getByText` for Radix primitives, state-changing text, and testid contracts.
+- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception:** `getByTestId` jumps above `getByText` for Radix primitives, state-changing text, and testid contracts.
 - [ ] **No XPath.** **No top-level CSS class/id selectors** (`page.locator('.btn')`, `page.locator('#foo')`). CSS only chained off a higher-priority anchor.
 - [ ] **No `page.waitForTimeout(...)`.**
 - [ ] Form/CRUD POMs include feedback locators (success toast, error toast, field validation, empty state, loading).

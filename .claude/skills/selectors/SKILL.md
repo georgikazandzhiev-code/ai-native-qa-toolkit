@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 1.2.1
+version: 2.0.0
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -30,7 +30,7 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 
 Non-negotiable. Violating any of these breaks the framework's contract.
 
-- **ALWAYS start from `getByRole`, and reach for a test-id only after a semantic locator has been tried and found wanting.** The order is `getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > getByAltText / getByTitle > page.locator(css)`. Tests built this way double as accessibility audits — if `getByRole('button', { name: 'Save' })` fails, screen-reader users are broken too and the test catches it. See § Priority hierarchy.
+- **ALWAYS start from `getByRole`, and reach for a test-id only after a semantic locator has been tried and found wanting.** The order is `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. Tests built this way double as accessibility audits — if `getByRole('button', { name: 'Save' })` fails, screen-reader users are broken too and the test catches it. See § Priority hierarchy.
 - **The one exception is narrow, per-element, and never reaches above priority 4.** A *single* locator may promote `getByTestId` above `getByText` when **that element** is a headless primitive whose visible text or accessible name is unstable (in this codebase: Radix Select / Switch / Dialog / DropdownMenu / Popover / Tabs). `getByRole` and `getByLabel` still come first. Rationale and the test-id contract prefixes: [recipes.md § Radix](recipes.md).
 - **The exception covers the trigger, not the whole component subtree.** Radix renders real ARIA roles inside the portal: the popover is a `listbox`, its items are `option`s, a dialog is a `dialog`, a validation message is an `alert`, a toast is a `status`. Address those **by role**. A second eval re-run showed the skill arm promoting test-ids for popover content, options and error messages where `getByRole('option', { name })` and `getByRole('alert')` work — a narrower version of the same over-generalisation.
 - **NEVER generalise that exception to a page, a file, or a form.** A form with one Radix dropdown and four native inputs gets **one** promoted locator and four semantic ones. A blind A/B eval caught exactly this failure: the skill arm made `data-testid` primary for nearly every element on a mostly-native form and scored *below* an unaided baseline (`evals/results.json`, `BENCHMARK.md`). Leading with a test-id where a role would work is a defect, even where existing page objects next to it do the same.
@@ -123,9 +123,10 @@ The default order is Playwright's recommendation: **semantic-first, testid-last*
 | 2 | `getByLabel(label)` | Form inputs with a visible `<label>` association |
 | 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (used in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) search controls) |
 | 4 | `getByText(text, { exact })` | Static UI strings: page titles, success messages, dropdown options, empty-state messages — **only when the text is stable across states and not reused elsewhere on the page** |
-| 5 | `getByTestId('...')` | Use when the higher tiers don't apply, OR when the **Radix exception** below promotes it to priority 4 |
-| 6 | `getByAltText` / `getByTitle` | Images / elements with `title` attribute |
-| 7 | `page.locator(css)` | **Last resort**. Only acceptable when chained off a higher-priority anchor (e.g. `getByTestId('x').locator('input')`), or anchored on a Radix data-attribute (`[data-state="checked"]`, `[data-sonner-toast]`). Never as a top-level selector for app classes |
+| 5 | `getByAltText(text)` | Images with meaningful `alt` text |
+| 6 | `getByTitle(text)` | Elements with a stable `title` attribute |
+| 7 | `getByTestId('...')` | Use when the higher tiers don't apply, OR when the **Radix exception** below promotes it to priority 4 |
+| 8 | `page.locator(css)` | **Last resort**. Only acceptable when chained off a higher-priority anchor (e.g. `getByTestId('x').locator('input')`), or anchored on a Radix data-attribute (`[data-state="checked"]`, `[data-sonner-toast]`). Never as a top-level selector for app classes |
 
 ### The one exception, stated narrowly
 

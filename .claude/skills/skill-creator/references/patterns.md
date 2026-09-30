@@ -146,7 +146,7 @@ Good:
 page.getByTestId('synthetic-uptime-tile');
 ```
 
-**The rule:** prefer `getByRole > getByLabel > getByText > getByTitle > getByTestId`. Never use raw CSS or XPath when one of the semantic locators applies.
+**The rule:** prefer `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId`. Never use raw CSS or XPath when one of the semantic locators applies.
 ````
 
 **When this pattern wins:** stylistic choices, test names, commit messages, file naming, anywhere the *shape* of the output matters.

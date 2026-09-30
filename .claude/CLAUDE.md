@@ -44,7 +44,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Imports** | Import `test`/`expect` from the project's fixtures barrel (e.g. `fixtures/pom/test-options.ts`), never directly from `@playwright/test` in spec files |
 | **Dependency Injection** | Use fixtures for page objects / API clients. Never `new PageObject(page)` inside a test |
 | **Type Safety** | Strict TS. No `any` / `as any` / `@ts-ignore`. Explicit return types on exported functions. No `console.*` |
-| **Selectors** | Priority: `getByRole()` > `getByText()` > `getByLabel()` > `getByPlaceholder()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
+| **Selectors** | Priority: `getByRole()` > `getByLabel()` > `getByPlaceholder()` > `getByText()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
 | **Schemas** | Validate every API response against a Zod schema. New schemas use `z.strictObject()`. Never loosen a schema to make a test pass |
 | **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();` |
 | **Sources of Truth** | Tokens/URLs from `process.env.*`. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |

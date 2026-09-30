@@ -87,7 +87,9 @@ What changes when these rules are followed: the test file shifts from brittle st
 | Main form action | `<div class="btn-submit" onclick="send()">Save</div>` | `<button type="submit">Save Changes</button>` | `getByRole('button', { name: 'Save Changes' })` |
 | Text entry field | `<input placeholder="Enter text..." />` | `<label for="email">User Email</label><input id="email" />` | `getByLabel('User Email')` |
 | Complex context menu | `<div class="dropdown-panel">…</div>` | `<div data-testid="ticket-priority-dropdown">` | `getByTestId('ticket-priority-dropdown')` |
-| Dynamic array rows | `<tr class="item-row">` (index 0) | `<tr data-testid="ticket-row-9823">` | `getByTestId('ticket-row-9823')` |
+| Dynamic array rows | `<tr class="item-row">` (index 0) | `<tr data-testid="ticket-row-9823">` inside a semantic `<table>` | `getByRole('row').filter({ has: page.getByRole('cell', { name: '9823', exact: true }) })` — `getByTestId('ticket-row-9823')` only when the ID is not rendered in a cell |
+
+The last column is what the **test** reaches for; the middle column is what the **product** must ship. Ship both hooks — semantic markup and the business-ID test-id — and the test picks the strongest one per the QA constitution's locator priority (role first, test-id last resort).
 
 ## Definition of done
 

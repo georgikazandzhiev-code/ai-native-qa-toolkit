@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 1.0.0
+version: 2.0.0
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -179,7 +179,7 @@ The shape is fixed: imports → class header → `open()` → page structure →
 
 This is the [`selectors`](../selectors/SKILL.md) skill's domain. Brief recap so you don't have to leave the page:
 
-- **Default order:** `getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > getByAltText / getByTitle > page.locator(css)`.
+- **Default order:** `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`.
 - **Radix exception:** for Radix primitives (Select, Switch, Dialog, DropdownMenu, Popover, Tabs), elements whose text changes with state, or framework testid contracts (`schema-field-*`, `error-*`, `monitor-actions-*`, `data-sonner-toast`), `getByTestId` jumps above `getByText`.
 - **Strings inside `getByText(...)` come from [`enums/app/*`](../../../enums/app)** (`Messages.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
 - **No XPath. No top-level CSS class / id selectors.** Both are forbidden by `selectors` § Critical.
@@ -373,7 +373,7 @@ User says: *"`DashboardPage`, `SyntheticsPage`, and `ProbesPage` all duplicate t
 | `Messages.X` enum constant doesn't exist for a string the POM needs. | UI text not yet encoded. | Stop and extend `enums/app/<file>.ts` via the `enums` skill — capture the exact text via `npx playwright open` first. Never hardcode the string in `getByText(...)`. |
 | POM file is 700 lines and hard to maintain. | One class is covering 4+ unrelated flows. | Split by surface (`SettingsProfilePage` / `SettingsBillingPage`) or extract repeated fragments into `pages/baseClasses/<Component>.ts`. |
 | Reusing the same setup logic across 3+ tests inside the spec. | Setup belongs in the page-object action, not the spec. | Move into a verification method on the POM (`xxxAndVerify`). If the setup is API-driven and reused across 3+ files, see the `helpers` skill (per-resource setup helper) or the `fixtures` skill (helper fixture promotion). |
-| Locator-getter copy-pasted from the DOM inspector with raw CSS or XPath. | Wrong locator strategy. | Replace with `getByRole` > `getByLabel` > `getByPlaceholder` > `getByText` > `getByTestId` per the `selectors` skill priority order. If nothing semantic works, coordinate with engineering for a `data-testid` and add it to the `schema-field-*` / `error-*` taxonomy. |
+| Locator-getter copy-pasted from the DOM inspector with raw CSS or XPath. | Wrong locator strategy. | Replace with `getByRole` > `getByLabel` > `getByPlaceholder` > `getByText` > `getByAltText` > `getByTitle` > `getByTestId` per the `selectors` skill priority order. If nothing semantic works, coordinate with engineering for a `data-testid` and add it to the `schema-field-*` / `error-*` taxonomy. |
 
 ## See Also
 
