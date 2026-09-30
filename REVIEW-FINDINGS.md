@@ -31,6 +31,9 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 15 | `common-tasks` hardcodes one project's layout | Medium | Open |
 | 16 | 31 links to a `docs/framework-alignment-plan.md` that doesn't exist | Low | Open |
 | 17 | AC writer's examples break its own keyword-casing rule | Low | Fixed · `5c6459b` |
+| 18 | **Nothing kept cross-references in sync — the root cause of 12, 13 and 19** | High | Fixed · `de28998` (new validator check 15) |
+| 19 | `skill-creator` points at an orchestration doc and index columns that don't exist | Low | Fixed · `de28998` |
+| 20 | `npm run test:der` crashes on Windows with Node 24 | Medium | Fixed · `f57a1ca` |
 
 ---
 
@@ -169,7 +172,7 @@ This skill orients agents, but it kept its own copy of the routing index, and th
 
 Nine files referred to `CLAUDE.md § Routed Detail Index`, but the section is called **Routed Skill Index**. The nine were `ai-native-workflow`, `common-tasks`, `frontend-cross-check`, `page-objects`, `pr-review`, `test-case-generation`, `test-standards`, and `skill-creator`'s template and checklist. `ai-native-workflow` also cited `§ Code Generation Tasks` and `§ Skill File Structure`, and neither exists.
 
-**Fix.** All references are renamed, and the two nonexistent sections are removed along with the stale text around them. **Still open as a suggestion:** a validator check that every `CLAUDE.md § <name>` reference in a skill matches a real heading, so this can't come back unnoticed.
+**Fix.** All references are renamed, and the two nonexistent sections are removed along with the stale text around them. The validator now catches this class of mistake automatically. See finding 18.
 
 ---
 
@@ -201,10 +204,45 @@ The constitution says it "never hardcodes one repo's layout as universal truth,"
 ## 17. The AC writer's examples broke its own keyword-casing rule — Fixed (`5c6459b`)
 
 `acceptance-criteria-writer` requires the Gherkin keywords in bold capitals (**GIVEN** / **WHEN** / **THEN** / **AND**), but its own style examples used **Given** / **When** / **Then**. Agents copy examples more readily than they follow rules, so the examples now follow the rule.
+
+---
+
+## 18. Nothing kept cross-references in sync — Fixed (`de28998`, new validator check 15)
+
+**This is the root cause behind findings 12, 13 and 19, and the most important change in this PR.** Fixing each stale reference by hand only fixes today's; this finding is about why they appeared at all.
+
+**What was missing.** Skills, personas and the constitution cite each other constantly: "see `CLAUDE.md § X`", "load skill Y", "the persona `/Z`". They were written at different times. When one file changed (a section was renamed, a placeholder skill was finally written), the files that described it kept saying the old thing. Each one was true when it was written. Nothing re-checked it afterwards. That's how we ended up with nine files citing a section by a name it no longer had, an orientation skill telling agents that three fully written skills were empty, and a skill list that named skills that didn't exist and missed four that did.
+
+**Why a rule in the constitution wouldn't fix it.** The obvious fix is a new law: "agents must keep cross-references in sync." But the constitution is instructions to an AI agent, and instructions get followed most of the time, not every time. Findings 11 and 12 show exactly that: the constitution already said "never `test.skip`", and seven places still taught it. A mistake that only happens when someone forgets a rule isn't prevented by adding another rule to forget. It's prevented by a check that runs every time and fails the build.
+
+**What was added.** `npm run validate` has a new **check 15, "files that point at each other still agree"**. It verifies two things:
+
+- every `CLAUDE.md § <section>` reference anywhere in `.claude/` names a heading, or a MUST / SHOULD / WON'T rule, that actually exists in the constitution;
+- the Routed Skill Index lists exactly the skills that exist on disk, and the persona line lists exactly the files in `.claude/commands/`, in both directions. A skill nobody routes to fails, and so does an index row for a skill that doesn't exist.
+
+**Why it's deliberately narrow.** Both of those can be resolved exactly, so the check never reports a correct reference as broken. I tried a broader version first, which fuzzy-matched every `§` in every file against every heading. It flagged around 38 references, and many were fine, just phrased in ways the matcher didn't expect. A gate that cries wolf gets switched off. The repo's own memory file records that lesson (case #003). So the check only covers what it can decide with certainty. Broader coverage, such as references between skills and links to files, can be added later in the same style.
+
+**Proof that it works.** A check nobody has seen fail is only a hypothesis, so it ships with a fault-injection suite, `scripts/tests/cross-references.test.mjs`, which runs in CI as `npm run test:xref`. It breaks the repo on purpose in four ways and confirms each one fails the build: a stale section reference, a skill folder the index doesn't route to, an index row for a missing skill, and a persona with no command file. A fifth case confirms that a *correct* reference stays silent. On its first run against the real tree, the check found one more genuine broken reference (finding 19).
+
+**In one sentence:** documentation that other files depend on drifts the way code does, so it is now tested the way code is.
+
+---
+
+## 19. `skill-creator` pointed at a document and index columns that don't exist — Fixed (`de28998`)
+
+Caught by check 15 on its first run. `skill-creator` told skill authors to update "`CLAUDE.md` §6.4 cross-reference matrix" and `docs/cursor-skills-orchestration.md § 6.2.2`. Both come from the original project's orchestration document, and neither exists here. It also told authors to "flip the row's status" in the Routed Skill Index, which has no status column. The skill, its checklist and its template now point at the Routed Skill Index. The checklist now also says that check 15 must pass. `skill-creator` 1.1.1 → 1.1.2.
+
+---
+
+## 20. `npm run test:der` crashed on Windows with Node 24 — Fixed (`f57a1ca`)
+
+Every case of the defect-escape-rate suite failed locally with exit code 3221226505 (`0xC0000409`), on a clean `main` too, while CI stayed green. The script computed and printed the correct result, then crashed on the way out with a libuv assertion (`!(handle->flags & UV_HANDLE_CLOSING)`). That's a known Node 24 behaviour on Windows when `process.exit()` runs while `fetch`'s sockets are still closing. CI uses Node 20 on Linux, so it never saw it.
+
+**Fix.** The final exit points set `process.exitCode` and let Node shut down normally. The exit codes are unchanged, and all five cases now pass on Windows. Together with finding 5, every validator and test suite in the repo now gives the same result on a Windows laptop as in CI.
 ---
 
 ## Validator warnings already present (not introduced here)
 
-`npm run validate` reports warnings that were there before this review. Six skills are over the 380-line budget (`api-testing`, `page-objects`, `scaffold-spec`, `selectors`, `skill-creator`, `test-standards`), and five skill descriptions lack a "Do NOT use for X" line (`common-tasks`, `debugging`, `pr-review`, `scaffold-spec`, `test-case-generation`). There are also three informational ones: `.cursor/mcp.json` and `.cursor/rules` aren't present (the checks are skipped), and the README's "Fourteen checks:" is written as a word, so check 7 can't cross-check it against the real count. Writing it as "14 checks" would bring it under the check. They're listed here only for completeness.
+`npm run validate` reports warnings that were there before this review. Six skills are over the 380-line budget (`api-testing`, `page-objects`, `scaffold-spec`, `selectors`, `skill-creator`, `test-standards`), and five skill descriptions lack a "Do NOT use for X" line (`common-tasks`, `debugging`, `pr-review`, `scaffold-spec`, `test-case-generation`). There are also two informational ones: `.cursor/mcp.json` and `.cursor/rules` aren't present, so those checks are skipped. They're listed here only for completeness.
 
-The only warning this branch adds is the `selectors` v2.0.0 eval-history one from finding 7, which makes 15 warnings in total, with 0 errors.
+This branch adds one warning (the `selectors` v2.0.0 eval-history one from finding 7) and removes one (the README's check count is now a digit that check 7 can verify). That leaves 14 warnings and 0 errors. All nine suites pass locally on Windows: `validate`, `test:xref`, `test:rules-owned`, `test:lock`, `test:stamp`, `test:der`, `test:memory`, `test:rules` and `test:faults`.
