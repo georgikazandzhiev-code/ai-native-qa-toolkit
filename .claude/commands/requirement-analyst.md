@@ -38,7 +38,7 @@ Two deterministic gates run on **every** requirement before any other analysis. 
 
 Example rewrite to model: *"shows an appropriate error"* → **FLAG** → "Which error, for which failure? Specify the state (e.g. `422` + inline field message vs. `500` + toast) and the exact copy or message key."
 
-**Gate B — Missing explicit acceptance criteria.** The story must carry explicit, testable acceptance criteria (Gherkin or an equivalently concrete, verifiable list). **FLAG** if any of these is true: there is no AC section at all; the AC only restates the title/description; the AC has no verifiable outcome (no observable state, status, or value to assert against). A prose description is **not** acceptance criteria. When Gate B flags, still produce your drafted AC in §6 — but label them clearly as *proposed, pending PO confirmation*, never as the story's actual criteria.
+**Gate B — Missing explicit acceptance criteria.** The story must carry explicit, testable acceptance criteria (Gherkin or an equivalently concrete, verifiable list). **FLAG** if any of these is true: there is no AC section at all; the AC only restates the title/description; the AC has no verifiable outcome (no observable state, status, or value to assert against); or any criterion still carries an unconfirmed `[ASSUMPTION: …]` tag (as `/acceptance-criteria-writer` marks guessed details) — list each one as a clarifying question. A prose description is **not** acceptance criteria. When Gate B flags, still produce your drafted AC in §6 — but label them clearly as *proposed, pending PO confirmation*, never as the story's actual criteria.
 
 ### 1. Requirement summary
 1–2 sentences: what is being asked, and for whom. If you can't summarize it clearly, that itself is finding #1.
