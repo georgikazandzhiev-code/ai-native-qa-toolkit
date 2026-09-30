@@ -40,6 +40,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 24 | Two skills disagreed about where `try/catch` is allowed | Medium | Wording fixed · `3570abf`; alternative Open |
 | 25 | `refactor-values` assumed the default branch is `master` | Low | Fixed · `3570abf` |
 | 26 | No testability constitution for backend / API developers | Medium | Open — proposal |
+| 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · see below |
 
 ---
 
@@ -301,6 +302,14 @@ It warned against leaving "`master` in a broken state". This repository's defaul
 On the QA side, the natural pairing is to generate the API client, the types and, ideally, the Zod schemas from that spec (OpenAPI Generator, openapi-zod-client or orval), instead of hand-writing them. Hand-written schemas are another copy of the contract, and copies drift.
 
 This comes from direct experience with a schema-first process, where the spec was updated right after grooming and the QA client was regenerated from it, so tests couldn't drift from the contract. I'm happy to draft the constitution as a follow-up PR.
+
+---
+
+## 27. `fixtures` claimed `afterEach` can be skipped when a test fails — Fixed
+
+The Critical block of `fixtures` gave, as "the decisive reason" to prefer a fixture, that "a manual `afterEach` can be skipped in some failure modes." That isn't accurate. Playwright runs `afterEach` after a failed test, just as it runs a fixture's teardown. A skill that teaches a wrong reason teaches agents to make the right choice for the wrong reason, and to argue it wrongly in review.
+
+**Fix.** The rule now gives the real reasons. A fixture makes setup and teardown one self-contained unit: no shared `let` variable links two hooks. If setup throws, `use` is never reached, so teardown never tries to delete something that was never created. Only tests that request the fixture pay for it. And any spec reuses it by name instead of copying both hooks. The recommendation itself (prefer a fixture for failure-safe cleanup) is unchanged. `fixtures` 1.0.0 → 1.0.1.
 ---
 
 ## Validator warnings already present (not introduced here)
