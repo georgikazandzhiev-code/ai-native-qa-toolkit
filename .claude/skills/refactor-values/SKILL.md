@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.0
+version: 1.0.1
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -12,7 +12,7 @@ metadata:
 
 - **ALWAYS** run Phase 1 (find all consumers) before making any edit. Enum values and `test-data/app/*.json` keys feed specs, page objects, helpers, and Zod schemas — the blast radius must be known up front.
 - **ALWAYS** search for both the **enum key** (e.g. `SUITES.API_SYNTHETICS`) **and the raw string value** (e.g. `"API\tSynthetics"`, or `"Active"` for `Status.ACTIVE`). Some consumers may have bypassed the enum and hardcoded the string — those will not auto-update.
-- **NEVER** edit a value, rename a key, or change a `test-data/app/*.json` field without updating every consumer **in the same commit**. No intermediate broken state on `master`.
+- **NEVER** edit a value, rename a key, or change a `test-data/app/*.json` field without updating every consumer **in the same commit**. No intermediate broken state on the default branch.
 - **NEVER** loosen a Zod schema (`z.literal`, `z.enum([...])`, e.g. `StatusSchema` in `fixtures/api/schemas/app/tenant.ts`) to make an updated value pass. Update the schema literal/enum to match the new value — the schema is the contract.
 - **ALWAYS** run `npx tsc --noEmit` and the lint-staged pipeline (eslint + prettier) plus the affected Playwright tests before declaring the refactor done. TypeScript catches key renames; eslint catches stale patterns; tests catch assertion drift.
 - **NEVER** use a single global find-and-replace. It misses casing variants, hardcoded copies in specs, and references inside `~/.claude/skills/*`, `.cursor/rules/*`, `README.md`, and Qase suite-name mappings. Inspect every match.
@@ -119,7 +119,7 @@ The project's `helpers/app/<resource>.ts` files do **not** declare schemas inlin
 - ❌ Changing `SUITES.API_SYNTHETICS = "API\tSynthetics"` to `"API\tSynthetic Monitors"` without checking the Qase project — the suite renames in the UI, breaking dashboards and saved filters.
 - ❌ Renaming an enum key but skipping `~/.claude/skills/*` and `.cursor/rules/*` references — the next author copies the old key from documentation.
 - ❌ Editing `test-data/app/probe.json`'s `defaultPageSize` without re-checking `probes.spec.ts` pagination assertions that hardcoded `10` (the old value) instead of importing the constant.
-- ❌ Splitting source-change and consumer-update into separate commits — leaves `master` in a broken state mid-PR.
+- ❌ Splitting source-change and consumer-update into separate commits — leaves the default branch in a broken state mid-PR.
 - ❌ Using `git commit --no-verify` to bypass Husky after the rename triggers a lint failure. Fix the lint.
 - ❌ Renaming a `z.enum` literal without verifying the API actually returns the new value — change the schema only when the contract has changed.
 - ❌ Bulk find-and-replace on a substring like `Active` — collides with `Inactive`, `Deactivate`, `Activate`, etc. Always inspect.

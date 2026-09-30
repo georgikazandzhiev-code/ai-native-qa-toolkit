@@ -106,7 +106,7 @@ When a test passes locally but fails in CI, you need CI's artifacts to reproduce
 ## Anti-patterns
 
 - ❌ Raising `actionTimeout`, `expect.timeout`, or `navigationTimeout` to make a failing assertion pass.
-- ❌ Wrapping `expect(...)` in `try/catch` to "handle" the failure. The only `try/catch` allowed is capturing an accidentally-created resource id for cleanup, and even that re-throws or asserts.
+- ❌ Wrapping `expect(...)` in `try/catch` to "handle" the failure. In a test body the only `try/catch` allowed is capturing an accidentally-created resource id for cleanup (the one other documented `try/catch` is the Radix trigger-swallow retry inside a page-object action — `page-objects` § Critical — never in a spec), and even that re-throws or asserts.
 - ❌ Adding `page.waitForTimeout(2000)` to "give it time".
 - ❌ Loosening a Zod schema (`z.string()` → `z.unknown()`, `z.strictObject` → `z.object`, adding `.optional()` without justification) to make `Schema.parse(body)` succeed.
 - ❌ Deleting the failing test "for now". Comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>` directly above instead.
