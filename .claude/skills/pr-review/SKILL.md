@@ -52,7 +52,7 @@ Group the output by **file kind** — each kind has its own checklist below:
 Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modified spec:
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
-- [ ] Each `test(...)` has **exactly one** tag from the whitelist (`@App-API | @App-E2E | @App-Smoke | @App-regression` — lowercase `regression`, matching the `package.json` greps). No combined tags. No tags on `test.describe(...)`.
+- [ ] Each `test(...)` has **exactly one** tag from the `test-standards` whitelist (casing exact — lowercase `@App-regression`, matching the `package.json` greps). No combined tags. No tags on `test.describe(...)`.
 - [ ] Each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**

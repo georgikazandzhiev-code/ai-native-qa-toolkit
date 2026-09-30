@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 1.0.0
+version: 1.0.1
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and the process.env.X! access rule. Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -18,7 +18,7 @@ This skill teaches the going-forward TypeScript and Zod conventions for the fram
 - **ALWAYS** assert API responses with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();`. Type generics on `apiRequest<T>()` alone are insufficient (no runtime check). A bare `Schema.parse(body)` with no `expect(...).toBeTruthy()` wrapper is also insufficient.
 - **ALWAYS** specify explicit return types on exported and public functions (`Promise<void>`, `Promise<UserResponse>`, `Locator`, `string`). Parameter types are mandatory — `noImplicitAny` enforces it; never silence it.
 - **`process.env.X` access — canonical pattern is `!` at every access point.** Matches the upstream reference framework (162 occurrences, zero `??` defaulting). `??` and `||` defaulting at call sites are **forbidden**; defaults belong in `config/util/<service>.ts`, not at call sites. `as string` is **forbidden**. Bare `string | undefined` past the call site is **forbidden**. See § process.env access patterns.
-- **NEVER** use `z.any()` to make a parse error go away — that's hiding contract drift. Investigate the divergence and `test.skip` with `// FIXME:` per the `api-testing` skill.
+- **NEVER** use `z.any()` to make a parse error go away — that's hiding contract drift. Investigate the divergence, write the test as the contract says, and comment it out with `// TODO: FIXME: <TICKET>` per the `api-testing` skill — never `test.skip`.
 - **This codebase uses Zod 3** (`^3.25.23`). Use chained string-format validators (`z.string().uuid()`, `z.string().email()`, `z.string().url()`). The Zod 4 top-level forms (`z.uuid()`, `z.email()`) do not apply here.
 
 ## process.env access patterns
@@ -256,7 +256,7 @@ User says: *"`appConfig.apiUrl` is typed `string | undefined` and downstream cal
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | TypeScript: `Type 'string \| undefined' is not assignable to type 'string'` on a `process.env.X` value | Wrong access pattern at the boundary | Use `!` at the access point (the canonical pattern, matching upstream). Do **not** `as string`. Do **not** bare-propagate. Do **not** add `??` defaulting at the call site — if a default is genuinely needed, put it in `config/util/<service>.ts`. |
-| `expect(Schema.parse(body)).toBeTruthy()` throws `ZodError` | API response disagrees with the schema (extra/missing field, wrong type, wrong nullability) | Treat as a contract violation. Keep the schema strict; `test.skip` with `// FIXME: <ticket>` and `eslint-disable playwright/no-skipped-test`. **Do not** loosen the schema or replace fields with `z.any()`. Route through `api-testing` § Skipping a test for a real backend bug. |
+| `expect(Schema.parse(body)).toBeTruthy()` throws `ZodError` | API response disagrees with the schema (extra/missing field, wrong type, wrong nullability) | Treat as a contract violation. Keep the schema strict; comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>` directly above — never `test.skip`. **Do not** loosen the schema or replace fields with `z.any()`. Route through `api-testing` § Skipping a test for a real backend bug. |
 | `Schema.parse(body)` throws `ZodError` on a 401 / 403 test | 401 has a body (`{ error: string }`); 403/405 have empty bodies (`null`) | Use `GatewayErrorSchema` for 401, `expect(body).toBeNull()` for 403/405. See `api-testing` § Error envelopes. |
 | "I need to silence a compile error with `as unknown as T`" | The value's real shape isn't known — that's why the cast was tempting | Replace with `Schema.parse(raw)`. You get runtime validation + a real type, instead of a lie. If no schema exists, author one (it's contract documentation). |
 | "I need `any` to make this generic helper compile" | The generic constraint is too loose | Use `unknown` at the input, narrow with a type guard or `Schema.parse(...)`, return a concrete type. `any` poisons every consumer. |

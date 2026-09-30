@@ -17,7 +17,7 @@ The orchestrator at [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) holds the global 
 These rules apply to **every** generated artifact in the framework — page object, test, schema, helper, fixture, enum entry, config value, static data file. Violating any of them breaks the framework's contract. The deep skills add domain-specific rules on top.
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
-- **ALWAYS** tag every test with **exactly one** value from the framework whitelist: `@App-API | @App-E2E | @App-Smoke | @App-regression` — each exactly as cased here, matching the `package.json` greps (`app-regression` greps **lowercase** `@App-regression`; the others are Title-case). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
+- **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps — every tag is Title-case except lowercase `@App-regression`. **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Add `qase.id(N);` if a Qase case ID exists. Why: the run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull URLs / credentials / env-driven values from `process.env.X!` (no defaults at call sites; defaults belong in `config/util/<service>.ts`). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`Messages.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
@@ -182,7 +182,7 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 - ❌ **Skipping the precondition step.** Generates code against an imagined API or UI. Fix: always run `npx playwright open` (UI) or read OpenAPI (API) first.
 - ❌ **Loading multiple skills speculatively without categorizing.** Bloats context. Fix: walk the decision tree, load one deep skill, expand only when its workflow points at a sibling.
 - ❌ **Generated code uses `import { test, expect } from "@playwright/test"`.** Strips merged fixtures. Fix: `from "../../../fixtures/pom/test-options"`.
-- ❌ **Generated test uses a non-whitelisted tag (`@functional`, `@destructive`, generic `@regression`) or wrong casing (`@App-Regression`, `@App-e2e`).** Misses CI greps. Fix: pick from `@App-API | @App-E2E | @App-Smoke | @App-regression` exactly as cased.
+- ❌ **Generated test uses a non-whitelisted tag (`@functional`, `@destructive`, generic `@regression`) or wrong casing (`@App-Regression`, `@App-e2e`).** Misses CI greps. Fix: pick from the `test-standards` whitelist, exactly as cased.
 - ❌ **Generated artifact hardcodes a URL / endpoint / token / UI string.** Sources of truth are `process.env.X!`, `appConfig.api.X` / `appConfig.paths.X`, `enums/app/*`, `test-data/app/*`. Fix: route to the `config` / `enums` / `type-safety` skills.
 - ❌ **Generated schema uses `z.object()` instead of `z.strictObject()`.** Silently strips unknown keys → hides API drift. Fix: `z.strictObject()` for new schemas (the `api-testing` skill's Critical rule).
 - ❌ **Generated API test omits `expect(SchemaName.parse(body)).toBeTruthy();`.** Type generics alone don't validate. Fix: every API response asserted with the exact pattern (the `api-testing` skill).
@@ -202,7 +202,7 @@ For **every** generated artifact, regardless of category:
 - [ ] No `page.waitForTimeout(...)`. Web-first assertions only.
 - [ ] No JSDoc on locator getters. JSDoc with `@param` / `@returns` on every public action method.
 - [ ] Tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => {})` for every distinct phase (capitalized prefix, colon, single space).
-- [ ] Each test has exactly **one** tag from `@App-API | @App-E2E | @App-Smoke | @App-regression`, cased exactly as listed. Tag on the test, not on `describe`.
+- [ ] Each test has exactly **one** tag from the `test-standards` whitelist, cased exactly as listed there. Tag on the test, not on `describe`.
 - [ ] Every test starts with `qase.suite(SUITES.<RESOURCE>);` as the first body line. `qase.id(N);` follows if applicable.
 - [ ] Page objects consumed via fixture destructuring — no `new <Page>(page)`.
 - [ ] New POMs registered in `fixtures/pom/page-object-fixture.ts` in the same edit batch.
