@@ -1,0 +1,16 @@
+# Check every text file out with LF, on every OS.
+#
+# The validators read these files byte for byte: check 12 hashes vendored files against
+# skills-lock.json, and the fault-injection suites match the constitution's tables with
+# `\n`-anchored patterns. A Windows checkout with core.autocrlf=true rewrites them to CRLF,
+# so the lock reports untouched upstream files as "modified locally" and the rule-ownership
+# cases cannot find the table they edit — red locally while CI on Linux is green.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary
