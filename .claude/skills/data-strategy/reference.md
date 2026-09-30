@@ -21,7 +21,7 @@ All env vars resolve from `env/.env.<ENVIRONMENT>` (or [env/.env.example](../../
 |-----|---------|--------|
 | `USER_ACCESS_TOKEN_FULL` | Tenant-scoped user with **all** permissions in the `<realm>` realm; default for any 200/201 path on tenant-scoped endpoints | Provisioned |
 | `USER_ACCESS_TOKEN_ADMIN` | Platform admin in the **master** realm; required for `/admin/*` endpoints | Provisioned |
-| `USER_ACCESS_TOKEN_ZERO` | Tenant-scoped user with **no** permissions; default for any 403 path | **Planned** per [`docs/framework-alignment-plan.md` § 6.2](../../../docs/framework-alignment-plan.md). Until provisioned, guard with `test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "ZERO token not provisioned")` |
+| `USER_ACCESS_TOKEN_ZERO` | Tenant-scoped user with **no** permissions; default for any 403 path | **Planned** per [`docs/framework-alignment-plan.md` § 6.2](../../../docs/framework-alignment-plan.md). Until provisioned, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` |
 
 > Naming rule: `USER_ACCESS_TOKEN_<PERSONA>` is the canonical pattern. New tokens MUST follow this pattern.
 

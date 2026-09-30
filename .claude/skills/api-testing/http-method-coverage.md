@@ -87,7 +87,7 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 - **Conflict (DELETE):** only when the resource is a parent in a 409-cascade (e.g. probe with bound synthetic).
 - **Mailpit side-effect (POST-create):** only on resources whose creation triggers email (admin-users invite, tenant onboarding).
 - **Cascade (DELETE):** only on parents whose children must follow (tenant → users; never the reverse — synthetic / probe ordering is the opposite, see § 9).
-- **403 (ZERO):** every spec should cover **conceptually**, but guard with `test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "ZERO token not provisioned")` per plan § 6.2 until the env var is provisioned (see [reference.md § Token catalog](reference.md#token-catalog)).
+- **403 (ZERO):** every spec should cover it. Until `USER_ACCESS_TOKEN_ZERO` is provisioned (plan § 6.2), write the test as the contract says and comment out the whole block with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` (see [reference.md § Token catalog](reference.md#token-catalog)).
 
 ---
 
@@ -449,7 +449,7 @@ The contract distinguishes **wrong realm** (401, gateway rejects) from **wrong s
 - **No-token 401** — every method, every spec.
 - **Wrong-realm 401 (admin → tenant path)** — every method on every tenant-scoped spec. Use the `... returns 401 with admin token (tenant-scoped endpoint)` test-name shape.
 - **Wrong-scope 403 (tenant → admin path)** — every method on every admin-scoped spec. Use the `... returns 403 for tenant-scoped user` test-name shape.
-- **403 ZERO** — every method, every spec, **once provisioned**. Until then, guard with `test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "ZERO token not provisioned")` per plan § 6.2 ([reference.md § Token catalog](reference.md#token-catalog)).
+- **403 ZERO** — every method, every spec. Until the token is provisioned (plan § 6.2), keep the test written and commented out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` ([reference.md § Token catalog](reference.md#token-catalog)).
 - **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs ([`cross-tenant-isolation.spec.ts`](../../../tests/app/api/shared/cross-tenant-isolation.spec.ts), [`cross-tenant-metrics-isolation.spec.ts`](../../../tests/app/api/shared/cross-tenant-metrics-isolation.spec.ts)). Skip with a drift note if no canned wrong-realm token exists.
 
 ### 12.3 Cascade & dependency rules
@@ -603,7 +603,7 @@ Before declaring a CRUD spec done, walk this list. Tick boxes only when the test
 - [ ] One filter (exact + partial) and one cross-field search.
 - [ ] Empty-result for non-matching filter.
 - [ ] 401 (no token) and 401 (admin token on tenant-scoped list).
-- [ ] 403 (ZERO) — guard with `test.skip` if not provisioned.
+- [ ] 403 (ZERO) — written; commented out with a `// TODO: FIXME:` ticket if the token is not provisioned.
 
 ### GET (by-id)
 

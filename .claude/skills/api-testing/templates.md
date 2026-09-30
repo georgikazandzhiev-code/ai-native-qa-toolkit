@@ -107,8 +107,6 @@ test.describe("GET /<resource>s — List", () => {
         "Verify GET /<resource>s returns 403 for token without permissions",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
-            // Guard: USER_ACCESS_TOKEN_ZERO is not always provisioned in the test env.
-            test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "USER_ACCESS_TOKEN_ZERO not provisioned");
             qase.suite(SUITES.API_<SUITE>);
 
             // Cast generic to `null` because at 403 the body is null, not List<Resource>sResponse.
@@ -186,7 +184,6 @@ test.describe("POST /<resource>s — Create", () => {
         "Verify POST /<resource>s returns 403 for token without permissions",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
-            test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "USER_ACCESS_TOKEN_ZERO not provisioned");
             qase.suite(SUITES.API_<SUITE>);
 
             const { status, body } = await create<Resource><null>(
@@ -1232,21 +1229,20 @@ For the **non-existent-but-well-formed-uuid** case (the 404 path), use `nonExist
 
 ## 13. Skipping a test for a real backend bug
 
-`test.skip` is the only correct response when API behavior diverges from the documented contract. Do not loosen the schema, do not delete the test, do not silently change the expected status. The eslint-disable directive is **scoped to the single test**.
+When API behavior diverges from the documented contract, write the test as the contract says, then **comment out the whole `test(...)` block** and put `// TODO: FIXME: <TICKET> <description>` directly above it. Do not loosen the schema, do not delete the test, do not silently change the expected status — and do **not** use `test.skip`: Qase records a skip against the case ID, which corrupts pass/fail history (see `SKILL.md` § Skipping a test for a real backend bug). Uncomment when the ticket is fixed.
 
 ```typescript
-/* eslint-disable playwright/no-skipped-test */
-// FIXME: PROJ-1234 — backend returns 200 instead of 400 for empty name
-test.skip(
-    "Verify POST /synthetics returns 400 with empty name",
-    { tag: "@App-API" },
-    async ({ apiRequest }) => {
-        qase.suite(SUITES.API_SYNTHETICS);
-        const { status, body } = await createSyntheticMonitor(apiRequest, buildCreateSyntheticBody([probeId], { name: "" }), process.env.USER_ACCESS_TOKEN_FULL!);
-        expect(status).toBe(400);
-        expect(APIErrorSchema.parse(body)).toBeTruthy();
-    },
-);
+// TODO: FIXME: PROJ-1234 — backend returns 200 instead of 400 for empty name
+// test(
+//     "Verify POST /synthetics returns 400 with empty name",
+//     { tag: "@App-API" },
+//     async ({ apiRequest }) => {
+//         qase.suite(SUITES.API_SYNTHETICS);
+//         const { status, body } = await createSyntheticMonitor(apiRequest, buildCreateSyntheticBody([probeId], { name: "" }), process.env.USER_ACCESS_TOKEN_FULL!);
+//         expect(status).toBe(400);
+//         expect(APIErrorSchema.parse(body)).toBeTruthy();
+//     },
+// );
 ```
 
 ## 14. Cleanup pattern (track-then-drain)

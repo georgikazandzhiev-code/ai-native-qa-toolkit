@@ -60,7 +60,7 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 - [ ] **No `if`/`else`/ternary in test bodies.** Tests are deterministic; one case per test.
 - [ ] Page objects consumed via fixture destructuring (`async ({ syntheticsPage }) => {...}`). **No `new SyntheticsPage(page)`** inside the test.
 - [ ] State-mutating tests have `afterEach`/`afterAll` cleanup via the matching `helpers/app/<resource>.ts` helper. **No UI deletes** — API only.
-- [ ] **No `test.only(...)`** anywhere. **No `.skip` without `// FIXME: <TICKET>`** — or use the comment-out-with-TODO pattern instead of `test.skip`.
+- [ ] **No `test.only(...)`** anywhere. **No `test.skip`** — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] **No `console.log`/`console.debug`** in committed code.
 - [ ] **No commented-out scratch code** — only `// TODO:`, `// FIXME:`, `// BUG:` with context.
 
@@ -205,7 +205,7 @@ Before declaring the PR ready:
 - [ ] Ran `npx playwright test <affected> --workers=1` and recorded pass/fail.
 - [ ] Ran `npx eslint <changed>` and `npx tsc --noEmit` — both clean (or pre-existing errors are documented).
 - [ ] PR description has Summary + Test plan + Risk sections.
-- [ ] No `.only`, no `console.log`, no commented-out code without context, no `test.skip` without a ticket.
+- [ ] No `.only`, no `console.log`, no commented-out code without context, no `test.skip` (comment the test out with a ticket instead).
 - [ ] Renamed/deleted skills updated in `~/.claude/CLAUDE.md`.
 - [ ] If the change touches shared infra (BasePage, fixtures, base helpers): listed downstream-affected specs in the Risk section.
 

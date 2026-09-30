@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 1.0.0
+version: 2.0.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -26,7 +26,7 @@ These rules apply to **every** generated artifact in the framework — page obje
 - **ALWAYS** consume page objects via fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** `new <Page>(page)` inside a spec. See the `page-objects` skill.
 - **NEVER** use XPath or top-level CSS class / id selectors. **NEVER** `page.waitForTimeout(...)`. Use the `selectors` skill's priority order (default + Radix exception) and web-first assertions.
 - **ALWAYS** call `apiRequest` directly in API specs by default. Promote to a `helpers/app/<resource>.ts` helper only on reuse (2+ specs), multi-step flows, or precondition setup. Promote to a `helper-fixture` only when the same setup/teardown is reused across **3+** spec files. See the `helpers` and `fixtures` skills.
-- **NEVER** silently `.skip` a test or omit one because the API/UI misbehaves. Use `test.skip` + `// FIXME: <ticket>` + `/* eslint-disable playwright/no-skipped-test */`. Every status code in the OpenAPI spec must be a passing test, a failing test, or an explicitly-skipped test with justification.
+- **NEVER** `test.skip` a test or omit one because the API/UI misbehaves. Write the test as the contract says, **comment out** the whole `test(...)` block, and add `// TODO: FIXME: <TICKET> <description>` directly above it. Why: a skipped test reports as not-failing and corrupts the Qase case mapping — a false green. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket. See the `test-standards` and `api-testing` skills.
 - **NEVER** commit explore-only / debug / `.only` spec files. Use `npx playwright open` for ad-hoc exploration.
 - **ALWAYS** run the affected tests and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-<tag>` for whole tag groups.
 
@@ -209,7 +209,7 @@ For **every** generated artifact, regardless of category:
 - [ ] New schemas use `z.strictObject()`. Every API response asserted with `expect(SchemaName.parse(body)).toBeTruthy();`.
 - [ ] API specs include the negative matrix when applicable (empty body, per-field omission, per-field invalid-type loops via `fixtures/api/invalid-types.ts`, 401/403/405 where relevant). See the `api-testing` skill.
 - [ ] E2E specs have `test.setTimeout(300_000)` + `MS = { sheet, toast, button, grid }` constants + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
-- [ ] No `.only` / `.skip` without `// FIXME: <ticket>` + `/* eslint-disable playwright/no-skipped-test */`.
+- [ ] No `.only`. No `test.skip` — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] Affected tests run green before declaring done.
 
 ## Examples

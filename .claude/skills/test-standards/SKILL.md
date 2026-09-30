@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 1.0.0
+version: 1.0.1
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -229,7 +229,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - ❌ **Committed `.only` / explore spec / `console.log(...)`.** Fix: delete before committing.
 - ❌ **Single-assertion test with full navigation overhead.** If a test contains one assertion and shares the same `beforeEach` navigation as its neighbors, merge it as an `AND:` step into the nearest structural test. A standalone `test()` is justified only when it has a distinct GIVEN/WHEN/THEN flow or tests an interaction (click, type, select).
 - ❌ **Back-to-back navigation calls where the second supersedes the first.** E.g., `await sideNavigation.navigateToApp(); await page.goto(alertsUrl);` — the first navigation is wasted. Fix: remove the redundant navigation; keep only the one that lands on the target page.
-- ❌ **Blanket `test.describe.skip` covering tests with different dependencies.** If only 2 of 4 describes need Mailpit, skip those 2 — not all 4. Over-scoped skips hide passing tests from CI and inflate the skip count. Each skip must cite the specific blocker (`// FIXME: requires MAILPIT_URL`).
+- ❌ **Disabling a whole describe when only some of its tests are blocked — and `test.describe.skip` at all.** If only 2 of 4 describes need Mailpit, disable those 2, not all 4, by commenting out their tests with `// TODO: FIXME: <TICKET> requires MAILPIT_URL`. Over-scoped disabling hides passing tests from CI; `test.describe.skip` also corrupts Qase mappings like any other skip.
 
 ## Self-review checklist
 
