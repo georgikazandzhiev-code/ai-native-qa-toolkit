@@ -6,7 +6,7 @@
 
 This is a running log of what came up while reading the toolkit end to end, starting with `.claude/`. Each finding says what's wrong, where, why it matters, and its status. Contradictions and wrong statements are fixed directly on `ivaylo-changes` and marked **Fixed** with their commit. Items marked **Open** are design choices or new work, and they need your decision first.
 
-Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the routing skills `common-tasks` and `ai-native-workflow`, plus the files the fixes touched. The other skills have not been reviewed in full yet.
+Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the routing skills (`common-tasks`, `ai-native-workflow`), and the framework-core skills (`test-standards`, `api-testing`, `type-safety`, `data-strategy`, `config`, `enums`, `selectors`, `page-objects`, `fixtures`, `helpers`, `refactor-values`), plus the files the fixes touched. For the framework-core skills, the Critical blocks were reviewed against the constitution and against each other. Their long reference and template files were only searched for known contradiction patterns. Still to review: exploration, effectiveness and risk, non-functional, and skill-authoring skills.
 
 ---
 
@@ -34,6 +34,11 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 18 | **Nothing kept cross-references in sync — the root cause of 12, 13 and 19** | High | Fixed · `de28998` (new validator check 15) |
 | 19 | `skill-creator` points at an orchestration doc and index columns that don't exist | Low | Fixed · `de28998` |
 | 20 | `npm run test:der` crashes on Windows with Node 24 | Medium | Fixed · `f57a1ca` |
+| 21 | Two different tag whitelists (7 tags vs 4) | Medium | Fixed · `3e13ede` |
+| 22 | `type-safety` still taught `test.skip` after finding 11 | High | Fixed · `3e13ede` |
+| 23 | `api-testing` put route constants in `enums` | Low | Fixed · `3e13ede` |
+| 24 | Two skills disagreed about where `try/catch` is allowed | Medium | Wording fixed · `3570abf`; alternative Open |
+| 25 | `refactor-values` assumed the default branch is `master` | Low | Fixed · `3570abf` |
 
 ---
 
@@ -239,6 +244,46 @@ Caught by check 15 on its first run. `skill-creator` told skill authors to updat
 Every case of the defect-escape-rate suite failed locally with exit code 3221226505 (`0xC0000409`), on a clean `main` too, while CI stayed green. The script computed and printed the correct result, then crashed on the way out with a libuv assertion (`!(handle->flags & UV_HANDLE_CLOSING)`). That's a known Node 24 behaviour on Windows when `process.exit()` runs while `fetch`'s sockets are still closing. CI uses Node 20 on Linux, so it never saw it.
 
 **Fix.** The final exit points set `process.exitCode` and let Node shut down normally. The exit codes are unchanged, and all five cases now pass on Windows. Together with finding 5, every validator and test suite in the repo now gives the same result on a Windows laptop as in CI.
+
+---
+
+## 21. Two different tag whitelists — Fixed (`3e13ede`)
+
+`test-standards` owns the tag whitelist, and the lint configs and the eval harness use its seven tags: `@App-Critical`, `@App-Smoke`, `@App-Sanity`, `@App-regression`, `@App-API`, `@App-Integration`, `@App-E2E`. `common-tasks` (in its Critical block, an anti-pattern and its checklist) and `pr-review` (its checklist) each kept a shorter copy with only four of those tags.
+
+**Why it mattered.** A correct `@App-Critical`, `@App-Sanity` or `@App-Integration` test would fail the self-review in `common-tasks` and `pr-review`. It's another duplicated list that drifted from its owner, the same failure as the skill index in finding 12.
+
+**Fix.** Those places now point at the `test-standards` whitelist and keep no copy of their own. The casing warning stays, because it's the part people get wrong: every tag is Title-case except lowercase `@App-regression`.
+
+---
+
+## 22. `type-safety` still taught `test.skip` — Fixed (`3e13ede`)
+
+After finding 11, the Critical block of `type-safety` still said: when a `ZodError` reveals contract drift, "Investigate the divergence and `test.skip` with `// FIXME:`". Its Troubleshooting table said the same, with an eslint-disable. My search for finding 11 missed it because of the wording ("`test.skip` with …"). Both now say to comment the test out with a ticket.
+
+**Worth noting.** This is exactly why finding 18 prefers mechanical checks: a manual search depends on guessing every way a sentence can be phrased. A skill-content check that flags any recommendation of `test.skip` could be a follow-up, but deciding whether a sentence recommends or forbids something is fuzzy, so it would need to be a warning, not an error.
+
+---
+
+## 23. `api-testing` put route constants in `enums` — Fixed (`3e13ede`)
+
+The Critical block of `api-testing` listed `enums/app/*` as the home of "route + message constants". The constitution ("Endpoint/route paths from a central config module"), `enums` ("**NEVER** put endpoint paths, route strings … in `enums/`") and `config` all say paths live in `appConfig`. The line now reads "message, suite and status constants — never paths".
+
+---
+
+## 24. Two skills disagreed about where `try/catch` is allowed — Wording fixed (`3570abf`), alternative Open
+
+`debugging` said "the only `try/catch` allowed is capturing an accidentally-created resource id for cleanup". `page-objects` documents a second one in its Critical block, the Radix trigger-swallow retry: `try { click + expect(item).toBeVisible({ timeout: 5_000 }) } catch { click({ force: true }) + expect visible }`. It calls this "the one accepted `try/catch` in a POM action method". The lint rule `no-try-catch-in-test` only covers test bodies, so neither skill was *mechanically* wrong. They just disagreed.
+
+**Fixed now.** `debugging` says its rule is about test bodies and names the page-object exception, so the two skills agree.
+
+**Open proposal.** Whether the exception should exist is a separate question. The retry uses `force: true`, which skips Playwright's actionability checks, and an inline `5_000` timeout, which the constitution's "no magic numbers" rule forbids. Playwright's built-in retry, `await expect(async () => { await trigger.click(); await expect(item).toBeVisible({ timeout: … }); }).toPass()`, retries the same click-and-check with no `try/catch`, no force-click, and a timeout that can come from config. `page-objects` already recommends `expect.toPass` for "genuinely-flaky reads". I haven't made this change because it alters runtime behaviour, and it needs to be verified against the real Radix components with `npx playwright open` first.
+
+---
+
+## 25. `refactor-values` assumed the default branch is `master` — Fixed (`3570abf`)
+
+It warned against leaving "`master` in a broken state". This repository's default branch is `main`, and a toolkit meant for any repo shouldn't assume either name. Both mentions now say "the default branch".
 ---
 
 ## Validator warnings already present (not introduced here)
