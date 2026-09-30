@@ -10,7 +10,7 @@ metadata:
 
 This skill is the front door when a user request doesn't name a specific area. It answers two questions: **(1) which deep skill owns this work?** and **(2) what framework-wide rules must every artifact obey, regardless of skill?** It does **not** teach the deep rules of any one area — those live in the specialized skills it routes to. This is a routing layer; the substance lives downstream.
 
-The orchestrator at [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) holds the global Routed Detail Index and the framework's MUST / WON'T tables. **Read it first** if you've never set up this framework or are unsure which surface you're touching. This skill picks up where the orchestrator stops — once you know the area, this skill points you to the deep skill and reminds you of the framework-wide invariants before you generate.
+The orchestrator at [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) holds the global Routed Skill Index and the framework's MUST / WON'T tables. **Read it first** if you've never set up this framework or are unsure which surface you're touching. This skill picks up where the orchestrator stops — once you know the area, this skill points you to the deep skill and reminds you of the framework-wide invariants before you generate.
 
 ## Critical
 
@@ -174,7 +174,7 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 | New `Messages.X` UI string | `enums/app/<file>.ts` (verified via `playwright-cli` first) |
 | New helper that's reused 3+ times | Promote to `fixtures/helper/<name>-fixture.ts` (see the `fixtures` skill) |
 | New Zod schema with shared shapes | Re-export through the barrel `fixtures/api/schemas/app/index.ts` |
-| New skill | `~/.claude/CLAUDE.md` § Routed Detail Index + the cluster siblings' `See Also` (bidirectional) |
+| New skill | `~/.claude/CLAUDE.md` § Routed Skill Index + the cluster siblings' `See Also` (bidirectional) |
 
 ## Anti-patterns
 
@@ -224,7 +224,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and `qase.suite(SUITES.APP_SETTINGS)`.
 5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend `Messages` enum). No `waitForTimeout`.
 6. **Step 6 — generate.** Both files produced.
-7. **Step 7 — self-review.** Tag is Title-case. POM registered. Action methods have built-in waits. Spec uses `test.step`.
+7. **Step 7 — self-review.** Tag is `@App-regression`, lowercase `r` as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
 9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `Messages.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 
@@ -268,11 +268,11 @@ User says: *"Tests/app/functional/http-create-edit-monitor.spec.ts is flaky in C
 
 ## See Also
 
-- **Paired rule:** (none) — this skill has no paired glob rule. Its peer at the top layer is the orchestrator [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md), which holds the global Routed Detail Index and the framework's MUST / WON'T tables.
+- **Paired rule:** (none) — this skill has no paired glob rule. Its peer at the top layer is the orchestrator [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md), which holds the global Routed Skill Index and the framework's MUST / WON'T tables.
 - **Sibling cluster (cross-cutting + every authoring cluster):**
   - **API authoring:** [`api-testing`](../api-testing/SKILL.md), [`scaffold-spec`](../scaffold-spec/SKILL.md), [`test-standards`](../test-standards/SKILL.md), [`helpers`](../helpers/SKILL.md), [`fixtures`](../fixtures/SKILL.md), [`type-safety`](../type-safety/SKILL.md), [`enums`](../enums/SKILL.md), [`config`](../config/SKILL.md), [`data-strategy`](../data-strategy/SKILL.md).
   - **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`playwright-cli`](../playwright-cli/SKILL.md), [`scaffold-spec`](../scaffold-spec/SKILL.md), [`test-standards`](../test-standards/SKILL.md), [`fixtures`](../fixtures/SKILL.md), [`enums`](../enums/SKILL.md), [`frontend-cross-check`](../frontend-cross-check/SKILL.md).
   - **Failure investigation:** [`debugging`](../debugging/SKILL.md), [`playwright-cli`](../playwright-cli/SKILL.md), [`frontend-cross-check`](../frontend-cross-check/SKILL.md).
   - **Repo hygiene:** [`refactor-values`](../refactor-values/SKILL.md), [`skill-creator`](../skill-creator/SKILL.md), [`ai-native-workflow`](../ai-native-workflow/SKILL.md).
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Detail Index lists this skill at the top of the cross-cutting cluster.
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill at the top of the cross-cutting cluster.
 - **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — drift-to-converge entries (lowercase `@App-regression` flip, three-tier test-data migration, `Notification` baseclass placeholder testids).

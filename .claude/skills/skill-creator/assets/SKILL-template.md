@@ -270,4 +270,4 @@ Cluster siblings (pick the cluster from skill-creator Phase 2):
 - **Sibling cluster (<cluster name>):** [`<sibling-1>`](../<sibling-1>/SKILL.md), [`<sibling-2>`](../<sibling-2>/SKILL.md), [`<sibling-3>`](../<sibling-3>/SKILL.md).
 - **Orchestration:** [`docs/cursor-skills-orchestration.md`](../../../docs/cursor-skills-orchestration.md) §6.4 cross-reference matrix.
 - **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) §<N>. <!-- Delete if no plan section applies. -->
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Detail Index lists this skill.
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.

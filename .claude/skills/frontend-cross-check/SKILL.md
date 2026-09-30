@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.0
+version: 1.0.1
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -10,7 +10,7 @@ metadata:
 
 ## Critical
 
-- **`git pull` `<sibling-repos>/frontend` BEFORE every cross-check.** Stale local clones produce wrong assumptions. Per `~/.claude/CLAUDE.md` Routed Detail Index: when investigating frontend behavior, always pull first.
+- **`git pull` `<sibling-repos>/frontend` BEFORE every cross-check.** Stale local clones produce wrong assumptions. Per `~/.claude/CLAUDE.md` Routed Skill Index: when investigating frontend behavior, always pull first.
 - **The frontend repo is the source of truth** for stable artifacts: testids, route paths, component structure, message strings emitted in source, schema-form field names, route file conventions. When a skill (e.g. `selectors`, `enums`) makes a claim about how the frontend works, **verify it by grepping the source** — do not rely on the skill's example values without confirmation.
 - **Use `npx playwright open` for runtime / dynamic behavior** — state-dependent text (`Refreshing…`), Sonner toast timing, post-click DOM, network races. Source code does not show these. (See the `playwright-cli` skill.)
 - **Pair the two sources.** Stable artifact (testid, route, component shape) → frontend source. Runtime behavior (state changes, timing) → live app via `npx playwright open`. Do not pick one and ignore the other.

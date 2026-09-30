@@ -139,7 +139,7 @@ Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 - [ ] Supplementary files (`reference.md`, `templates.md`, `<topic>.md`) have **Load-When** annotations in SKILL.md's `## What's in each file` table.
 - [ ] **No README.md** inside the skill folder. Docs go in SKILL.md or `references/`.
 - [ ] Cross-skill references use relative paths (`../<skill>/SKILL.md`).
-- [ ] Renamed/deleted skills updated in `~/.claude/CLAUDE.md § Routed Detail Index`.
+- [ ] Renamed/deleted skills updated in `~/.claude/CLAUDE.md § Routed Skill Index`.
 
 ### Step 3 — Run the affected specs
 

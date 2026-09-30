@@ -110,7 +110,7 @@ One-way and stale cross-references were the #1 source of audit churn in Tier 1.
 - [ ] **Bidirectional cross-references** — when this skill cites a sibling, that sibling's `See Also` mentions this skill back (when relevant). Update both in the same edit.
 - [ ] **Paired rule cited** — explicit link if it exists, "(none)" if not. No omission.
 - [ ] **No broken markdown links** — every `[text](path)` resolves to a real file. Use `ls`, `cat`, or `Read` to verify.
-- [ ] **`~/.claude/CLAUDE.md § Routed Detail Index` updated** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's index is the live route map (and the only human-readable index — `project-identity.mdc` was retired in favor of consolidating into `~/.claude/CLAUDE.md`).
+- [ ] **`~/.claude/CLAUDE.md § Routed Skill Index` updated** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's index is the live route map (and the only human-readable index — `project-identity.mdc` was retired in favor of consolidating into `~/.claude/CLAUDE.md`).
 - [ ] **`docs/cursor-skills-orchestration.md § 6.2.2`** row updated if a previously-empty placeholder is now populated, or if cluster relationships changed (also update §6.4 matrix).
 - [ ] **Cluster siblings' `See Also` updated** when this skill belongs to a cluster — the existing siblings should mention this skill in their `See Also` so the cluster is internally connected.
 
