@@ -4,9 +4,9 @@
 
 **Reviewer:** Ivaylo Ilchev · **Started:** 2026-09-30 · **Branch:** `ivaylo-changes` · **Last updated:** 2026-10-01
 
-This is a running log of what came up while reading the toolkit end to end, starting with `.claude/`. Each finding says what's wrong, where, why it matters, and its status. Items marked **Fixed** are committed on `ivaylo-changes`. Items marked **Open** need your decision before anything changes.
+This is a running log of what came up while reading the toolkit end to end, starting with `.claude/`. Each finding says what's wrong, where, why it matters, and its status. Contradictions and wrong statements are fixed directly on `ivaylo-changes` and marked **Fixed** with their commit. Items marked **Open** are design choices or new work, and they need your decision first.
 
-Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, plus the files the fixes touched. `skills/` has not been reviewed in full yet.
+Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the routing skills `common-tasks` and `ai-native-workflow`, plus the files the fixes touched. The other skills have not been reviewed in full yet.
 
 ---
 
@@ -14,7 +14,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, plus th
 
 | # | Finding | Severity | Status |
 |---|---|---|---|
-| 1 | AC writer invents details that the requirement analyst forbids inventing | Medium | Open |
+| 1 | AC writer invents details that the requirement analyst forbids inventing | Medium | Fixed · `5c6459b` |
 | 2 | Locator priority stated three different ways | High | Fixed · `4c7c5ea` |
 | 3 | Table-row locator example contradicts the memory file | Medium | Fixed · `4c7c5ea` |
 | 4 | `npm run test:memory` referenced but missing | Low | Fixed · `d3c45b5` |
@@ -24,23 +24,23 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, plus th
 | 8 | Testability constitutions have no version stamp once copied | Low | Open |
 | 9 | `name:` in command frontmatter is ignored | Low | Open |
 | 10 | No accessibility-testing skill | — | Suggestion |
+| 11 | Skills teach `test.skip`, which the constitution forbids | High | Fixed · `e49acec` |
+| 12 | `ai-native-workflow` is out of date with the repo | Medium | Fixed · `7297f8b` |
+| 13 | Skills cite constitution sections that don't exist | Low | Fixed · `e1851ae`, `7297f8b` |
+| 14 | `common-tasks` example contradicts its own tag-casing rule | Low | Fixed · `e1851ae` |
+| 15 | `common-tasks` hardcodes one project's layout | Medium | Open |
+| 16 | 31 links to a `docs/framework-alignment-plan.md` that doesn't exist | Low | Open |
+| 17 | AC writer's examples break its own keyword-casing rule | Low | Fixed · `5c6459b` |
 
 ---
 
-## 1. The AC writer and the requirement analyst disagree about missing information — Open
+## 1. The AC writer and the requirement analyst disagreed about missing information — Fixed (`5c6459b`)
 
-`.claude/commands/acceptance-criteria-writer.md:25` says:
+`.claude/commands/acceptance-criteria-writer.md` told the agent: "If details are missing from the input, make logical professional assumptions consistent with standard UI/UX patterns." `.claude/commands/requirement-analyst.md` says the opposite: "**Never invent UI specifics** not present in the requirement" and "**Never paper over a gap**."
 
-> If details are missing from the input, make logical professional assumptions consistent with standard UI/UX patterns.
+**Why it mattered.** The two personas cover neighbouring stages of the same flow: story → ACs → review. The AC writer quietly filled gaps with plausible guesses that then read like confirmed requirements, which is exactly what the analyst exists to catch. By the time the analyst ran on the writer's output, the gaps were already hidden.
 
-`.claude/commands/requirement-analyst.md:69-70` says the opposite:
-
-> **Never invent UI specifics** not present in the requirement.
-> **Never paper over a gap** — … Surface everything; let the PO decide what's out of scope.
-
-**Why it matters.** The two personas cover neighbouring stages of the same flow: story → ACs → review. The AC writer quietly fills gaps with plausible guesses, and those guesses then look like confirmed requirements. That's exactly what the analyst exists to catch. If the analyst runs on the writer's output, the gaps are already hidden.
-
-**Proposed fix.** Keep the AC writer's ability to draft from thin input, but make every assumption visible. Tag it inline as `[ASSUMPTION: …]` and add an "Assumptions to confirm" list at the end. The analyst's Gate B would then treat any `[ASSUMPTION]` as unconfirmed, not as acceptance criteria. I haven't changed this yet, because it changes how the persona behaves.
+**Fix.** The AC writer can still draft from thin input, but it now tags every assumed detail inline as `[ASSUMPTION: …]` and ends with an "Assumptions to confirm" list for the PO. The analyst's Gate B now flags any unconfirmed `[ASSUMPTION]` tag and turns it into a clarifying question, so the two personas hand off to each other correctly.
 
 ---
 
@@ -131,6 +131,76 @@ Claude Code uses the file name as the command name, and ignores `name:` in `.cla
 
 Accessibility comes up in several places (the web constitution's a11y section, the role-first locator rationale), but there's no skill for actually testing it. An `accessibility-testing` skill built on `@axe-core/playwright` would fill that gap. I'm happy to draft it as a separate PR.
 
+---
+
+## 11. Skills taught `test.skip`, which the constitution forbids — Fixed (`e49acec`)
+
+The constitution is explicit. Its WON'T table forbids `test.skip()` in test bodies, and for an API that doesn't match its docs it says: "comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>` … Never `test.skip`." `test-standards`, `flakiness-triage` and `api-testing/SKILL.md` all agreed. Seven other places taught the opposite:
+
+- `common-tasks`, in its **Critical block**: "Use `test.skip` + `// FIXME: <ticket>` + `/* eslint-disable … */`". Its checklist allowed `.skip` with a FIXME too.
+- `api-testing/templates.md` § 13: "`test.skip` is the only correct response", with a `test.skip` skeleton. `api-testing/SKILL.md` says "**Do NOT use `test.skip`**" and links to that same section as its skeleton.
+- The `api-testing` templates, `http-method-coverage.md` and `reference.md`, plus `data-strategy/reference.md`: a conditional `test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, …)` guard. That's exactly what pre-edit checklist question 1 forbids.
+- `config`: the same conditional guard, in Example 1 and in Troubleshooting.
+- `debugging`: an anti-pattern that allowed `.skip` with an eslint-disable, contradicting its own checklist two sections later.
+- `pr-review`: checklist lines that accepted `.skip` with a ticket.
+- `test-standards`: an anti-pattern that recommended `describe.skip` for the blocked describes.
+
+**Why it mattered.** This was the highest-impact contradiction in the review. `common-tasks` is the router every "add a test" request goes through, and the template is what agents copy. An agent following them would produce skipped tests, which show up as false greens and orphaned Qase cases. That's exactly what the constitution was written to prevent. Precedence says the constitution wins, but only if the agent notices the conflict.
+
+**Fix.** Every place now gives the constitution's instruction. A test waiting on an unprovisioned token is written and commented out with a ticket, not skipped conditionally. No conditional-skip guidance remains in `.claude/`.
+
+**Versions.** `common-tasks` 1.0.0 → 2.0.0, because a Critical rule changed meaning. `api-testing` and `data-strategy` 1.1.0 → 1.1.1, and `debugging`, `config` and `test-standards` 1.0.0 → 1.0.1: each already stated the correct rule, and the fix removed text that contradicted it.
+
+---
+
+## 12. `ai-native-workflow` was out of date with the repo — Fixed (`7297f8b`)
+
+This skill orients agents, but it kept its own copy of the routing index, and that copy had drifted:
+
+- It said `common-tasks`, `page-objects` and `test-standards` were empty placeholders that must not be routed to. All three are fully written, so an agent that believed this would avoid the three main authoring skills.
+- Its "populated skills" matrix listed `master-context` and `metrics-api-tests-context`, which don't exist here. It left out `mutation-testing`, `defect-prediction`, `qe-pattern-memory` and `owasp-security-testing`, which do.
+- Its "three-layer model" had two rows and described "detail rule files", "scoped rule files matched by glob" and `.cursor/rules/`. None of these exist, and its precedence line didn't match the constitution.
+
+**Fix.** The matrix and skill list are replaced by a pointer to the one real index, `CLAUDE.md § Routed Skill Index`, with a note on why no copy is kept. The three-layer model now has its three layers: constitution, skills and personas. The precedence line and lifecycle step 2 match the constitution. The conversation contract and the seven-phase lifecycle, the parts that duplicate nothing, are unchanged. Version 1.0.0 → 2.0.0.
+
+---
+
+## 13. Skills cited constitution sections that don't exist — Fixed (`e1851ae`, `7297f8b`)
+
+Nine files referred to `CLAUDE.md § Routed Detail Index`, but the section is called **Routed Skill Index**. The nine were `ai-native-workflow`, `common-tasks`, `frontend-cross-check`, `page-objects`, `pr-review`, `test-case-generation`, `test-standards`, and `skill-creator`'s template and checklist. `ai-native-workflow` also cited `§ Code Generation Tasks` and `§ Skill File Structure`, and neither exists.
+
+**Fix.** All references are renamed, and the two nonexistent sections are removed along with the stale text around them. **Still open as a suggestion:** a validator check that every `CLAUDE.md § <name>` reference in a skill matches a real heading, so this can't come back unnoticed.
+
+---
+
+## 14. A `common-tasks` example contradicted its own tag-casing rule — Fixed (`e1851ae`)
+
+Example 1 tagged the spec `@App-regression`, correctly lowercase. One step later the same example said "Tag is Title-case." That's the exact mistake the skill warns, a few lines earlier, will silently drop the test from CI. The line now names the tag and explains why its casing matters.
+
+---
+
+## 15. `common-tasks` hardcodes one project's layout — Open
+
+The constitution says it "never hardcodes one repo's layout as universal truth," and that repo-specific facts belong in each repo's own `CLAUDE.md` or a repo-context skill. `common-tasks`, which is shipped as a generic skill, hardcodes a specific project: the tag whitelist (`@App-API | @App-E2E | @App-Smoke | @App-regression`), paths like `fixtures/pom/test-options.ts` and `enums/app/qase-suites.ts`, and env vars like `USER_ACCESS_TOKEN_FULL`. Several other skills probably do the same, which I'll check as the review continues.
+
+**Why it matters.** When the toolkit is adopted in another repo, the router will send agents to paths and tags that don't exist there. That undercuts the toolkit's main selling point, that the skills "apply on top without modification."
+
+**Proposed fix.** Move the project-specific facts into a repo-context skill or a project `CLAUDE.md` template, and have `common-tasks` refer to "the project's tag whitelist" and "the project's fixtures barrel" instead. This is a bigger design change, so it's worth discussing before anyone starts.
+
+
+---
+
+## 16. 31 links point to a document that doesn't exist — Open
+
+`docs/framework-alignment-plan.md` is linked 31 times across 15 skill files (`api-testing`, `common-tasks`, `data-strategy`, `page-objects`, `skill-creator`, `test-standards`, `ai-native-workflow` and their supporting files), often as "plan § 6.2" to justify a rule. The file isn't in this repo. It belongs to the project the toolkit was extracted from. `common-tasks` also links to its own `reference.md`, marked TBD, which doesn't exist either.
+
+**Why it's open rather than fixed.** This is the same root cause as finding 15: project-specific content shipped in generic skills. Deleting 31 references mechanically would lose the reasoning some of them carry. The cleaner route is to resolve it together with finding 15. Either the rules that matter get restated in the skills and the plan references go, or the plan moves into a repo-context layer where a project can supply it.
+
+---
+
+## 17. The AC writer's examples broke its own keyword-casing rule — Fixed (`5c6459b`)
+
+`acceptance-criteria-writer` requires the Gherkin keywords in bold capitals (**GIVEN** / **WHEN** / **THEN** / **AND**), but its own style examples used **Given** / **When** / **Then**. Agents copy examples more readily than they follow rules, so the examples now follow the rule.
 ---
 
 ## Validator warnings already present (not introduced here)
