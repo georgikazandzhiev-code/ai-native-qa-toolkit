@@ -39,6 +39,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 23 | `api-testing` put route constants in `enums` | Low | Fixed · `3e13ede` |
 | 24 | Two skills disagreed about where `try/catch` is allowed | Medium | Wording fixed · `3570abf`; alternative Open |
 | 25 | `refactor-values` assumed the default branch is `master` | Low | Fixed · `3570abf` |
+| 26 | No testability constitution for backend / API developers | Medium | Open — proposal |
 
 ---
 
@@ -284,6 +285,22 @@ The Critical block of `api-testing` listed `enums/app/*` as the home of "route +
 ## 25. `refactor-values` assumed the default branch is `master` — Fixed (`3570abf`)
 
 It warned against leaving "`master` in a broken state". This repository's default branch is `main`, and a toolkit meant for any repo shouldn't assume either name. Both mentions now say "the default branch".
+
+---
+
+## 26. No testability constitution for backend / API developers — Open (proposal)
+
+`constitutions/` gives the frontend and mobile teams' coding agents a testability standard, but the backend has none. The API-testing rules all assume a trustworthy OpenAPI contract: coverage plans are built from it, and "the contract is truth, live requests only when no docs exist." Nothing asks the backend team to provide one. In a code-first team the spec is generated from the code after it's written, so it records whatever was built, bugs included, and the API tests end up being checked against the implementation instead of the agreement.
+
+**Proposal.** Add `constitutions/api-testability.md` for the backend repos, making the contract a product requirement. It would say:
+- **Schema-first.** New or changed endpoints go into the OpenAPI spec right after grooming, before implementation, and the spec change is reviewed like code.
+- **Complete contracts.** Every endpoint documents every status code it can return and its body. Errors follow one shared error schema.
+- **Test hooks.** There are stable identifiers and dedicated seeding and cleanup endpoints for test data, so tests don't have to drive the UI to set up state.
+- **Enforcement, not only instructions.** CI validates real responses against the spec, and a spec-diff tool (for example oasdiff) blocks breaking changes that aren't announced.
+
+On the QA side, the natural pairing is to generate the API client, the types and, ideally, the Zod schemas from that spec (OpenAPI Generator, openapi-zod-client or orval), instead of hand-writing them. Hand-written schemas are another copy of the contract, and copies drift.
+
+This comes from direct experience with a schema-first process, where the spec was updated right after grooming and the QA client was regenerated from it, so tests couldn't drift from the contract. I'm happy to draft the constitution as a follow-up PR.
 ---
 
 ## Validator warnings already present (not introduced here)
