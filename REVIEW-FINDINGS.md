@@ -28,8 +28,8 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 12 | `ai-native-workflow` is out of date with the repo | Medium | Fixed · `7297f8b` |
 | 13 | Skills cite constitution sections that don't exist | Low | Fixed · `e1851ae`, `7297f8b` |
 | 14 | `common-tasks` example contradicts its own tag-casing rule | Low | Fixed · `e1851ae` |
-| 15 | `common-tasks` hardcodes one project's layout | Medium | Open |
-| 16 | 30 references (23 links) to a `docs/framework-alignment-plan.md` that doesn't exist | Low | Open |
+| 15 | Generic skills carry one project's layout, names and paths | High | Decided · in progress |
+| 16 | 416 links to files this repository has never contained | High | Fixed · `76a0b72` (and now caught by check 15) |
 | 17 | AC writer's examples break its own keyword-casing rule | Low | Fixed · `5c6459b` |
 | 18 | **Nothing kept cross-references in sync — the root cause of 12, 13 and 19** | High | Fixed · `de28998` (new validator check 15) |
 | 19 | `skill-creator` points at an orchestration doc and index columns that don't exist | Low | Fixed · `de28998` |
@@ -42,6 +42,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 26 | No testability constitution for backend / API developers | Medium | Added · `09dc8f7` |
 | 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · `044cd07` |
 | 28 | Six See Also entries still called written skills "(TBD)" | Medium | Fixed · `403a6de` (and now caught by check 15) |
+| 29 | `skill-creator` described a validation hook that never existed, and required "real codebase names" in examples | Medium | Fixed · `76a0b72` |
 
 ---
 
@@ -204,24 +205,32 @@ Example 1 tagged the spec `@App-regression`, correctly lowercase. One step later
 
 ---
 
-## 15. `common-tasks` hardcodes one project's layout — Open
+## 15. Generic skills carry one project's layout, names and paths — Decided, in progress
 
-The constitution says it "never hardcodes one repo's layout as universal truth," and that repo-specific facts belong in each repo's own `CLAUDE.md` or a repo-context skill. `common-tasks`, which is shipped as a generic skill, hardcodes a specific project: the tag whitelist (`@App-API | @App-E2E | @App-Smoke | @App-regression`), paths like `fixtures/pom/test-options.ts` and `enums/app/qase-suites.ts`, and env vars like `USER_ACCESS_TOKEN_FULL`. Several other skills probably do the same, which I'll check as the review continues.
+The constitution says it "never hardcodes one repo's layout as universal truth," and that repo-specific facts belong in each repo's own `CLAUDE.md` or a repo-context skill. The skills don't follow that. This first showed up in `common-tasks`, and finding 16 showed how wide it goes: `api-testing`, `data-strategy`, `helpers`, `fixtures`, `page-objects`, `selectors` and `test-standards` all describe one product. They name its page objects (`SyntheticsPage`, `ProbesPage`), its helpers (`helpers/app/probes.ts`), its monitor types, its spec files, its test-data files and its tag whitelist, as if every repository had them.
 
-**Why it matters.** When the toolkit is adopted in another repo, the router will send agents to paths and tags that don't exist there. That undercuts the toolkit's main selling point, that the skills "apply on top without modification."
+**Why it matters.** When the toolkit is adopted in another repo, agents get sent to files, tags and helpers that don't exist there. That undercuts the toolkit's main selling point, that the skills "apply on top without modification."
 
-**Proposed fix.** Move the project-specific facts into a repo-context skill or a project `CLAUDE.md` template, and have `common-tasks` refer to "the project's tag whitelist" and "the project's fixtures barrel" instead. This is a bigger design change, so it's worth discussing before anyone starts.
+**Decision.** The toolkit is a standalone skeleton that can be installed in any repository or built on. It must not link to, or name as if present, anything it doesn't contain. Rules stay. Project facts become generic, clearly illustrative examples, and the place for a real project's facts is that project's own `CLAUDE.md`, as the constitution's "Adopting this in a new repo" section already says.
 
+**Done so far.** The dead links are gone (finding 16). The authoring rule that produced this, "use REAL codebase names, no placeholders," has been replaced (finding 29). **Next:** rewrite each affected skill's examples into generic ones, one skill per commit so each can be reviewed on its own.
 
 ---
 
-## 16. 30 references point to a document that doesn't exist — Open
+## 16. 416 links pointed at files this repository has never contained — Fixed (`76a0b72`, and now caught by check 15)
 
-`docs/framework-alignment-plan.md` is mentioned **30 times across 15 skill files**, 23 of them as clickable links and the rest as plain-text citations such as "plan § 6.2". There's one more dead link, to `docs/keycloak-dev-setup.md`. Neither file is in this repo; they belong to the project the toolkit was extracted from. (An earlier version of this finding said 31; that count also included a mention in this report.)
+This started as "a plan document that doesn't exist," cited about sixty times (links and plain-text "plan § 6.2" mentions, including in `helpers`, which the first count missed), plus one link to `docs/keycloak-dev-setup.md`. Checking every relative link in every markdown file found **416** that lead nowhere. Besides the plan, they pointed at the project's page objects, helpers, specs, test data, `playwright.config.ts`, `env/.env.example`, a validation hook and `AGENTS.md`.
 
-The mentions, by file: `api-testing` (`SKILL.md` 5, `reference.md` 3, `templates.md` 2, `http-method-coverage.md` 2), `data-strategy` (`reference.md` 2, `refactor-playbook.md` 2, `patterns.md` 2, `SKILL.md` 1), `skill-creator` (`SKILL.md` 3, `assets/SKILL-template.md` 2, `references/checklist.md` 1), `common-tasks` 2, `test-standards` 1, `page-objects` 1, `ai-native-workflow` 1.
+**None of them were ever here.** `git log --all` shows no commit on any branch has ever contained `docs/`, `helpers/`, `pages/` or those spec files, and the links are already in the first commit (`8abc855`). The skills were written inside the product repository, where every link worked, and copied into this one without the files they point to.
 
-**Why it's open rather than fixed.** This has the same root cause as finding 15: project-specific content shipped in generic skills. Deleting the references mechanically would lose the reasoning some of them carry. The cleaner route is to resolve this together with finding 15, once it's decided where project-specific facts should live (a repo-context skill, a project `CLAUDE.md` template, or clearly marked examples).
+**Fix.**
+- **Plan and Keycloak citations** are removed. Each sentence keeps the rule it states, and only the citation goes. The "companion plan" slot is gone from the skill template, the authoring checklist and the See Also requirements, so new skills stop inheriting it.
+- **Links into product code** are now plain code text. Rewriting those examples is finding 15.
+- **Links to a wrong path inside the toolkit** are fixed. The hook links point at `scripts/validate.mjs` instead (finding 29), and the `common-tasks` row for an unwritten `reference.md` is removed.
+
+**Prevention.** Check 15(d) now fails on any relative link, in `.claude/` or the root docs, whose target file doesn't exist. Code, URLs, `~/` paths, `<placeholder>` targets and `*-template.md` files are exempt, because their links aren't paths into this tree. Run against the tree from before the fix, it reports all 416. `scripts/tests/cross-references.test.mjs` adds three cases: a dead link fails, a real link stays silent, and placeholders, code and URLs stay silent. That brings it to 11 cases, 6 blocking.
+
+**Worth noting.** `skill-creator`'s checklist already said "No broken markdown links — every `[text](path)` resolves to a real file." As a box for a reviewer to tick, it held for none of the 416. As a check, it can't be skipped.
 
 ---
 
@@ -342,6 +351,15 @@ The Critical block of `fixtures` gave, as "the decisive reason" to prefer a fixt
 Found while registering the accessibility skill. Six See Also entries in five skills still called `page-objects` or `common-tasks` "(TBD)", although both are fully written: `selectors` (twice), `debugging`, `fixtures` and `playwright-cli` (twice). One said "until populated, follow patterns in existing `pages/app/*`", which steers agents away from the skill that holds those patterns. It's the same drift as finding 12: each label was true when it was written, and nothing re-checked it.
 
 **Fix.** The labels are removed. Because this one can be checked exactly, **check 15 now fails when any file marks an existing skill "(TBD)"**, while a TBD label for a skill that really isn't written yet stays allowed. `scripts/tests/cross-references.test.mjs` has two new cases: a stale label fails, and a label for an unwritten skill stays silent (8 cases, 5 blocking).
+
+---
+
+## 29. `skill-creator` described a validation hook that never existed, and required "real codebase names" in examples — Fixed (`76a0b72`)
+
+Found while fixing finding 16. Two things in the skill-authoring guidance didn't match reality:
+
+- **A hook that never existed.** The checklist, the patterns reference and the skill template said a `postToolUse` hook (`.cursor/hooks/skill-validate.py`) validates every skill on save, and linked to it. No such file exists, and `skill-creator/SKILL.md` itself says validation is "a command, not a hook." Validator check 8 was added for exactly this claim, but it only scans `SKILL.md` files, so the claim lived on in the reference files. The checklist also said required sections were "not yet enforced," although the validator checks them. All of these now describe `npm run validate` and what it really checks, and list separately the items it doesn't (Contents blocks, backslash paths, reference depth, signature devices).
+- **A rule that caused finding 15.** The checklist required examples to use "REAL codebase names (no placeholders)." Inside one product that's good advice. In a toolkit meant for many repositories, it put that product's paths into every skill. It now asks for concrete, realistic names that read as illustrations, never as a path the reader is expected to find.
 ---
 
 ## Validator warnings already present (not introduced here)
