@@ -2,7 +2,7 @@
 
 > **Temporary file. Delete it before merging this PR, or right after.** It exists so the findings can be reviewed alongside the diff. Once the open items have tickets or follow-up PRs, it has no further use in the repo.
 
-**Reviewer:** Ivaylo Ilchev · **Started:** 2026-09-30 · **Branch:** `ivaylo-changes` · **Last updated:** 2026-10-01
+**Reviewer:** Ivaylo Ilchev · **Started:** 2026-09-30 · **Branch:** `ivaylo-changes` · **Last updated:** 2026-10-01 (second session)
 
 This is a running log of what came up while reading the toolkit end to end, starting with `.claude/`. Each finding says what's wrong, where, why it matters, and its status. Contradictions and wrong statements are fixed directly on `ivaylo-changes` and marked **Fixed** with their commit. Items marked **Open** are design choices or new work, and they need your decision first.
 
@@ -19,10 +19,10 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 3 | Table-row locator example contradicts the memory file | Medium | Fixed · `4c7c5ea` |
 | 4 | `npm run test:memory` referenced but missing | Low | Fixed · `d3c45b5` |
 | 5 | Validators fail on a clean Windows checkout (CRLF) | Medium | Fixed · `f818b4c` |
-| 6 | Jira-writing commands can be triggered by the agent itself | Medium | Open |
+| 6 | Jira-writing commands can be triggered by the agent itself | Medium | Fixed · `5203f49` |
 | 7 | `selectors` 2.0.0 needs re-measuring | — | Owed |
-| 8 | Testability constitutions have no version stamp once copied | Low | Open |
-| 9 | `name:` in command frontmatter is ignored | Low | Open |
+| 8 | Testability constitutions have no version stamp once copied | Low | Fixed · `8f0f861` |
+| 9 | `name:` in command frontmatter is ignored | Low | Fixed · `5203f49` |
 | 10 | No accessibility-testing skill | — | Suggestion |
 | 11 | Skills teach `test.skip`, which the constitution forbids | High | Fixed · `e49acec` |
 | 12 | `ai-native-workflow` is out of date with the repo | Medium | Fixed · `7297f8b` |
@@ -40,7 +40,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 24 | Two skills disagreed about where `try/catch` is allowed | Medium | Wording fixed · `3570abf`; alternative Open |
 | 25 | `refactor-values` assumed the default branch is `master` | Low | Fixed · `3570abf` |
 | 26 | No testability constitution for backend / API developers | Medium | Open — proposal |
-| 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · see below |
+| 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · `044cd07` |
 
 ---
 
@@ -107,13 +107,13 @@ The repo content was fine. A fresh LF clone of the branch had `validate` at 0 er
 
 ---
 
-## 6. Jira-writing commands can be started by the agent itself — Open
+## 6. Jira-writing commands could be started by the agent itself — Fixed (`5203f49`)
 
-In current Claude Code, commands and skills are merged, and the agent can invoke either one based on its description unless the file sets `disable-model-invocation: true`. None of the four files in `.claude/commands/` set it.
+In current Claude Code, commands and skills are merged, and the agent can start a command by itself, based on its description, unless the file sets `disable-model-invocation: true`. None of the four files in `.claude/commands/` set it.
 
-**Why it matters.** `bug-helper`, `test-case-helper` and `requirement-analyst` can post to Jira. Each one asks for confirmation before writing, which is good, but that's the only safeguard.
+**Why it mattered.** `bug-helper`, `test-case-helper` and `requirement-analyst` can post to Jira. Each asks for confirmation before writing, which is good, but that was the only safeguard, and the agent itself enforces it.
 
-**Proposed fix.** Add `disable-model-invocation: true` to those three. It's one line each, and it gives a second, independent safeguard. `acceptance-criteria-writer` only produces text, so it matters less there.
+**Fix.** Those three now set `disable-model-invocation: true`, with a one-line comment saying why, so only a person can start them. That's a second safeguard, independent of the first. `acceptance-criteria-writer` only produces text, so the agent may still start it.
 
 ---
 
@@ -123,17 +123,19 @@ In current Claude Code, commands and skills are merged, and the agent can invoke
 
 ---
 
-## 8. The testability constitutions have no version stamp once copied — Open
+## 8. The testability constitutions had no version stamp once copied — Fixed (`8f0f861`)
 
-The `constitutions/` files are meant to be copied into product repos as their `CLAUDE.md`. Unlike `.claude/CLAUDE.md`, they carry no `toolkit-version` stamp, so `npm run audit` can't tell which frontend or mobile repos are running an old copy.
+The `constitutions/` files are copied into product repos as their `CLAUDE.md`. Unlike `.claude/CLAUDE.md`, they carried no `toolkit-version` stamp, so once copied, nobody could tell which version of the testability rules a frontend or mobile repo had, or that it had fallen behind.
 
-**Options.** Add a stamp so the audit can see copies. Better still, distribute them as a versioned package or Claude Code plugin, have each product repo's `CLAUDE.md` import the file with `@path`, and add a CI check that warns when a copy is behind. The key rules could also be backed with frontend lint (for example `eslint-plugin-jsx-a11y`), so they're enforced rather than only instructed.
+**Fix.** The existing stamping mechanism now covers them, rather than a new one being invented. `npm run stamp` writes the same `<!-- toolkit-version: x.y.z -->` line under their title, and check 14 in `npm run validate` fails if either is missing its stamp or disagrees with `VERSION`. `scripts/tests/version-stamp.test.mjs` has three new cases (agreeing stamps pass, a stale stamp fails, a missing stamp fails), and its idempotency case now covers a product constitution too. `constitutions/README.md` explains the stamp and asks anyone merging a file into an existing `CLAUDE.md` to keep the stamp line.
+
+**Still open, as a follow-up.** `npm run audit` only scans repos that contain the toolkit's skills, so it doesn't report product repos yet. Now that the stamp exists, teaching the audit to read it from a product repo's `CLAUDE.md` is a small next step. The larger option from the original proposal, distributing the constitutions as a versioned package or Claude Code plugin, stays a discussion point.
 
 ---
 
-## 9. `name:` in command frontmatter is ignored — Open
+## 9. `name:` in command frontmatter was ignored — Fixed (`5203f49`)
 
-Claude Code uses the file name as the command name, and ignores `name:` in `.claude/commands/*.md`. It's harmless, but it suggests the field does something. Either remove it, or keep it with a comment that it's documentation only.
+Claude Code uses the file name as the command name and ignores `name:` in `.claude/commands/*.md`. All four command files carried it, which suggested a setting that didn't exist. Removed from all four.
 
 ---
 
