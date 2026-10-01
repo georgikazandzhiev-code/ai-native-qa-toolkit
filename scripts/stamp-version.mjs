@@ -18,7 +18,7 @@
  * because consumers copy `.claude/`, not the repository.
  *
  * The product-side testability constitutions travel the same way, one hop further: they are
- * copied into frontend and mobile repos as those repos' CLAUDE.md. They carry the same stamp, so
+ * copied into frontend, mobile and backend repos as those repos' CLAUDE.md. They carry the same stamp, so
  * a product repo can tell which version of the testability rules it took, and a stale copy is
  * visible instead of silent.
  *
@@ -37,7 +37,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const VERSION_FILE = join(ROOT, 'VERSION');
 const CONSTITUTION = join(ROOT, '.claude', 'CLAUDE.md');
 /** Copied into product repos as their CLAUDE.md, so they carry the stamp too. Checked when present. */
-const PRODUCT_CONSTITUTIONS = ['web-testability.md', 'mobile-testability.md'].map((f) =>
+const PRODUCT_CONSTITUTIONS = ['web-testability.md', 'mobile-testability.md', 'api-testability.md'].map((f) =>
   join(ROOT, '.claude', 'constitutions', f)
 );
 const rel = (p) => p.slice(ROOT.length + 1).replace(/\\/g, '/');
