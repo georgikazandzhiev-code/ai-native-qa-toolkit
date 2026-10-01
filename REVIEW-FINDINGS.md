@@ -28,7 +28,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 12 | `ai-native-workflow` is out of date with the repo | Medium | Fixed · `7297f8b` |
 | 13 | Skills cite constitution sections that don't exist | Low | Fixed · `e1851ae`, `7297f8b` |
 | 14 | `common-tasks` example contradicts its own tag-casing rule | Low | Fixed · `e1851ae` |
-| 15 | Generic skills carry one project's layout, names and paths | High | Decided · in progress |
+| 15 | Generic skills carry one project's layout, names and paths | High | Decided · follow-up PR planned |
 | 16 | 416 links to files this repository has never contained | High | Fixed · `76a0b72` (and now caught by check 15) |
 | 17 | AC writer's examples break its own keyword-casing rule | Low | Fixed · `5c6459b` |
 | 18 | **Nothing kept cross-references in sync — the root cause of 12, 13 and 19** | High | Fixed · `de28998` (new validator check 15) |
@@ -215,7 +215,17 @@ The constitution says it "never hardcodes one repo's layout as universal truth,"
 
 **Two more cases found while taking stock.** Seven files, including two persona commands, tell agents to use terminology from a `master-context` skill, but no such skill exists. It's a dead reference that check 15(d) can't see, because it's a name in prose, not a link. And the tag-casing rules cite `app-regression` and `app-all` scripts in `package.json` that this repository's `package.json` doesn't have. Both are part of the rewrite below.
 
-**Done so far.** The dead links are gone (finding 16). The authoring rule that produced this, "use REAL codebase names, no placeholders," has been replaced (finding 29). **Next:** rewrite each affected skill's examples into generic ones, one skill per commit so each can be reviewed on its own.
+**Done so far.** The dead links are gone (finding 16). The authoring rule that produced this, "use REAL codebase names, no placeholders," has been replaced (finding 29). **Not done in this PR, on purpose.** The rewrite touches about 2,000 lines across 50 files, and it would bury this PR's fixes. It also may not be safe to do blind: if the source product still uses these skills, making them generic would take knowledge away from its agents.
+
+**Question for the reviewer:** are these skills still used in the monitoring product? If yes, the product-specific facts should first move into that repo's own `CLAUDE.md`, and only then should the toolkit be made generic.
+
+**Plan (follow-up PRs):**
+1. Move the product facts into the product repo's `CLAUDE.md`, if it still uses the skills.
+2. A pilot PR that rewrites `test-standards` around one neutral example app, to agree the style.
+3. The remaining skills, one per commit. Heaviest first: `api-testing`, `data-strategy`, `selectors`, `page-objects`, `helpers`, `test-case-generation`. Also remove the `master-context` references.
+4. A validator check that fails if the old product's names come back.
+
+**Before this file is deleted,** open a tracking issue for this plan, so it outlives the report.
 
 ---
 
