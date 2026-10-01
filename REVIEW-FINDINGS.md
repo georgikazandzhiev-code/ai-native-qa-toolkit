@@ -461,7 +461,30 @@ The constitution and skills steer every agent session, so a careless edit pollut
 1. Confirm that `main` requires a pull request and **review from Code Owners**. The public API doesn't show review settings.
 2. Update the repository's About description on GitHub. It still says "26 on-demand skills" (there are 27), and it lives in the GitHub settings, where check 7 can't see it.
 
-**Proposed (not done yet).** Installed copies of the toolkit should stop the agent from editing its own instruction files, using `permissions.deny` rules in Claude Code's `settings.json`. That's least privilege applied to the agent. It belongs in the copies, not in this source repository, where editing the skills is the work itself. A verified snippet will be added to the README's adoption section once the path syntax has been checked against Claude Code's documentation, because a deny rule with a wrong pattern looks safe and protects nothing.
+### Proposal for discussion: protecting the shared files
+
+**The starting idea (Ivaylo):** make the constitution, skills and governance files read-only for everyone except the owner, and have any proposed change discussed with the owner first. These files steer every agent session, so anyone being able to edit them makes them easy to pollute.
+
+**Suggested shape: owner-approved, not read-only.** Truly read-only files make the owner the only path for every idea. It doesn't scale past a small team, nothing moves while the owner is away, and ideas raised in conversation leave no record. Owner-approved changes keep the same control. Anyone can propose a change as a pull request, but only the owner can merge it, so the "discuss it with me first" step happens in the PR, in writing, with the exact diff and the CI result attached.
+
+**The layers, from strongest to weakest:**
+
+1. **Branch protection on `main`** (owner, in GitHub Settings → Branches or Rules):
+   - require a pull request before merging;
+   - require review from Code Owners;
+   - keep the three required CI checks (already on);
+   - apply the rules to administrators (already on for the checks);
+   - block force pushes and branch deletion.
+2. **Deny rules for the agent in installed copies.** In `~/.claude` and in product repositories, `permissions.deny` rules in Claude Code's `settings.json` stop the agent from editing its own constitution and skills. That's least privilege applied to the agent. The rules don't belong in this source repository, where editing the skills is the work itself. A verified snippet will go into the README's adoption section once the path syntax has been checked against Claude Code's documentation, because a deny rule with a wrong pattern looks safe and protects nothing.
+3. **Detecting edited or outdated copies.** The version stamps already exist. `npm run audit` should also read the stamps in product repositories (an open item), so a copy that is outdated or was edited locally shows up. Distributing the toolkit as a package or plugin makes local edits less tempting in the first place.
+4. **Checking what gets copied.** Extend the snippet lint that already guards the memory file to the skill templates (TypeScript compiler plus the plugin's rules), so a broken or forbidden pattern can't be merged into a template everyone copies (see finding 30).
+
+**The one exception is the memory file.** Its purpose is that agents and engineers write lessons into it, so it can't be locked. It's protected by evidence labels, the size cap, linted snippets and review of each new entry in its PR.
+
+**Questions for the owner:**
+- Is code-owner review already required on `main`?
+- Should all four layers be adopted, or only some?
+- Who, besides the owner, may approve changes while the owner is away? A second code owner removes the single point of failure.
 ---
 
 ## Validator warnings already present (not introduced here)
