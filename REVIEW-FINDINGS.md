@@ -44,6 +44,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 28 | Six See Also entries still called written skills "(TBD)" | Medium | Fixed · `403a6de` (and now caught by check 15) |
 | 29 | `skill-creator` described a validation hook that never existed, and required "real codebase names" in examples | Medium | Fixed · `76a0b72` |
 | 30 | About 60 contradictions between skills, in 12 themes | High | Open · planned follow-up PR |
+| 31 | No prerequisites anywhere; personas pointed at "install notes" that don't exist | Medium | Fixed · this commit |
 
 ---
 
@@ -420,6 +421,30 @@ Finding 2 (five locator orders) wasn't a one-off. A full audit on 2026-10-01 com
 - App UI strings always from enums.
 
 Where a mechanical check can prevent a theme from coming back, it'll be added with the fix.
+
+---
+
+## 31. No prerequisites anywhere; the personas pointed at "install notes" that don't exist — Fixed
+
+Nothing told a new user what to install before starting. The README's Install section was a clone and three copy commands. The only stated prerequisite was `"node": ">=18"` in `package.json`. Missing:
+
+- Claude Code itself.
+- The lint plugin's dependencies, which must be installed inside `eslint-plugin-qa-constitution`. A root `npm install` installs nothing, which this review ran into on day one.
+- The Playwright, Zod, faker and ESLint stack the skills assume in the adopting repo.
+- The `.env` file.
+- The optional Atlassian MCP connection.
+
+Three things were also out of date:
+
+- The three Jira personas said "configure via `claude mcp` — see the install notes", but there are no install notes.
+- `GOVERNANCE.md` gated public-mirror pushes on `python scripts/build-public.py`, a script from the source project that this repository doesn't contain.
+- `GOVERNANCE.md` said 25 of 28 skills have no eval history. The real figure is 24 of 27.
+
+**Fix.**
+- The README has a new **Prerequisites** section. It lists what's needed to use the toolkit, to run this repository's own checks, and in the test repository it's adopted into. It also covers the optional integrations, and the product-side practices that are recommended but not required (testability constitutions, a schema-first OpenAPI spec, test-ids published as a shared package). It states that no Python is needed and that Windows users should use Git Bash.
+- Install now runs `npm run validate` right after cloning.
+- The personas point at the new section.
+- The governance row now names the PR template's real public-mirror checklist instead of the missing script, and the count is corrected.
 ---
 
 ## Validator warnings already present (not introduced here)

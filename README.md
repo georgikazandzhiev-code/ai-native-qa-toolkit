@@ -259,10 +259,53 @@ Drop the matching file into the **product** repo as its `CLAUDE.md`. The coding 
 
 See `.claude/constitutions/README.md`.
 
+## Prerequisites
+
+**To use the toolkit** (the constitution, skills and personas):
+
+- [Claude Code](https://docs.claude.com/en/docs/claude-code/overview), as the CLI, the desktop app or the VS Code / JetBrains extension. The skills, personas and `CLAUDE.md` are written for it.
+- Git.
+
+**To run this repository's own checks** (`npm run validate` and the test suites):
+
+- Node.js 18 or newer. `validate` has no dependencies and runs on a fresh clone.
+- The lint plugin's dependencies, installed **inside the plugin folder**. A root `npm install` installs nothing:
+
+```bash
+cd eslint-plugin-qa-constitution && npm install
+```
+
+No Python is needed. On Windows, run the shell commands below in Git Bash. `.gitattributes` keeps line endings consistent, so the hash and stamp checks pass on a Windows checkout.
+
+**In the test repository you adopt it in** (see [Adopting it in your repo](#adopting-it-in-your-repo)), the default stack the skills assume:
+
+- `@playwright/test`, with browsers installed (`npx playwright install`), plus TypeScript in strict mode.
+- `zod` for response schemas and `@faker-js/faker` for unique test data.
+- ESLint 9 or newer, with `eslint-plugin-qa-constitution` and `eslint-plugin-playwright`.
+- A `.env` file for tokens and URLs, kept out of git. The project's own `CLAUDE.md` names the variables.
+- Optional: `playwright-qase-reporter`, if you use Qase for test management.
+
+**Optional integrations:**
+
+- **Atlassian MCP**, for the Jira personas (`/bug-helper`, `/test-case-helper`, `/requirement-analyst`). Add it with `claude mcp add`, using the server address from Atlassian's Remote MCP Server documentation, and check it with `/mcp`. Without it, the personas still produce their drafts for you to paste into Jira by hand.
+- **Read access to the frontend repository**, for the `frontend-cross-check` skill: a clone you pull before each check.
+
+**Recommended on the product side** (not needed to start, but each one removes a class of flaky or drifting tests):
+
+- The testability constitutions in [`.claude/constitutions/`](.claude/constitutions/README.md), copied into the web, mobile and API repositories.
+- An OpenAPI spec maintained schema-first, so API tests are written against the contract.
+- Test-ids published by the frontend as a shared package that both the components and the tests import, so a renamed id breaks the test build instead of a test run.
+
 ## Install
 
 ```bash
 git clone https://github.com/georgikazandzhiev-code/ai-native-qa-toolkit.git
+```
+
+Check the clone (needs only Node):
+
+```bash
+cd ai-native-qa-toolkit && npm run validate
 ```
 
 Copy the layer into your Claude Code configuration:

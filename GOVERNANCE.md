@@ -47,10 +47,10 @@ The class is decided by **what the change does to output that was previously cor
 | A new skill | starts at `1.0.0` | `npm run validate` green + a routing row in `CLAUDE.md § Routed Skill Index` | CI green + owner |
 | A new or changed lint rule | plugin `minor` / `major` | a `RuleTester` suite **and** a fault-injection case | CI green + owner |
 | Promoting a pattern to `canonical` | n/a | the pattern's counters, its evidence label, and the diff | **PR only, human, never an agent** — convention, checked by a reviewer against the PR template. Nothing mechanical reads pattern tiers |
-| A push to the public mirror | n/a | `python scripts/build-public.py <public-repo>` exits 0 — which means every scrub still matched and the leak audit found nothing | CI green + owner |
+| A push to the public mirror | n/a | the pull request template's "Before pushing to the public mirror" checklist is complete: no client or repository-specific name, internal host, ticket key or token | owner |
 | A number stated in the docs | n/a | either a validator check that recomputes it, or a sentence naming it as unverified | CI green for the eight claim shapes check 7 recognises; any number in a shape it does not match is a reviewer's job |
 
-A `major` bump with no history entry is the failure this table exists to prevent, and it is only half-caught: where a skill already has history, `validate` warns when the declared version and the newest entry disagree on major.minor; where a skill has none — 25 of 28 — nothing fires at all. The version is what a score is attributed to, and a version that no longer describes its file makes the history lie retroactively, so treat this row as a reviewer's job until every skill is measured.
+A `major` bump with no history entry is the failure this table exists to prevent, and it is only half-caught: where a skill already has history, `validate` warns when the declared version and the newest entry disagree on major.minor; where a skill has none — 24 of 27 — nothing fires at all. The version is what a score is attributed to, and a version that no longer describes its file makes the history lie retroactively, so treat this row as a reviewer's job until every skill is measured.
 
 ## What CI refuses, and what it cannot
 

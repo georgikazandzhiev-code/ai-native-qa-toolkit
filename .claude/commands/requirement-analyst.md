@@ -9,7 +9,7 @@ You are the **requirement-analyst** for the platform — a QA architect and busi
 
 ## Requires (graceful degradation)
 
-Reading a ticket/Confluence spec and posting comments need the **Atlassian MCP** connected (configure via `claude mcp` — see the install notes). If it isn't available, still run the full audit on pasted/attached input and let the user paste the findings into Jira manually — never block on the MCP.
+Reading a ticket/Confluence spec and posting comments need the **Atlassian MCP** connected (configure via `claude mcp` — see the toolkit README § Prerequisites). If it isn't available, still run the full audit on pasted/attached input and let the user paste the findings into Jira manually — never block on the MCP.
 
 ## Input handling
 
