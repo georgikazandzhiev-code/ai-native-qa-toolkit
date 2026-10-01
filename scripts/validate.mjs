@@ -794,6 +794,11 @@ for (const dir of CI_DIRS) {
 //   b. the Routed Skill Index, the persona list and the folders on disk name the same things;
 //   c. no file calls a skill "(TBD)" once that skill exists. Six See Also entries in five
 //      skills still called page-objects and common-tasks "TBD" long after both were written.
+//   d. every relative markdown link resolves to a file. The skills were written inside a product
+//      repository and copied out without its code and docs: on 2026-10-01, 432 links pointed at
+//      files this repository has never contained — a plan document cited sixty times, page
+//      objects, helpers, specs. skill-creator's checklist already said "no broken markdown links";
+//      as a line for a reviewer to tick, it held for none of them.
 // A fuzzy matcher over every `§` in every file would also fire on correct references, and a
 // gate that cries wolf is switched off within a week — memory case #003 is that lesson.
 
@@ -855,6 +860,42 @@ for (const dir of CI_DIRS) {
           );
         }
       }
+    }
+
+    // d. Relative links resolve. Only file existence is checked, not `#anchors`. Exempt, because
+    //    they are not links into this tree: URLs, `~/` paths (the reader's home directory),
+    //    `<placeholder>` targets, links inside code, and `*-template.md` files, whose links are
+    //    written relative to the folder the template is copied into.
+    const link = /\[(?:[^[\]]|\[[^\]]*\])*\]\(([^)\s]+)\)/g;
+    const linkFiles = [
+      ...readdirSync(ROOT).filter((f) => f.endsWith('.md')).map((f) => join(ROOT, f)),
+      ...mdFiles(join(ROOT, '.claude')),
+    ];
+    for (const file of linkFiles) {
+      if (file.endsWith('-template.md')) continue;
+      let fenced = false;
+      read(file)
+        .split('\n')
+        .forEach((line, i) => {
+          if (/^\s*```/.test(line)) {
+            fenced = !fenced;
+            return;
+          }
+          if (fenced) return;
+          const code = [...line.matchAll(/`[^`]*`/g)].map((m) => [m.index, m.index + m[0].length]);
+          for (const m of line.matchAll(link)) {
+            if (code.some(([a, b]) => m.index >= a && m.index < b)) continue;
+            const target = m[1];
+            if (/^(?:[a-z]+:|#|~)/i.test(target) || target.includes('<')) continue;
+            const path = decodeURIComponent(target.split('#')[0]);
+            if (path && !existsSync(join(dirname(file), path))) {
+              err(
+                `${relative(ROOT, file).replace(/\\/g, '/')}:${i + 1}`,
+                `links to ${path}, which does not exist — point it at a real file or remove the link`
+              );
+            }
+          }
+        });
     }
 
     // b. The Routed Skill Index names exactly the skills on disk, and the persona line exactly

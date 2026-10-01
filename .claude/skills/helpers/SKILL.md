@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.0.0
+version: 1.0.1
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
@@ -40,7 +40,7 @@ The **canonical** layout (per orchestrator File Naming Conventions, kebab-case f
 | `adminTenants.ts` | Passthrough (minimal) | `createTenant`, `getTenant`, `patchTenant`, `deleteTenant`. **camelCase legacy — canonical: `admin-tenants.ts`.** |
 | `adminUsers.ts` | **Mixed** — passthrough CRUD AND assertion-style setup/teardown | Passthrough: `createUser`, `getUser`, `listUsers`, `updateUser`, `deleteUser`. Assertion-style: `setupTestUser` / `teardownTestUser` (Mailpit-purges + Keycloak-resets-password + admin-API-creates the user). **camelCase legacy — canonical: `admin-users.ts`.** |
 | `adminRealms.ts` | Passthrough CRUD + body builder | `getRealm`, `createRealm`, `patchRealm`; `buildRealmSettings` (valid default login/email/tokens settings). **camelCase legacy — canonical: `admin-realms.ts`.** |
-| `users.ts` | Passthrough CRUD + body builder + URL builder | `createUser`, `getUser`, `listUsers`, `updateUser`, `logoutUserSession`, `deleteAdminTenantUser`; `buildCreateUserBody`, `buildUpdateUserBody`; `buildListUsersUrl`. **NOTE — drift:** `buildCreateUserBody` emits `@<alt-test-domain>` recipients which Mailpit on the test infra silently drops; per `api-testing` (§ Mailpit) and the alignment plan § 4.1 the only valid Mailpit-catchable domain is `@<your-test-domain>`. |
+| `users.ts` | Passthrough CRUD + body builder + URL builder | `createUser`, `getUser`, `listUsers`, `updateUser`, `logoutUserSession`, `deleteAdminTenantUser`; `buildCreateUserBody`, `buildUpdateUserBody`; `buildListUsersUrl`. **NOTE — drift:** `buildCreateUserBody` emits `@<alt-test-domain>` recipients which Mailpit on the test infra silently drops; per `api-testing` (§ Mailpit) the only valid Mailpit-catchable domain is `@<your-test-domain>`. |
 | `data.ts` | Passthrough + assertion-style picker | `getSyntheticMetrics`, `listMetrics`, `getSyntheticTypes`, `queryData`, `queryMetrics` (URL builders are internal); assertion-style `pickPolicyMetricForType`. |
 | `alerts.ts` | **Mixed** — passthrough CRUD + cleanup + assertion-style fixtures | `listAlerts`, `getAlert`, `acknowledgeAlert`, `resolveAlert`, `bulkResolveAlerts`, `getAlertsStats`, `getAlertHistory`; `cleanupAlertsForMonitor`. Assertion-style fixture lifecycle: `setupFiringAlertsFixture` / `teardownFiringAlertsFixture`, `claimFiringAlerts`, and the shared on-disk cache trio `warmSharedFiringAlertsFixtureCache` / `loadSharedFiringAlertsFixture` / `clearSharedFiringAlertsFixtureCache`. |
 | `policies.ts` | **Mixed** — passthrough CRUD + body builders + cleanup + assertion-style fixture | `listPolicies`, `createPolicy`, `getPolicy`, `updatePolicy`, `deletePolicy`; `buildTriggerCondition`, `buildCreatePolicyBody`, `buildSeverityCascade`, `buildClearCondition`, `buildCreateCascadePolicyBody`, `buildUpdatePolicyBody`, `buildSyntheticBodyForType`; `cleanupPolicies`. Assertion-style: `setupPolicySpecFixture` (1 probe + one synthetic per monitor type + metric discovery). |
@@ -82,7 +82,7 @@ The decision rule lives in **`api-testing` § Two helper styles** — read that 
 Cliff-notes for orientation only (not a substitute for the api-testing section):
 - **Assertion-style** parses internally and returns a typed payload. Use when the helper exists to seed a precondition. Existing examples in this codebase: `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`, `setupProbeAndSynthetic` in `helpers/app/synthetics.ts`, `setupPolicySpecFixture` in `helpers/app/policies.ts`, `setupFiringAlertsFixture` in `helpers/app/alerts.ts`.
 - **Passthrough** returns `{ status, body }` and lets the caller assert. Use when the same helper runs across positive AND negative tests. Existing examples: every CRUD helper in `helpers/app/synthetics.ts`, `helpers/app/probes.ts`, `helpers/app/adminTenants.ts`, `helpers/app/users.ts`.
-- **Planned** — per the framework alignment plan § 4.2, more assertion-style setup helpers are coming (`setupSynthetic`, `setupProbe`, `setupUser`, `setupTenant`). Today the project leans heavily passthrough.
+- **Planned** — more assertion-style setup helpers are coming (`setupSynthetic`, `setupProbe`, `setupUser`, `setupTenant`). Today the project leans heavily passthrough.
 
 ## Cleanup helper patterns
 
@@ -97,8 +97,8 @@ These are the project-specific cleanup invariants. Generic guidance lives in `ap
 
 - One file per resource, alongside the CRUD helpers (`synthetics.ts` co-locates seven `buildCreate*Body` variants for the seven monitor types).
 - `qa-` prefix + faker suffix is the project convention for greppable cleanup. Do not drop the prefix.
-- Seven monitor types live in `helpers/app/synthetics.ts`: `buildCreateSyntheticBody` (icmp, the default), `buildCreateHTTPSyntheticBody`, `buildCreateWebSocketSyntheticBody`, `buildCreateTCPSyntheticBody`, `buildCreateDNSSyntheticBody`, `buildCreateSSLSyntheticBody`, `buildCreateMCPSyntheticBody`. Adding an 8th monitor type goes in the same file. **The 10th-monitor-type-or-5th-builder-on-another-file trigger** for extracting body builders to a shared `helpers/app/test-data-generators.ts` is documented in the framework alignment plan § 6.4 — until then, per-resource is fine.
-- Recipient-domain rule for any builder that emits an email: it MUST be `@<your-test-domain>` (Mailpit catches only that). `buildCreateUserBody` in `helpers/app/users.ts` currently emits `@<alt-test-domain>` and is in the alignment plan § 4.1 to fix; do not pattern after it.
+- Seven monitor types live in `helpers/app/synthetics.ts`: `buildCreateSyntheticBody` (icmp, the default), `buildCreateHTTPSyntheticBody`, `buildCreateWebSocketSyntheticBody`, `buildCreateTCPSyntheticBody`, `buildCreateDNSSyntheticBody`, `buildCreateSSLSyntheticBody`, `buildCreateMCPSyntheticBody`. Adding an 8th monitor type goes in the same file. **The 10th-monitor-type-or-5th-builder-on-another-file trigger** for extracting body builders to a shared `helpers/app/test-data-generators.ts` has not fired yet — until then, per-resource is fine.
+- Recipient-domain rule for any builder that emits an email: it MUST be `@<your-test-domain>` (Mailpit catches only that). `buildCreateUserBody` in `helpers/app/users.ts` currently emits `@<alt-test-domain>` and is a known bug; do not pattern after it.
 
 ## Auth-bootstrap helpers
 
@@ -173,7 +173,7 @@ Walk:
 1. **Location** — `helpers/app/synthetics.ts` — same file, after the existing six per-type variants.
 2. **Signature** — `export function buildCreateGraphQLSyntheticBody(probeIds: string[], overrides?: Record<string, unknown>): Record<string, unknown>` — match the seven existing variants byte-for-byte.
 3. **Faker seeding** — `name: \`qa-graphql-${faker.string.alphanumeric(8).toLowerCase()}\``, `target: faker.internet.url()` (or whatever the GraphQL endpoint shape is), `type: "graphql"`, `checkInterval: DEFAULT_CHECK_INTERVAL`, `timeout: DEFAULT_TIMEOUT`, `config: { /* graphql-specific keys */ }`, `probeIds`, `...overrides`.
-4. **Threshold check** — adding the 8th type. The 10th-type trigger for promoting all body builders to a shared `helpers/app/test-data-generators.ts` (alignment plan § 6.4) has not yet fired; keep it inline.
+4. **Threshold check** — adding the 8th type. The 10th-type trigger for promoting all body builders to a shared `helpers/app/test-data-generators.ts` has not yet fired; keep it inline.
 5. **Schema** — the response shape is already covered by `SyntheticSchema` (it discriminates on `type`); the new monitor type extends the existing `config` shape inside `fixtures/api/schemas/app/synthetic.ts` — that schema work belongs to `api-testing` / `type-safety`, not this skill.
 
 ## Troubleshooting
@@ -184,7 +184,7 @@ Walk:
 | Cleanup fails with `409 Conflict` deleting a probe | The probe is still bound to a synthetic — wrong delete order | Use `cleanupProbesAndSynthetics(apiRequest, probeIds, syntheticIds, headers)` from `helpers/app/synthetics.ts`. It deletes synthetics first, probes second. |
 | ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The orchestrator's File Naming Conventions section is the source of truth; the legacy camelCase files in this codebase are listed in this skill's File Locations section — do not propagate. |
 | Cleanup throws and breaks the next test's setup | A delete returned 404 (already gone) and the helper threw | Wrap deletes in `Promise.allSettled`. Cleanup must tolerate 404 — never throw. See `cleanupProbes` and `cleanupProbesAndSynthetics`. |
-| `setupTestUser` returns `null` for the invite link / email never arrives | Recipient domain is not `@<your-test-domain>` — Mailpit on the test infra silently drops everything else | Use the `setupTestUser` flow as-is (it already generates `qa-reset-...@<your-test-domain>`). For your own helpers, hardcode the `@<your-test-domain>` domain. `buildCreateUserBody` in `helpers/app/users.ts` emits `@<alt-test-domain>` today — that is in the alignment plan § 4.1 to fix; do not copy that pattern. |
+| `setupTestUser` returns `null` for the invite link / email never arrives | Recipient domain is not `@<your-test-domain>` — Mailpit on the test infra silently drops everything else | Use the `setupTestUser` flow as-is (it already generates `qa-reset-...@<your-test-domain>`). For your own helpers, hardcode the `@<your-test-domain>` domain. `buildCreateUserBody` in `helpers/app/users.ts` emits `@<alt-test-domain>` today — that is a known bug; do not copy that pattern. |
 | 401 test fails because `headers: ""` triggered a different error | Empty-string `headers` sends an `Authorization: Bearer ` request, not an unauthenticated request | **Omit the `headers` property entirely** in the helper call site. Never pass an empty string. |
 | I don't know whether to write a helper, call `apiRequest` directly, or build a fixture | Decision rule is not in this skill | Load `api-testing` § Helpers — three callable shapes / Two helper styles. This skill governs how to author the helper; that one governs whether you should. |
 | My new helper duplicates `generateTestEmail` / `generateUserData` / `getNextTestEmail` | The codebase has overlapping email/user generators across `dataGenerator.ts` and `mailpit.ts` | Search before creating. Pick the existing one and consolidate when next touched — `getNextTestEmail` (in `helpers/util/mailpit.ts`) is the most current. |

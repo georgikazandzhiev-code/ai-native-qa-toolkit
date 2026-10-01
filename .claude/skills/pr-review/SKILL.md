@@ -84,7 +84,7 @@ Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../sele
 - [ ] **No XPath.** **No top-level CSS class/id selectors** (`page.locator('.btn')`, `page.locator('#foo')`). CSS only chained off a higher-priority anchor.
 - [ ] **No `page.waitForTimeout(...)`.**
 - [ ] Form/CRUD POMs include feedback locators (success toast, error toast, field validation, empty state, loading).
-- [ ] New POMs are registered on `FrameworkFixtures` in [`fixtures/pom/page-object-fixture.ts`](../../../fixtures/pom/page-object-fixture.ts).
+- [ ] New POMs are registered on `FrameworkFixtures` in `fixtures/pom/page-object-fixture.ts`.
 - [ ] Radix trigger-swallow `try/catch` (the one allowed exception) is annotated `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`.
 - [ ] **Substring match guard:** Every `filter({ hasText: value })` and `getByText(value)` in a dynamic method (where `value` is a parameter) uses `{ exact: true }` or wraps in `filter({ has: page.getByText(value, { exact: true }) })`. Substring matching causes false positives when one name is a prefix of another (e.g., "Item9" matching "Item90").
 - [ ] **Post-action table stabilization:** Any action method that triggers a data reload (pagination click, sort header click, page-size change, filter toggle) ends with `await this.waitForTableSettled()` or equivalent. Asserting only the UI control change (e.g., page counter updated) without waiting for rows to reload is a flake source.

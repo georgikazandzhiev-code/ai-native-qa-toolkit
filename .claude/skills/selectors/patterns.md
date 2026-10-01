@@ -42,7 +42,7 @@ get targetInput(): Locator {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). The `field-field-*` testid is on the schema-form input that the front-end team owns; `.or()` widens to the labelled control so older specs and the current UI both work. The chain stays at one level — never CSS at the top.
+From `pages/app/SyntheticsPage.ts`. The `field-field-*` testid is on the schema-form input that the front-end team owns; `.or()` widens to the labelled control so older specs and the current UI both work. The chain stays at one level — never CSS at the top.
 
 ### Bad
 
@@ -104,7 +104,7 @@ async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Identifies the row by content; survives column reordering. The `:not([data-testid="expanded-row"])` exclusion guards against strict-mode double-matches when a row is expanded.
+From `pages/app/SyntheticsPage.ts`. Identifies the row by content; survives column reordering. The `:not([data-testid="expanded-row"])` exclusion guards against strict-mode double-matches when a row is expanded.
 
 ### Bad
 
@@ -114,7 +114,7 @@ getMonitorTypeByName(monitorName: string): Locator {
 }
 ```
 
-Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids ([pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `getSortHeader`); per-cell column testids are missing and should be requested from the front-end team. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
+Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids (`pages/app/SyntheticsPage.ts` `getSortHeader`); per-cell column testids are missing and should be requested from the front-end team. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
 
 ## P4 — Component scoping (instead of repeated top-level lookups)
 
@@ -134,7 +134,7 @@ class DeleteMonitorDialog {
 }
 ```
 
-Pattern mirrors the inline delete-dialog scoping in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) (`deleteDialog`, `deleteConfirmButton`, `deleteCancelButton`) and the equivalent `delete-probe-*` getters in [pages/app/ProbesPage.ts](../../../pages/app/ProbesPage.ts). All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
+Pattern mirrors the inline delete-dialog scoping in `pages/app/SyntheticsPage.ts` (`deleteDialog`, `deleteConfirmButton`, `deleteCancelButton`) and the equivalent `delete-probe-*` getters in `pages/app/ProbesPage.ts`. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
 
 > **Anchor as a field is the one exception** to the "always use getters" rule shown in P14: when a single locator is the parent of every getter in the class, store it once in the constructor. Locators are lazy, so the field still re-resolves on each downstream `.click()` / `expect()`.
 
@@ -170,7 +170,7 @@ healthCard(state: HealthState): Locator {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Type-checked at compile time; adding a new `HealthState` member produces a TS error at the map.
+From `pages/app/SyntheticsPage.ts`. Type-checked at compile time; adding a new `HealthState` member produces a TS error at the map.
 
 ### Bad
 
@@ -303,7 +303,7 @@ async expectSuccessToastForMonitor(name: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Click → button-disabled wait → DOM confirmation → URL confirmation → Sonner toast. Multiple independent signals.
+From `pages/app/SyntheticsPage.ts`. Click → button-disabled wait → DOM confirmation → URL confirmation → Sonner toast. Multiple independent signals.
 
 ### Bad
 
@@ -362,7 +362,7 @@ async verifyActionMenuOptions(): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Two menu items are mutually exclusive (a paused monitor shows "Resume"; a running one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
+From `pages/app/SyntheticsPage.ts`. Two menu items are mutually exclusive (a paused monitor shows "Resume"; a running one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
 
 `.or()` is also the right tool for legacy-vs-current testid duals (older specs use `synthetics-name-search`, the current UI exposes the search via a labelled textbox):
 
@@ -405,7 +405,7 @@ async expectSuccessToastForMonitor(name: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Filters the Sonner stack by the monitor name first, so two toasts firing in rapid succession (create + auto-refresh) don't trip strict mode. `.or()` widens to the regional `sonner` testid as a fallback.
+From `pages/app/SyntheticsPage.ts`. Filters the Sonner stack by the monitor name first, so two toasts firing in rapid succession (create + auto-refresh) don't trip strict mode. `.or()` widens to the regional `sonner` testid as a fallback.
 
 ### Bad — hypothetical, do not write this
 
@@ -431,7 +431,7 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
 await expect(this.autoRefreshSwitch).toHaveAttribute('aria-checked', 'true');
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Radix exposes its toggle/active state on `data-state` and `aria-checked`; assert against the attribute directly.
+From `pages/app/SyntheticsPage.ts`. Radix exposes its toggle/active state on `data-state` and `aria-checked`; assert against the attribute directly.
 
 ### Bad
 
@@ -534,7 +534,7 @@ async expectMonitorListed(name: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Action → assertion that the search filtered to the expected row.
+From `pages/app/SyntheticsPage.ts`. Action → assertion that the search filtered to the expected row.
 
 ### Bad
 

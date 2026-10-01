@@ -35,7 +35,6 @@ These rules apply to **every** generated artifact in the framework — page obje
 | File | Purpose | Read when |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Task → skill routing matrix, framework-wide Critical rules, generated-artifact self-review checklist. | Always, when a "create / generate / extend / refactor" prompt arrives without an explicit skill named, OR before starting any artifact-generation task to remind yourself of the framework-wide rules. |
-| **[`reference.md`](reference.md)** *(TBD — inline routing tables below for now)* | Catalog: full task → skill matrix, prompt-template starter blocks per artifact type, "where does X live" file-location table. | Looking up "what's the prompt template for adding a Zod schema?" or "which directory does a new factory go in?" |
 
 **Boundary rule:** routing decisions and framework-wide rules live in this `SKILL.md`. Deep rules (POM structure, locator priority, schema patterns, status-code matrix, factory shape, etc.) live in the matching specialized skill. **This skill must not duplicate deep rules** — it points at them. If you find deep-skill content in this file (or vice versa), it's drift — fix it.
 
@@ -94,7 +93,7 @@ flowchart TD
 | Verify a `data-testid` against the live frontend | `frontend-cross-check` | `selectors`, `playwright-cli` | (varies) |
 | New to the framework — onboarding | `ai-native-workflow` | `~/.claude/CLAUDE.md` + every cluster | (none) |
 
-> **Drift to converge — test data tiering.** Today, `test-data/` holds only `test-data/app/*.json` files (no `test-data/factories/`, no `test-data/static/`). The planned three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. Routing for *new* data work points at the planned location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place. Tracked in [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md).
+> **Drift to converge — test data tiering.** Today, `test-data/` holds only `test-data/app/*.json` files (no `test-data/factories/`, no `test-data/static/`). The planned three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. Routing for *new* data work points at the planned location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place.
 >
 > **Tag casing is settled — lowercase `@App-regression` is the standard.** The `package.json` `app-regression` and `app-all` scripts grep lowercase `@App-regression`; Title-case `@App-Regression` matches **nothing** and would silently drop the test from CI. ~398 tags across ~34 functional specs already use the lowercase form. Never "fix" the casing to Title-case.
 
@@ -234,8 +233,8 @@ User says: *"Add API tests for `POST /probes` covering 201, 400 (each required f
 
 1. **Step 1 — categorize.** API test → API tests + Zod schema + helper.
 2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod 3 chained validators).
-3. **Step 3 — precondition.** Read the OpenAPI for `POST /probes`. Map every documented status code to a planned test. Read [`tests/app/api/monitoring-service/probes/probes.spec.ts`](../../../tests/app/api/monitoring-service/probes/probes.spec.ts) for the canonical shape.
-4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from [`fixtures/api/invalid-types.ts`](../../../fixtures/api/invalid-types.ts) → behavior-mismatch protocol → helper-fixture promotion if reused.
+3. **Step 3 — precondition.** Read the OpenAPI for `POST /probes`. Map every documented status code to a planned test. Read `tests/app/api/monitoring-service/probes/probes.spec.ts` for the canonical shape.
+4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
 5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.PROBES`. `process.env.USER_ACCESS_TOKEN_FULL!`. `@App-API` tag.
 6. **Step 6 — generate.** `tests/app/api/monitoring-service/probes/probes.spec.ts` (extend if exists), `fixtures/api/schemas/app/probe.ts`, `helpers/app/probes.ts`.
 7. **Step 7 — self-review.** Coverage audit: every status code has a test. Auth matrix: 401 and 403. Path-param fuzz if endpoint has `:id`.
@@ -260,7 +259,7 @@ User says: *"Tests/app/functional/http-create-edit-monitor.spec.ts is flaky in C
 | User asked "create something" but the request is ambiguous between functional and E2E. | Decision tree wasn't walked. | Ask one specific question — "single behaviour (Functional, `@App-regression`) or multi-step journey (E2E, `@App-E2E`)?" — never guess. |
 | Generated code uses generic Playwright conventions instead of repo conventions (e.g., kebab-case `dashboard-page.ts` instead of PascalCase `DashboardPage.ts`). | Specialized skill not loaded — generation freelanced. | Stop. Load the matching deep skill (`page-objects` for POMs, `test-standards` for specs). Regenerate using the skill's canonical examples. |
 | User says "just create the page object, skip the fixture step". | They want speed; the framework requires the fixture entry. | Push back — bypassing the fixture means the spec consumer has to do `new <Page>(page)`, breaking every other merged fixture. Either complete Step 7 of `page-objects` or document the gap. Don't ship half. |
-| Generated test fails because `SUITES.X` doesn't exist. | Sibling update skipped. | Extend [`enums/app/qase-suites.ts`](../../../enums/app/qase-suites.ts) in the same edit batch. |
+| Generated test fails because `SUITES.X` doesn't exist. | Sibling update skipped. | Extend `enums/app/qase-suites.ts` in the same edit batch. |
 | Generated artifact crosses two skills' boundaries (e.g., a Zod schema that lives in `api-testing` plus a factory that lives in `data-strategy`). | Routing produced two skills; they were merged improperly. | Load both deep skills, walk both workflows, generate two artifacts in two files. Don't combine schema + factory in one file. |
 | User says "I tried to create X and it doesn't work" — no skill named, no error. | Information-gathering needed. | Ask: "What does `X` look like? Show me the file you're editing or paste the failing command output." Then route via the decision tree once you know the artifact. |
 | Generated test doesn't run in `npm run app-regression`. | Likely Title-case `@App-Regression` tag — the `package.json` grep is lowercase `@App-regression`. | Flip to lowercase `@App-regression`. |
@@ -275,4 +274,3 @@ User says: *"Tests/app/functional/http-create-edit-monitor.spec.ts is flaky in C
   - **Failure investigation:** [`debugging`](../debugging/SKILL.md), [`playwright-cli`](../playwright-cli/SKILL.md), [`frontend-cross-check`](../frontend-cross-check/SKILL.md).
   - **Repo hygiene:** [`refactor-values`](../refactor-values/SKILL.md), [`skill-creator`](../skill-creator/SKILL.md), [`ai-native-workflow`](../ai-native-workflow/SKILL.md).
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill at the top of the cross-cutting cluster.
-- **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — drift-to-converge entries (lowercase `@App-regression` flip, three-tier test-data migration, `Notification` baseclass placeholder testids).

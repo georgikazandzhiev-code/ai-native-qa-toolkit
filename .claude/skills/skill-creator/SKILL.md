@@ -13,7 +13,7 @@ Manual-only meta-skill for authoring and refactoring skills inside `~/.claude/sk
 
 Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic `postToolUse` hook at `.cursor/hooks/skill-validate.py`; that file never existed, so nothing was checked — which is how 16 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
 
-> **Truth source.** Skill topology, rule disposition, migration sequence: the Routed Skill Index in `~/.claude/CLAUDE.md`. Companion plan: [docs/framework-alignment-plan.md](../../../docs/framework-alignment-plan.md).
+> **Truth source.** Skill topology, rule disposition, migration sequence: the Routed Skill Index in `~/.claude/CLAUDE.md`.
 
 ## Critical
 
@@ -262,7 +262,6 @@ In the new SKILL.md `## See Also` section:
 - Paired rule (or `(none)` explicitly).
 - Sibling skills in the chosen cluster from Phase 2 — verify each is **populated** (not TBD).
 - Orchestration — always cite the Routed Skill Index in `~/.claude/CLAUDE.md`, the one skill index.
-- Companion plan — `docs/framework-alignment-plan.md` §N if applicable.
 
 ### Phase 8: Verify
 
@@ -363,7 +362,7 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 - [ ] `## Self-review checklist` — checkboxes the model walks through.
 - [ ] `## Examples` — 2-3 worked walkthroughs with REAL codebase names (no placeholders).
 - [ ] `## Troubleshooting` — symptom → cause → fix table.
-- [ ] `## See Also` — paired rule, sibling skills (verified populated, not TBD), orchestration doc, companion plan.
+- [ ] `## See Also` — paired rule, sibling skills (verified populated, not TBD), orchestration doc.
 - [ ] No code blocks > 5 lines in SKILL.md (boundary rule). Skeletons live in `templates.md` if needed.
 - [ ] Every codebase claim verified by grep (helpers, paths, testids, env vars, npm scripts, schemas).
 - [ ] Every code snippet matches `type-safety` conventions (`process.env.X!`, `z.strictObject()`, no Zod 4 in Zod 3 codebase, no `field-field-`).
@@ -445,8 +444,6 @@ User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) int
 
 - `~/.claude/CLAUDE.md` — always-on orchestrator. § Routed Skill Index lives here; every new skill updates it.
 - the Routed Skill Index in `~/.claude/CLAUDE.md` — the one skill index; every skill has exactly one row there.
-- [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — companion plan, drift inventory, sequenced fix order.
-- [`AGENTS.md`](../../../AGENTS.md) — repo-root cross-tool entrypoint.
 
 **Built-ins:**
 

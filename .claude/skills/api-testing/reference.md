@@ -13,13 +13,13 @@
 | Helpers | `helpers/app/<resource>.ts` | Reusable API flows (`createSyntheticMonitor`, `cleanupProbesAndSynthetics`, `createTenant`, …) |
 | Test data | `test-data/app/<resource>.json` | Static fixtures (`invalidId`, `nonExistentId`, boundary values, monitor-type configs) |
 | Invalid-types | `fixtures/api/invalid-types.ts` | Reusable invalid-value arrays — see § Invalid-type arrays below |
-| Generators | `helpers/app/<resource>.ts` (`buildCreate<X>Body` / `buildUpdate<X>Body`). Per-file is acceptable today; **trigger threshold (plan § 6.4):** extract to a shared `helpers/app/testDataGenerators.ts` once `synthetics.ts` reaches a 10th monitor type **or** another helper crosses 5 builders. | Unique-per-run payloads via `faker`; never hardcode names |
+| Generators | `helpers/app/<resource>.ts` (`buildCreate<X>Body` / `buildUpdate<X>Body`). Per-file is acceptable today; **trigger threshold:** extract to a shared `helpers/app/testDataGenerators.ts` once `synthetics.ts` reaches a 10th monitor type **or** another helper crosses 5 builders. | Unique-per-run payloads via `faker`; never hardcode names |
 | Qase | `enums/app/qase-suites.ts` | `SUITES.API_*` constants used in `qase.suite()` |
 | Mailpit | `helpers/util/mailpit.ts`, `fixtures/api/mailpit-fixture.ts` | Email loop tests; `@<your-test-domain>` recipient domain required |
 
 Deep reference for response shapes, error catalog, schema patterns, helper inventory, and request recipes used in this framework.
 
-> Read [SKILL.md](SKILL.md) first for the workflow and source-of-truth philosophy. For per-verb coverage rules ("what do I owe for GET / POST / PUT / PATCH / DELETE / 405?") see [http-method-coverage.md](http-method-coverage.md). Drift items cited here (e.g. "plan § 5.1") refer to numbered sections of [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md), the canonical roadmap from current → upstream-aligned state.
+> Read [SKILL.md](SKILL.md) first for the workflow and source-of-truth philosophy. For per-verb coverage rules ("what do I owe for GET / POST / PUT / PATCH / DELETE / 405?") see [http-method-coverage.md](http-method-coverage.md).
 
 ## Response shape catalog
 
@@ -197,7 +197,7 @@ The fixture parses `application/json` automatically; non-JSON returns the raw va
 |---------|---------|---------------------|
 | `process.env.USER_ACCESS_TOKEN_ADMIN` | Admin scope (admin/tenants, admin/realms, admin/users) | Tenant-scoped endpoints (returns 401, not 403) |
 | `process.env.USER_ACCESS_TOKEN_FULL` | Tenant-scoped full permissions (synthetics, probes, users, data, metrics) | Admin endpoints |
-| `process.env.USER_ACCESS_TOKEN_ZERO` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat (plan § 6.2):** this env var is **not always provisioned** in the test environment; there's an open TODO to re-add it for RBAC/403 testing (see [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md)). Until it is re-added, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
+| `process.env.USER_ACCESS_TOKEN_ZERO` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat:** this env var is **not always provisioned** in the test environment; there's an open TODO to re-add it for RBAC/403 testing. Until it is re-added, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
 | `process.env.FRONT_MAIN_PASSWORD` | Default password for KC users created in E2E onboarding | n/a |
 | `process.env.MAILPIT_URL` | Mailpit base URL (default `http://localhost:8025`) | n/a |
 | `process.env.MAILPIT_USERNAME`, `MAILPIT_PASSWORD` | Optional Basic auth for protected Mailpit deployments | n/a |
@@ -256,7 +256,7 @@ Helpers are tagged below with their style:
 - (cleanup) `cleanupProbesAndSynthetics(apiRequest, probeIds, syntheticIds, headers)` — synthetics first, probes second.
 - (cleanup) `cleanupUiCreatedSyntheticMonitors(apiRequest, token, refs)` — resolves id-by-name with retry.
 - (assertion) `setupProbeAndSynthetic(apiRequest, headers?) → { probeId, syntheticId }` — seeds a probe + ICMP synthetic in one call, asserts both creates return 201, returns the typed ids. Use for precondition setup in specs exercising synthetic-dependent resources (policies, alerts, metrics); clean up via `cleanupProbesAndSynthetics`.
-- (assertion, **planned** — plan § 4.2) `setupSynthetic(apiRequest, probeIds, headers, overrides?) → Synthetic` — seeds a synthetic, parses with `SyntheticSchema`, returns the typed entity. Use only for preconditions; passthroughs above stay for negative tests.
+- (assertion, **planned**) `setupSynthetic(apiRequest, probeIds, headers, overrides?) → Synthetic` — seeds a synthetic, parses with `SyntheticSchema`, returns the typed entity. Use only for preconditions; passthroughs above stay for negative tests.
 - Constants: `VALID_CHECK_INTERVALS`, `DEFAULT_CHECK_INTERVAL`, `DEFAULT_TIMEOUT`, `TIMEOUT_MIN/MAX`, `NAME_MIN/MAX_LENGTH`, `TARGET_MIN/MAX_LENGTH`, `DESCRIPTION_MAX_LENGTH`.
 
 ### Probes — `helpers/app/probes.ts`
@@ -265,19 +265,19 @@ Helpers are tagged below with their style:
 - (passthrough) `getProbesByIds(apiRequest, ids[], headers)` — POST `/probes/list`.
 - (passthrough) `getProbeConfig(apiRequest, probeId, type, headers)`, `getProbeSchema(apiRequest, name, headers)`.
 - (cleanup) `cleanupProbes(apiRequest, probeIds, headers)`.
-- (assertion, **planned** — plan § 4.2) `setupProbe(apiRequest, headers, overrides?) → Probe`.
+- (assertion, **planned**) `setupProbe(apiRequest, headers, overrides?) → Probe`.
 
 ### Admin Tenants — `helpers/app/adminTenants.ts`
 - (passthrough) `createTenant(apiRequest, name, headers, parentId?)` — note: name + optional parentId are positional, not a body object.
 - (passthrough) `getTenant`, `patchTenant(apiRequest, tenantId, body?, headers?)`, `deleteTenant`.
-- (assertion, **planned** — plan § 4.2) `setupTenant(apiRequest, adminHeaders, overrides?) → Tenant` — seeds a tenant, parses with `TenantSchema`, returns the typed entity. Used by onboarding / cross-tenant specs.
+- (assertion, **planned**) `setupTenant(apiRequest, adminHeaders, overrides?) → Tenant` — seeds a tenant, parses with `TenantSchema`, returns the typed entity. Used by onboarding / cross-tenant specs.
 
 ### Admin Realms — `helpers/app/adminRealms.ts`
 - (builder) `buildRealmSettings()` — valid default realm settings (login + email/smtp + tokens) for POST/PATCH bodies.
 - (passthrough) `createRealm`, `patchRealm`, `getRealm`. POST always returns 409 on dev (`<realm>` realm exists).
 
 ### Admin Users — `helpers/app/adminUsers.ts`
-- (builder) `generateUserPayload()` — random valid user body. **⚠ Bug (plan § 4.1):** this generator currently emits emails at `@automation.test`, which Mailpit on test infra does not catch. For any E2E flow that needs an email loop, build the payload locally with a `@<your-test-domain>` recipient (see `templates.md` § 6 `generateE2EUserPayload`) until the helper is fixed in the plan-§ 4.1 PR (one-line swap to `@<your-test-domain>`).
+- (builder) `generateUserPayload()` — random valid user body. **⚠ Bug:** this generator currently emits emails at `@automation.test`, which Mailpit on test infra does not catch. For any E2E flow that needs an email loop, build the payload locally with a `@<your-test-domain>` recipient (see `templates.md` § 6 `generateE2EUserPayload`) until the helper is fixed (a one-line swap to `@<your-test-domain>`).
 - (passthrough) `createUser(apiRequest, tenantId, body, headers)` — **tenantId is positional (in the path)**, not part of the body.
 - (passthrough) `listUsers(apiRequest, tenantId, headers, params?)`.
 - (passthrough) `getUser(apiRequest, tenantId, userId, headers)`.
@@ -287,11 +287,11 @@ Helpers are tagged below with their style:
 - (assertion) `teardownTestUser(apiRequest, mailpit, tenantId, email, userId, adminToken?)` — purges Mailpit for the recipient, then DELETEs the user via the admin API.
 
 ### Users (tenant API) — `helpers/app/users.ts`
-- (builder) `buildCreateUserBody(overrides?)`, `buildUpdateUserBody(overrides?)`, `buildListUsersUrl(params?)`. **⚠ Bug (plan § 4.1):** `buildCreateUserBody` emits emails at `@<alt-test-domain>` (note the leading hyphen — **not** the same as `@<your-test-domain>`; Mailpit does not catch it). For Mailpit-catching flows, override the email field with a literal `@<your-test-domain>` address until the plan-§ 4.1 PR lands.
+- (builder) `buildCreateUserBody(overrides?)`, `buildUpdateUserBody(overrides?)`, `buildListUsersUrl(params?)`. **⚠ Bug:** `buildCreateUserBody` emits emails at `@<alt-test-domain>` (note the leading hyphen — **not** the same as `@<your-test-domain>`; Mailpit does not catch it). For Mailpit-catching flows, override the email field with a literal `@<your-test-domain>` address until the helper is fixed.
 - (passthrough) `listUsers`, `createUser(apiRequest, body, headers)`, `getUser(apiRequest, userId, headers)`, `updateUser(apiRequest, userId, body, headers)` — these target `/users` (tenant-scoped, **no tenantId in path**).
 - (passthrough) `logoutUserSession(apiRequest, sessionId, headers)` — DELETE `/users/sessions/:id`.
 - (passthrough) `deleteAdminTenantUser(apiRequest, tenantId, userId, headers)` — admin-scoped DELETE under `/admin/tenants/:tenantId/users/:userId`.
-- (assertion, **planned** — plan § 4.2) `setupUser(apiRequest, headers, overrides?) → User` — tenant-scoped setup helper, parses with `UserSchema`. Distinct from `setupTestUser` (which is admin-scoped, KC-credentialed, in `adminUsers.ts`).
+- (assertion, **planned**) `setupUser(apiRequest, headers, overrides?) → User` — tenant-scoped setup helper, parses with `UserSchema`. Distinct from `setupTestUser` (which is admin-scoped, KC-credentialed, in `adminUsers.ts`).
 - The two `users.ts` and `adminUsers.ts` modules cover **different APIs**: tenant-scoped (no tenantId in URL) vs admin-scoped (tenantId in URL). Pick the helper that matches the route under test.
 
 ### Mailpit utilities — `helpers/util/mailpit.ts`
@@ -559,8 +559,8 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Realm API:** `POST/PATCH /api/v1/admin/realms`. Body: `{ settings: { email?, login?, tokens? } }`. **No path param** — realm is implicit from the admin token. POST always returns 409 on dev (the `<realm>` realm already exists).
 - **Realm vs Tenant conceptual model:** **Realm** = Keycloak auth domain (one per realm). **Tenant** = organization within a realm (many). Order: Create realm → Create tenants → Create users.
 - **Schemas:** `TenantSchema` (no settings field), `TenantSettingsSchema`, `CreateRealmResponseSchema`, `UpdateRealmResponseSchema`.
-- **Helpers:** [`helpers/app/adminTenants.ts`](../../../helpers/app/adminTenants.ts) (`createTenant`, `getTenant`, `patchTenant`, `deleteTenant`); [`helpers/app/adminRealms.ts`](../../../helpers/app/adminRealms.ts) (`buildRealmSettings`, `getRealm`, `createRealm`, `patchRealm`).
-- **Auth:** Admin endpoints use `process.env.USER_ACCESS_TOKEN_ADMIN`. For Keycloak details see [docs/keycloak-dev-setup.md](../../../docs/keycloak-dev-setup.md).
+- **Helpers:** `helpers/app/adminTenants.ts` (`createTenant`, `getTenant`, `patchTenant`, `deleteTenant`); `helpers/app/adminRealms.ts` (`buildRealmSettings`, `getRealm`, `createRealm`, `patchRealm`).
+- **Auth:** Admin endpoints use `process.env.USER_ACCESS_TOKEN_ADMIN`.
 - **Validation status:** realm-settings validation is largely enforced now — `admin-realms.spec.ts` has active 400 tests for empty body, `settings: null`, `settings` as string, unknown keys, missing `settings` key, and per-field invalid string/boolean/integer/object values; POST with `settings: {}` returns 400. The one unverified edge: no explicit PATCH `settings: {}` test exists.
 
 ### Synthetics (ICMP / HTTP / TCP / DNS / SSL / WebSocket / MCP)
@@ -568,7 +568,7 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Synthetic API** (tenant-scoped): `POST/GET/PATCH/DELETE /api/v1/synthetics(/:id)`. Create body: `{ name, target, type, checkInterval?, timeout, probeIds }`. **Do NOT send empty `config: {}`** — backend rejects it. PATCH is partial; `type` is immutable.
 - **Probe API** (tenant-scoped): `POST /api/v1/probes` body `{ name, location, region }`. `DELETE /api/v1/probes/:id`.
 - **Probe ↔ Synthetic dependency:** A probe must exist before creating a synthetic. **Cleanup order: delete synthetics FIRST, then probes** — a probe still referenced by a synthetic returns 409 on delete. `cleanupProbesAndSynthetics` in `helpers/app/synthetics.ts` enforces this order.
-- **Helpers:** [`helpers/app/synthetics.ts`](../../../helpers/app/synthetics.ts) (`buildCreateSyntheticBody`, `createSyntheticMonitor`, `getSyntheticMonitor`, `updateSyntheticMonitor`, `deleteSyntheticMonitor`); [`helpers/app/probes.ts`](../../../helpers/app/probes.ts) (`createProbe`, `deleteProbe`, `cleanupProbes`); plus the combined `cleanupProbesAndSynthetics`.
+- **Helpers:** `helpers/app/synthetics.ts` (`buildCreateSyntheticBody`, `createSyntheticMonitor`, `getSyntheticMonitor`, `updateSyntheticMonitor`, `deleteSyntheticMonitor`); `helpers/app/probes.ts` (`createProbe`, `deleteProbe`, `cleanupProbes`); plus the combined `cleanupProbesAndSynthetics`.
 - **Schemas:** `SyntheticSchema` (`tests` field is nullable), `ListSyntheticsResponseSchema`, `CreateSyntheticResponseSchema`, etc.
 - **Auth pattern:** `401` (no token), `401` (admin token on a tenant endpoint — unlike `/users` which returns `404` for the same case).
 - **Sort-test guidance:** verify endpoint accepts `sort`/`direction` params and returns valid results — **do NOT assert exact order** because PostgreSQL collation differs from JS `Array.sort` and produces non-deterministic test results across environments.
@@ -577,7 +577,7 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 
 ### Tenant Onboarding E2E
 
-- **Spec:** [`tests/app/api/tenant-service/e2e-tenant-onboarding-flow.spec.ts`](../../../tests/app/api/tenant-service/e2e-tenant-onboarding-flow.spec.ts) — 4 tests (create tenant + invite + verify email; UUID immutability; empty user list; multi-user emails).
+- **Spec:** `tests/app/api/tenant-service/e2e-tenant-onboarding-flow.spec.ts` — 4 tests (create tenant + invite + verify email; UUID immutability; empty user list; multi-user emails).
 - **Email domain:** **Must use `@<your-test-domain>`** for Mailpit delivery. Local helper `generateE2EUserPayload()` enforces this — do **NOT** use `generateUserPayload()` from `adminUsers.ts` (which uses `@automation.test` and the email never arrives).
 - **Helpers:** `createTenant`, `getTenant`, `patchTenant`, `deleteTenant`, `createUser`, `listUsers`, `getUser`, `deleteUser`, `extractLinkFromEmail`, `MailpitHelper`.
 - **Cleanup order:** Mailpit emails → Users → Tenant. Each step guarded by `if (tenantId)` so a partial failure still cleans whatever made it through.
@@ -588,9 +588,9 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Metrics API** (tenant-scoped): `GET /api/v1/synthetics/:id/metrics`. Returns metric **definitions** (name, unit, dataType, monitorType) available for a synthetic monitor based on its type. Includes traceroute metrics when traceroute is enabled.
 - **Response shape:** `{ metrics: [{ dataType, monitorType, name, unit }] }`. Example ICMP metric: `{ dataType: "gauge", monitorType: "icmp", name: "icmp_rtt_avg_ms", unit: "ms" }`.
 - **Error responses:** `400` (invalid id format), `401` (no/wrong token), `404` (non-existent monitor), `500`.
-- **Schemas:** `MetricSchema` (`z.strictObject`), `GetSyntheticMetricsResponseSchema` (`z.strictObject`) — both in [`fixtures/api/schemas/app/data.ts`](../../../fixtures/api/schemas/app/data.ts).
-- **Helpers:** `getSyntheticMetrics` in [`helpers/app/data.ts`](../../../helpers/app/data.ts).
-- **Spec:** [`tests/app/api/monitoring-service/metrics/synthetic-metrics.spec.ts`](../../../tests/app/api/monitoring-service/metrics/synthetic-metrics.spec.ts) — covers per-type metric definitions (ICMP, HTTP, TCP, DNS, WebSocket, SSL, MCP), ICMP/HTTP traceroute variants, PATCH traceroute toggle, 400/401/404/405, error message content.
+- **Schemas:** `MetricSchema` (`z.strictObject`), `GetSyntheticMetricsResponseSchema` (`z.strictObject`) — both in `fixtures/api/schemas/app/data.ts`.
+- **Helpers:** `getSyntheticMetrics` in `helpers/app/data.ts`.
+- **Spec:** `tests/app/api/monitoring-service/metrics/synthetic-metrics.spec.ts` — covers per-type metric definitions (ICMP, HTTP, TCP, DNS, WebSocket, SSL, MCP), ICMP/HTTP traceroute variants, PATCH traceroute toggle, 400/401/404/405, error message content.
 - **Auth pattern:** same as other synthetic endpoints — `401` (no token), `401` (admin token on tenant endpoint).
 - **Key behavior:** Metrics are **type-specific** (ICMP monitor returns ICMP metrics, HTTP returns HTTP metrics). Traceroute metrics appear only when `config.enableTraceroute: true`.
 - **Deeper context:** `metrics-api-tests-context` (project repo only — trimmed from this toolkit) — full per-endpoint test plan, predefined query catalog, monitor-type metric inventory.
@@ -647,4 +647,4 @@ Use this pattern whenever tests touch settings, toggles, feature flags, or any s
 | Mailpit mailbox | use the `mailpit` fixture (`{ apiRequest, mailpit }`); recipient must be `@<your-test-domain>` |
 | Email-loop signup (e2e onboarding) | combine `mailpit`, `extractLinkFromEmail`, and the user-creation helpers |
 
-> **`USER_ACCESS_TOKEN_ZERO` caveat.** The 403 token is part of the canonical matrix (per upstream convention), but it is **not always provisioned** in the current test environment — there's an open TODO to re-add it for RBAC/403 testing (see [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md)). When writing 403 tests and the env var is not provisioned, **comment out** the 403 test with `// TODO: FIXME: USER_ACCESS_TOKEN_ZERO not provisioned — re-enable when RBAC token is added` above it. Do not silently drop the 403 row from the matrix.
+> **`USER_ACCESS_TOKEN_ZERO` caveat.** The 403 token is part of the canonical matrix (per upstream convention), but it is **not always provisioned** in the current test environment — there's an open TODO to re-add it for RBAC/403 testing. When writing 403 tests and the env var is not provisioned, **comment out** the 403 test with `// TODO: FIXME: USER_ACCESS_TOKEN_ZERO not provisioned — re-enable when RBAC token is added` above it. Do not silently drop the 403 row from the matrix.

@@ -40,7 +40,7 @@ Complete API reference grouped by intent. Cross-link from [SKILL.md](SKILL.md). 
 | `loc.filter({ has: <Locator> })` | Keep matches whose subtree contains the inner locator |
 | `loc.filter({ hasNot: <Locator> })` | Inverse of `has` |
 | `loc.and(other)` | Match elements that satisfy both locators |
-| `loc.or(other)` | Match elements that satisfy either (good for legacy/current testid duals — see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `searchInput`) |
+| `loc.or(other)` | Match elements that satisfy either (good for legacy/current testid duals — see `pages/app/SyntheticsPage.ts` `searchInput`) |
 | `loc.first()` | Pick first match |
 | `loc.last()` | Pick last match |
 | `loc.nth(n)` | Pick the n-th (0-based) match |
@@ -90,18 +90,18 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 | `button` | Buttons with stable labels | "Cancel", "Save", "Refresh", "Previous", "Next" |
 | `link` | Anchors with stable text | "Forgot Password", "Synthetics" (sidebar) |
 | `tab` | Tab strips inside expanded views (e.g. ICMP: Metrics, Traceroute, Path) | "Metrics", "Traceroute", "Path" |
-| `textbox` | Search inputs and labelled fields ([pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts), [pages/util/LoginPage.ts](../../../pages/util/LoginPage.ts)) | "Search by name or target", "Email", "Password" |
+| `textbox` | Search inputs and labelled fields (`pages/app/SyntheticsPage.ts`, `pages/util/LoginPage.ts`) | "Search by name or target", "Email", "Password" |
 | `menuitem` | Items inside a Radix dropdown menu (row-action menu) | "Edit monitor", "View details", "Delete", "Pause", "Resume" |
-| `option` | Items inside a Radix select listbox / `<option>` ([pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `selectFilterOption`) | filter labels (`"Online"`, `"Offline"`, page sizes) |
+| `option` | Items inside a Radix select listbox / `<option>` (`pages/app/SyntheticsPage.ts` `selectFilterOption`) | filter labels (`"Online"`, `"Offline"`, page sizes) |
 | `combobox` | Radix `SelectTrigger` (probe location selector, page-size selector) | use within an anchor (`expandedRowHeader.getByRole('combobox')`) |
 | `checkbox` | Native checkboxes / Radix checkbox primitives | scoped under a row/section (`probe-location-checkbox`) |
 | `switch` | Radix `Switch` (auto-refresh toggle) | "Auto-refresh" — toggled via `aria-checked` / `data-state` |
-| `radio` | Chart timeframe selector ([pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
+| `radio` | Chart timeframe selector (`pages/app/SyntheticsPage.ts` `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
 | `dialog` | Confirmation / delete dialogs (testid-based today; role is also exposed via the Radix primitive) | use the testid (`delete-monitor-dialog`, `delete-probe-dialog`) for stability |
-| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid ([pages/baseClasses/DataTableBase.ts](../../../pages/baseClasses/DataTableBase.ts)) | prefer `getByTestId('data-table')` |
+| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | prefer `getByTestId('data-table')` |
 | `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | prefer `[data-testid^='table-row-']` |
-| `cell` | Native `<td>` (used in [pages/baseClasses/DataTableBase.ts](../../../pages/baseClasses/DataTableBase.ts) `noResultsMessage`) | `getByRole('cell', { name: /no results/i })` |
-| `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts), `ProbesPage`, `PoliciesPage`, `InventoryPage` | column name (`"Health"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`) |
+| `cell` | Native `<td>` (used in `pages/baseClasses/DataTableBase.ts` `noResultsMessage`) | `getByRole('cell', { name: /no results/i })` |
+| `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of `pages/app/SyntheticsPage.ts`, `ProbesPage`, `PoliciesPage`, `InventoryPage` | column name (`"Health"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`) |
 | `listbox` | Radix select content / page-size dropdown content | usually closed-state assertion (`toBeHidden`) after option pick |
 | `img` | Images with `alt` — no current callers in `pages/`; prefer a testid when the first one ships | — |
 | `alert` | Toasts/notifications (Sonner emits `role="status"`, but the `[data-sonner-toast]` attribute filter is the canonical hook in this codebase) | use the data-attribute selector (Recipe 5) |
@@ -165,7 +165,7 @@ All return `Promise<void>`, all auto-retry until the configured timeout. Negate 
 | `await page.waitForLoadState('networkidle')` | Avoid. The Playwright team discourages this — long-polling/analytics traffic can keep the network busy forever. Use it only when opening a brand-new `Page` (popup) before any other locator-based assertion is meaningful. Otherwise rely on `expect(loc).toBe…` to auto-wait. |
 | `await page.waitForLoadState('domcontentloaded')` | OK on a freshly-opened popup before the first assertion; redundant on the main page in most flows. |
 
-`waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `clickManualRefreshAndWaitForRefresh`.
+`waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — see `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh`.
 
 ### 3.6 Assertion options
 
@@ -174,12 +174,12 @@ All assertions accept `{ timeout?: number }`. Default is project-wide (configure
 | Value | Where it's used | Purpose |
 |-------|-----------------|---------|
 | (default) | The vast majority of assertions | Trust the project default; do not override |
-| `{ timeout: 3_000 }` | Inner clicks inside an `expect.toPass()` retry block — e.g. `item.click({ timeout: 3_000 })` in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `openRowActionMenu` | Fail fast inside a polling loop; the outer `toPass({ timeout: 15_000 })` owns the real budget |
+| `{ timeout: 3_000 }` | Inner clicks inside an `expect.toPass()` retry block — e.g. `item.click({ timeout: 3_000 })` in `pages/app/SyntheticsPage.ts` `openRowActionMenu` | Fail fast inside a polling loop; the outer `toPass({ timeout: 15_000 })` owns the real budget |
 | `{ timeout: 5_000 }` | Inner assertions inside polling blocks (Radix select content visible after trigger click) | Same fast-fail pattern |
-| `{ timeout: 10_000 }` | The most common explicit override. Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
-| `{ timeout: 15_000 }` | Sheet "save enabled" / sheet-hidden after submit; new-row visibility after create — see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `expectMonitorListed`, `expectSuccessToastForMonitor` | Backend creates that include validation + persistence + table refresh |
+| `{ timeout: 10_000 }` | The most common explicit override. Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/SyntheticsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
+| `{ timeout: 15_000 }` | Sheet "save enabled" / sheet-hidden after submit; new-row visibility after create — see `pages/app/SyntheticsPage.ts` `expectMonitorListed`, `expectSuccessToastForMonitor` | Backend creates that include validation + persistence + table refresh |
 | `{ timeout: 20_000 }` | Outer budget on `expect.toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
-| `{ timeout: 30_000 }` | **Reserved for `waitForResponse(...)` and long-poll metric assertions** — used in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `clickManualRefreshAndWaitForRefresh`. Functional detail-view specs use `toPass({ timeout: 90_000 })` for the very-first probe-data wait (see [`recipes.md` § 18 Synthetic Monitor expanded-view tests](recipes.md)). | Long backend ops |
+| `{ timeout: 30_000 }` | **Reserved for `waitForResponse(...)` and long-poll metric assertions** — used in `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh`. Functional detail-view specs use `toPass({ timeout: 90_000 })` for the very-first probe-data wait (see [`recipes.md` § 18 Synthetic Monitor expanded-view tests](recipes.md)). | Long backend ops |
 
 Rules of thumb:
 - Don't override the timeout unless you can point at an existing assertion in `pages/**` or `tests/**` doing the same thing for the same reason.
@@ -199,29 +199,29 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | `schema-field-<fieldName>` | Schema-form **field wrapper** (emitted by `src/components/schema-form/schema-form.tsx` in the frontend); drill to `input` / `textarea` or fall back to `getByLabel` via `.or()` — POM helpers: `CreateMonitorPage.schemaField()`, `CreatePolicyPage.fieldWrapper()` | `schema-field-monitorName` → `.locator('input')`, `schema-field-target` |
 | `field-field-<fieldPath>` | Schema-form **input** testid — the canonical hook for filling fields; POM helper: `fieldInput(fieldPath)` on `CreateMonitorPage` | `field-field-name`, `field-field-checkInterval`, `field-field-config.method`, `field-field-firstName` |
 | `error-<fieldName>` | Schema-form error message for the matching field (emitted by `src/components/schema-form/schema-form.tsx`) | `error-monitorName`, `error-target`, `error-timeout` |
-| `monitor-type-grid`, `monitor-type-card` | Step-1 monitor-type chooser (cards share the testid; scope by title text) | see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `icmpTypeCard()` |
+| `monitor-type-grid`, `monitor-type-card` | Step-1 monitor-type chooser (cards share the testid; scope by title text) | see `pages/app/SyntheticsPage.ts` `icmpTypeCard()` |
 | `schema-form`, `schema-section-<name>`, `schema-section-<name>-trigger` | Schema-form root + collapsible section wrappers | `schema-section-icmp-settings` |
-| `delete-monitor-dialog`, `delete-monitor-confirm` | Synthetics delete dialog — the per-feature delete-dialog pattern (`delete-probe-dialog`, `delete-asset-*` follow the same shape) | scoped in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) |
+| `delete-monitor-dialog`, `delete-monitor-confirm` | Synthetics delete dialog — the per-feature delete-dialog pattern (`delete-probe-dialog`, `delete-asset-*` follow the same shape) | scoped in `pages/app/SyntheticsPage.ts` |
 | `create-monitor-sheet`, `edit-monitor-sheet`, `monitor-details-sheet` | Right-side sheet containers (anchor for everything inside) | scope all child getters under these |
 
 ### 4.2 Tables
 
 | Pattern | Meaning |
 |---------|---------|
-| `data-table` | The table root — anchor for `tableRows` and `noResultsMessage` in [pages/baseClasses/DataTableBase.ts](../../../pages/baseClasses/DataTableBase.ts) |
-| `table-row-<id>` | Per-row root — a **prefix** testid, matched via `[data-testid^='table-row-']` under `dataTable` ([pages/baseClasses/DataTableBase.ts](../../../pages/baseClasses/DataTableBase.ts):29). There is no bare `table-row` testid. |
+| `data-table` | The table root — anchor for `tableRows` and `noResultsMessage` in `pages/baseClasses/DataTableBase.ts` |
+| `table-row-<id>` | Per-row root — a **prefix** testid, matched via `[data-testid^='table-row-']` under `dataTable` (`pages/baseClasses/DataTableBase.ts`:29). There is no bare `table-row` testid. |
 | `table-cell-<columnId>` | Per-cell testid — `cellForRow(row, columnId)` / `getColumnTexts(columnId)` in `DataTableBase` |
 | `expanded-row` | Per-row sibling rendered when a row is expanded — exclude with `:not([data-testid="expanded-row"])` when filtering by `hasText` |
 | `monitor-actions-<id>` | Per-row "…" action button — selected with prefix CSS: `[data-testid^='monitor-actions-']` |
 | `health-status-<state>` | Per-row health badge — selected with prefix CSS: `[data-testid^='health-status-']` |
 | `sort-header-<columnId>` | Sortable column header (e.g. `sort-header-name`, `sort-header-status`) — `getSortHeader(columnId)` in `DataTableBase` |
-| `skeleton-row` | Loading-state placeholder row — assert `toHaveCount(0)` before interacting with real rows ([pages/baseClasses/DataTableBase.ts](../../../pages/baseClasses/DataTableBase.ts) `waitForTableSettled`) |
+| `skeleton-row` | Loading-state placeholder row — assert `toHaveCount(0)` before interacting with real rows (`pages/baseClasses/DataTableBase.ts` `waitForTableSettled`) |
 
 ### 4.3 Navigation
 
 | Pattern | Meaning |
 |---------|---------|
-| `nav-link-synthetics`, `nav-link-dashboard`, `nav-link-<feature>` | Sidebar nav links — always `nav-link-<feature>` ([pages/app/SideNavigation.ts](../../../pages/app/SideNavigation.ts)); the header alerts bell is `header-alerts-bell` |
+| `nav-link-synthetics`, `nav-link-dashboard`, `nav-link-<feature>` | Sidebar nav links — always `nav-link-<feature>` (`pages/app/SideNavigation.ts`); the header alerts bell is `header-alerts-bell` |
 | `page-synthetics`, `page-probes`, `page-dashboard`, `page-<feature>` | Per-page shell roots (use as page-arrival anchors) |
 | `dashboard-section-<feature>` | Dashboard-page section wrappers (`-alerts`, `-synthetics`, `-probes`, `-monitor-types`, `-quick-actions`) |
 | `dashboard-stat-<feature>-<state>` | Dashboard stat cards (e.g. `dashboard-stat-alerts-critical`, `dashboard-stat-synthetics-healthy`, `dashboard-stat-probes-online`) — each renders an `<a>` with a query-param URL |
@@ -233,7 +233,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Pattern | Meaning |
 |---------|---------|
 | `filter-total`, `filter-healthy`, `filter-warning`, `filter-critical`, `filter-unknown` | Synthetics health filter cards (top of the synthetics list) |
-| `filter-active`, `filter-inactive` | **Deprecated** — replaced by health-state cards above; existing getters in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) carry `@deprecated` JSDoc |
+| `filter-active`, `filter-inactive` | **Deprecated** — replaced by health-state cards above; existing getters in `pages/app/SyntheticsPage.ts` carry `@deprecated` JSDoc |
 | `status-card` | Probes-page status cards (×4, scoped by title text: "Total Probes", "Online", "Offline", "Provisioning") |
 | `status-filter`, `type-filter`, `health-filter` | Toolbar filter triggers (Radix select trigger; click to open; pick option via `getByRole('option')`) |
 
@@ -256,7 +256,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | `no-probes` | Empty-state shown when the tenant has no probes |
 | `probe-actions-{id}`, `probe-view-{id}`, `probe-edit-{id}`, `probe-download-config-{id}`, `probe-delete-{id}` | Per-row action triggers (parameterized by probe id) |
 | `register-probe-sheet`, `register-probe-close-button`, `register-step-indicator`, `register-cancel-button`, `register-continue-button`, `register-back-button`, `register-submit-button`, `register-done-button` | Register Probe sheet (multi-step wizard — uses `register-step-indicator` to track step) |
-| Register fields | `field-field-name`, `field-field-location`, `field-field-region` and their errors (`error-name`, `error-location`, `error-region`) — see [pages/app/ProbesPage.ts](../../../pages/app/ProbesPage.ts) |
+| Register fields | `field-field-name`, `field-field-location`, `field-field-region` and their errors (`error-name`, `error-location`, `error-region`) — see `pages/app/ProbesPage.ts` |
 | `edit-probe-sheet`, `edit-probe-close-button`, `edit-probe-id`, `edit-probe-cancel`, `edit-probe-submit` | Edit probe sheet (`edit-probe-id` is read-only) |
 | `probe-details-sheet`, `probe-details-close-button` | Read-only details sheet |
 | `delete-probe-dialog`, `delete-probe-cancel`, `delete-probe-confirm` | Delete confirmation dialog |
@@ -298,7 +298,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Pattern | Meaning |
 |---------|---------|
 | `[data-sonner-toast]` | Per-toast container (multiple toasts can stack) — filter by text to pick one |
-| `data-testid="sonner"` | Toast region wrapper — used as a fallback in `expectSuccessToastForMonitor` ([pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts)) |
+| `data-testid="sonner"` | Toast region wrapper — used as a fallback in `expectSuccessToastForMonitor` (`pages/app/SyntheticsPage.ts`) |
 
 ### 4.10 Regex / prefix testids
 
@@ -342,8 +342,8 @@ When you cannot find an element via role/label/placeholder/text/testid:
 | `[role="switch"]` | Radix `Switch` | Auto-refresh toggle (assert via `aria-checked`) |
 | `[data-state="checked"]` / `[data-state="open"]` / `[data-state="on"]` | Radix state attribute on checkboxes, selects, dialogs, toggle groups | Active-state assertion (chart timeframe `data-state="on"`); checkbox state |
 | `[data-sonner-toast]` | Sonner toast container | Toast targeting (Recipe 5) — multiple toasts stack |
-| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Radix select content / option (emitted via `<SelectContent>`) | Drill into an open Radix select dropdown — see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `selectCheckIntervalOption` |
-| `[data-testid^='table-row-']` | Per-row anchor (prefix — rows carry `table-row-<id>`) | Row collection — `tableRows` getter in [pages/baseClasses/DataTableBase.ts](../../../pages/baseClasses/DataTableBase.ts):29 |
+| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Radix select content / option (emitted via `<SelectContent>`) | Drill into an open Radix select dropdown — see `pages/app/SyntheticsPage.ts` `selectCheckIntervalOption` |
+| `[data-testid^='table-row-']` | Per-row anchor (prefix — rows carry `table-row-<id>`) | Row collection — `tableRows` getter in `pages/baseClasses/DataTableBase.ts`:29 |
 
 These are tolerated because the design system / Radix primitives treat them as a public API. Treat any other CSS class as private.
 
@@ -443,9 +443,9 @@ Constructor shape — observed conventions across `pages/**`:
 
 | Shape | When to use | Examples |
 |-------|-------------|----------|
-| `class XPage extends BasePage` (or `extends DataTableBase` for table-bearing pages) with `constructor(page: Page) { super(page); }` | **The default for any `pages/app/**` class.** `BasePage` provides `this.page` (typed as `protected`), spinner waits, toast assertions, and shared navigation helpers; `DataTableBase extends BasePage` adds table getters, search, sorting, and pagination. | [pages/app/MetricsPage.ts](../../../pages/app/MetricsPage.ts), [pages/app/DashboardPage.ts](../../../pages/app/DashboardPage.ts) (BasePage); [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts), [pages/app/ProbesPage.ts](../../../pages/app/ProbesPage.ts) (DataTableBase) |
-| `constructor(protected page: Page) {}` | Base classes at the root of the hierarchy — `BasePage` itself. The `protected` keeps `this.page` available to subclasses (`DataTableBase` inherits it without declaring its own constructor). | [pages/baseClasses/BasePage.ts](../../../pages/baseClasses/BasePage.ts) |
-| `constructor(private page: Page) {}` | Sheet / drawer / shell-component page objects that own their own `Page` reference and don't need `BasePage` plumbing — the `CreateMonitorPage` sheet wrapper, `SideNavigation`, `ProfileSettingsPage`. | [pages/app/CreateMonitorPage.ts](../../../pages/app/CreateMonitorPage.ts), [pages/app/SideNavigation.ts](../../../pages/app/SideNavigation.ts) |
+| `class XPage extends BasePage` (or `extends DataTableBase` for table-bearing pages) with `constructor(page: Page) { super(page); }` | **The default for any `pages/app/**` class.** `BasePage` provides `this.page` (typed as `protected`), spinner waits, toast assertions, and shared navigation helpers; `DataTableBase extends BasePage` adds table getters, search, sorting, and pagination. | `pages/app/MetricsPage.ts`, `pages/app/DashboardPage.ts` (BasePage); `pages/app/SyntheticsPage.ts`, `pages/app/ProbesPage.ts` (DataTableBase) |
+| `constructor(protected page: Page) {}` | Base classes at the root of the hierarchy — `BasePage` itself. The `protected` keeps `this.page` available to subclasses (`DataTableBase` inherits it without declaring its own constructor). | `pages/baseClasses/BasePage.ts` |
+| `constructor(private page: Page) {}` | Sheet / drawer / shell-component page objects that own their own `Page` reference and don't need `BasePage` plumbing — the `CreateMonitorPage` sheet wrapper, `SideNavigation`, `ProfileSettingsPage`. | `pages/app/CreateMonitorPage.ts`, `pages/app/SideNavigation.ts` |
 | `constructor(readonly page: Page) {}` | Wrappers that must **hand their `Page` back** to a caller or sub-component (e.g. an iframe wrapper that exposes `page` so a spec can build a `frameLocator`, or a composite that passes `page` to a child component). `readonly` keeps the reference public-but-immutable. | [selectors patterns.md § P6](../selectors/patterns.md) (iframe wrapper) |
 
 Default rule: **new top-level page → extend `BasePage`** (**table-bearing page → extend `DataTableBase`**). **New shared component / mixin → `protected page: Page`**. Add `private` only when the page object is a self-contained drawer/sheet that genuinely shouldn't expose `Page` to consumers. Use `readonly page: Page` only when a caller/sub-component legitimately needs the `Page` reference exposed.

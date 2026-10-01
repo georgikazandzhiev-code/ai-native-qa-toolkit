@@ -72,7 +72,7 @@ flowchart TD
 |-------|------|---------|
 | **Page object getter (default)** | Any locator that is **interacted with**, or **referenced by 2+ tests/steps**, MUST live in a POM file under `pages/**`. | `syntheticsPage.createMonitorButton`, `loginPage.emailInput`, `sideNavigation.navSyntheticsLink` |
 | **Page object dynamic method** | Locators parameterized by data (`getRowByName(name)`, `getMetricCardByLabel(label)`) live as POM methods returning `Locator` synchronously. | `syntheticsPage.getRowByName(name)` |
-| **Page object assertion method** | A short assertion expressed against a one-off element should be a **method on the POM**, not an inline locator. The framework convention is `verifyXxx()`. | [`SyntheticsPage.verifyNoResults()`](../../../pages/app/SyntheticsPage.ts), [`PoliciesPage.verifyNoResults()`](../../../pages/app/PoliciesPage.ts) |
+| **Page object assertion method** | A short assertion expressed against a one-off element should be a **method on the POM**, not an inline locator. The framework convention is `verifyXxx()`. | `SyntheticsPage.verifyNoResults()`, `PoliciesPage.verifyNoResults()` |
 | **Inline in spec — TOLERATED** | A locator used by a single test, only as an assertion target (not for interaction), where wrapping it in a POM method would inflate the POM with one-off members. | Sonner toast arrival (`page.getByText('Monitor "<name>" created successfully')`), empty-state markers (`expect(page.getByText('No ICMP Metrics Available')).toBeVisible()`) |
 | **Inline in spec — FORBIDDEN** | Inline `page.locator('css-class')` in a spec. Inline locator that is **clicked / filled / hovered / typed into**. Inline locator reused across more than one `test()` block. | All current violations should be refactored into POM getters. |
 
@@ -121,7 +121,7 @@ The default order is Playwright's recommendation: **semantic-first, testid-last*
 |----------|---------|-------------|
 | 1 | `getByRole(role, { name })` | Native semantic elements: `heading`, `button` (with stable text), `link`, `tab`, `checkbox`, `menuitem`, `dialog`, `row`, `columnheader`, `cell`. Also Radix-mapped roles when reliable: `combobox` (Radix select trigger), `switch`, `option` (when the popover is open) |
 | 2 | `getByLabel(label)` | Form inputs with a visible `<label>` association |
-| 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (used in [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) search controls) |
+| 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (used in `pages/app/SyntheticsPage.ts` search controls) |
 | 4 | `getByText(text, { exact })` | Static UI strings: page titles, success messages, dropdown options, empty-state messages — **only when the text is stable across states and not reused elsewhere on the page** |
 | 5 | `getByAltText(text)` | Images with meaningful `alt` text |
 | 6 | `getByTitle(text)` | Elements with a stable `title` attribute |
@@ -236,8 +236,8 @@ Every page object that covers a form or CRUD operation **must** include selector
 |---------------|-----------------|-------------------|
 | Success toast (Sonner) | After successful create / update / delete | Filter on `[data-sonner-toast]` by the unique part of the message (the monitor name); never bare `[data-sonner-toast]` (multiple toasts can stack — see [recipes.md § 5](recipes.md)) |
 | Error toast (Sonner) | After failed mutation or server error | Same shape as success toast; assert `toContainText(/error|failed/i)` |
-| Field validation message | On blur or submit with invalid input | Schema-form fields render errors as `[data-testid='error-<fieldName>']` — pair with `field-field-<fieldPath>` for the input. Generic helpers: `fieldError(name)` / `fieldInput(path)` (see [pages/app/CreateMonitorPage.ts](../../../pages/app/CreateMonitorPage.ts)) |
-| Confirmation modal | Destructive action (delete) | Per-feature delete dialog testids (`delete-monitor-dialog` / `delete-monitor-confirm` on [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts), `delete-probe-dialog` on [pages/app/ProbesPage.ts](../../../pages/app/ProbesPage.ts)) — see [recipes.md § 4](recipes.md) |
+| Field validation message | On blur or submit with invalid input | Schema-form fields render errors as `[data-testid='error-<fieldName>']` — pair with `field-field-<fieldPath>` for the input. Generic helpers: `fieldError(name)` / `fieldInput(path)` (see `pages/app/CreateMonitorPage.ts`) |
+| Confirmation modal | Destructive action (delete) | Per-feature delete dialog testids (`delete-monitor-dialog` / `delete-monitor-confirm` on `pages/app/SyntheticsPage.ts`, `delete-probe-dialog` on `pages/app/ProbesPage.ts`) — see [recipes.md § 4](recipes.md) |
 | Loading state | During async operations | Spinner / skeleton testid scoped under the data container — `getByRole('progressbar')` when exposed |
 | Empty state | List or table with no data | `getByText('No <X> Available', { exact: true })` — the exact strings live in `enums/app/*` (e.g. `Messages.NO_ICMP_METRICS`); inline `getByText` in a spec is tolerated only as a one-off arrival marker (see § Where selectors live) |
 
@@ -257,7 +257,7 @@ Playwright assertions auto-wait. Use them everywhere; do NOT mix with `await loc
 - A web-first assertion.
 - A `waitForResponse` / `waitForRequest` for a known XHR.
 - A re-read of a Locator after the triggering action (Locators are lazy).
-- An `expect.toPass({ timeout })` retry block when the assertion is genuinely flaky on first read (see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `expandRow`, `openRowActionMenu`).
+- An `expect.toPass({ timeout })` retry block when the assertion is genuinely flaky on first read (see `pages/app/SyntheticsPage.ts` `expandRow`, `openRowActionMenu`).
 
 ### Form interaction hygiene (mutation action methods)
 
@@ -289,7 +289,7 @@ Only when ALL of these hold:
 
 Forbidden CSS:
 
-- App-level class names tracking layout / styling (`.text-muted-foreground`, `.h-10.w-full.overflow-hidden`) at the **top** of a chain. They can appear deep in a chain only when the design system has no testid for the element — see [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `timingStackedBarIn` (acknowledged as tech debt; FE improvement requested).
+- App-level class names tracking layout / styling (`.text-muted-foreground`, `.h-10.w-full.overflow-hidden`) at the **top** of a chain. They can appear deep in a chain only when the design system has no testid for the element — see `pages/app/SyntheticsPage.ts` `timingStackedBarIn` (acknowledged as tech debt; FE improvement requested).
 - Tailwind utility classes (`text-3xl`, `font-bold`, `flex`, `gap-2`, etc.) at **any** position in the chain — even when chained off a higher-priority anchor. Tailwind classes are styling concerns that change with design updates. Prefer `getByText(/pattern/)` for text-content matching or request a `data-testid` from FE.
 - Position-based selectors for content (`.locator('td').nth(2)` to grab "the third column").
 - Tag-only selectors with no follow-up filter (`page.locator('header')` standalone). Note: `page.locator('header').filter({ hasText: 'X' })` is tolerated because `.filter()` IS the scope — but when a `data-testid` exists, prefer it.
@@ -348,7 +348,7 @@ Walk the workflow:
 
 1. **Phase 1 (explore)** — `npx playwright open --load-storage <storage-state-path> https://<app-host>/synthetics` (path from `playwright.config.ts`). The human navigates and observes: each row has a kebab button with `data-testid` matching `monitor-actions-<id>` (per-row); clicking it opens a Radix menu of items.
 2. **Pattern 4 (filter by text)** + **Pattern 6 (dynamic method)** — the row anchor depends on the synthetic name; the action button is a per-row testid prefix.
-3. **Add to [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts):**
+3. **Add to `pages/app/SyntheticsPage.ts`:**
     - `getRowByName(name: string): Locator` — already present (Pattern 4).
     - `openRowActionMenu(row: Locator, menuItem: string): Promise<void>` — locates the prefix testid `getByTestId(/^monitor-actions-/)` scoped under `row`, clicks it, then clicks `getByRole('menuitem', { name: menuItem })`.
 4. **Validation** — POM method must end in a post-condition. Assert the menu item is hidden (menu closed) before returning, OR verify the next visible UI state (sheet opened, toast shown).
@@ -389,7 +389,7 @@ User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
 | `page.locator('.btn-primary')` because the button has no accessible name | App class tracks styling, not semantics; unstable across redesigns | First re-check the snapshot for an `aria-label` or hidden role. If absent, request a `data-testid` from FE; until then, anchor under a higher-priority parent and drill (Pattern 3). Never ship a top-level CSS-class locator. |
 | Sonner toast assertion is flaky / matches the wrong toast | Bare `[data-sonner-toast]` matches every stacked toast on screen (auto-refresh "Loaded N monitors" can fire alongside "created successfully") | Filter by the unique part of the message — usually the monitor name. Pattern in [recipes.md § 5](recipes.md). Invented `notification-success`/`notification-error` testids do **not** exist in Sonner's DOM — always use the `[data-sonner-toast]` attribute filter. |
 | `getByText('Edit')` matches multiple elements | Substring matching catches "Edit monitor", "Edit profile", etc. | Always pass `exact: true` for short strings: `getByText('Edit', { exact: true })`. Or use `getByRole('button', { name: 'Edit', exact: true })` when the role is exposed. |
-| Field validation error locator returns nothing | Wrong shape — schema-form errors render at `data-testid='error-<fieldName>'`, not under the field input | Use the existing `fieldError(name)` helper in [pages/app/CreateMonitorPage.ts](../../../pages/app/CreateMonitorPage.ts) or `getByTestId('error-<fieldName>')` directly. Pair with the input testid `field-field-<fieldPath>` for context. |
+| Field validation error locator returns nothing | Wrong shape — schema-form errors render at `data-testid='error-<fieldName>'`, not under the field input | Use the existing `fieldError(name)` helper in `pages/app/CreateMonitorPage.ts` or `getByTestId('error-<fieldName>')` directly. Pair with the input testid `field-field-<fieldPath>` for context. |
 | Auth fails or `npx playwright open` cannot reach the app | Environment / credentials issue | **Stop and notify the human** with the exact issue and what you need (credentials, storage state path, env vars). Do not generate placeholder locators with guessed names. Re-explore once unblocked. |
 | Test calls `await locator.click()` immediately after navigation and races | `Locator.click()` auto-waits but only up to the action timeout; redirects mid-action can race | Use `await expect(locator).toBeVisible()` first to anchor the wait, then click. Or — for actions that trigger a known XHR — combine with `page.waitForResponse(...)` (see [recipes.md § 13](recipes.md)). |
 

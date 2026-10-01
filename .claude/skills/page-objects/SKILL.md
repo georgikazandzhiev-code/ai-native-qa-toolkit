@@ -20,7 +20,7 @@ Page Object classes are the seam between specs and the UI: they own every locato
 - **Radix trigger-swallow retry.** When a Radix dropdown trigger swallows the first click (known race — the menu doesn't open), use `try { click + expect(item).toBeVisible({ timeout: 5_000 }) } catch { click({ force: true }) + expect visible }`. This is the **one accepted `try/catch`** in a POM action method — annotate with `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`. Do not generalize this pattern beyond confirmed Radix trigger issues.
 - **ALWAYS** explore the live app with `npx playwright open` before writing locators (see the `playwright-cli` skill). No guessing from wireframes, frontend source, or screenshots — verify roles, accessible names, and testids on the running app. If the app is unreachable, **stop and notify the human** — never ship placeholder locators with guessed names.
 - **ALWAYS** include feedback locators (success toast, error toast, field validation, empty state, loading) on any POM that covers a form or CRUD operation. Why: a POM without feedback locators forces specs to assert state via timing instead of UI signals — the `selectors` skill calls a feedback-less POM "incomplete".
-- **ALWAYS** register every new app POM as a property on `FrameworkFixtures` in [fixtures/pom/page-object-fixture.ts](../../../fixtures/pom/page-object-fixture.ts). Tests consume page objects through the fixture (`async ({ dashboardPage }) => { ... }`), never via `new DashboardPage(page)`. Why: bypassing the fixture means specs miss `mergeTests` integration (api-request, login, mailpit) and the centralized lifecycle.
+- **ALWAYS** register every new app POM as a property on `FrameworkFixtures` in `fixtures/pom/page-object-fixture.ts`. Tests consume page objects through the fixture (`async ({ dashboardPage }) => { ... }`), never via `new DashboardPage(page)`. Why: bypassing the fixture means specs miss `mergeTests` integration (api-request, login, mailpit) and the centralized lifecycle.
 - **NEVER** write JSDoc on locator getters. Names are self-documenting; JSDoc on `get submitButton(): Locator { ... }` adds noise and ages badly. JSDoc with `@param` / `@returns` is required on every public action method (see § Step 6 below).
 - **NEVER** add a "thin" action method that only calls `click()` / `fill()`. Every public POM method must include at least one built-in validation: a web-first assertion (`expect(locator).toBeVisible()`), a `page.waitForResponse(...)`, or a toast check. A method without a built-in wait is too thin and produces flake when the spec runs in parallel.
 - **ALWAYS** end data-reload actions with `await this.waitForTableSettled()`. Any action method that triggers a table data reload — pagination click, sort header click, page-size change, filter toggle — must wait for rows to settle after asserting the UI control change (e.g., page counter updated). Asserting only the control without waiting for rows is a flake source: the pagination UI updates before the new rows render.
@@ -181,7 +181,7 @@ This is the [`selectors`](../selectors/SKILL.md) skill's domain. Brief recap so 
 
 - **Default order:** `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`.
 - **Radix exception:** for Radix primitives (Select, Switch, Dialog, DropdownMenu, Popover, Tabs), elements whose text changes with state, or framework testid contracts (`schema-field-*`, `error-*`, `monitor-actions-*`, `data-sonner-toast`), `getByTestId` jumps above `getByText`.
-- **Strings inside `getByText(...)` come from [`enums/app/*`](../../../enums/app)** (`Messages.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
+- **Strings inside `getByText(...)` come from `enums/app/*`** (`Messages.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
 - **No XPath. No top-level CSS class / id selectors.** Both are forbidden by `selectors` § Critical.
 
 If the locator decision feels non-trivial (Radix-heavy form, async-rendered table row, iframe), open the `selectors` skill's `recipes.md` before guessing — there's almost certainly a worked recipe.
@@ -320,7 +320,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 
 User says: *"Add a `forgotPasswordLink` locator and a `clickForgotPassword()` method to `LoginPage`."*
 
-1. **Step 2 — exploration.** Run `npx playwright open` against the Keycloak login. The link already exists at `data-testid="login-forgot-password-link"` (verified at [pages/util/LoginPage.ts:39](../../../pages/util/LoginPage.ts#L39)).
+1. **Step 2 — exploration.** Run `npx playwright open` against the Keycloak login. The link already exists at `data-testid="login-forgot-password-link"` (verified at `pages/util/LoginPage.ts:39`).
 2. **Step 4 — extend the class.** Locator already exists — confirm. Add the action method.
 3. **Step 6 — action method.**
    ```typescript
@@ -380,4 +380,3 @@ User says: *"`DashboardPage`, `SyntheticsPage`, and `ProbesPage` all duplicate t
 - **Always-on rules:** [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) — framework invariants (imports, type-safety, MUST/SHOULD/WON'T). UI-specific POM Method Standards, Locator Priority, and cleanup are now in this skill (consolidated from the previous `ui-tests.mdc`).
 - **Sibling cluster (UI authoring):** [`selectors`](../selectors/SKILL.md) (locator strategy, Radix exception), [`playwright-cli`](../playwright-cli/SKILL.md) (live-app exploration tool), [`fixtures`](../fixtures/SKILL.md) (fixture DI / helper-fixture promotion), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding that consumes POMs), [`enums`](../enums/SKILL.md) (where `Messages.X` / `ApiEndpoints.X` live), [`test-standards`](../test-standards/SKILL.md) (spec-side rules — `test.step`, tags, Qase, imports), [`frontend-cross-check`](../frontend-cross-check/SKILL.md) (verifying testids against the live frontend), [`config`](../config/SKILL.md) (`appConfig.paths.X` for navigation URLs).
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.
-- **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — drift-to-converge entries (lowercase `@App-regression` flip, planned three-tier test data).

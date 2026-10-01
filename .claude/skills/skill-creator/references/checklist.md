@@ -1,12 +1,12 @@
 # Quality checklist
 
-The shipping gate for any new (or refactored) skill in this repo. Run all sections before merging. The `postToolUse` hook ([.cursor/hooks/skill-validate.py](../../../hooks/skill-validate.py)) enforces the structural items it can on every save (frontmatter, length, signature device); the rest is human (or subagent) review.
+The shipping gate for any new (or refactored) skill in this repo. Run all sections before merging. The validator ([scripts/validate.mjs](../../../../scripts/validate.mjs), `npm run validate`, also run in CI) enforces the structural items it can; the rest is human (or subagent) review.
 
 This checklist gates on the **standardized SKILL.md structure** mandated by skill-creator. Every section is required (or marked "(when applicable)"). Skills authored before this standardization are TBD-tracked separately and migrate during their next legitimate edit.
 
 ## Contents
 
-- [1. Hook-enforced (automatic on save)](#1-hook-enforced-automatic-on-save)
+- [1. Validator-enforced (`npm run validate`)](#1-validator-enforced-npm-run-validate)
 - [2. Frontmatter (manual review)](#2-frontmatter-manual-review)
 - [3. Required sections (manual review)](#3-required-sections-manual-review)
 - [4. Body quality (manual review)](#4-body-quality-manual-review)
@@ -18,27 +18,31 @@ This checklist gates on the **standardized SKILL.md structure** mandated by skil
 
 ---
 
-## 1. Hook-enforced (automatic on save)
+## 1. Validator-enforced (`npm run validate`)
 
-These run on every `Write` / `StrReplace` into `~/.claude/skills/**/*.md`. The hook reports errors as `additional_context` to the agent in the same turn.
+Run `npm run validate` before pushing; CI runs it on every pull request. Errors fail the run, warnings are listed but do not.
 
-- [ ] `name` field present, lowercase + hyphens, ≤ 64 chars, equals folder name, no `anthropic`/`claude`, no XML angle brackets.
-- [ ] `description` field present, ≤ 1024 chars.
-- [ ] `metadata.category` is one of `authoring | running | domain | cross-cutting`.
-- [ ] YAML frontmatter parses.
-- [ ] `SKILL.md` body ≤ 500 lines (Anthropic ceiling); ≤ 380 lines is the project guideline (warning above 380).
+- [ ] YAML frontmatter parses; `name` present, lowercase letters, digits and hyphens, equals the folder name, unique, no `anthropic`/`claude`.
+- [ ] `description` present, ≤ 1024 chars (warning under 120, or with no "Do NOT use for" disclaimer).
+- [ ] `version` present, `major.minor.patch`.
+- [ ] `metadata.category` present (warning unless one of `authoring | running | domain | cross-cutting`).
+- [ ] Every required section present (see §3).
+- [ ] `SKILL.md` ≤ 380 lines (warning above).
+- [ ] Every See Also skill exists, and the skill has a row in the Routed Skill Index.
+- [ ] Every relative markdown link resolves to a real file.
+
+Not checked by the validator, so check by hand:
+
 - [ ] Reference files > 100 lines start with a `## Contents` block.
 - [ ] No Windows-style backslash paths.
 - [ ] `references/` exactly one level deep — no `references/foo/bar.md`.
 - [ ] At least one signature device present (table / mermaid / numbered checklist).
 
-If any item here fails, the hook surfaces the diff inline. Fix and re-save.
-
 ---
 
 ## 2. Frontmatter (manual review)
 
-The hook validates structure; the human validates *content*.
+The validator checks structure; the human validates *content*.
 
 - [ ] **WHAT + WHEN both visible** in the description's first 2 sentences.
 - [ ] **3-7 quoted trigger phrases** in the description (`"phrase 1"`, `"phrase 2"`, …).
@@ -53,23 +57,23 @@ The hook validates structure; the human validates *content*.
 
 ## 3. Required sections (manual review)
 
-The standardized SKILL.md structure mandates every section below. The hook does not yet enforce section presence — manual review is the gate. Skills missing any section are not ready to ship.
+The standardized SKILL.md structure mandates every section below. The validator checks that each section heading is present; review checks that its content earns its place. Skills missing any section are not ready to ship.
 
-- [ ] **Opener** — one paragraph, paired-rule callout (or "(none)" explicitly), companion-plan citation if applicable.
+- [ ] **Opener** — one paragraph, paired-rule callout (or "(none)" explicitly).
 - [ ] **`## Critical`** block at top — 5–9 hard rules in `**ALWAYS**` / `**NEVER**` form. Each rule enforceable, not aspirational. Drawn from real incidents.
 - [ ] **`## What's in each file`** table when the skill has supplementary files (`reference.md`, `templates.md`, `<topic>.md`, `assets/`). Skip when single-file.
 - [ ] **Workflow / phases / decision tables / architecture map** — the skill's substance. Use one or more body patterns from [`patterns.md`](patterns.md).
 - [ ] **`## Anti-patterns`** with bulleted ❌ list. Each anti-pattern names the fix.
 - [ ] **`## Self-review checklist`** with checkboxes the model walks through.
-- [ ] **`## Examples`** — 2–3 worked walkthroughs using REAL codebase names (no placeholders like `<resource>`, `MyResource`).
+- [ ] **`## Examples`** — 2–3 worked walkthroughs with concrete, realistic names (`UsersPage`, `createUser`) rather than bare placeholders. This toolkit is installed into many repositories, so an example must read as an illustration — never a path the reader is expected to find in this one.
 - [ ] **`## Troubleshooting`** — symptom → cause → fix table, listing real failure modes.
-- [ ] **`## See Also`** — paired rule, sibling cluster, orchestration doc, identity, companion plan.
+- [ ] **`## See Also`** — paired rule, sibling cluster, orchestration doc, identity.
 
 ---
 
 ## 4. Body quality (manual review)
 
-Anthropic + Cursor fundamentals the hook can't catch.
+Anthropic + Cursor fundamentals the validator can't catch.
 
 - [ ] **Concise** — no filler ("This skill helps you…", "In this section we will…").
 - [ ] **Imperative body** — "Open the file", "Run the test", not "You should open" or "We open".
@@ -123,7 +127,6 @@ The marks that distinguish a skill that "fits this repo" from a generic skill.
 - [ ] **Signature device** — at least one of: architecture map (table), storage location map (table), decision tree (mermaid), pattern catalog (numbered). Mirror `scaffold-spec` / `data-strategy` / `api-testing`.
 - [ ] **Opener** answers "what does this skill cover, what's the failure mode it prevents". One paragraph max.
 - [ ] **Paired-rule callout** — if a paired glob rule exists, opener says "Read that rule first" and links it. If no paired rule, `## See Also` says `(none)` explicitly.
-- [ ] **Companion-plan citation** — if the skill describes work in flight, cite the relevant `docs/framework-alignment-plan.md` section by number.
 - [ ] **Cluster fit** — skill belongs to one of the five named clusters (API authoring / UI authoring / domain orientation / failure investigation / repo hygiene); at least one cluster sibling is cross-linked.
 - [ ] **Visible in Settings → Rules & Memories → "Agent Decides"** after Cursor reload (skip when `disable-model-invocation: true`).
 

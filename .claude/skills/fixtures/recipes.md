@@ -11,7 +11,7 @@ Trigger: a new POM class lands under `pages/app/<X>.ts` (or `pages/util/`) and a
 Steps:
 
 1. Confirm the POM follows the `page-objects` / `selectors` skills (extends `BasePage`, constructor takes `Page`).
-2. Open [`fixtures/pom/page-object-fixture.ts`](../../../fixtures/pom/page-object-fixture.ts).
+2. Open `fixtures/pom/page-object-fixture.ts`.
 3. Add the import, grouped with its siblings.
 4. Add the fixture to the `FrameworkFixtures` type.
 5. Add the fixture body to the `base.extend<FrameworkFixtures>({...})` block — identical shape to every other entry.
@@ -187,8 +187,8 @@ Decision:
 
 Steps:
 
-1. Add credentials to [`env/.env.example`](../../../env/.env.example) and your local `env/.env.<environment>`.
-2. For an **env token**, extend the `tenantTokens` block in [`tests/app/login.setup.ts`](../../../tests/app/login.setup.ts):
+1. Add credentials to `env/.env.example` and your local `env/.env.<environment>`.
+2. For an **env token**, extend the `tenantTokens` block in `tests/app/login.setup.ts`:
 
 ```typescript
 const tenantTokens = {
@@ -232,7 +232,7 @@ export const test = base.extend<{ myService: MyServiceClient }>({
 });
 ```
 
-Wire it into [`test-options.ts`](../../../fixtures/pom/test-options.ts): add `import { test as myServiceFixture } from '../services/myservice-fixture';` and append `myServiceFixture` to `mergeTests(...)`. Declare the env vars in `env/.env.example` and add the fixture to `reference.md § 1.2`. This mirrors how `mailpit` builds and disposes its own context.
+Wire it into `test-options.ts`: add `import { test as myServiceFixture } from '../services/myservice-fixture';` and append `myServiceFixture` to `mergeTests(...)`. Declare the env vars in `env/.env.example` and add the fixture to `reference.md § 1.2`. This mirrors how `mailpit` builds and disposes its own context.
 
 ---
 
@@ -269,7 +269,7 @@ Critical: extend `baseApiRequestFixture`, NOT `base` from `@playwright/test` —
 
 Adding a fixture module under `fixtures/`:
 
-1. `import { test as fooFixture } from '../services/foo-fixture';` in [`test-options.ts`](../../../fixtures/pom/test-options.ts).
+1. `import { test as fooFixture } from '../services/foo-fixture';` in `test-options.ts`.
 2. Append `fooFixture` to the `mergeTests(...)` call. Order does not matter.
 3. Run one spec that consumes it.
 

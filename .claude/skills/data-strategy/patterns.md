@@ -32,11 +32,11 @@ test('non-existent probe returns 404', async ({ apiRequest }) => {
 });
 ```
 
-Fix: pull `nonExistentId` from [test-data/app/probe.json](../../../test-data/app/probe.json) (Pattern 5).
+Fix: pull `nonExistentId` from `test-data/app/probe.json` (Pattern 5).
 
 ## Pattern 2 — Typed factory with `Partial<T>` overrides
 
-### Good — target shape (planned per [`docs/framework-alignment-plan.md` § 6.4](../../../docs/framework-alignment-plan.md))
+### Good — target shape (planned)
 
 ```typescript
 export type ProbeData = {
@@ -65,7 +65,7 @@ Test consumes with overrides:
 const probe = createProbeData({ region: 'EU' });
 ```
 
-### Drift today — `Record<string, unknown>` instead of typed factory ([helpers/app/probes.ts](../../../helpers/app/probes.ts))
+### Drift today — `Record<string, unknown>` instead of typed factory (`helpers/app/probes.ts`)
 
 ```typescript
 export function buildCreateProbeBody(
@@ -149,7 +149,7 @@ Fix: `return createProbeData({ region: 'EU', location: 'EU-Amsterdam' });`.
 
 ## Pattern 4 — JSON validation matrix
 
-### Good ([test-data/app/httpSyntheticValidation.json](../../../test-data/app/httpSyntheticValidation.json))
+### Good (`test-data/app/httpSyntheticValidation.json`)
 
 ```json
 {
@@ -179,7 +179,7 @@ Fix: move to `test-data/app/<resource>Validation.json` and import. The JSON is t
 
 ## Pattern 5 — JSON lookup / sentinel
 
-### Good ([test-data/app/probe.json](../../../test-data/app/probe.json))
+### Good (`test-data/app/probe.json`)
 
 ```json
 {
@@ -209,7 +209,7 @@ Fix: every "non-existent" or "invalid" sentinel lives in `test-data/app/<resourc
 
 ## Pattern 6 — API seeder
 
-### Good (the shape we want — assertion-style per [`docs/framework-alignment-plan.md` § 4.2](../../../docs/framework-alignment-plan.md))
+### Good (the shape we want — assertion-style)
 
 ```typescript
 // helpers/app/testDataGenerators.ts (factory — Pattern 2)
@@ -263,7 +263,7 @@ test.afterAll(async ({ apiRequest }) => {
 });
 ```
 
-### Drift today — passthrough seeder + body builder ([helpers/app/probes.ts](../../../helpers/app/probes.ts))
+### Drift today — passthrough seeder + body builder (`helpers/app/probes.ts`)
 
 ```typescript
 export async function createProbe<T = CreateProbeResponse>(
@@ -304,7 +304,7 @@ Fix: `import { createProbe, buildCreateProbeBody } from '../../../helpers/app/pr
 
 ## Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
 
-### Good ([helpers/app/adminUsers.ts](../../../helpers/app/adminUsers.ts) shape)
+### Good (`helpers/app/adminUsers.ts` shape)
 
 ```typescript
 import { setupTestUser, teardownTestUser } from '../../../helpers/app/adminUsers';
@@ -372,11 +372,11 @@ Fix: drop the `await`.
 process.env.USER_ACCESS_TOKEN_TEMP = await getClientToken(kcClient); // forbidden in specs
 ```
 
-Fix: only [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) writes `process.env.USER_ACCESS_TOKEN_*`. Specs READ.
+Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*`. Specs READ.
 
 ## Lifecycle: id-array drain (the canonical leak guard)
 
-### Good ([tests/app/api/monitoring-service/probes/probes.spec.ts](../../../tests/app/api/monitoring-service/probes/probes.spec.ts) pattern)
+### Good (`tests/app/api/monitoring-service/probes/probes.spec.ts` pattern)
 
 ```typescript
 test.describe('POST /probes', () => {
@@ -473,7 +473,7 @@ Fix: seed via Pattern 6 + Pattern 7 (`setupTestUser` then call the resource API)
 const amount = faker.number.float({ min: 1, max: 100000, multipleOf: 0.01 });
 ```
 
-### Bad ([helpers/util/dataGenerator.ts](../../../helpers/util/dataGenerator.ts))
+### Bad (`helpers/util/dataGenerator.ts`)
 
 ```typescript
 export function generateRandomAmount(min = 1.0, max = 100000.0): number {

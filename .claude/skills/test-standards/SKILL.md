@@ -52,11 +52,11 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 
 | Type | Directory | Tag | Covers | Canonical example |
 |------|-----------|-----|--------|-------------------|
-| **API** | `tests/app/api/` | `@App-API` | API contracts, schema validation, status-code matrix, per-field negative coverage | [`tests/app/api/monitoring-service/probes/probes.spec.ts`](../../../tests/app/api/monitoring-service/probes/probes.spec.ts) |
-| **E2E** | `tests/app/e2e/` | `@App-E2E` | Full CRUD journeys — create → verify → edit → delete in one test | [`tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts`](../../../tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts) |
-| **Functional** | `tests/app/functional/` | `@App-regression` (+ rare `@App-Smoke` for landing pages) | One feature or behaviour in isolation — form validation, dropdown behavior, navigation, page-structure assertions | [`tests/app/functional/monitoring-service/dashboard-page.spec.ts`](../../../tests/app/functional/monitoring-service/dashboard-page.spec.ts) |
-| **Smoke (UI)** | `tests/app/e2e/` | `@App-Smoke` | Critical-path login + landing-page sanity | [`tests/app/e2e/tenant-service/login-smoke.spec.ts`](../../../tests/app/e2e/tenant-service/login-smoke.spec.ts) |
-| **Setup** | `tests/app/` | (no tag) | Storage-state generation, token bootstrap | [`tests/app/login.setup.ts`](../../../tests/app/login.setup.ts) |
+| **API** | `tests/app/api/` | `@App-API` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/monitoring-service/probes/probes.spec.ts` |
+| **E2E** | `tests/app/e2e/` | `@App-E2E` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts` |
+| **Functional** | `tests/app/functional/` | `@App-regression` (+ rare `@App-Smoke` for landing pages) | One feature or behaviour in isolation — form validation, dropdown behavior, navigation, page-structure assertions | `tests/app/functional/monitoring-service/dashboard-page.spec.ts` |
+| **Smoke (UI)** | `tests/app/e2e/` | `@App-Smoke` | Critical-path login + landing-page sanity | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
+| **Setup** | `tests/app/` | (no tag) | Storage-state generation, token bootstrap | `tests/app/login.setup.ts` |
 
 **Functional vs E2E** is a frequent decision point:
 
@@ -128,7 +128,7 @@ import { faker } from "@faker-js/faker";
 // + Invalid-type arrays from fixtures/api/invalid-types
 ```
 
-`SUITES.<RESOURCE>` lives in [`enums/app/qase-suites.ts`](../../../enums/app/qase-suites.ts). If the suite you need (`APP_SETTINGS`, `API_REPORTS`, etc.) isn't there yet, **extend the enum first** via the [`enums`](../enums/SKILL.md) skill — never inline a string literal.
+`SUITES.<RESOURCE>` lives in `enums/app/qase-suites.ts`. If the suite you need (`APP_SETTINGS`, `API_REPORTS`, etc.) isn't there yet, **extend the enum first** via the [`enums`](../enums/SKILL.md) skill — never inline a string literal.
 
 ### Step 5 — tag and Qase
 
@@ -180,7 +180,7 @@ Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized pre
 
 ### Step 7 — E2E cleanup
 
-E2E describes set `test.setTimeout(300_000)`, declare `const MS = { sheet: 15_000, toast: 10_000, button: 20_000, grid: 15_000 };` at file scope, track names in `const createdMonitorNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror [`http-synthetic-monitor-crud.spec.ts`](../../../tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts) verbatim. Don't invent new timeout-constant names per file.
+E2E describes set `test.setTimeout(300_000)`, declare `const MS = { sheet: 15_000, toast: 10_000, button: 20_000, grid: 15_000 };` at file scope, track names in `const createdMonitorNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror `http-synthetic-monitor-crud.spec.ts` verbatim. Don't invent new timeout-constant names per file.
 
 ### Step 8 — data-driven tests
 
@@ -253,7 +253,7 @@ User says: *"Verify the Dashboard renders all four sections (Synthetics, Probes,
 
 1. **Step 1.** Single behaviour, single phase → **Functional** (`tests/app/functional/`, `@App-regression`).
 2. **Step 2.** Confirm imports, tag, `qase.suite` requirement against the Critical block above.
-3. **Step 3.** Open `/` via `npx playwright open`, verify all four section testids exist on `DashboardPage` (already there — see [pages/app/DashboardPage.ts:147-180](../../../pages/app/DashboardPage.ts#L147-L180)).
+3. **Step 3.** Open `/` via `npx playwright open`, verify all four section testids exist on `DashboardPage` (already there — see `pages/app/DashboardPage.ts:147-180`).
 4. **Step 4.** Skeleton — imports + describe.
 5. **Step 5.** Tag `{ tag: "@App-regression" }`, `qase.suite(SUITES.APP_DASHBOARD)`.
 6. **Step 6.** Structure: `GIVEN: I am on Dashboard` → `THEN: All four sections visible`. Use `dashboardPage.verifyAllSectionsVisible()`.
@@ -315,7 +315,7 @@ For larger or domain-specific data sets, see the [`data-strategy`](../data-strat
 User says: *"E2E test for HTTP monitor: create via UI → verify in grid → edit → delete via UI."*
 
 1. **Step 1.** Multi-phase journey → **E2E** (`tests/app/e2e/`, `@App-E2E`).
-2. **Step 7.** `test.setTimeout(300_000)`, `MS = {...}`, `createdMonitorNames` array, `test.afterAll` cleanup via `listSynthetics` + `deleteSyntheticMonitor`. Mirror [`http-synthetic-monitor-crud.spec.ts`](../../../tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts) verbatim.
+2. **Step 7.** `test.setTimeout(300_000)`, `MS = {...}`, `createdMonitorNames` array, `test.afterAll` cleanup via `listSynthetics` + `deleteSyntheticMonitor`. Mirror `http-synthetic-monitor-crud.spec.ts` verbatim.
 
 ```typescript
 import { expect, test } from "../../../fixtures/pom/test-options";
@@ -368,9 +368,9 @@ test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
 
 ### Example 4 — API + Smoke routing
 
-For an API spec (`POST /probes` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_PROBES)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror [`tests/app/api/monitoring-service/probes/probes.spec.ts`](../../../tests/app/api/monitoring-service/probes/probes.spec.ts) for the canonical shape.
+For an API spec (`POST /probes` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_PROBES)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror `tests/app/api/monitoring-service/probes/probes.spec.ts` for the canonical shape.
 
-For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror [`tests/app/e2e/tenant-service/login-smoke.spec.ts`](../../../tests/app/e2e/tenant-service/login-smoke.spec.ts).
+For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror `tests/app/e2e/tenant-service/login-smoke.spec.ts`.
 
 ## Troubleshooting
 
@@ -395,4 +395,3 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES
 - **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `Messages.X`, `ApiEndpoints.X`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (`process.env.X!`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
 - **Failure investigation:** [`debugging`](../debugging/SKILL.md) — failure-mode taxonomy and the right Playwright tool (`npm run app-ui`, `npm run app-debug`, trace viewer) when Step 9 reports red.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.
-- **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — drift-to-converge entries (planned three-tier test-data migration).

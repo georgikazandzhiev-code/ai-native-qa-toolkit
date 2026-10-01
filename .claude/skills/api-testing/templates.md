@@ -4,7 +4,7 @@ Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase
 
 > Anchored on the synthetics resource because it is the most complete CRUD example and exercises every pattern (list-with-paging, single-keyed-by-resource, create-with-status-string, update-with-echoed-entity, probe dependency, per-field PATCH isolation).
 
-> These skeletons encode the **plan-aligned target state** (see [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md)): `z.strictObject()` schemas, `z.string().uuid()` ids, hyphen-case test-data filenames, `Verify METHOD /path returns <status>` test names, assertion-style setup helpers paired with passthrough CRUD, and shared schemas centralized in `fixtures/api/schemas/util/common.ts`. Copying any template should produce code that already matches the plan; do not regress to current-state shortcuts.
+> These skeletons encode the **target state**: `z.strictObject()` schemas, `z.string().uuid()` ids, hyphen-case test-data filenames, `Verify METHOD /path returns <status>` test names, assertion-style setup helpers paired with passthrough CRUD, and shared schemas centralized in `fixtures/api/schemas/util/common.ts`. Copying any template should produce code that already matches the target state; do not regress to current-state shortcuts.
 
 > **Companion playbook:** [http-method-coverage.md](http-method-coverage.md) explains, per verb, which test scenarios the § 1 skeleton must cover (per-field PATCH isolation, idempotency-as-404 on DELETE, the 405 catch-all loop, the auth-coverage matrix). Use the templates here for **shape** and the playbook for **coverage**.
 
@@ -661,7 +661,7 @@ export type Delete<Resource>Response = z.infer<typeof Delete<Resource>ResponseSc
 
 There is **no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file. (The `util/` side does have a barrel: `fixtures/api/schemas/util/index.ts` re-exports `./common` and `./keycloak`.)
 
-> **Name-collision callout:** if your new resource happens to export a `UserSchema`, do **not** dodge the collision with an `as <Alias>` re-export. The existing collision is **still live today** (`tenant.ts` admin-side `UserSchema` vs `user.ts` tenant-side `UserSchema`); the planned fix (`docs/framework-alignment-plan.md` § 5.4) renames the admin-side schema to `AdminUserSchema` at the source. Pick distinctly-named schemas at definition time.
+> **Name-collision callout:** if your new resource happens to export a `UserSchema`, do **not** dodge the collision with an `as <Alias>` re-export. The existing collision is **still live today** (`tenant.ts` admin-side `UserSchema` vs `user.ts` tenant-side `UserSchema`); the planned fix renames the admin-side schema to `AdminUserSchema` at the source. Pick distinctly-named schemas at definition time.
 
 ## 4. Helper file (`helpers/app/<resource>.ts`)
 

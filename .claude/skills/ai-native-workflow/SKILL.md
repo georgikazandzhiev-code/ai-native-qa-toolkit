@@ -64,7 +64,7 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 - **Layered topology.** Constitution → skills → personas. One source per concern; precedence is documented.
 - **Routed by area through one index, not by free text.** The Routed Skill Index makes skill selection deterministic — the model does not have to guess.
 - **One source of truth per concern.** URLs/credentials in `process.env.*` (declared in `env/.env.example`); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` and `enums/util/*`; fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
-- **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern but the codebase still has the legacy form, it says so (e.g. `api-testing` cites `docs/framework-alignment-plan.md` § 5.1, § 5.4, § 6.6, § 6.7). The next person to touch the file converges; they don't perpetuate the drift.
+- **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern but the codebase still has the legacy form, it says so (e.g. `api-testing` names legacy camelCase test-data files as drift and forbids new ones). The next person to touch the file converges; they don't perpetuate the drift.
 - **Hard-stop forbidden patterns.** `~/.claude/CLAUDE.md § WON'T` and each skill's `## Anti-patterns` list refusal triggers, not soft preferences.
 
 ## Anti-patterns

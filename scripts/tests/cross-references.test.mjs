@@ -6,9 +6,10 @@
  * while the check stays green in four ways, and each is covered below: a skill cites a
  * constitution section that does not exist, a skill folder exists that the index does not
  * route to, the index routes to a skill that does not exist, and a persona is listed without a
- * command file behind it; and a written skill is still labelled "(TBD)". Silent cases prove the
- * check stays quiet on a correct reference and on a TBD label for a skill not yet written,
- * because a gate that fires on correct text gets switched off.
+ * command file behind it; a written skill is still labelled "(TBD)"; and a link points at a file
+ * that does not exist. Silent cases prove the check stays quiet on a correct reference, on a TBD
+ * label for a skill not yet written, on a link to a real file, and on placeholders, code and
+ * URLs, because a gate that fires on correct text gets switched off.
  *
  * Each case copies the working tree, breaks one thing, runs the real validate.mjs, and asserts
  * the exit code and the message. The tree is copied whole, so the check runs against the
@@ -83,6 +84,33 @@ const CASES = [
     name: 'a TBD label for an unwritten skill stays silent',
     break: (dir) =>
       edit(dir, PR_REVIEW, (md) => `${md}\n- **\`visual-regression\`** *(TBD)* — planned.\n`, 'append a valid TBD label'),
+    exit: 0,
+  },
+  {
+    name: 'a link points at a file that does not exist',
+    // The 432-link case: a skill copied out of a product repo still linking to its code.
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- See [SyntheticsPage](../../../pages/app/SyntheticsPage.ts).\n`, 'append a dead link'),
+    exit: 1,
+    expect: 'links to ../../../pages/app/SyntheticsPage.ts, which does not exist',
+  },
+  {
+    name: 'a link to a real file stays silent',
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- See [selectors](../selectors/SKILL.md#critical).\n`, 'append a valid link'),
+    exit: 0,
+  },
+  {
+    name: 'placeholders, code and URLs stay silent',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) =>
+          `${md}\n- [\`<sibling>\`](../<sibling>/SKILL.md), \`[text](missing.md)\`, [docs](https://playwright.dev).\n` +
+          '\n```md\n[example](not-here.md)\n```\n',
+        'append exempt links'
+      ),
     exit: 0,
   },
   {

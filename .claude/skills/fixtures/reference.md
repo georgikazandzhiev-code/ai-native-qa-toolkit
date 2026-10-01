@@ -6,9 +6,9 @@ Catalog of what exists on the fixture surface. "What is registered, where it liv
 
 ## 1. Fixture inventory
 
-Every fixture merged into [`fixtures/pom/test-options.ts`](../../../fixtures/pom/test-options.ts). All are `{ scope: 'test' }` — the framework has **no** `worker`-scoped fixtures today.
+Every fixture merged into `fixtures/pom/test-options.ts`. All are `{ scope: 'test' }` — the framework has **no** `worker`-scoped fixtures today.
 
-### 1.1 Page-object fixtures — [`fixtures/pom/page-object-fixture.ts`](../../../fixtures/pom/page-object-fixture.ts)
+### 1.1 Page-object fixtures — `fixtures/pom/page-object-fixture.ts`
 
 Registered on the `FrameworkFixtures` type + the `base.extend<FrameworkFixtures>({...})` body. Body is always `async ({ page }, use) => { await use(new XPage(page)); }`.
 
@@ -40,13 +40,13 @@ Plus one non-POM helper registered in the same file:
 
 | Fixture | File | Yielded type | Depends on | Teardown |
 |---------|------|--------------|------------|----------|
-| `apiRequest` | [`fixtures/api/api-request-fixture.ts`](../../../fixtures/api/api-request-fixture.ts) | `ApiRequestFn` — `<T>({ method, url, baseUrl, body?, headers? }) => Promise<{ status, body: T }>` | Playwright's built-in `request` (`APIRequestContext`) | none (no owned resource) |
-| `loginUser` | [`fixtures/services/login-fixture.ts`](../../../fixtures/services/login-fixture.ts) | `(username, password) => Promise<ApiRequestResponse<LoginUser>>` | extends `apiRequestFixture` (inherits `apiRequest`); `process.env.API_URL` | none. **Currently unused** — helpers are preferred; kept as the canonical "fixture that extends `apiRequest`" example |
-| `mailpit` | [`fixtures/api/mailpit-fixture.ts`](../../../fixtures/api/mailpit-fixture.ts) | `MailpitHelper` | builds its **own** `APIRequestContext` with `Basic` auth from `MAILPIT_USERNAME` / `MAILPIT_PASSWORD` | `await context.dispose()` after `use` |
+| `apiRequest` | `fixtures/api/api-request-fixture.ts` | `ApiRequestFn` — `<T>({ method, url, baseUrl, body?, headers? }) => Promise<{ status, body: T }>` | Playwright's built-in `request` (`APIRequestContext`) | none (no owned resource) |
+| `loginUser` | `fixtures/services/login-fixture.ts` | `(username, password) => Promise<ApiRequestResponse<LoginUser>>` | extends `apiRequestFixture` (inherits `apiRequest`); `process.env.API_URL` | none. **Currently unused** — helpers are preferred; kept as the canonical "fixture that extends `apiRequest`" example |
+| `mailpit` | `fixtures/api/mailpit-fixture.ts` | `MailpitHelper` | builds its **own** `APIRequestContext` with `Basic` auth from `MAILPIT_USERNAME` / `MAILPIT_PASSWORD` | `await context.dispose()` after `use` |
 
 ---
 
-## 2. The merge point — [`fixtures/pom/test-options.ts`](../../../fixtures/pom/test-options.ts)
+## 2. The merge point — `fixtures/pom/test-options.ts`
 
 ```typescript
 const test = mergeTests(
@@ -81,7 +81,7 @@ Do not re-wrap these as fixtures — call them directly.
 
 ## 4. Storage-state & token catalog
 
-Produced by [`tests/app/login.setup.ts`](../../../tests/app/login.setup.ts) (the `app-setup` project). Every setup test calls `qase.ignore()` and imports `test` from `fixtures/pom/test-options`.
+Produced by `tests/app/login.setup.ts` (the `app-setup` project). Every setup test calls `qase.ignore()` and imports `test` from `fixtures/pom/test-options`.
 
 | Artifact | Kind | Produced by | Consumed by |
 |----------|------|-------------|-------------|
@@ -109,7 +109,7 @@ Deliberate omissions. If you're about to add one of these, re-read `SKILL.md` fi
 
 ## 6. Env-var dependency map
 
-Fixtures/setup read these directly from `process.env` (declared in [`env/.env.example`](../../../env/.env.example)):
+Fixtures/setup read these directly from `process.env` (declared in `env/.env.example`):
 
 | Consumer | Env vars |
 |----------|----------|

@@ -24,8 +24,7 @@ This skill is the **single source of truth** for API-test invariants and workflo
 **Boundary rule:** decisions, rules, and anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Skeletons live in `templates.md`. Per-verb playbooks live in `http-method-coverage.md`. If you find rule content in a catalog file (or vice versa), it's drift — fix it.
 
 > **Source-of-truth philosophy.** The patterns described here are based on the reliable, battle-tested patterns of the upstream framework (`the upstream reference framework`), adapted to this project's domain (single `app/` area, multi-tenant network monitoring, no response envelope, Mailpit instead of Mailhog). When the current codebase deviates from a upstream pattern, this skill encodes the **upstream-correct pattern** (e.g. shared error/pagination schemas in `util/common.ts`, `z.string().uuid()` by default, full barrel re-exports, assertion-style helpers for setup) and flags the local deviation as drift to converge. Do **not** treat the current state of the codebase as canonical; treat it as the starting point for the next consolidation pass.
->
-> **Companion plan.** The full inventory of drift, severity ranking, fix sequence, and verification commands live in [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md). When this skill says "drift" or "planned", it cites a numbered section of that plan; the plan is the canonical roadmap from current state → upstream-aligned state. Anything new authored through this skill must already match the plan's target state — never add new code that re-creates a documented drift item.
+
 
 ## Critical
 
@@ -58,7 +57,7 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
         `qa-` prefix and a faker suffix to be greppable in DB cleanups.
 - [ ] 5. Add `SUITES.API_<RESOURCE>` to enums/app/qase-suites.ts if it does not exist.
 - [ ] 6. Add static fixtures (`invalidId`, `nonExistentId`, …) to test-data/app/<resource>.json if needed.
-- [ ] 7. Author the spec from templates.md. Test name format (per `docs/framework-alignment-plan.md` § 6.6):
+- [ ] 7. Author the spec from templates.md. Test name format:
         `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used in 100% of
         specs today (e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`).
         Keep `<reason>` short and behavior-focused; omit it when the status alone is unambiguous (e.g.
@@ -84,7 +83,7 @@ Full TypeScript signature, parameter usage table, and `headers` overload semanti
 
 This API does **not** use a global response envelope. Responses are direct or resource-keyed.
 
-1. **One file per resource** under `fixtures/api/schemas/app/<resource>.ts`. **There is no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file (`fixtures/api/schemas/app/synthetic.ts`, etc.). A shared-schema barrel does exist at `fixtures/api/schemas/util/index.ts` (re-exports `./common` and `./keycloak`). **Name-collision rule:** never dodge collisions with `as <Alias>` re-exports; pick distinct names at definition. The `UserSchema` collision is **still live today** (`tenant.ts:170` and `user.ts:32` both export a `UserSchema`) — the `UserSchema` → `AdminUserSchema` rename remains unresolved (plan § 5.4).
+1. **One file per resource** under `fixtures/api/schemas/app/<resource>.ts`. **There is no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file (`fixtures/api/schemas/app/synthetic.ts`, etc.). A shared-schema barrel does exist at `fixtures/api/schemas/util/index.ts` (re-exports `./common` and `./keycloak`). **Name-collision rule:** never dodge collisions with `as <Alias>` re-exports; pick distinct names at definition. The `UserSchema` collision is **still live today** (`tenant.ts:170` and `user.ts:32` both export a `UserSchema`) — the `UserSchema` → `AdminUserSchema` rename remains unresolved.
 2. **Reusable shared schemas live in `fixtures/api/schemas/util/common.ts` — importing from there is correct and recommended.** It exports `PageInfoSchema` (`z.strictObject`), `APIErrorSchema` (`z.strictObject`), and `JSONSchemaResponseSchema`. `synthetic.ts` and `policy.ts` import/re-export from it; `alert.ts` flows through `policy.ts`; `probe.ts` and `data.ts` flow through `synthetic.ts`. Local copies of `APIErrorSchema` still remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` (the `tenant-schema.ts` copy has a divergent `details` shape); `GatewayErrorSchema` is not yet centralized (local `z.strictObject` copies in `tenant.ts`, `user.ts`, `policy.ts`). When touching any duplicating file, centralize through `util/common.ts` rather than duplicating again — full inventory in `reference.md § Error catalog`.
 3. Always export both the schema and the inferred type:
 
@@ -169,9 +168,9 @@ Otherwise, call `apiRequest({...})` directly inside the spec. Wrapping a single 
 
 The codebase uses both. Both are valid; the choice depends on whether the helper is a **happy-path assertion** (one shape only) or a **CRUD wrapper** (used across positive AND negative tests).
 
-> **Principle (per `docs/framework-alignment-plan.md` § 6.6 — upstream-aligned):** a helper that creates an entity and is used for setup MUST `Schema.parse` the response body before returning the typed payload. This is the assertion-style contract — every caller gets a validated entity, no caller redoes the validate-then-cast dance, and a missing field surfaces at the schema boundary instead of as `undefined` deep in a downstream assertion. Passthrough helpers (`{ status, body }`) are still allowed for negative-test reuse.
+> **Principle (upstream-aligned):** a helper that creates an entity and is used for setup MUST `Schema.parse` the response body before returning the typed payload. This is the assertion-style contract — every caller gets a validated entity, no caller redoes the validate-then-cast dance, and a missing field surfaces at the schema boundary instead of as `undefined` deep in a downstream assertion. Passthrough helpers (`{ status, body }`) are still allowed for negative-test reuse.
 
-**Style A — assertion-style** (parse internally, return typed payload). Use when the helper exists to seed a precondition and the caller only cares about the parsed entity. The helper asserts `status` and runs `Schema.parse(body)` once; the caller gets a typed value back. **Skeleton:** [templates.md § 18](templates.md) (Helper styles). **Existing examples:** `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`. **Planned** (plan § 4.2): `setupSynthetic`, `setupProbe`, `setupUser`, `setupTenant`.
+**Style A — assertion-style** (parse internally, return typed payload). Use when the helper exists to seed a precondition and the caller only cares about the parsed entity. The helper asserts `status` and runs `Schema.parse(body)` once; the caller gets a typed value back. **Skeleton:** [templates.md § 18](templates.md) (Helper styles). **Existing examples:** `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`. **Planned:** `setupSynthetic`, `setupProbe`, `setupUser`, `setupTenant`.
 
 > Note: `appConfig.api.ADMIN_TENANT` is **singular** (`/admin/tenants`) — the constant name does not pluralize even though the path does. Always grep `config/app.ts` before guessing.
 
@@ -190,7 +189,7 @@ Before writing a new helper, check the full inventory in [reference.md § Helper
 ## Test data
 
 - **Static** (deterministic ids, strings, numbers): `test-data/app/<resource>.json`. Import and destructure: `import probeData from "../../../test-data/app/probe.json"; const { invalidId, nonExistentId } = probeData;` (the `invalidId` / `nonExistentId` keys live in resource-specific files like `probe.json`; cross-cutting numeric tables live in `synthetic-common.json`).
-- **Filename convention (per `docs/framework-alignment-plan.md` § 6.7): hyphen-case** — `mcp-synthetic.json`, `dns-synthetic.json`, `synthetic-common.json`. Three legacy camelCase files (`httpSyntheticValidation.json`, `mcpSyntheticValidation.json`, `sslSyntheticValidation.json`) are drift; do not add new camelCase JSON files. New validation tables go in `<type>-synthetic-validation.json`.
+- **Filename convention: hyphen-case** — `mcp-synthetic.json`, `dns-synthetic.json`, `synthetic-common.json`. Three legacy camelCase files (`httpSyntheticValidation.json`, `mcpSyntheticValidation.json`, `sslSyntheticValidation.json`) are drift; do not add new camelCase JSON files. New validation tables go in `<type>-synthetic-validation.json`.
 - **Dynamic** (random per-run): `faker` inside body builders (`buildCreateSyntheticBody`, `buildCreateProbeBody`, …). Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-icmp-${faker.string.alphanumeric(8).toLowerCase()}`).
 - Never invent new uuid/tokens — read from JSON or `faker.string.uuid()`.
 
@@ -340,8 +339,8 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 
 - ❌ Calling `request.get` / `request.post` / `request.fetch` directly inside a spec or helper. Always go through `apiRequest`.
 - ❌ Defining a `z.object({...})` inside a spec or helper file. Schemas live only under `fixtures/api/schemas/app/`.
-- ❌ Authoring a **new** schema as `z.object({...})` instead of `z.strictObject({...})`. New schemas must be strict; lax-object drift is being closed in plan § 5.3.
-- ❌ Defaulting ids to `z.string()`. Use `z.string().uuid()` unless you have empirically verified the API returns a non-UUID and documented the case inline (plan § 5.3).
+- ❌ Authoring a **new** schema as `z.object({...})` instead of `z.strictObject({...})`. New schemas must be strict; existing lax objects are drift to be closed.
+- ❌ Defaulting ids to `z.string()`. Use `z.string().uuid()` unless you have empirically verified the API returns a non-UUID and documented the case inline.
 - ❌ Asserting only `status` without `Schema.parse(body)` (or vice-versa) on success responses.
 - ❌ Adding a new local copy of `PageInfoSchema` / `APIErrorSchema` instead of importing from `fixtures/api/schemas/util/common.ts` — the shared definitions live there now (the old upstream-port schemas were deleted); import or re-export them.
 - ❌ Hardcoded uuids, tokens, base URLs, or paths in specs. Pull from `process.env`, `appConfig.api.X`, or `test-data/app/*.json`.
@@ -349,14 +348,14 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 - ❌ Importing `test`/`expect` from `@playwright/test` — always from `fixtures/pom/test-options`.
 - ❌ Defaulting Zod fields to `.optional()` / `.nullable()` without a named condition AND a verification test (see § Zod schema conventions, item 9).
 - ❌ Duplicating shared error / pagination / auth schemas across resource files instead of centralizing in `fixtures/api/schemas/util/common.ts`.
-- ❌ Aliasing schemas in re-exports with `as <Alias>` to dodge name collisions. Pick distinct names at definition (e.g. `UserSchema` vs `AdminUserSchema` — the `UserSchema` collision between `tenant.ts` and `user.ts` is still live; plan § 5.4).
-- ❌ Mailpit recipient outside `@<your-test-domain>` (the test infra only catches that domain). `@automation.test` and `@<alt-test-domain>` are silently dropped — the helpers that emit them (`generateUserPayload`, `buildCreateUserBody`) are bugs in plan § 4.1.
-- ❌ New test-data JSON files in camelCase (`fooBarValidation.json`). Use hyphen-case (`foo-bar-validation.json`) per plan § 6.7.
+- ❌ Aliasing schemas in re-exports with `as <Alias>` to dodge name collisions. Pick distinct names at definition (e.g. `UserSchema` vs `AdminUserSchema` — the `UserSchema` collision between `tenant.ts` and `user.ts` is still live).
+- ❌ Mailpit recipient outside `@<your-test-domain>` (the test infra only catches that domain). `@automation.test` and `@<alt-test-domain>` are silently dropped — the helpers that emit them (`generateUserPayload`, `buildCreateUserBody`) are known bugs.
+- ❌ New test-data JSON files in camelCase (`fooBarValidation.json`). Use hyphen-case (`foo-bar-validation.json`).
 - ❌ Empty `config: {}` body for synthetics — synthetic POST requires the per-monitor-type config keys (icmp, http, tcp, dns, ssl, websocket, mcp); empty `config` returns 400.
 - ❌ Deleting probes before synthetics — returns 409 because the synthetic still references the probe. Always cleanup synthetics first (use `cleanupProbesAndSynthetics`).
 - ❌ Asserting exact ordering on sort tests — DB collation differs from JavaScript string sort. Assert that the endpoint accepts the sort param and returns valid items.
 - ❌ Wrapping a single one-shot request in a helper "for tidiness" — reach for a helper only on reuse / multi-step / preconditions.
-- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]` — see plan § 6.6.
+- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`.
 - ❌ `for...of` loop **outside** `test()` for invalid-value validation (one-test-per-value pattern). Loop INSIDE `test()` with `test.step` + `expect.soft` per § Per-field invalid-type loop. The loop-outside form generates dozens of nearly-identical tests, hammers the API with extra auth cycles, and clutters Qase reporting.
 - ❌ Hard `expect()` inside an in-test validation loop. Use `expect.soft()` so all iterations report — a failing first iteration must not silence the rest.
 - ❌ Asserting on **exact error message text** (`expect(body.error).toBe("Resource not found")`) unless the message is part of the documented API contract. Assert on status code + envelope schema shape; brittle copy comparisons fail every time the backend tweaks wording.
@@ -370,7 +369,7 @@ Before declaring a spec done, verify:
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
 - [ ] `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test (or commented if pending mapping).
 - [ ] Each test carries `{ tag: "@App-API" }` (or `@App-E2E` for multi-endpoint flows).
-- [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention per plan § 6.6 — e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
+- [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
 - [ ] Synthetics-with-probes specs use `cleanupProbesAndSynthetics` (synthetics first, probes second).
 - [ ] No hardcoded uuids, tokens, base URLs, or paths — everything from `process.env` / `appConfig.api.X` / `test-data/app/*.json`.
@@ -381,7 +380,7 @@ Before declaring a spec done, verify:
 - [ ] New schemas use `z.strictObject({...})` (not `z.object`) and `z.string().uuid()` for ids unless the API has been verified to return non-UUIDs.
 - [ ] Every `.optional()` / `.nullable()` modifier is justified inline (named condition + branch test) per the strictness ladder.
 - [ ] No new duplicate copies of `APIErrorSchema` / `GatewayErrorSchema` / `PageInfoSchema` — import `APIErrorSchema` / `PageInfoSchema` from `fixtures/api/schemas/util/common.ts` (or re-export through an existing resource file like `synthetic.ts` / `policy.ts`); re-export `GatewayErrorSchema` from an existing strict copy.
-- [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-synthetic-validation.json`), never camelCase — per plan § 6.7.
+- [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-synthetic-validation.json`), never camelCase.
 - [ ] Mailpit recipients use `@<your-test-domain>` — never `@automation.test`, `@<alt-test-domain>`, or any other domain (the test infra catches only `@<your-test-domain>`).
 - [ ] Specs that exercise 403 from a no-permission token: if `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`.
 - [ ] No `test.fixme()` without a linked `// BUG:` annotation.
@@ -457,4 +456,3 @@ User says: _"We only have `{}` → 400 for `POST /probes`. Add full per-field va
 - [reference.md](reference.md) — response/error schema catalog, token catalog, helper inventory, schema patterns by data type, Mailpit recipe, decision tree.
 - [templates.md](templates.md) — copy-paste skeletons: full CRUD spec, schema file, helper file, body builder, test-data JSON, PATCH per-field isolation, E2E API flow.
 - [http-method-coverage.md](http-method-coverage.md) — per-verb coverage playbook (GET/POST/PUT/PATCH/DELETE/405) with resource × method matrix and self-review checklists. Read this when the question is **"what do I owe for this verb on any resource?"**.
-- [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — drift inventory, severity ranking, sequenced fix plan with verification commands. Cited inline throughout this skill (e.g. plan § 4.1, § 5.1, § 6.6) — every "drift" / "planned" reference points to a numbered section there.
