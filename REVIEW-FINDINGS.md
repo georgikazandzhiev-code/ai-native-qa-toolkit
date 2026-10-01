@@ -23,13 +23,13 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 7 | `selectors` 2.0.0 needs re-measuring | — | Owed |
 | 8 | Testability constitutions have no version stamp once copied | Low | Fixed · `8f0f861` |
 | 9 | `name:` in command frontmatter is ignored | Low | Fixed · `5203f49` |
-| 10 | No accessibility-testing skill | — | Suggestion |
+| 10 | No accessibility-testing skill | — | Added · `403a6de` |
 | 11 | Skills teach `test.skip`, which the constitution forbids | High | Fixed · `e49acec` |
 | 12 | `ai-native-workflow` is out of date with the repo | Medium | Fixed · `7297f8b` |
 | 13 | Skills cite constitution sections that don't exist | Low | Fixed · `e1851ae`, `7297f8b` |
 | 14 | `common-tasks` example contradicts its own tag-casing rule | Low | Fixed · `e1851ae` |
 | 15 | `common-tasks` hardcodes one project's layout | Medium | Open |
-| 16 | 31 links to a `docs/framework-alignment-plan.md` that doesn't exist | Low | Open |
+| 16 | 30 references (23 links) to a `docs/framework-alignment-plan.md` that doesn't exist | Low | Open |
 | 17 | AC writer's examples break its own keyword-casing rule | Low | Fixed · `5c6459b` |
 | 18 | **Nothing kept cross-references in sync — the root cause of 12, 13 and 19** | High | Fixed · `de28998` (new validator check 15) |
 | 19 | `skill-creator` points at an orchestration doc and index columns that don't exist | Low | Fixed · `de28998` |
@@ -39,8 +39,9 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 23 | `api-testing` put route constants in `enums` | Low | Fixed · `3e13ede` |
 | 24 | Two skills disagreed about where `try/catch` is allowed | Medium | Wording fixed · `3570abf`; alternative Open |
 | 25 | `refactor-values` assumed the default branch is `master` | Low | Fixed · `3570abf` |
-| 26 | No testability constitution for backend / API developers | Medium | Open — proposal |
+| 26 | No testability constitution for backend / API developers | Medium | Added · `09dc8f7` |
 | 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · `044cd07` |
+| 28 | Six See Also entries still called written skills "(TBD)" | Medium | Fixed · `403a6de` (and now caught by check 15) |
 
 ---
 
@@ -139,9 +140,21 @@ Claude Code uses the file name as the command name and ignores `name:` in `.clau
 
 ---
 
-## 10. No accessibility-testing skill — Suggestion
+## 10. No accessibility-testing skill — Added (`403a6de`)
 
-Accessibility comes up in several places (the web constitution's a11y section, the role-first locator rationale), but there's no skill for actually testing it. An `accessibility-testing` skill built on `@axe-core/playwright` would fill that gap. I'm happy to draft it as a separate PR.
+Accessibility came up in several places (the web constitution's a11y section, the role-first locator rationale), but there was no skill for actually testing it.
+
+**Added.** `.claude/skills/accessibility-testing/` covers:
+- **The scans.** `@axe-core/playwright` scans come from a `makeAxeBuilder` fixture that owns the WCAG A/AA tags and exclusions. Every meaningful state is scanned (dialogs open, validation errors shown, empty and error states), each after a web-first assertion that the state is on screen. The assertion is strict, `expect(results.violations).toEqual([])`, with the full results attached to the report.
+- **Known violations.** Never `disableRules`. Known violations go in one list, each with a ticket and an expiry, which mirrors the quarantine policy in `flakiness-triage`.
+- **What automation can't see.** Keyboard-path, dialog-focus and `toMatchAriaSnapshot` checks, plus the rule that a clean scan is not a claim of WCAG compliance.
+- **Product defects.** A missing accessible name is filed as a product defect, never routed around with a test-id.
+
+`SKILL.md` holds the rules, and `templates.md` holds the skeletons. It is registered in the Routed Skill Index, the README and GOVERNANCE, with bidirectional See Also from `selectors` and `owasp-security-testing`.
+
+**Evidence: STATIC.** The examples follow Playwright's accessibility-testing guide and the `@axe-core/playwright` API, but haven't been run against an app from this repository. The skill says so, and asks for the first real run to be recorded in `memories/learned_patterns.md`. It also has no eval cases yet, like 23 of the other skills.
+
+**Worth noting.** Check 15 flagged the missing Routed Skill Index row, and check 7 the stale skill counts in README and GOVERNANCE, on the first `validate` run after the skill was created. Both new checks did their job on a real change.
 
 ---
 
@@ -202,11 +215,13 @@ The constitution says it "never hardcodes one repo's layout as universal truth,"
 
 ---
 
-## 16. 31 links point to a document that doesn't exist — Open
+## 16. 30 references point to a document that doesn't exist — Open
 
-`docs/framework-alignment-plan.md` is linked 31 times across 15 skill files (`api-testing`, `common-tasks`, `data-strategy`, `page-objects`, `skill-creator`, `test-standards`, `ai-native-workflow` and their supporting files), often as "plan § 6.2" to justify a rule. The file isn't in this repo. It belongs to the project the toolkit was extracted from. `common-tasks` also links to its own `reference.md`, marked TBD, which doesn't exist either.
+`docs/framework-alignment-plan.md` is mentioned **30 times across 15 skill files**, 23 of them as clickable links and the rest as plain-text citations such as "plan § 6.2". There's one more dead link, to `docs/keycloak-dev-setup.md`. Neither file is in this repo; they belong to the project the toolkit was extracted from. (An earlier version of this finding said 31; that count also included a mention in this report.)
 
-**Why it's open rather than fixed.** This is the same root cause as finding 15: project-specific content shipped in generic skills. Deleting 31 references mechanically would lose the reasoning some of them carry. The cleaner route is to resolve it together with finding 15. Either the rules that matter get restated in the skills and the plan references go, or the plan moves into a repo-context layer where a project can supply it.
+The mentions, by file: `api-testing` (`SKILL.md` 5, `reference.md` 3, `templates.md` 2, `http-method-coverage.md` 2), `data-strategy` (`reference.md` 2, `refactor-playbook.md` 2, `patterns.md` 2, `SKILL.md` 1), `skill-creator` (`SKILL.md` 3, `assets/SKILL-template.md` 2, `references/checklist.md` 1), `common-tasks` 2, `test-standards` 1, `page-objects` 1, `ai-native-workflow` 1.
+
+**Why it's open rather than fixed.** This has the same root cause as finding 15: project-specific content shipped in generic skills. Deleting the references mechanically would lose the reasoning some of them carry. The cleaner route is to resolve this together with finding 15, once it's decided where project-specific facts should live (a repo-context skill, a project `CLAUDE.md` template, or clearly marked examples).
 
 ---
 
@@ -291,19 +306,26 @@ It warned against leaving "`master` in a broken state". This repository's defaul
 
 ---
 
-## 26. No testability constitution for backend / API developers — Open (proposal)
+## 26. No testability constitution for backend / API developers — Added (`09dc8f7`)
 
-`constitutions/` gives the frontend and mobile teams' coding agents a testability standard, but the backend has none. The API-testing rules all assume a trustworthy OpenAPI contract: coverage plans are built from it, and "the contract is truth, live requests only when no docs exist." Nothing asks the backend team to provide one. In a code-first team the spec is generated from the code after it's written, so it records whatever was built, bugs included, and the API tests end up being checked against the implementation instead of the agreement.
+`constitutions/` gave the frontend and mobile teams' coding agents a testability standard, but the backend had none. Yet every API-testing rule assumes a trustworthy OpenAPI contract: coverage plans are built from it, and "the contract is truth, live requests only when no docs exist." Nothing asked the backend team to produce that contract first. In a code-first team the spec is generated from the code after it's written, so it records whatever was built, bugs included, and the API tests end up checked against the implementation instead of the agreement.
 
-**Proposal.** Add `constitutions/api-testability.md` for the backend repos, making the contract a product requirement. It would say:
-- **Schema-first.** New or changed endpoints go into the OpenAPI spec right after grooming, before implementation, and the spec change is reviewed like code.
-- **Complete contracts.** Every endpoint documents every status code it can return and its body. Errors follow one shared error schema.
-- **Test hooks.** There are stable identifiers and dedicated seeding and cleanup endpoints for test data, so tests don't have to drive the UI to set up state.
-- **Enforcement, not only instructions.** CI validates real responses against the spec, and a spec-diff tool (for example oasdiff) blocks breaking changes that aren't announced.
+**Added.** `constitutions/api-testability.md` is copied into backend repos as their `CLAUDE.md`, like the other two. Its universal law: no endpoint ships, changes or is removed unless the reviewed OpenAPI spec describes it first. It covers eight areas:
 
-On the QA side, the natural pairing is to generate the API client, the types and, ideally, the Zod schemas from that spec (OpenAPI Generator, openapi-zod-client or orval), instead of hand-writing them. Hand-written schemas are another copy of the contract, and copies drift.
+1. A schema-first workflow. The spec PR is reviewed before implementation, and the server, frontend and QA clients are generated from it.
+2. Complete contracts. Every status code is documented, required, optional and nullable are distinct, unknown properties are rejected, and formats and limits are stated.
+3. One shared error schema, with field-level validation errors.
+4. Authentication and the `401` / `403` / `404` choice as part of the contract, including tenant isolation.
+5. Deterministic data: stable IDs, defined ordering and pagination, and observable async work.
+6. Test-data hooks: seeding, idempotent cleanup, and documented dependency rules.
+7. Change control: a spec diff in CI (for example `oasdiff`) and response validation against the spec.
+8. Correlation IDs for diagnosability.
 
-This comes from direct experience with a schema-first process, where the spec was updated right after grooming and the QA client was regenerated from it, so tests couldn't drift from the contract. I'm happy to draft the constitution as a follow-up PR.
+It ends with a code-first vs schema-first blueprint and a definition of done. It's stamped and checked by check 14, like the UI constitutions, and described in the constitutions README and the main README.
+
+This comes from direct experience with a schema-first process, where the spec was updated right after grooming and the QA client was regenerated from it, so tests couldn't drift from the contract.
+
+**Natural follow-up on the QA side.** The toolkit hand-writes its Zod schemas, which are another copy of the contract. They could be generated from the spec (for example with openapi-zod-client or orval), so runtime validation stays in step with it.
 
 ---
 
@@ -312,6 +334,14 @@ This comes from direct experience with a schema-first process, where the spec wa
 The Critical block of `fixtures` gave, as "the decisive reason" to prefer a fixture, that "a manual `afterEach` can be skipped in some failure modes." That isn't accurate. Playwright runs `afterEach` after a failed test, just as it runs a fixture's teardown. A skill that teaches a wrong reason teaches agents to make the right choice for the wrong reason, and to argue it wrongly in review.
 
 **Fix.** The rule now gives the real reasons. A fixture makes setup and teardown one self-contained unit: no shared `let` variable links two hooks. If setup throws, `use` is never reached, so teardown never tries to delete something that was never created. Only tests that request the fixture pay for it. And any spec reuses it by name instead of copying both hooks. The recommendation itself (prefer a fixture for failure-safe cleanup) is unchanged. `fixtures` 1.0.0 → 1.0.1.
+
+---
+
+## 28. Six See Also entries still called written skills "(TBD)" — Fixed (`403a6de`, and now caught by check 15)
+
+Found while registering the accessibility skill. Six See Also entries in five skills still called `page-objects` or `common-tasks` "(TBD)", although both are fully written: `selectors` (twice), `debugging`, `fixtures` and `playwright-cli` (twice). One said "until populated, follow patterns in existing `pages/app/*`", which steers agents away from the skill that holds those patterns. It's the same drift as finding 12: each label was true when it was written, and nothing re-checked it.
+
+**Fix.** The labels are removed. Because this one can be checked exactly, **check 15 now fails when any file marks an existing skill "(TBD)"**, while a TBD label for a skill that really isn't written yet stays allowed. `scripts/tests/cross-references.test.mjs` has two new cases: a stale label fails, and a label for an unwritten skill stays silent (8 cases, 5 blocking).
 ---
 
 ## Validator warnings already present (not introduced here)
