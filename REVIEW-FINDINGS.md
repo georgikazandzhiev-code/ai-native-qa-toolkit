@@ -213,6 +213,8 @@ The constitution says it "never hardcodes one repo's layout as universal truth,"
 
 **Decision.** The toolkit is a standalone skeleton that can be installed in any repository or built on. It must not link to, or name as if present, anything it doesn't contain. Rules stay. Project facts become generic, clearly illustrative examples, and the place for a real project's facts is that project's own `CLAUDE.md`, as the constitution's "Adopting this in a new repo" section already says.
 
+**Two more cases found while taking stock.** Seven files, including two persona commands, tell agents to use terminology from a `master-context` skill, but no such skill exists. It's a dead reference that check 15(d) can't see, because it's a name in prose, not a link. And the tag-casing rules cite `app-regression` and `app-all` scripts in `package.json` that this repository's `package.json` doesn't have. Both are part of the rewrite below.
+
 **Done so far.** The dead links are gone (finding 16). The authoring rule that produced this, "use REAL codebase names, no placeholders," has been replaced (finding 29). **Next:** rewrite each affected skill's examples into generic ones, one skill per commit so each can be reviewed on its own.
 
 ---
