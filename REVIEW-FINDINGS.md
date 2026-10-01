@@ -43,6 +43,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · `044cd07` |
 | 28 | Six See Also entries still called written skills "(TBD)" | Medium | Fixed · `403a6de` (and now caught by check 15) |
 | 29 | `skill-creator` described a validation hook that never existed, and required "real codebase names" in examples | Medium | Fixed · `76a0b72` |
+| 30 | About 60 contradictions between skills, in 12 themes | High | Open · planned follow-up PR |
 
 ---
 
@@ -369,6 +370,56 @@ Found while fixing finding 16. Two things in the skill-authoring guidance didn't
 
 - **A hook that never existed.** The checklist, the patterns reference and the skill template said a `postToolUse` hook (`.cursor/hooks/skill-validate.py`) validates every skill on save, and linked to it. No such file exists, and `skill-creator/SKILL.md` itself says validation is "a command, not a hook." Validator check 8 was added for exactly this claim, but it only scans `SKILL.md` files, so the claim lived on in the reference files. The checklist also said required sections were "not yet enforced," although the validator checks them. All of these now describe `npm run validate` and what it really checks, and list separately the items it doesn't (Contents blocks, backslash paths, reference depth, signature devices).
 - **A rule that caused finding 15.** The checklist required examples to use "REAL codebase names (no placeholders)." Inside one product that's good advice. In a toolkit meant for many repositories, it put that product's paths into every skill. It now asks for concrete, realistic names that read as illustrations, never as a path the reader is expected to find.
+
+---
+
+## 30. About 60 contradictions between skills, in 12 themes — Open, planned follow-up PR
+
+Finding 2 (five locator orders) wasn't a one-off. A full audit on 2026-10-01 compared every skill, the constitution, the commands and the memory file topic by topic, and found about 60 places that tell an agent to do incompatible things. The high-impact ones were checked against the files by hand. They're listed in one place here so they can be fixed together, in their own PR after this one, one commit per theme.
+
+1. **Locators.** The Radix exception is narrow in `selectors` but widened in three other files, including the `pr-review` checklist. Many "good" examples use a test-id where a role or label would work.
+2. **Waits.** `page-objects` marks a `waitForResponse` registered after the click as correct, and the memory file rightly calls that a race. Three skills recommend `expect.toPass({ timeout })`, which isn't a real Playwright API.
+3. **Timeouts.** The constitution bans magic-number timeouts and raising them. The templates require `test.setTimeout(300_000)` and an `MS = { … }` block in every spec, and one troubleshooting row says to raise the timeout.
+4. **Disabled tests.** There are three different markers (`// TODO: FIXME:`, `// FIXME:`, `// SKIP:`). One skill allows `test.fixme`, and two specs presented as canonical examples skip themselves.
+5. **Conditionals in tests.** `scaffold-spec` calls an `if` in a test body "ACCEPTABLE", which the constitution and a lint rule both forbid. One template wraps a whole test in `try/finally`. The lint's real cleanup-capture escape hatch is undocumented.
+6. **The parse idiom.** It's called "exact" but has three unnamed variants. One of them doesn't work: `expect.soft(Schema.parse(x))` can't keep a loop running, because `parse` throws first. The memory file records it as a proven lesson.
+7. **API rules.** The skills disagree on:
+   - whether data-driven loops go inside or outside the test;
+   - test-name and step-label formats;
+   - where `qase.id` goes;
+   - which token produces 403;
+   - whether cross-tenant access returns 403 or 404.
+
+   The 405 template breaks three rules at once, and `toBe(401 | 403)` is a bitwise OR that means `403`.
+8. **Tokens and env vars.** Two template lines aren't valid TypeScript (`const process.env.X! = …`). Templates alias tokens and helpers read env vars, both against stated rules. `type-safety` claims `!` crashes at startup, but TypeScript erases it at compile time.
+9. **Where things live.** The skills give conflicting answers on:
+   - endpoint paths, UI strings and fixed constants;
+   - when a helper becomes a fixture, and which folder it goes in;
+   - whether a schema barrel exists;
+   - the naming style for test-data files;
+   - whether spec placement is flat or in subfolders.
+10. **Test data.** One skill borrows "the first existing user", while the constitution says to seed. A template pushes into a shared array from `beforeAll`.
+11. **Process.**
+    - Parallel vs always one worker: the single-worker claim cites a memory entry that doesn't exist.
+    - Four different "green runs before merge" counts.
+    - Flaky-test examples that skip `flakiness-triage`.
+    - A routing loop between `bug-helper` and `flakiness-triage`.
+    - A committed `console.log`.
+    - `scaffold-spec` exploring in ways the constitution forbids.
+12. **Meta.**
+    - A fourth evidence label (CONJECTURE) that the constitution doesn't know.
+    - `skill-creator`'s structure contract doesn't match most skills.
+    - The acceptance-criteria writer lacks the manual-only flag.
+    - Two lint claims don't match the lint.
+
+**Proposed resolutions, all standard practice:**
+- Named timeout budgets in config.
+- UI data-driven cases as separate tests, and API negative matrices as one test with steps, soft assertions and `safeParse`.
+- Required env vars validated once, when config loads.
+- A parallel-safe suite, with a single worker for diagnosis only.
+- App UI strings always from enums.
+
+Where a mechanical check can prevent a theme from coming back, it'll be added with the fix.
 ---
 
 ## Validator warnings already present (not introduced here)
