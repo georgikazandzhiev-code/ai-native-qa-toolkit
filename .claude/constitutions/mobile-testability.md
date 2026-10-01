@@ -1,5 +1,7 @@
 # Mobile Testability Constitution — Flutter + Patrol
 
+<!-- toolkit-version: 1.1.0 -->
+
 > **Audience: the engineer or coding agent writing the Flutter application.** Not the QA automation repo.
 > Drop this in a **Flutter product repo** as its `CLAUDE.md` (or merge it into an existing one) so the
 > widget tree is born testable instead of being retrofitted.

@@ -23,6 +23,8 @@ cp mobile-testability.md <flutter-repo>/CLAUDE.md
 
 Then the coding agent building the UI is held to the locator contract at authoring time, instead of QA discovering an unaddressable component after the feature is merged.
 
+Each file carries a `<!-- toolkit-version: x.y.z -->` stamp under its title, written by `npm run stamp` and checked by `npm run validate` (check 14). The stamp travels with the copy, so a product repo's `CLAUDE.md` says which version of the testability rules it took, and a stale copy can be spotted by comparing it with this repo's `VERSION`. If you merge the file into an existing `CLAUDE.md` instead of replacing it, keep the stamp line.
+
 ## Why they are separate from the skills
 
 The skills in `.claude/skills/` are loaded by whoever is **writing tests**. These constitutions are loaded by whoever is **writing the application** — a different repository, a different agent, a different task. Mixing them would put frontend build rules in front of an agent authoring a spec, and the QA rules in front of an agent building a form. Keeping them in their own folder makes the audience unambiguous.
