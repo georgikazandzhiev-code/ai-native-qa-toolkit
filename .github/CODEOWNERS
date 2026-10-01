@@ -2,10 +2,10 @@
 #
 # HONEST LIMIT, read this before trusting the file: CODEOWNERS only *requests* review.
 # It becomes a requirement only behind a protected branch with "Require review from Code
-# Owners" enabled. On a free-plan private repository that setting is unavailable, so here
-# this file is a routing hint, not a gate. GOVERNANCE.md § What this document cannot
-# enforce says the same thing in prose; if the two ever disagree, this comment is the one
-# that was checked against the platform.
+# Owners" enabled. That setting is unavailable on a free-plan private repository, but this
+# repository is public, so it is available here. Whether it is enabled is visible only to
+# administrators. The required CI checks on main are publicly verifiable; see
+# GOVERNANCE.md § What this document cannot enforce.
 
 # Everything, unless a more specific rule below wins.
 *                                   @georgikazandzhiev-code

@@ -44,7 +44,8 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 28 | Six See Also entries still called written skills "(TBD)" | Medium | Fixed · `403a6de` (and now caught by check 15) |
 | 29 | `skill-creator` described a validation hook that never existed, and required "real codebase names" in examples | Medium | Fixed · `76a0b72` |
 | 30 | About 60 contradictions between skills, in 12 themes | High | Open · planned follow-up PR |
-| 31 | No prerequisites anywhere; personas pointed at "install notes" that don't exist | Medium | Fixed · this commit |
+| 31 | No prerequisites anywhere; personas pointed at "install notes" that don't exist | Medium | Fixed · `af77f70` |
+| 32 | How protected are the shared files? CI gate confirmed; code-owner review and agent-side locks unconfirmed | Medium | Partly fixed · needs owner action |
 
 ---
 
@@ -424,7 +425,7 @@ Where a mechanical check can prevent a theme from coming back, it'll be added wi
 
 ---
 
-## 31. No prerequisites anywhere; the personas pointed at "install notes" that don't exist — Fixed
+## 31. No prerequisites anywhere; the personas pointed at "install notes" that don't exist — Fixed (`af77f70`)
 
 Nothing told a new user what to install before starting. The README's Install section was a clone and three copy commands. The only stated prerequisite was `"node": ">=18"` in `package.json`. Missing:
 
@@ -445,6 +446,22 @@ Three things were also out of date:
 - Install now runs `npm run validate` right after cloning.
 - The personas point at the new section.
 - The governance row now names the PR template's real public-mirror checklist instead of the missing script, and the count is corrected.
+
+---
+
+## 32. How protected are the shared files? — Partly fixed, needs owner action
+
+The constitution and skills steer every agent session, so a careless edit pollutes everyone's work. Here's what was checked.
+
+**Confirmed in place.** GitHub's public API (`GET /repos/georgikazandzhiev-code/ai-native-qa-toolkit/branches/main`) shows `main` as `"protected": true`. The three CI jobs (Toolkit structure, Lint plugin rules, Skill eval regression) are required status checks with enforcement level `everyone`, so a red pipeline blocks a merge, administrators included. `CODEOWNERS` routes all the shared files to the owner.
+
+**Corrected.** `CODEOWNERS` and `GOVERNANCE.md` both said code-owner review "is unavailable on a free-plan private repository", and concluded that here the file only routes and doesn't gate. The repository is public, so the setting is available. Both now say that, and record what the public API shows.
+
+**Needs the owner (only an admin can see or change these):**
+1. Confirm that `main` requires a pull request and **review from Code Owners**. The public API doesn't show review settings.
+2. Update the repository's About description on GitHub. It still says "26 on-demand skills" (there are 27), and it lives in the GitHub settings, where check 7 can't see it.
+
+**Proposed (not done yet).** Installed copies of the toolkit should stop the agent from editing its own instruction files, using `permissions.deny` rules in Claude Code's `settings.json`. That's least privilege applied to the agent. It belongs in the copies, not in this source repository, where editing the skills is the work itself. A verified snippet will be added to the README's adoption section once the path syntax has been checked against Claude Code's documentation, because a deny rule with a wrong pattern looks safe and protects nothing.
 ---
 
 ## Validator warnings already present (not introduced here)
