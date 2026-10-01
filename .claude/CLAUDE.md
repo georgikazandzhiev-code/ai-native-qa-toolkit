@@ -161,6 +161,7 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `qe-pattern-memory` | Cross-session learning — git-tracked pattern store with confidence, tier promotion and falsification |
 | `pr-review` | Pre-push self-review against MUSTs and WON'Ts |
 | `k6-load-testing` | Load / performance test work |
+| `accessibility-testing` | Accessibility (a11y) tests — axe scans per page state with `@axe-core/playwright`, WCAG A/AA tags, keyboard and focus checks, ARIA snapshots, known-violations policy |
 | `owasp-security-testing` | Security testing — OWASP Top 10 (web) + API Security Top 10 mapped to QA tests; access control / BOLA / BFLA / injection / XSS / SSRF; pre-release security review gate |
 | `ai-native-workflow` | "How should I work with AI here?", multi-skill planning |
 | `skill-creator` | Authoring or refactoring a skill (manual) — owns the SKILL.md structure contract |

@@ -6,7 +6,8 @@
  * while the check stays green in four ways, and each is covered below: a skill cites a
  * constitution section that does not exist, a skill folder exists that the index does not
  * route to, the index routes to a skill that does not exist, and a persona is listed without a
- * command file behind it. A fifth case proves the check stays silent on a correct reference,
+ * command file behind it; and a written skill is still labelled "(TBD)". Silent cases prove the
+ * check stays quiet on a correct reference and on a TBD label for a skill not yet written,
  * because a gate that fires on correct text gets switched off.
  *
  * Each case copies the working tree, breaks one thing, runs the real validate.mjs, and asserts
@@ -69,6 +70,19 @@ const CASES = [
     name: 'a correct section reference stays silent',
     break: (dir) =>
       edit(dir, PR_REVIEW, (md) => `${md}\n- See \`~/.claude/CLAUDE.md § Verification Standard\`.\n`, 'append a valid reference'),
+    exit: 0,
+  },
+  {
+    name: 'a written skill is still labelled TBD',
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- **\`page-objects\`** *(TBD)* — POM structure.\n`, 'append a stale TBD label'),
+    exit: 1,
+    expect: 'marks skill "page-objects" as TBD, but it exists',
+  },
+  {
+    name: 'a TBD label for an unwritten skill stays silent',
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- **\`visual-regression\`** *(TBD)* — planned.\n`, 'append a valid TBD label'),
     exit: 0,
   },
   {

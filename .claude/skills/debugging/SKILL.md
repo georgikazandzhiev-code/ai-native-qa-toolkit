@@ -184,7 +184,7 @@ Before declaring a failure resolved:
 - **`api-testing`** — `Schema.parse` failures, error envelope shapes (`APIErrorSchema` / `GatewayErrorSchema`), the comment-out + `// TODO: FIXME:` workflow for real backend bugs, `cleanupProbesAndSynthetics` ordering.
 - **`playwright-cli`** — re-explore the live app via `npx playwright open` when a locator no longer matches. **Mandatory** before guessing at a new selector.
 - **`frontend-cross-check`** — when a locator failure points to a possible testid rename or component change, `git pull` `<sibling-repos>/frontend` and grep the source to confirm what the FE actually emits — before re-authoring the locator. Source is the truth for stable artifacts; `playwright-cli` is the truth for runtime behavior.
-- **`page-objects`** *(TBD)* — where the fix lives when an action raced navigation: in the POM action method, NOT in the spec.
+- **`page-objects`** — where the fix lives when an action raced navigation: in the POM action method, NOT in the spec.
 - **`fixtures`** — "fixture is undefined" failures; storage-state fixtures; the `apiRequest` and `mailpit` lifecycle.
 - **`refactor-values`** — when an `expect()` mismatch traces to a `Messages.*` enum value or `test-data/app/*.json` value drift.
 - **`data-strategy`** — when test data has drifted from the live API contract or from the UI's rendered strings.

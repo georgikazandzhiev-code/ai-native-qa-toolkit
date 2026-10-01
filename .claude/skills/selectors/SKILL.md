@@ -395,12 +395,13 @@ User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
 
 ## See Also
 
-- **`page-objects`** skill *(TBD)* — POM class structure (constructor, three locator sections, action methods), JSDoc rules, fixture registration, component composition. **Read alongside this skill** when authoring a new page object.
+- **`page-objects`** skill — POM class structure (constructor, three locator sections, action methods), JSDoc rules, fixture registration, component composition. **Read alongside this skill** when authoring a new page object.
 - **`playwright-cli`** skill — the live-app exploration workflow (uses `npx playwright open`, built into `@playwright/test`). **Mandatory** before generating any new selectors. Pair with `frontend-cross-check` (source) for stable artifacts; `playwright-cli` covers runtime behavior.
 - **`frontend-cross-check`** skill — verify testid prefixes (`field-field-*`, `schema-field-*`, `error-*`, `monitor-actions-*`), Radix-primitive claims, and accessible names against `<sibling-repos>/frontend` source before authoring selectors. `git pull` first.
 - **`enums`** skill — where suite names, status enums, and (when populated) UI message constants live. Strings inside `getByText(...)` come from here when reused in 2+ specs.
 - **`fixtures`** skill — how to register a new page object in `fixtures/pom/page-object-fixture.ts` so specs receive it via DI.
-- **`common-tasks`** skill *(TBD)* — prompt templates for "Add a New Page Object (With / Without Exploration)" that chain into this skill.
+- **`accessibility-testing`** skill — role-first locators double as accessibility checks; a `getByRole` that cannot find a control is often an a11y defect to file, not a reason to fall back to a test-id.
+- **`common-tasks`** skill — routing and prompt templates for "Add a New Page Object (With / Without Exploration)" that chain into this skill.
 - **`debugging`** skill — strict-mode violations, "element not found" / "not attached", and other locator-driven test failures.
 - **`api-testing`** skill — for API specs with Zod schemas (no locators); sister skill.
 - **`data-strategy`** skill — where the data the UI is filled with comes from.

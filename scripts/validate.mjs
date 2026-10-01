@@ -791,7 +791,9 @@ for (const dir of CI_DIRS) {
 //
 // Deliberately narrow. Two kinds of reference can be resolved exactly, so they are errors:
 //   a. every `CLAUDE.md § <section>` names a real heading or MUST / SHOULD / WON'T rule;
-//   b. the Routed Skill Index, the persona list and the folders on disk name the same things.
+//   b. the Routed Skill Index, the persona list and the folders on disk name the same things;
+//   c. no file calls a skill "(TBD)" once that skill exists. Six See Also entries in five
+//      skills still called page-objects and common-tasks "TBD" long after both were written.
 // A fuzzy matcher over every `§` in every file would also fire on correct references, and a
 // gate that cries wolf is switched off within a week — memory case #003 is that lesson.
 
@@ -835,6 +837,21 @@ for (const dir of CI_DIRS) {
           err(
             relative(ROOT, file).replace(/\\/g, '/'),
             `cites "CLAUDE.md § ${m[1].trim().slice(0, 60)}" — no such section or rule in the constitution`
+          );
+        }
+      }
+    }
+
+    // c. A skill marked "(TBD)" must not exist yet. Marking a genuinely unwritten skill TBD is
+    //    fine and stays silent; marking a written one TBD tells agents to avoid it.
+    const written = new Set(skillDirs.filter((d) => existsSync(join(SKILLS, d, 'SKILL.md'))));
+    const tbd = /`([a-z0-9-]+)`\*{0,2}(?:\s+skill)?\s*\*?\(TBD\b/g;
+    for (const file of mdFiles(join(ROOT, '.claude'))) {
+      for (const m of stripFences(read(file)).matchAll(tbd)) {
+        if (written.has(m[1])) {
+          err(
+            relative(ROOT, file).replace(/\\/g, '/'),
+            `marks skill "${m[1]}" as TBD, but it exists — the label tells agents to avoid a written skill`
           );
         }
       }

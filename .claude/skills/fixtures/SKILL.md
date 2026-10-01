@@ -180,7 +180,7 @@ User says: *"Every synthetics-mutation test needs a probe seeded first. Should I
 - **`recipes.md`** — end-to-end wiring scenarios (add a POM fixture, seed-in-UI-spec, mailpit loop, guest flow, persona add, domain fixture, `mergeTests`, helper-with-cleanup, debug table).
 - **`api-testing`** skill — § Three callable shapes is the canonical decision rule for `apiRequest` direct vs helper function vs helper fixture. This skill defers to it.
 - **`selectors`** skill — selectors-vs-POM placement; page-object registration through this skill's `page-object-fixture.ts` is what makes locators reachable from specs.
-- **`page-objects`** skill (TBD) — POM class structure (constructor, getters, action methods). When populated, will pair with this skill on every "add a new page object" task.
+- **`page-objects`** skill — POM class structure (constructor, getters, action methods). Pairs with this skill on every "add a new page object" task.
 - **`helpers`** skill — plain utility functions that are NOT fixtures (no `use()` lifecycle). The helper-vs-fixture decision lives in `api-testing` § Three callable shapes.
 - **`type-safety`** skill — typing rules for fixture function signatures and yielded values; the canonical `process.env.X!` access pattern (no `??` defaulting at call sites).
 - **`scaffold-spec`** skill — when scaffolding a new spec, the fixture import line comes from this skill.
