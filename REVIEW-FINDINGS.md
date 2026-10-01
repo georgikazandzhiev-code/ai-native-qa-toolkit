@@ -215,15 +215,12 @@ The constitution says it "never hardcodes one repo's layout as universal truth,"
 
 **Two more cases found while taking stock.** Seven files, including two persona commands, tell agents to use terminology from a `master-context` skill, but no such skill exists. It's a dead reference that check 15(d) can't see, because it's a name in prose, not a link. And the tag-casing rules cite `app-regression` and `app-all` scripts in `package.json` that this repository's `package.json` doesn't have. Both are part of the rewrite below.
 
-**Done so far.** The dead links are gone (finding 16). The authoring rule that produced this, "use REAL codebase names, no placeholders," has been replaced (finding 29). **Not done in this PR, on purpose.** The rewrite touches about 2,000 lines across 50 files, and it would bury this PR's fixes. It also may not be safe to do blind: if the source product still uses these skills, making them generic would take knowledge away from its agents.
-
-**Question for the reviewer:** are these skills still used in the monitoring product? If yes, the product-specific facts should first move into that repo's own `CLAUDE.md`, and only then should the toolkit be made generic.
+**Done so far.** The dead links are gone (finding 16). The authoring rule that produced this, "use REAL codebase names, no placeholders," has been replaced (finding 29). **Not done in this PR, on purpose.** The rewrite touches about 2,000 lines across 50 files, and it would bury this PR's fixes. **Settled: nothing depends on the product content.** The repository is a boilerplate meant to be built on, and no product uses these skills, so the product material can be rewritten directly. Nothing needs to be moved anywhere first.
 
 **Plan (follow-up PRs):**
-1. Move the product facts into the product repo's `CLAUDE.md`, if it still uses the skills.
-2. A pilot PR that rewrites `test-standards` around one neutral example app, to agree the style.
-3. The remaining skills, one per commit. Heaviest first: `api-testing`, `data-strategy`, `selectors`, `page-objects`, `helpers`, `test-case-generation`. Also remove the `master-context` references.
-4. A validator check that fails if the old product's names come back.
+1. A pilot PR that rewrites `test-standards` around one neutral example app, to agree the style.
+2. The remaining skills, one per commit. Heaviest first: `api-testing`, `data-strategy`, `selectors`, `page-objects`, `helpers`, `test-case-generation`. Also remove the `master-context` references.
+3. A validator check that fails if the old product's names come back.
 
 **Before this file is deleted,** open a tracking issue for this plan, so it outlives the report.
 
