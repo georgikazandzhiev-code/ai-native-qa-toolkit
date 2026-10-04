@@ -423,6 +423,12 @@ Finding 2 (five locator orders) wasn't a one-off. A full audit on 2026-10-01 com
 
 Where a mechanical check can prevent a theme from coming back, it'll be added with the fix.
 
+**Found since the audit, same follow-up PR:**
+- `scaffold-spec` cites rule files (`api-tests.mdc`, `ui-tests.mdc`, `api-router.md`, `ui-router.md`) that don't exist.
+- `playwright-cli` gives an outdated reason for banning `codegen` (modern codegen prefers role and test-id locators).
+- `pr-review` routes to a `/review-changes` command that doesn't exist, assumes Husky pre-commit hooks this repository doesn't have, and gives a 500-line skill limit against `skill-creator`'s 380.
+- The skill templates should be linted and type-checked like the memory file's snippets, which would have caught the invalid `const process.env.X! = …` lines.
+
 ---
 
 ## 31. No prerequisites anywhere; the personas pointed at "install notes" that don't exist — Fixed (`af77f70`)
