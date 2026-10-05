@@ -196,10 +196,11 @@ verification, drift triggers absent, tests pass, linter clean.
 <!--
 REQUIRED. 2-3 worked walkthroughs that cite the workflow steps.
 
-Use REAL codebase names — never placeholders. The Tier 1 audit caught skills
-using `MyResource` / `<resource>` placeholders; the model extrapolates better
-from real names (`synthetics`, `probes`, `adminTenants`, `SyntheticsPage`,
-`schema-field-monitorName`, etc.).
+Use concrete, realistic names that read as illustrations (`UsersPage`,
+`createUser`, `orders.spec.ts`) — not bare placeholders like `MyResource` /
+`<resource>`, and never one product's files as if every repository had them.
+The model extrapolates better from concrete examples, and this toolkit is
+installed into many repositories.
 
 Each example should:
 1. Open with a quoted user request

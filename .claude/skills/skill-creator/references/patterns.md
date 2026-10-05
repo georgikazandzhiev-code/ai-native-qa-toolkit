@@ -31,7 +31,7 @@ The validator (`npm run validate`) enforces frontmatter, section presence and le
 | 6 | **Workflow / phases / decision tables** | Usually | The skill's substance. Use one or more body patterns from §1–§4. |
 | 7 | **`## Anti-patterns`** | Yes | Bulleted ❌ list of mistakes that real authors hit. Each anti-pattern names the fix. |
 | 8 | **`## Self-review checklist`** | Yes | Checkboxes the model walks through before declaring the artifact done. |
-| 9 | **`## Examples`** | Yes (2–3) | Worked walkthroughs that cite the workflow steps. **REAL codebase names only — no placeholders** (`MyResource`, `<resource>`). |
+| 9 | **`## Examples`** | Yes (2–3) | Worked walkthroughs that cite the workflow steps. **Concrete, realistic illustrative names** (`UsersPage`, `createUser`) — not bare placeholders (`MyResource`, `<resource>`), and not one product's files. |
 | 10 | **`## Troubleshooting`** | Yes | Symptom → cause → fix table. Real failure modes a future author will hit. |
 | 11 | **`## See Also`** | Yes | Paired rule (or `(none)`), sibling cluster (verified populated, not TBD), orchestration doc, identity. **Bidirectional cross-references** — when this section cites a sibling, that sibling's See Also mentions this skill back. |
 

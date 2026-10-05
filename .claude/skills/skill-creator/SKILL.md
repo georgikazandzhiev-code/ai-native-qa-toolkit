@@ -66,13 +66,13 @@ Every skill in this repo follows this exact section order. The template encodes 
 | Section | Required? | Purpose |
 |---------|-----------|---------|
 | **Frontmatter** (`name`, `description`, `metadata.category`, optional `disable-model-invocation`) | Yes | Discoverability gate. `description` includes WHAT + WHEN + 3-7 quoted trigger phrases + "Do NOT use for X" disclaimers. |
-| **Opener** (1 paragraph, optional companion-plan callout) | Yes | What surface this skill covers, who pairs with it, single sentence on the failure mode it prevents. |
+| **Opener** (1 paragraph) | Yes | What surface this skill covers, who pairs with it, single sentence on the failure mode it prevents. |
 | **`## Critical`** | Yes | 5-9 hard rules in `**ALWAYS**` / `**NEVER**` form. Each rule is enforceable, not aspirational. Drawn from real incidents. |
 | **`## What's in each file`** | When multi-file | Mini-index table mapping `SKILL.md` / `reference.md` / `templates.md` / `<topic>.md` to purpose. Includes the "boundary rule" callout. |
 | **Workflow / phases / architecture / decision tree** | Usually | The skill's substance: numbered checklist (Workflow pattern), worked examples (Examples pattern), branched decision (Conditional pattern), or validate-loop (Feedback-loop pattern). Pick from `references/patterns.md`. |
 | **`## Anti-patterns`** | Yes | Bulleted ❌ list of mistakes that real authors hit. Each anti-pattern names what to do instead. |
 | **`## Self-review checklist`** | Yes | Checkboxes the model walks through before declaring done. High-level; deep checklist for skill-creator itself lives in `references/checklist.md`. |
-| **`## Examples`** | Yes (2-3) | Worked walkthroughs that cite the workflow steps. Use REAL names from this codebase, never placeholders. |
+| **`## Examples`** | Yes (2-3) | Worked walkthroughs that cite the workflow steps. Use concrete, realistic names (`UsersPage`, `createUser`) that read as illustrations — never a path the reader is expected to find in this repository. |
 | **`## Troubleshooting`** | Yes | Table: symptom → cause → fix. Lists real failure modes a future author will hit. |
 | **`## Gotchas`** | Optional, session-grown | Dated bullets of non-obvious environment quirks, API surprises, and workarounds discovered during real sessions (`- **YYYY-MM-DD:** <gotcha>`). Agents append here when a session hits one. Promote a gotcha into `## Critical` / `## Troubleshooting` once it recurs or stabilizes; prune entries that a fix upstream made obsolete. |
 | **`## See Also`** | Yes | Cross-skill links (paired rule, sibling skills in cluster, orchestration doc). Must be verified — no TBD references for now-populated skills. |
@@ -184,7 +184,7 @@ Anthropic constraints: each `references/<file>.md` is **one level deep**; refere
 4. Workflow / phases / decision tables
 5. `## Anti-patterns`
 6. `## Self-review checklist`
-7. `## Examples` (2-3 worked walkthroughs with REAL codebase names)
+7. `## Examples` (2-3 worked walkthroughs with concrete, realistic illustrative names)
 8. `## Troubleshooting` (symptom → cause → fix)
 9. `## See Also`
 
@@ -200,7 +200,6 @@ Anthropic constraints: each `references/<file>.md` is **one level deep**; refere
 - **Architecture map** or **storage location map** (table).
 - **Mermaid decision tree** when the skill picks between modes.
 - **Paired-rule callout** in the opener: "Read that rule first."
-- **Companion-plan citation** with section numbers if the skill describes work in flight.
 
 **Drift-prevention while authoring:**
 
@@ -265,7 +264,7 @@ In the new SKILL.md `## See Also` section:
 
 ### Phase 8: Verify
 
-Run [`references/checklist.md`](references/checklist.md) end-to-end, then `npm run validate`. The command covers front matter, required-section presence, semver, duplicate names, `See Also` targets that resolve, and links to scripts that exist. The checklist covers what it cannot: whether the `## Critical` block holds 5-9 real rules, whether the examples use real names, drift-trigger absence, and whether each cross-reference points somewhere useful rather than merely somewhere real.
+Run [`references/checklist.md`](references/checklist.md) end-to-end, then `npm run validate`. The command covers front matter, required-section presence, semver, duplicate names, `See Also` targets that resolve, and links to scripts that exist. The checklist covers what it cannot: whether the `## Critical` block holds 5-9 real rules, whether the examples use concrete illustrative names, drift-trigger absence, and whether each cross-reference points somewhere useful rather than merely somewhere real.
 
 Ship only when all gates pass and `npm run validate` reports zero errors. If any gate fails, return to the relevant phase.
 
@@ -347,20 +346,20 @@ Each ❌ below was caught in real Tier 1 audits. The fix is named.
 - ❌ **Reference proliferation** — > 4 reference files for a single skill is almost always the wrong shape. Inline first; split only when length forces it.
 - ❌ **Skipping `~/.claude/CLAUDE.md § Routed Skill Index` update** when adding a skill. The orchestrator's index is the live route map — if it drifts, every model loading the orchestrator routes wrong.
 - ❌ **Pre-emptive bulk drift fix in a single PR** ("rewrite all camelCase helpers to kebab-case in one go"). The skill should mark drift as "fix on next touch" — not as a standalone refactor.
-- ❌ **Examples that use placeholder names** (`MyResource`, `<resource>`). Use REAL names from this codebase — `synthetics`, `probes`, `adminTenants`, etc. The model extrapolates better from real examples.
+- ❌ **Examples that are bare placeholders** (`MyResource`, `<resource>`) **or that name one product's files as if every repo had them.** Use concrete, realistic illustrations (`UsersPage`, `createUser`). The model extrapolates better from concrete examples, and a toolkit installed in many repos must not point readers at files they don't have.
 
 ## Self-review checklist
 
 High-level. The full gate is in [`references/checklist.md`](references/checklist.md).
 
 - [ ] Frontmatter: `name` matches folder, `description` ≤ 1024 chars third-person pushy with WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers, `metadata.category` set.
-- [ ] Opener: one paragraph, paired-rule callout if applicable, companion-plan citation if applicable.
+- [ ] Opener: one paragraph, paired-rule callout if applicable.
 - [ ] `## Critical` block present at top — 5-9 hard rules in `**ALWAYS**` / `**NEVER**` form.
 - [ ] `## What's in each file` table present when the skill has reference / templates / topic siblings.
 - [ ] Workflow / decisions / patterns body — uses one or more of the four patterns from `references/patterns.md`. Project signature device (table / mermaid / numbered checklist) present.
 - [ ] `## Anti-patterns` section with ❌ list — each anti-pattern names the fix.
 - [ ] `## Self-review checklist` — checkboxes the model walks through.
-- [ ] `## Examples` — 2-3 worked walkthroughs with REAL codebase names (no placeholders).
+- [ ] `## Examples` — 2-3 worked walkthroughs with concrete, realistic illustrative names (not bare placeholders, not one product's files).
 - [ ] `## Troubleshooting` — symptom → cause → fix table.
 - [ ] `## See Also` — paired rule, sibling skills (verified populated, not TBD), orchestration doc.
 - [ ] No code blocks > 5 lines in SKILL.md (boundary rule). Skeletons live in `templates.md` if needed.
