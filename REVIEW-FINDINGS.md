@@ -427,6 +427,7 @@ Where a mechanical check can prevent a theme from coming back, it'll be added wi
 - `scaffold-spec` cites rule files (`api-tests.mdc`, `ui-tests.mdc`, `api-router.md`, `ui-router.md`) that don't exist.
 - `playwright-cli` gives an outdated reason for banning `codegen` (modern codegen prefers role and test-id locators).
 - `pr-review` routes to a `/review-changes` command that doesn't exist, assumes Husky pre-commit hooks this repository doesn't have, and gives a 500-line skill limit against `skill-creator`'s 380.
+- `k6-load-testing` tells users to run `scripts/bundle.sh` and `scripts/run.sh` "from repo root", but the scripts live in `.claude/skills/k6-load-testing/scripts/`. Its `lib/env.ts` example uses `??` fallbacks that the no-call-site-defaults rule forbids, and its "Repo layout" describes a `tests/perf/` folder "in this repo" that doesn't exist.
 - The skill templates should be linted and type-checked like the memory file's snippets, which would have caught the invalid `const process.env.X! = …` lines.
 
 ---
