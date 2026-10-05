@@ -1,6 +1,6 @@
 # Toolkit review — findings
 
-> **Temporary file. Delete it before merging this PR, or right after.** It exists so the findings can be reviewed alongside the diff. Once the open items have tickets or follow-up PRs, it has no further use in the repo.
+> **A snapshot for reviewing PR #4, not a maintained document.** It exists so the findings can be read alongside the diff. The open items now have issues: **#5** (finding 30, contradictions between skills) and **#6** (finding 15, making the skills generic). After merge, the owner chooses one of two endings: delete this file (the issues and commit history hold everything), or keep it as a dated, frozen record, for example `docs/reviews/2026-10-toolkit-review.md`, marked "Snapshot as of PR #4 — not maintained".
 
 **Reviewer:** Ivaylo Ilchev · **Started:** 2026-09-30 · **Branch:** `ivaylo-changes` · **Last updated:** 2026-10-01 (second session)
 
@@ -28,7 +28,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 12 | `ai-native-workflow` is out of date with the repo | Medium | Fixed · `7297f8b` |
 | 13 | Skills cite constitution sections that don't exist | Low | Fixed · `e1851ae`, `7297f8b` |
 | 14 | `common-tasks` example contradicts its own tag-casing rule | Low | Fixed · `e1851ae` |
-| 15 | Generic skills carry one project's layout, names and paths | High | Decided · follow-up PR planned |
+| 15 | Generic skills carry one project's layout, names and paths | High | Decided · tracked in #6 |
 | 16 | 416 links to files this repository has never contained | High | Fixed · `76a0b72` (and now caught by check 15) |
 | 17 | AC writer's examples break its own keyword-casing rule | Low | Fixed · `5c6459b` |
 | 18 | **Nothing kept cross-references in sync — the root cause of 12, 13 and 19** | High | Fixed · `de28998` (new validator check 15) |
@@ -43,7 +43,7 @@ Covered so far: `CLAUDE.md`, `commands/`, `memories/`, `constitutions/`, the rou
 | 27 | `fixtures` claimed `afterEach` can be skipped when a test fails | Low | Fixed · `044cd07` |
 | 28 | Six See Also entries still called written skills "(TBD)" | Medium | Fixed · `403a6de` (and now caught by check 15) |
 | 29 | `skill-creator` described a validation hook that never existed, and required "real codebase names" in examples | Medium | Fixed · `76a0b72` |
-| 30 | About 60 contradictions between skills, in 12 themes | High | Open · planned follow-up PR |
+| 30 | About 60 contradictions between skills, in 12 themes | High | Open · tracked in #5 |
 | 31 | No prerequisites anywhere; personas pointed at "install notes" that don't exist | Medium | Fixed · `af77f70` |
 | 32 | How protected are the shared files? CI gate confirmed; code-owner review and agent-side locks unconfirmed | Medium | Partly fixed · needs owner action |
 
@@ -208,7 +208,7 @@ Example 1 tagged the spec `@App-regression`, correctly lowercase. One step later
 
 ---
 
-## 15. Generic skills carry one project's layout, names and paths — Decided, in progress
+## 15. Generic skills carry one project's layout, names and paths — Decided, tracked in #6
 
 The constitution says it "never hardcodes one repo's layout as universal truth," and that repo-specific facts belong in each repo's own `CLAUDE.md` or a repo-context skill. The skills don't follow that. This first showed up in `common-tasks`, and finding 16 showed how wide it goes: `api-testing`, `data-strategy`, `helpers`, `fixtures`, `page-objects`, `selectors` and `test-standards` all describe one product. They name its page objects (`SyntheticsPage`, `ProbesPage`), its helpers (`helpers/app/probes.ts`), its monitor types, its spec files, its test-data files and its tag whitelist, as if every repository had them.
 
@@ -225,7 +225,7 @@ The constitution says it "never hardcodes one repo's layout as universal truth,"
 2. The remaining skills, one per commit. Heaviest first: `api-testing`, `data-strategy`, `selectors`, `page-objects`, `helpers`, `test-case-generation`. Also remove the `master-context` references.
 3. A validator check that fails if the old product's names come back.
 
-**Before this file is deleted,** open a tracking issue for this plan, so it outlives the report.
+**Tracked in issue #6.**
 
 ---
 
@@ -375,7 +375,7 @@ Found while fixing finding 16. Two things in the skill-authoring guidance didn't
 
 ---
 
-## 30. About 60 contradictions between skills, in 12 themes — Open, planned follow-up PR
+## 30. About 60 contradictions between skills, in 12 themes — Open, tracked in #5
 
 Finding 2 (five locator orders) wasn't a one-off. A full audit on 2026-10-01 compared every skill, the constitution, the commands and the memory file topic by topic, and found about 60 places that tell an agent to do incompatible things. The high-impact ones were checked against the files by hand. They're listed in one place here so they can be fixed together, in their own PR after this one, one commit per theme.
 
