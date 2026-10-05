@@ -462,6 +462,8 @@ The constitution and skills steer every agent session, so a careless edit pollut
 
 **Confirmed in place.** GitHub's public API (`GET /repos/georgikazandzhiev-code/ai-native-qa-toolkit/branches/main`) shows `main` as `"protected": true`. The three CI jobs (Toolkit structure, Lint plugin rules, Skill eval regression) are required status checks with enforcement level `everyone`, so a red pipeline blocks a merge, administrators included. `CODEOWNERS` routes all the shared files to the owner.
 
+**Also corrected (Lesson 11):** `GOVERNANCE.md` § What CI refuses still said required status checks were "unavailable on this plan" and a red run only an annotation; it now states that the three jobs are required and block the merge. Two stale counts were fixed in the same pass: "23 skills with no recorded measurement" is now 24 (of 27), and "CI's five blocking checks" is now "three required jobs".
+
 **Corrected.** `CODEOWNERS` and `GOVERNANCE.md` both said code-owner review "is unavailable on a free-plan private repository", and concluded that here the file only routes and doesn't gate. The repository is public, so the setting is available. Both now say that, and record what the public API shows.
 
 **Needs the owner (only an admin can see or change these):**

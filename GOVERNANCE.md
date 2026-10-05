@@ -56,7 +56,7 @@ A `major` bump with no history entry is the failure this table exists to prevent
 
 Three jobs run on every push and every pull request (`.github/workflows/validate.yml`).
 
-**Read the left column as "fails the run", not "blocks the merge".** Required status checks need the same protected branch that Code Owner review needs, and it is unavailable on this plan. A red run is an annotation until Phase 1 puts a protected branch behind it.
+**The three jobs are required status checks on `main`**, enforced for everyone including administrators (GitHub's public API, checked 2026-10-01), so a red run blocks the merge. Whether code-owner review is also required is visible only to administrators; see § What this document cannot enforce.
 
 | Fails the CI run | Reported, never fails the run |
 |---|---|
@@ -143,7 +143,7 @@ Inventory is not achievement. The skill count may be **reported**; it may never 
 
 | When | What | Who |
 |---|---|---|
-| Every PR | The template checklist; CI's five blocking checks | Reviewer |
+| Every PR | The template checklist; CI's three required jobs | Reviewer |
 | Monthly, by hand — nothing schedules it | Warning debt: 6 skills are over the 380-line budget. The count is recomputed by check 7, so the number in this document cannot drift; what is unenforced is the ceiling itself | Owner |
 | Every major Playwright or ESLint release — by hand, and nothing watches for the release | Re-run the gate and the fault-injection harness against the new version. The pinned ranges mean CI will never see a new major on its own | Owner |
 
@@ -155,7 +155,7 @@ Out of band, immediately, on any of: a `canonical` pattern falsified; an eval re
 - **That a review happens at all.** `.github/CODEOWNERS` *requests* review; it requires it only behind a protected branch with "Require review from Code Owners" enabled. This repository is public, so that setting is available. As of 2026-10-01 GitHub's public API (`GET /repos/{owner}/{repo}/branches/main`) shows `main` protected, with the three CI jobs (Toolkit structure, Lint plugin rules, Skill eval regression) required for everyone, administrators included, so a red pipeline does block a merge. Whether code-owner review is also required is visible only to administrators. Until that is confirmed, treat the "one reviewer" and "owner" gates in § Change classes as conventions the owner keeps, not checks the platform runs.
 - **That a reviewer actually read the diff.** No mechanism proposed here distinguishes a considered approval from a fast one.
 - **The quality of a convention** — only that it is transmitted. The eval measures whether a skill teaches the house style, not whether the house style is right. Those are different questions and only the first is measured.
-- **Anything about the 23 skills with no recorded measurement.** They are governed by this document and evidenced by nothing.
+- **Anything about the 24 skills with no recorded measurement.** They are governed by this document and evidenced by nothing.
 
 ## Current state — 2026-08-11
 
