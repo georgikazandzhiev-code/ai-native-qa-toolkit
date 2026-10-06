@@ -22,6 +22,17 @@
       "baseline": 15,
       "verdict": "within noise",
       "note": "after moving the Radix rationale to recipes.md and rewriting the first three Critical rules. Targeted defect gone (grader reported testid-primary in NEITHER arm, both cases) but baseline also gained +1 with zero changes, so the score movement is run-to-run variance at n=2, not a demonstrated gain"
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-10-06",
+      "metric": "expectations-met",
+      "cases": 2,
+      "max": 15,
+      "score": 15,
+      "baseline": 15,
+      "verdict": "tie at ceiling",
+      "note": "Re-measured for the 2.0.0 bump (one locator priority everywhere; test-id last) with the BENCHMARK.md method: each case run with SKILL.md read in full and with skill + constitution withheld, one blind grader per case, A/B order alternating by case, partial = not met. Both arms met every expectation (case 1: 8/8 vs 8/8, case 2: 7/7 vs 7/7). The original defect — data-testid as the default locator — did not appear in either arm. The tie at the maximum means these two rubrics cannot discriminate (they measure general competence, as BENCHMARK.md already notes), so this records the version, not a demonstrated gain. Limits: today's model, which may differ from the 2026-08-11 runs; the baseline was instructed to ignore project guidance but ran in the same environment; single grader."
     }
   ]
 }
