@@ -8,49 +8,78 @@ Install once, as a dev dependency of the test project: `npm i -D @axe-core/playw
 
 ---
 
-## 1. The `makeAxeBuilder` fixture
+## 1. The `makeAxeBuilder` fixture and the known-violations filter
 
-One place for the WCAG tags and the documented exclusions. The fixture returns a **factory**, so a test can scan several states and narrow one scan with `include(...)`.
+One place for the WCAG tags, the third-party regions and the known-violations list. The fixture returns a **factory**, so a test can scan several states and narrow one scan with `include(...)`.
 
-```typescript
-// fixtures/a11y/axe-fixture.ts
-import { test as base } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
-import { A11Y_WCAG_TAGS, A11Y_EXCLUSIONS } from "../../enums/util/accessibility";
+Two lists, because they do different things:
 
-type AxeFixtures = { makeAxeBuilder: () => AxeBuilder };
-
-export const axeFixture = base.extend<AxeFixtures>({
-    makeAxeBuilder: async ({ page }, use) => {
-        const makeAxeBuilder = (): AxeBuilder => {
-            const builder = new AxeBuilder({ page }).withTags([...A11Y_WCAG_TAGS]);
-            for (const exclusion of A11Y_EXCLUSIONS) builder.exclude(exclusion.selector);
-            return builder;
-        };
-        await use(makeAxeBuilder);
-    },
-});
-```
-
-Merge it into the fixtures barrel (`mergeTests(...)` in `test-options.ts`) like every other fixture.
+- **Third-party regions** are removed from the scan with `exclude(...)`. That hides the region from **every** rule, which is right only for markup the team does not own.
+- **Known violations** are never excluded. The page is scanned in full, and afterwards `unexpectedViolations()` drops only the exact pairs on the list: **this rule on this element**. Another rule failing on the same element, or the same rule failing anywhere else, still fails.
 
 ```typescript
 // enums/util/accessibility.ts
 /** WCAG conformance target for automated scans: 2.x A + AA. Raise deliberately, here only. */
 export const A11Y_WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] as const;
 
-/** One region excluded from every scan. Known violations carry a ticket and an expiry (yyyy-mm-dd). */
-type A11yExclusion = { selector: string; owner: string; reason: string; ticket: string; expires: string };
+/** Markup the team does not own. Excluded from every rule, so nothing of ours belongs here. */
+type A11yThirdPartyRegion = { selector: string; owner: string; reason: string };
+export const A11Y_THIRD_PARTY_REGIONS: ReadonlyArray<A11yThirdPartyRegion> = [];
 
 /**
- * Regions excluded from every scan — third-party embeds and known violations only.
- * Example entry: { selector: "#vendor-chat", owner: "Vendor X", reason: "Not our markup", ticket: "PROJ-123", expires: "2026-12-31" }.
- * An expired entry must be renewed with a reason or removed.
+ * One tolerated violation: exactly this axe rule on exactly this element.
+ * `target` is copied from the attached axe results (the node's `target`, joined with a space).
+ * Example: { ruleId: "color-contrast", target: "#site-footer > .legal", ticket: "PROJ-123", expires: "2026-12-31" }.
  */
-export const A11Y_EXCLUSIONS: ReadonlyArray<A11yExclusion> = [];
+type A11yKnownViolation = { ruleId: string; target: string; ticket: string; expires: string };
+export const A11Y_KNOWN_VIOLATIONS: ReadonlyArray<A11yKnownViolation> = [];
 ```
 
-To make expired entries fail, add a small unit check, or a `beforeAll` in the fixture module, that compares each `expires` date with today and throws with the entry's ticket.
+```typescript
+// fixtures/a11y/axe-fixture.ts
+import { test as base } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import type { AxeResults } from "axe-core";
+import { A11Y_WCAG_TAGS, A11Y_THIRD_PARTY_REGIONS, A11Y_KNOWN_VIOLATIONS } from "../../enums/util/accessibility";
+
+type AxeFixtures = { makeAxeBuilder: () => AxeBuilder };
+
+export const axeFixture = base.extend<AxeFixtures>({
+    makeAxeBuilder: async ({ page }, use) => {
+        // An expired (or unparseable) exception fails every scan until it is renewed with a reason or removed.
+        // `!(parsed >= now)` is also true for NaN, so a mistyped date fails instead of never expiring.
+        const expired = A11Y_KNOWN_VIOLATIONS.filter((known) => !(Date.parse(known.expires) >= Date.now()));
+        if (expired.length > 0) {
+            const list = expired.map((k) => `${k.ruleId} on ${k.target} (${k.ticket}, expired ${k.expires})`);
+            throw new Error(`Expired or invalid known accessibility violations: ${list.join("; ")}`);
+        }
+        await use((): AxeBuilder => {
+            const builder = new AxeBuilder({ page }).withTags([...A11Y_WCAG_TAGS]);
+            for (const region of A11Y_THIRD_PARTY_REGIONS) builder.exclude(region.selector);
+            return builder;
+        });
+    },
+});
+
+/** The violations a test must fail on: everything except the exact (rule, element) pairs on the known list. */
+export function unexpectedViolations(results: AxeResults): AxeResults["violations"] {
+    return results.violations
+        .map((violation) => ({
+            ...violation,
+            nodes: violation.nodes.filter(
+                (node) =>
+                    !A11Y_KNOWN_VIOLATIONS.some(
+                        (known) => known.ruleId === violation.id && known.target === node.target.flat().join(" "),
+                    ),
+            ),
+        }))
+        .filter((violation) => violation.nodes.length > 0);
+}
+```
+
+Merge the fixture into the fixtures barrel (`mergeTests(...)` in `test-options.ts`) like every other fixture.
+
+Matching is exact on purpose. When the markup around a known violation changes, axe reports a different `target`, the entry stops matching, and the violation fails again. That is a prompt to re-check the defect, never a reason to loosen the match.
 
 ---
 
@@ -60,6 +89,7 @@ One test per state. Reach the state through the page object, prove it's on scree
 
 ```typescript
 import { test, expect } from "../../../fixtures/pom/test-options";
+import { unexpectedViolations } from "../../../fixtures/a11y/axe-fixture";
 import { SUITES } from "../../../enums/app/qase-suites";
 import { qase } from "playwright-qase-reporter";
 
@@ -78,14 +108,14 @@ test.describe("Settings accessibility", () => {
             return scan;
         });
 
-        await test.step("THEN: there are no violations", async () => {
-            expect(results.violations).toEqual([]);
+        await test.step("THEN: there are no violations beyond the known list", async () => {
+            expect(unexpectedViolations(results)).toEqual([]);
         });
     });
 });
 ```
 
-`toEqual([])` prints every violation (rule id, impact, help URL, affected nodes) when it fails. The attachment keeps the full result in the HTML report.
+`toEqual([])` prints every unexpected violation (rule id, impact, help URL, affected nodes) when it fails. The attachment keeps the full, unfiltered result in the HTML report, including the known violations, so they stay visible.
 
 ---
 
@@ -94,7 +124,7 @@ test.describe("Settings accessibility", () => {
 What no rule engine can judge: can the flow be done without a mouse, and does focus go where it should?
 
 ```typescript
-test("Verify the delete-account dialog traps focus and returns it on Escape", { tag: "@App-regression" }, async ({ page, settingsPage }) => {
+test("Verify Escape closes the delete-account dialog and returns focus to its trigger", { tag: "@App-regression" }, async ({ page, settingsPage }) => {
     qase.suite(SUITES.APP_SETTINGS);
 
     await test.step("GIVEN: the dialog was opened from its trigger", async () => {

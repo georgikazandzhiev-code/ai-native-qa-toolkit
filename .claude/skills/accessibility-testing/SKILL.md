@@ -18,9 +18,9 @@ This skill has no paired rule (rule disposition: skill-only).
 
 ## Critical
 
-- **ALWAYS** get the axe builder from a fixture (`makeAxeBuilder`), never `new AxeBuilder({ page })` inside a spec. The fixture fixes the WCAG tags and the documented exclusions in one place, the same reason page objects come from fixtures (the `fixtures` skill). Skeleton: [templates.md § 1](templates.md).
+- **ALWAYS** get the axe builder from a fixture (`makeAxeBuilder`), never `new AxeBuilder({ page })` inside a spec. The fixture fixes the WCAG tags, the third-party regions and the known-violations list in one place, the same reason page objects come from fixtures (the `fixtures` skill). Skeleton: [templates.md § 1](templates.md).
 - **ALWAYS** wait for the state you mean to scan before calling `analyze()` — a web-first assertion on the content (`await expect(page.getByRole('heading', { name })).toBeVisible()`). Scanning before the data loads audits the skeleton and passes falsely.
-- **ALWAYS** assert strictly: `expect(results.violations).toEqual([])`, and attach the full results to the report. A count assertion (`toBeLessThan(5)`) lets new violations in silently; the attachment is what makes a red run actionable.
+- **ALWAYS** assert strictly: `expect(unexpectedViolations(results)).toEqual([])`, and attach the full, unfiltered results to the report. A count assertion (`toBeLessThan(5)`) lets new violations in silently; the attachment is what makes a red run actionable.
 - **NEVER** call `disableRules(...)` or drop a WCAG tag to make a scan pass. That is the accessibility version of loosening a schema. A real known violation goes in the known-violations list with a ticket and an expiry (§ Known violations) — never in a spec-local disable.
 - **ALWAYS** scan every meaningful state, not just the first render: dialogs open, form validation errors shown, empty state, error state, expanded menus. These are exactly the states `web-testability.md` requires the product to make addressable — and where most real a11y defects live.
 - **NEVER** treat a clean axe scan as "accessible". Automated rules can check only part of WCAG. Pair scans with keyboard and focus checks (Tab order, focus trap in dialogs, Escape returns focus to the trigger) and ARIA structure assertions (§ Beyond the scan).
@@ -55,7 +55,7 @@ flowchart TD
 
 **Which states.** For each page or feature under test, list its meaningful states and scan each one: initial content, each dialog or drawer open, the form with validation errors visible, empty and error states, any expanded menu or disclosure. Use the page object's action methods to reach each state — they already wait for the result (the `page-objects` skill).
 
-**Scope.** Scan the whole page by default. Use `include(...)` to focus a component test on the component; use `exclude(...)` only for regions you do not own (third-party widgets), each with a comment naming the owner. Exclusions live in the fixture, never scattered across specs.
+**Scope.** Scan the whole page by default. Use `include(...)` to focus a component test on the component; use `exclude(...)` only for regions you do not own (third-party widgets), each with its owner named. `exclude` hides the region from **every** rule, so it is never the tool for a known violation of your own. Exclusions live in the fixture, never scattered across specs.
 
 **Where the spec lives.** Follow `test-standards` placement. The default is one `<feature>-accessibility.spec.ts` per feature, so a11y failures report separately from functional ones while reusing the same page objects.
 
@@ -63,9 +63,9 @@ flowchart TD
 
 Some violations will be real, known and not fixable this sprint. They must not block every run, and they must not hide new ones.
 
-- Keep **one** known-violations list (next to the fixture), each entry with the axe rule id, the affected selector or component, a **ticket**, and an **expiry date**.
-- The fixture applies the list as targeted `exclude(...)` for that component only — never a global `disableRules`. New violations of the same rule elsewhere still fail.
-- An expired entry fails the run until it is renewed with a reason or removed. This is the same quarantine-with-expiry policy as `flakiness-triage`: an exception nobody revisits becomes permanent.
+- Keep **one** known-violations list (next to the fixture), each entry with the axe **rule id**, the affected **element** (the `target` axe reported), a **ticket**, and an **expiry date**.
+- Scan the whole page, then filter: `unexpectedViolations(results)` drops only the exact (rule, element) pairs on the list. Another rule failing on the same element, or the same rule failing anywhere else, still fails. Never `exclude(...)` a known violation, because that hides the region from every rule, and never a global `disableRules`.
+- An expired entry fails the run: the fixture throws during setup, so every scan stays red until the entry is renewed with a reason or removed. This is the same quarantine-with-expiry policy as `flakiness-triage`: an exception nobody revisits becomes permanent.
 
 ## Beyond the scan
 
@@ -80,8 +80,9 @@ Everything else (meaningful alt text, sensible reading order, error messages tha
 ## Anti-patterns
 
 - ❌ **Scanning on `page.goto` and nothing else.** Misses every state where defects live. Fix: one scan per meaningful state.
-- ❌ **`disableRules(['color-contrast'])` in a spec to get green.** Hides every future contrast regression too. Fix: a known-violations entry, scoped, with ticket and expiry.
+- ❌ **`disableRules(['color-contrast'])` in a spec to get green.** Hides every future contrast regression too. Fix: a known-violations entry for that rule on that element, with ticket and expiry.
 - ❌ **`expect(results.violations.length).toBeLessThan(N)`.** Lets new violations in while the count stays under N. Fix: `toEqual([])` plus a known-violations list.
+- ❌ **`exclude(selector)` for a known violation of your own.** Removes that region from every rule, so a new missing label or ARIA error there goes unseen. Fix: scan the whole page and filter the (rule, element) pair with `unexpectedViolations`.
 - ❌ **`new AxeBuilder({ page })` in every spec.** Tags and exclusions drift per file. Fix: the `makeAxeBuilder` fixture.
 - ❌ **Injecting axe by hand with `page.evaluate`.** Forbidden by the constitution and unnecessary — `AxeBuilder` injects itself.
 - ❌ **A new `@a11y` or `@accessibility` tag.** Not in the whitelist, so no CI job runs it. Fix: a whitelisted tag from `test-standards`.
@@ -93,8 +94,8 @@ Everything else (meaningful alt text, sensible reading order, error messages tha
 - [ ] Axe builder comes from the `makeAxeBuilder` fixture; WCAG tags come from one constant.
 - [ ] Every scan is preceded by a web-first assertion that the intended state is on screen.
 - [ ] Every meaningful state of the feature is scanned (dialogs, validation errors, empty / error states).
-- [ ] Assertion is `expect(results.violations).toEqual([])`, and results are attached to the report.
-- [ ] No `disableRules`, no dropped tags, no spec-local exclusions; known violations are in the one list with ticket + expiry.
+- [ ] Assertion is `expect(unexpectedViolations(results)).toEqual([])`, and the full results are attached to the report.
+- [ ] No `disableRules`, no dropped tags, no spec-local exclusions; `exclude` is used only for third-party regions; known violations are (rule, element) entries in the one list, with ticket + expiry.
 - [ ] Keyboard path and dialog focus are checked for the primary flow.
 - [ ] Missing names / labels found along the way were filed as product defects, not worked around.
 - [ ] Spec follows `test-standards`: barrel import, one whitelisted tag, `qase.suite` first, `test.step` phases.
@@ -106,13 +107,13 @@ Everything else (meaningful alt text, sensible reading order, error messages tha
 
 1. **List the states.** Initial content, the "delete account" confirmation dialog, the profile form with validation errors shown.
 2. **Fixture.** Confirm `makeAxeBuilder` exists in the fixtures barrel; add it from [templates.md § 1](templates.md) if not.
-3. **Spec.** `settings-accessibility.spec.ts`, one test per state. Each test reaches its state through the `SettingsPage` action methods, asserts the state is visible, scans, attaches, asserts `toEqual([])` ([templates.md § 2](templates.md)).
+3. **Spec.** `settings-accessibility.spec.ts`, one test per state. Each test reaches its state through the `SettingsPage` action methods, asserts the state is visible, scans, attaches, asserts `unexpectedViolations(results)` is `[]` ([templates.md § 2](templates.md)).
 4. **Beyond the scan.** Add a keyboard test: Tab to Save, press Enter, success toast shown; open the dialog, Escape, focus back on the trigger ([templates.md § 3](templates.md)).
 5. **Run.** Two contrast violations appear on a third-party chat widget: exclude that widget in the fixture with its owner named. One missing label on the avatar upload: file it via `bug-helper`, and the scan stays red until it is fixed or entered as a known violation with a ticket and expiry.
 
 ### Example 2 — "The scan fails on color-contrast in the footer; just disable it"
 
-Refuse the global disable. Check whether the footer is owned by this team. If it is, file the defect and add one known-violations entry scoped to the footer, with ticket and expiry — new contrast failures anywhere else still fail. If it is a third-party embed, exclude that region in the fixture with the owner named. Either way the rule stays on.
+Refuse the global disable. Check whether the footer is owned by this team. If it is, file the defect and add a known-violations entry for `color-contrast` on each reported footer element, with ticket and expiry — any other rule failing in the footer, and contrast failures anywhere else, still fail. If it is a third-party embed, exclude that region in the fixture with the owner named. Either way the rule stays on.
 
 ## Troubleshooting
 
@@ -120,10 +121,11 @@ Refuse the global disable. Check whether the footer is owned by this team. If it
 |---|---|---|
 | Scan passes but the page is visibly broken for keyboard users | Automated rules cannot judge interaction | Add the keyboard / focus checks (§ Beyond the scan) |
 | Scan passes locally, fails in CI on contrast or `region` | Scanned before content or fonts loaded; theme differs | Assert the intended content is visible first; pin the theme / color scheme in config |
-| Same violation reported many times | One defect in a repeated component | Fix once in the component; the known-violations entry targets the component selector |
+| Same violation reported many times | One defect in a repeated component | Fix once in the component; until then, one known-violations entry per reported element, each for that rule only |
 | `analyze()` reports violations inside an iframe you don't own | Third-party embed | Exclude the iframe in the fixture with the owner named |
 | Results hard to read in a red run | Only the assertion diff is shown | Attach the full JSON results (`testInfo.attach`) — templates.md § 2 does this |
-| Expired known-violations entry fails the run | Nobody revisited the exception | Fix the defect, or renew the entry with a reason and a new date |
+| Every scan fails with "Expired or invalid known accessibility violations" | An entry passed its expiry date, or its date is mistyped | Fix the defect, or renew the entry with a reason and a new date |
+| A known violation fails again after a markup change | axe now reports a different `target`, so the entry no longer matches | Re-check the defect; update the entry's `target` only if it is the same defect |
 
 ## See Also
 
