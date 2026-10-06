@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 1.1.0 -->
+<!-- toolkit-version: 1.2.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
