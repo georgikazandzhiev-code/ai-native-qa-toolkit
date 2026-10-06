@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 1.0.0
+version: 2.0.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -10,14 +10,14 @@ metadata:
 
 This skill is the front door when a user request doesn't name a specific area. It answers two questions: **(1) which deep skill owns this work?** and **(2) what framework-wide rules must every artifact obey, regardless of skill?** It does **not** teach the deep rules of any one area — those live in the specialized skills it routes to. This is a routing layer; the substance lives downstream.
 
-The orchestrator at [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) holds the global Routed Detail Index and the framework's MUST / WON'T tables. **Read it first** if you've never set up this framework or are unsure which surface you're touching. This skill picks up where the orchestrator stops — once you know the area, this skill points you to the deep skill and reminds you of the framework-wide invariants before you generate.
+The orchestrator at [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) holds the global Routed Skill Index and the framework's MUST / WON'T tables. **Read it first** if you've never set up this framework or are unsure which surface you're touching. This skill picks up where the orchestrator stops — once you know the area, this skill points you to the deep skill and reminds you of the framework-wide invariants before you generate.
 
 ## Critical
 
 These rules apply to **every** generated artifact in the framework — page object, test, schema, helper, fixture, enum entry, config value, static data file. Violating any of them breaks the framework's contract. The deep skills add domain-specific rules on top.
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
-- **ALWAYS** tag every test with **exactly one** value from the framework whitelist: `@App-API | @App-E2E | @App-Smoke | @App-regression` — each exactly as cased here, matching the `package.json` greps (`app-regression` greps **lowercase** `@App-regression`; the others are Title-case). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
+- **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps — every tag is Title-case except lowercase `@App-regression`. **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Add `qase.id(N);` if a Qase case ID exists. Why: the run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull URLs / credentials / env-driven values from `process.env.X!` (no defaults at call sites; defaults belong in `config/util/<service>.ts`). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`Messages.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
@@ -26,7 +26,7 @@ These rules apply to **every** generated artifact in the framework — page obje
 - **ALWAYS** consume page objects via fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** `new <Page>(page)` inside a spec. See the `page-objects` skill.
 - **NEVER** use XPath or top-level CSS class / id selectors. **NEVER** `page.waitForTimeout(...)`. Use the `selectors` skill's priority order (default + Radix exception) and web-first assertions.
 - **ALWAYS** call `apiRequest` directly in API specs by default. Promote to a `helpers/app/<resource>.ts` helper only on reuse (2+ specs), multi-step flows, or precondition setup. Promote to a `helper-fixture` only when the same setup/teardown is reused across **3+** spec files. See the `helpers` and `fixtures` skills.
-- **NEVER** silently `.skip` a test or omit one because the API/UI misbehaves. Use `test.skip` + `// FIXME: <ticket>` + `/* eslint-disable playwright/no-skipped-test */`. Every status code in the OpenAPI spec must be a passing test, a failing test, or an explicitly-skipped test with justification.
+- **NEVER** `test.skip` a test or omit one because the API/UI misbehaves. Write the test as the contract says, **comment out** the whole `test(...)` block, and add `// TODO: FIXME: <TICKET> <description>` directly above it. Why: a skipped test reports as not-failing and corrupts the Qase case mapping — a false green. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket. See the `test-standards` and `api-testing` skills.
 - **NEVER** commit explore-only / debug / `.only` spec files. Use `npx playwright open` for ad-hoc exploration.
 - **ALWAYS** run the affected tests and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-<tag>` for whole tag groups.
 
@@ -35,7 +35,6 @@ These rules apply to **every** generated artifact in the framework — page obje
 | File | Purpose | Read when |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Task → skill routing matrix, framework-wide Critical rules, generated-artifact self-review checklist. | Always, when a "create / generate / extend / refactor" prompt arrives without an explicit skill named, OR before starting any artifact-generation task to remind yourself of the framework-wide rules. |
-| **[`reference.md`](reference.md)** *(TBD — inline routing tables below for now)* | Catalog: full task → skill matrix, prompt-template starter blocks per artifact type, "where does X live" file-location table. | Looking up "what's the prompt template for adding a Zod schema?" or "which directory does a new factory go in?" |
 
 **Boundary rule:** routing decisions and framework-wide rules live in this `SKILL.md`. Deep rules (POM structure, locator priority, schema patterns, status-code matrix, factory shape, etc.) live in the matching specialized skill. **This skill must not duplicate deep rules** — it points at them. If you find deep-skill content in this file (or vice versa), it's drift — fix it.
 
@@ -94,7 +93,7 @@ flowchart TD
 | Verify a `data-testid` against the live frontend | `frontend-cross-check` | `selectors`, `playwright-cli` | (varies) |
 | New to the framework — onboarding | `ai-native-workflow` | `~/.claude/CLAUDE.md` + every cluster | (none) |
 
-> **Drift to converge — test data tiering.** Today, `test-data/` holds only `test-data/app/*.json` files (no `test-data/factories/`, no `test-data/static/`). The planned three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. Routing for *new* data work points at the planned location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place. Tracked in [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md).
+> **Drift to converge — test data tiering.** Today, `test-data/` holds only `test-data/app/*.json` files (no `test-data/factories/`, no `test-data/static/`). The planned three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. Routing for *new* data work points at the planned location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place.
 >
 > **Tag casing is settled — lowercase `@App-regression` is the standard.** The `package.json` `app-regression` and `app-all` scripts grep lowercase `@App-regression`; Title-case `@App-Regression` matches **nothing** and would silently drop the test from CI. ~398 tags across ~34 functional specs already use the lowercase form. Never "fix" the casing to Title-case.
 
@@ -174,7 +173,7 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 | New `Messages.X` UI string | `enums/app/<file>.ts` (verified via `playwright-cli` first) |
 | New helper that's reused 3+ times | Promote to `fixtures/helper/<name>-fixture.ts` (see the `fixtures` skill) |
 | New Zod schema with shared shapes | Re-export through the barrel `fixtures/api/schemas/app/index.ts` |
-| New skill | `~/.claude/CLAUDE.md` § Routed Detail Index + the cluster siblings' `See Also` (bidirectional) |
+| New skill | `~/.claude/CLAUDE.md` § Routed Skill Index + the cluster siblings' `See Also` (bidirectional) |
 
 ## Anti-patterns
 
@@ -182,7 +181,7 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 - ❌ **Skipping the precondition step.** Generates code against an imagined API or UI. Fix: always run `npx playwright open` (UI) or read OpenAPI (API) first.
 - ❌ **Loading multiple skills speculatively without categorizing.** Bloats context. Fix: walk the decision tree, load one deep skill, expand only when its workflow points at a sibling.
 - ❌ **Generated code uses `import { test, expect } from "@playwright/test"`.** Strips merged fixtures. Fix: `from "../../../fixtures/pom/test-options"`.
-- ❌ **Generated test uses a non-whitelisted tag (`@functional`, `@destructive`, generic `@regression`) or wrong casing (`@App-Regression`, `@App-e2e`).** Misses CI greps. Fix: pick from `@App-API | @App-E2E | @App-Smoke | @App-regression` exactly as cased.
+- ❌ **Generated test uses a non-whitelisted tag (`@functional`, `@destructive`, generic `@regression`) or wrong casing (`@App-Regression`, `@App-e2e`).** Misses CI greps. Fix: pick from the `test-standards` whitelist, exactly as cased.
 - ❌ **Generated artifact hardcodes a URL / endpoint / token / UI string.** Sources of truth are `process.env.X!`, `appConfig.api.X` / `appConfig.paths.X`, `enums/app/*`, `test-data/app/*`. Fix: route to the `config` / `enums` / `type-safety` skills.
 - ❌ **Generated schema uses `z.object()` instead of `z.strictObject()`.** Silently strips unknown keys → hides API drift. Fix: `z.strictObject()` for new schemas (the `api-testing` skill's Critical rule).
 - ❌ **Generated API test omits `expect(SchemaName.parse(body)).toBeTruthy();`.** Type generics alone don't validate. Fix: every API response asserted with the exact pattern (the `api-testing` skill).
@@ -202,14 +201,14 @@ For **every** generated artifact, regardless of category:
 - [ ] No `page.waitForTimeout(...)`. Web-first assertions only.
 - [ ] No JSDoc on locator getters. JSDoc with `@param` / `@returns` on every public action method.
 - [ ] Tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => {})` for every distinct phase (capitalized prefix, colon, single space).
-- [ ] Each test has exactly **one** tag from `@App-API | @App-E2E | @App-Smoke | @App-regression`, cased exactly as listed. Tag on the test, not on `describe`.
+- [ ] Each test has exactly **one** tag from the `test-standards` whitelist, cased exactly as listed there. Tag on the test, not on `describe`.
 - [ ] Every test starts with `qase.suite(SUITES.<RESOURCE>);` as the first body line. `qase.id(N);` follows if applicable.
 - [ ] Page objects consumed via fixture destructuring — no `new <Page>(page)`.
 - [ ] New POMs registered in `fixtures/pom/page-object-fixture.ts` in the same edit batch.
 - [ ] New schemas use `z.strictObject()`. Every API response asserted with `expect(SchemaName.parse(body)).toBeTruthy();`.
 - [ ] API specs include the negative matrix when applicable (empty body, per-field omission, per-field invalid-type loops via `fixtures/api/invalid-types.ts`, 401/403/405 where relevant). See the `api-testing` skill.
 - [ ] E2E specs have `test.setTimeout(300_000)` + `MS = { sheet, toast, button, grid }` constants + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
-- [ ] No `.only` / `.skip` without `// FIXME: <ticket>` + `/* eslint-disable playwright/no-skipped-test */`.
+- [ ] No `.only`. No `test.skip` — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] Affected tests run green before declaring done.
 
 ## Examples
@@ -224,7 +223,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and `qase.suite(SUITES.APP_SETTINGS)`.
 5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend `Messages` enum). No `waitForTimeout`.
 6. **Step 6 — generate.** Both files produced.
-7. **Step 7 — self-review.** Tag is Title-case. POM registered. Action methods have built-in waits. Spec uses `test.step`.
+7. **Step 7 — self-review.** Tag is `@App-regression`, lowercase `r` as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
 9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `Messages.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 
@@ -234,8 +233,8 @@ User says: *"Add API tests for `POST /probes` covering 201, 400 (each required f
 
 1. **Step 1 — categorize.** API test → API tests + Zod schema + helper.
 2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod 3 chained validators).
-3. **Step 3 — precondition.** Read the OpenAPI for `POST /probes`. Map every documented status code to a planned test. Read [`tests/app/api/monitoring-service/probes/probes.spec.ts`](../../../tests/app/api/monitoring-service/probes/probes.spec.ts) for the canonical shape.
-4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from [`fixtures/api/invalid-types.ts`](../../../fixtures/api/invalid-types.ts) → behavior-mismatch protocol → helper-fixture promotion if reused.
+3. **Step 3 — precondition.** Read the OpenAPI for `POST /probes`. Map every documented status code to a planned test. Read `tests/app/api/monitoring-service/probes/probes.spec.ts` for the canonical shape.
+4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
 5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.PROBES`. `process.env.USER_ACCESS_TOKEN_FULL!`. `@App-API` tag.
 6. **Step 6 — generate.** `tests/app/api/monitoring-service/probes/probes.spec.ts` (extend if exists), `fixtures/api/schemas/app/probe.ts`, `helpers/app/probes.ts`.
 7. **Step 7 — self-review.** Coverage audit: every status code has a test. Auth matrix: 401 and 403. Path-param fuzz if endpoint has `:id`.
@@ -260,7 +259,7 @@ User says: *"Tests/app/functional/http-create-edit-monitor.spec.ts is flaky in C
 | User asked "create something" but the request is ambiguous between functional and E2E. | Decision tree wasn't walked. | Ask one specific question — "single behaviour (Functional, `@App-regression`) or multi-step journey (E2E, `@App-E2E`)?" — never guess. |
 | Generated code uses generic Playwright conventions instead of repo conventions (e.g., kebab-case `dashboard-page.ts` instead of PascalCase `DashboardPage.ts`). | Specialized skill not loaded — generation freelanced. | Stop. Load the matching deep skill (`page-objects` for POMs, `test-standards` for specs). Regenerate using the skill's canonical examples. |
 | User says "just create the page object, skip the fixture step". | They want speed; the framework requires the fixture entry. | Push back — bypassing the fixture means the spec consumer has to do `new <Page>(page)`, breaking every other merged fixture. Either complete Step 7 of `page-objects` or document the gap. Don't ship half. |
-| Generated test fails because `SUITES.X` doesn't exist. | Sibling update skipped. | Extend [`enums/app/qase-suites.ts`](../../../enums/app/qase-suites.ts) in the same edit batch. |
+| Generated test fails because `SUITES.X` doesn't exist. | Sibling update skipped. | Extend `enums/app/qase-suites.ts` in the same edit batch. |
 | Generated artifact crosses two skills' boundaries (e.g., a Zod schema that lives in `api-testing` plus a factory that lives in `data-strategy`). | Routing produced two skills; they were merged improperly. | Load both deep skills, walk both workflows, generate two artifacts in two files. Don't combine schema + factory in one file. |
 | User says "I tried to create X and it doesn't work" — no skill named, no error. | Information-gathering needed. | Ask: "What does `X` look like? Show me the file you're editing or paste the failing command output." Then route via the decision tree once you know the artifact. |
 | Generated test doesn't run in `npm run app-regression`. | Likely Title-case `@App-Regression` tag — the `package.json` grep is lowercase `@App-regression`. | Flip to lowercase `@App-regression`. |
@@ -268,11 +267,10 @@ User says: *"Tests/app/functional/http-create-edit-monitor.spec.ts is flaky in C
 
 ## See Also
 
-- **Paired rule:** (none) — this skill has no paired glob rule. Its peer at the top layer is the orchestrator [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md), which holds the global Routed Detail Index and the framework's MUST / WON'T tables.
+- **Paired rule:** (none) — this skill has no paired glob rule. Its peer at the top layer is the orchestrator [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md), which holds the global Routed Skill Index and the framework's MUST / WON'T tables.
 - **Sibling cluster (cross-cutting + every authoring cluster):**
   - **API authoring:** [`api-testing`](../api-testing/SKILL.md), [`scaffold-spec`](../scaffold-spec/SKILL.md), [`test-standards`](../test-standards/SKILL.md), [`helpers`](../helpers/SKILL.md), [`fixtures`](../fixtures/SKILL.md), [`type-safety`](../type-safety/SKILL.md), [`enums`](../enums/SKILL.md), [`config`](../config/SKILL.md), [`data-strategy`](../data-strategy/SKILL.md).
   - **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`playwright-cli`](../playwright-cli/SKILL.md), [`scaffold-spec`](../scaffold-spec/SKILL.md), [`test-standards`](../test-standards/SKILL.md), [`fixtures`](../fixtures/SKILL.md), [`enums`](../enums/SKILL.md), [`frontend-cross-check`](../frontend-cross-check/SKILL.md).
   - **Failure investigation:** [`debugging`](../debugging/SKILL.md), [`playwright-cli`](../playwright-cli/SKILL.md), [`frontend-cross-check`](../frontend-cross-check/SKILL.md).
   - **Repo hygiene:** [`refactor-values`](../refactor-values/SKILL.md), [`skill-creator`](../skill-creator/SKILL.md), [`ai-native-workflow`](../ai-native-workflow/SKILL.md).
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Detail Index lists this skill at the top of the cross-cutting cluster.
-- **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) — drift-to-converge entries (lowercase `@App-regression` flip, three-tier test-data migration, `Notification` baseclass placeholder testids).
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill at the top of the cross-cutting cluster.

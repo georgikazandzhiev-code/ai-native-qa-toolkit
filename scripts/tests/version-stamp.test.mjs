@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCRIPT = join('scripts', 'stamp-version.mjs');
 
-function scaffold({ version, stamp }) {
+function scaffold({ version, stamp, products = [] }) {
   const dir = mkdtempSync(join(tmpdir(), 'version-stamp-'));
   mkdirSync(join(dir, 'scripts'), { recursive: true });
   mkdirSync(join(dir, '.claude'), { recursive: true });
@@ -35,6 +35,13 @@ function scaffold({ version, stamp }) {
     '',
   ].join('\n');
   writeFileSync(join(dir, '.claude', 'CLAUDE.md'), body);
+
+  // Product-side testability constitutions: copied into frontend / mobile repos, so stamped too.
+  if (products.length) mkdirSync(join(dir, '.claude', 'constitutions'), { recursive: true });
+  for (const p of products) {
+    const md = [`# ${p.file}`, '', ...(p.stamp === null ? [] : [`<!-- toolkit-version: ${p.stamp} -->`]), '', 'Body.', ''];
+    writeFileSync(join(dir, '.claude', 'constitutions', p.file), md.join('\n'));
+  }
   return dir;
 }
 
@@ -65,6 +72,35 @@ const CASES = [
     stamp: '1.1.0',
     exit: 1,
     expect: 'VERSION is missing',
+  },
+  {
+    name: 'testability constitutions agree with VERSION',
+    version: '1.1.0',
+    stamp: '1.1.0',
+    products: [
+      { file: 'web-testability.md', stamp: '1.1.0' },
+      { file: 'mobile-testability.md', stamp: '1.1.0' },
+    ],
+    exit: 0,
+  },
+  {
+    name: 'a testability constitution left on an old stamp',
+    version: '1.2.0',
+    stamp: '1.2.0',
+    products: [
+      { file: 'web-testability.md', stamp: '1.1.0' },
+      { file: 'mobile-testability.md', stamp: '1.2.0' },
+    ],
+    exit: 1,
+    expect: 'web-testability.md stamp says 1.1.0',
+  },
+  {
+    name: 'a testability constitution with no stamp',
+    version: '1.1.0',
+    stamp: '1.1.0',
+    products: [{ file: 'mobile-testability.md', stamp: null }],
+    exit: 1,
+    expect: 'mobile-testability.md carries no',
   },
   {
     name: 'VERSION is not semver',
@@ -99,11 +135,15 @@ for (const c of CASES) {
 // Writing must be idempotent: stamping twice must not add a second stamp, or the regex would
 // match the stale one and the check would compare against the wrong number.
 {
-  const dir = scaffold({ version: '2.0.0', stamp: '1.1.0' });
+  const dir = scaffold({ version: '2.0.0', stamp: '1.1.0', products: [{ file: 'web-testability.md', stamp: null }] });
   run(dir, []);
   run(dir, []);
   const md = readFileSync(join(dir, '.claude', 'CLAUDE.md'), 'utf8');
-  const count = (md.match(/toolkit-version:/g) ?? []).length;
+  const web = readFileSync(join(dir, '.claude', 'constitutions', 'web-testability.md'), 'utf8');
+  const count = Math.max(
+    (md.match(/toolkit-version:/g) ?? []).length,
+    (web.match(/toolkit-version:/g) ?? []).length
+  );
   const after = run(dir);
   rmSync(dir, { recursive: true, force: true });
   const ok = count === 1 && after.code === 0;

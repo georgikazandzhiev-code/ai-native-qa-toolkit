@@ -10,15 +10,15 @@ Six numbered cleanups for the duplication and inconsistency hot spots already in
 
 ### Symptoms
 
-- [helpers/app/probes.ts](../../../helpers/app/probes.ts) defines `buildCreateProbeBody`, `buildUpdateProbeBody`, `buildListProbesUrl` with override support.
-- [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) defines `buildCreateSyntheticBody` (ICMP — base) plus six sibling per-type builders (`buildCreateHTTPSyntheticBody`, `buildCreateWebSocketSyntheticBody`, `buildCreateTCPSyntheticBody`, `buildCreateDNSSyntheticBody`, `buildCreateSSLSyntheticBody`, `buildCreateMCPSyntheticBody`) and `buildUpdateSyntheticBody` / `buildListSyntheticsUrl`.
+- `helpers/app/probes.ts` defines `buildCreateProbeBody`, `buildUpdateProbeBody`, `buildListProbesUrl` with override support.
+- `helpers/app/synthetics.ts` defines `buildCreateSyntheticBody` (ICMP — base) plus six sibling per-type builders (`buildCreateHTTPSyntheticBody`, `buildCreateWebSocketSyntheticBody`, `buildCreateTCPSyntheticBody`, `buildCreateDNSSyntheticBody`, `buildCreateSSLSyntheticBody`, `buildCreateMCPSyntheticBody`) and `buildUpdateSyntheticBody` / `buildListSyntheticsUrl`.
 - Specs that nevertheless hand-roll the same shape with `faker.*` inline are drift. Every business-rule change to a synthetic or probe shape requires touching ≥4 places.
 
 ### Migration steps
 
 1. `rg "faker\." tests/app/api/<resource>.spec.ts tests/app/e2e/<resource>.spec.ts tests/app/functional/<resource>.spec.ts` to enumerate offending blocks for each resource.
 2. For each inline block, replace with `buildCreateProbeBody({ /* only fields the test cares about */ })` or the matching synthetic-type builder. Drop `faker` import if it becomes unused.
-3. For pairing tests, prefer an Object Mother that delegates to the base builder (planned per [`docs/framework-alignment-plan.md` § 6.4](../../../docs/framework-alignment-plan.md)).
+3. For pairing tests, prefer an Object Mother that delegates to the base builder (planned).
 4. If a test needs a field the builder doesn't randomize (e.g., a specific check interval or region), pass it via overrides — do NOT add a new builder.
 5. If a test exercises a *boundary* on a single field, the override goes in the test:
    ```typescript
@@ -39,9 +39,9 @@ Six numbered cleanups for the duplication and inconsistency hot spots already in
 
 ### Symptoms
 
-[helpers/back/assetPairs.ts](../../../helpers/back/assetPairs.ts) exports two near-identical generators:
+`helpers/back/assetPairs.ts` exports two near-identical generators:
 
-- `createAssetPairData()` — resolves `baseAssetId`/`quotingAssetId` via the [enums/back/assets](../../../enums/back/assets.ts) lookup.
+- `createAssetPairData()` — resolves `baseAssetId`/`quotingAssetId` via the `enums/back/assets` lookup.
 - `createAssetPairDataForUI()` — same shape, but stores raw `blockChainId` strings; `isDisabled: false` hard-coded.
 
 Neither accepts overrides. UI vs API divergence is implicit.
@@ -99,7 +99,7 @@ export function createAssetPairDataForUI(): AssetPairData {
 
 ### Symptoms
 
-Every Pattern-6 seeder in [helpers/app/](../../../helpers/app/) is currently **passthrough** — it forwards `body` and `headers` to `apiRequest` and returns `{ status, body }` raw, leaving the spec to assert status and Zod-parse the response:
+Every Pattern-6 seeder in `helpers/app/` is currently **passthrough** — it forwards `body` and `headers` to `apiRequest` and returns `{ status, body }` raw, leaving the spec to assert status and Zod-parse the response:
 
 ```typescript
 // helpers/app/probes.ts (today)
@@ -127,7 +127,7 @@ Consequences:
 
 ### Target
 
-Per [`docs/framework-alignment-plan.md` § 4.2](../../../docs/framework-alignment-plan.md), introduce paired typed factories + assertion-style setup helpers in [helpers/app/testDataGenerators.ts](../../../helpers/app/testDataGenerators.ts) and the resource helpers:
+Introduce paired typed factories + assertion-style setup helpers in `helpers/app/testDataGenerators.ts` and the resource helpers:
 
 ```typescript
 // helpers/app/testDataGenerators.ts (factory — Pattern 2)
@@ -184,7 +184,7 @@ Apply the same shape to `setupSynthetic` (and per-type Object Mothers `setupHttp
 
 ### Migration steps
 
-1. Add typed factories (`ProbeData`, `SyntheticData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to [helpers/app/testDataGenerators.ts](../../../helpers/app/testDataGenerators.ts) (create the file).
+1. Add typed factories (`ProbeData`, `SyntheticData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to `helpers/app/testDataGenerators.ts` (create the file).
 2. Replace each `buildCreate<X>Body` body with a delegation to the new factory; keep the existing function as a thin wrapper for backward compatibility, marked `@deprecated`.
 3. Add assertion-style `setup<X>` / `teardown<X>` to each resource helper file. The existing passthrough `create<X>` / `delete<X>` stays for advanced specs that need to assert non-2xx outcomes (negative tests).
 4. Migrate specs one resource at a time: every `beforeAll`/`beforeEach` that does `await create<X>(...)` followed by status + parse becomes `await setup<X>(...)`. Every `afterAll`/`afterEach` cleanup becomes `await teardown<X>(...)`.
@@ -204,7 +204,7 @@ Apply the same shape to `setupSynthetic` (and per-type Object Mothers `setupHttp
 
 ### Symptoms
 
-- [test-data/back/mockedCustomer.json](../../../test-data/back/mockedCustomer.json), [test-data/back/customer.json](../../../test-data/back/customer.json) and their `-old` siblings encode customer fields that the live backend now owns.
+- `test-data/back/mockedCustomer.json`, `test-data/back/customer.json` and their `-old` siblings encode customer fields that the live backend now owns.
 - Specs that compare against these files silently drift when the backend evolves.
 - Pattern 6 + Pattern 7 already provide a reliable alternative: create a user via Keycloak, then read the customer back via API.
 
@@ -281,7 +281,7 @@ Module-level aliases conceal the canonical name from `rg`, encourage copy-paste 
 
 ### Symptoms
 
-[helpers/util/dataGenerator.ts](../../../helpers/util/dataGenerator.ts) provides:
+`helpers/util/dataGenerator.ts` provides:
 
 ```typescript
 export function generateRandomAmount(min = 1.0, max = 100000.0): number {
@@ -301,7 +301,7 @@ export function generateRandomAmount(min = 1.0, max = 100000.0): number {
    + const amount = faker.number.float({ min: 1, max: 100000, multipleOf: 0.01 });
    ```
 3. Drop the import.
-4. When the last consumer is migrated, delete [helpers/util/dataGenerator.ts](../../../helpers/util/dataGenerator.ts) and remove the export from any barrel files.
+4. When the last consumer is migrated, delete `helpers/util/dataGenerator.ts` and remove the export from any barrel files.
 
 ### Verification
 

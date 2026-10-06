@@ -1,6 +1,6 @@
 ---
 name: debugging
-version: 1.0.0
+version: 1.0.1
 description: Investigate any Playwright test failure — failure-mode taxonomy (TimeoutError, strict mode, ZodError, detachment, network race, stale storage state), trace capture/replay, and choosing UI Mode vs Trace Viewer vs Inspector. Load whenever a test fails or behaves unexpectedly. Triggers — "test fails", "timeout", "ZodError", "trace". Never to silence a failure; for intermittent failures use flakiness-triage first.
 metadata:
   category: running
@@ -106,11 +106,11 @@ When a test passes locally but fails in CI, you need CI's artifacts to reproduce
 ## Anti-patterns
 
 - ❌ Raising `actionTimeout`, `expect.timeout`, or `navigationTimeout` to make a failing assertion pass.
-- ❌ Wrapping `expect(...)` in `try/catch` to "handle" the failure. The only `try/catch` allowed is capturing an accidentally-created resource id for cleanup, and even that re-throws or asserts.
+- ❌ Wrapping `expect(...)` in `try/catch` to "handle" the failure. In a test body the only `try/catch` allowed is capturing an accidentally-created resource id for cleanup (the one other documented `try/catch` is the Radix trigger-swallow retry inside a page-object action — `page-objects` § Critical — never in a spec), and even that re-throws or asserts.
 - ❌ Adding `page.waitForTimeout(2000)` to "give it time".
 - ❌ Loosening a Zod schema (`z.string()` → `z.unknown()`, `z.strictObject` → `z.object`, adding `.optional()` without justification) to make `Schema.parse(body)` succeed.
-- ❌ Deleting the failing test "for now" without a `// FIXME: <ticket>` and the eslint-disable directive.
-- ❌ Marking a test `.skip` without `// eslint-disable-next-line playwright/no-skipped-test` and a `// FIXME: <ticket-or-description>` (per `api-testing` § Skipping a test for a real backend bug).
+- ❌ Deleting the failing test "for now". Comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>` directly above instead.
+- ❌ Marking a test `.skip` — with or without an eslint-disable and a FIXME. Skips report as not-failing and corrupt Qase mappings; comment the test out instead (per `api-testing` § Skipping a test for a real backend bug).
 - ❌ Editing production source code to make the test pass when the test is the one asserting reality. Figure out which side is right before changing either.
 - ❌ Re-running until the test goes green ("flaky test acceptance"). 3 retries that eventually pass = a real bug that ships.
 - ❌ Bouncing between UI Mode, Inspector, and `console.log` without finishing one investigation. Pick the right tool, finish, then move on.
@@ -150,7 +150,7 @@ Before declaring a failure resolved:
 2. **Phase 2** — open the trace (UI Mode → Network tab) and confirm the response body shape. The API returned `'administrator'` while the schema expected `'admin' | 'user'`.
 3. **Decision** — OpenAPI is the source of truth. If the spec still says `'admin' | 'user'`, this is a **backend bug**, NOT a schema bug. Do **not** loosen `UserSchema`.
 4. **Fix at root** — keep the test as-written, then **comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET>` directly above. Do not use `test.skip` — it corrupts Qase ID mappings. See `api-testing` § Skipping a test for a real backend bug. If instead the OpenAPI spec was updated to include `'administrator'`, follow `refactor-values` to add the new enum member.
-5. **Verify** — `npx eslint <file>` is clean; the skipped test is reported as skipped (not deleted).
+5. **Verify** — `npx eslint <file>` is clean; the commented-out test is still in the file with its ticket above it (not deleted).
 
 ### Example 3 — Test passes locally, fails in CI
 
@@ -184,7 +184,7 @@ Before declaring a failure resolved:
 - **`api-testing`** — `Schema.parse` failures, error envelope shapes (`APIErrorSchema` / `GatewayErrorSchema`), the comment-out + `// TODO: FIXME:` workflow for real backend bugs, `cleanupProbesAndSynthetics` ordering.
 - **`playwright-cli`** — re-explore the live app via `npx playwright open` when a locator no longer matches. **Mandatory** before guessing at a new selector.
 - **`frontend-cross-check`** — when a locator failure points to a possible testid rename or component change, `git pull` `<sibling-repos>/frontend` and grep the source to confirm what the FE actually emits — before re-authoring the locator. Source is the truth for stable artifacts; `playwright-cli` is the truth for runtime behavior.
-- **`page-objects`** *(TBD)* — where the fix lives when an action raced navigation: in the POM action method, NOT in the spec.
+- **`page-objects`** — where the fix lives when an action raced navigation: in the POM action method, NOT in the spec.
 - **`fixtures`** — "fixture is undefined" failures; storage-state fixtures; the `apiRequest` and `mailpit` lifecycle.
 - **`refactor-values`** — when an `expect()` mismatch traces to a `Messages.*` enum value or `test-data/app/*.json` value drift.
 - **`data-strategy`** — when test data has drifted from the live API contract or from the UI's rendered strings.

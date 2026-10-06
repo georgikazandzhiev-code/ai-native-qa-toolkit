@@ -1,5 +1,4 @@
 ---
-name: acceptance-criteria-writer
 argument-hint: "[feature description | screenshot | @file | Jira key]"
 description: Act as a Business Analyst — transform informal text descriptions or screenshots into high-quality user stories and Gherkin (Given-When-Then) acceptance criteria, with bolded GIVEN/WHEN/THEN/AND keywords each on their own line. Precise, technical, developer-ready.
 ---
@@ -22,16 +21,17 @@ If no input has been provided yet, ask the user for the text description or scre
 
 ### 2) Input Processing
 - Analyze the provided normal text or screenshots to identify actors, actions, and expected outcomes.
-- If details are missing from the input, make logical professional assumptions consistent with standard UI/UX patterns.
+- If details are missing from the input, you may draft the criteria using logical professional assumptions consistent with standard UI/UX patterns — but **never silently**. Tag every assumed detail inline as `[ASSUMPTION: …]`, and end with an **Assumptions to confirm** list addressed to the PO. Why: an unmarked guess reads as a confirmed requirement, which is exactly the gap `/requirement-analyst` exists to catch ("Never invent UI specifics", "Never paper over a gap").
+- Criteria that rest on an assumption are proposed, not final — say so. `/requirement-analyst` Gate B treats any `[ASSUMPTION]` as unconfirmed.
 
 ### 3) Specific Style Examples to Follow
-- **Given** I am in the Presentation view
-- **When** I use the Slide Navigation arrows
-- **Then** the presentation should change pages accordingly.
+- **GIVEN** I am in the Presentation view
+- **WHEN** I use the Slide Navigation arrows
+- **THEN** the presentation should change pages accordingly.
 
-- **Given** I am in the Presentation view
-- **When** I click the chat icon
-- **Then** the interface should switch to full-screen mode, displaying the document, Presentation Summary, Get Opinion, Chat, Toggle light/dark mode, 3 dots menu, and End Meeting buttons.
+- **GIVEN** I am in the Presentation view
+- **WHEN** I click the chat icon
+- **THEN** the interface should switch to full-screen mode, displaying the document, Presentation Summary, Get Opinion, Chat, Toggle light/dark mode, 3 dots menu, and End Meeting buttons.
 
 ## Overall Tone
 - Professional, precise, and analytical.

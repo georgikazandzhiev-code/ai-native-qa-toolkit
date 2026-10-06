@@ -19,7 +19,7 @@
     {
       "id": 2,
       "prompt": "Write the locators for a page object for a settings form that has: a Save button, an email input labelled 'Email address', a Country dropdown (Radix UI), a validation error message, and a success toast.",
-      "expected_output": "Locator getters following the priority hierarchy (role > text > label > placeholder > alt > title > test-id as last resort), with the Radix dropdown handled by its documented recipe, and feedback selectors (error + success) present.",
+      "expected_output": "Locator getters following the priority hierarchy (role > label > placeholder > text > alt > title > test-id as last resort), with the Radix dropdown handled by its documented recipe, and feedback selectors (error + success) present.",
       "expectations": [
         "The Save button uses getByRole",
         "The email input uses getByLabel (or getByRole with an accessible name), not a CSS selector or placeholder",

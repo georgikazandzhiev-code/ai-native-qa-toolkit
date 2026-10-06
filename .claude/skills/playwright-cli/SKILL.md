@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-version: 1.0.0
+version: 1.0.1
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
 metadata:
   category: running
@@ -75,7 +75,7 @@ The human navigates to the feature, opens forms, triggers CRUD, observes feedbac
 Hand the captured data to the matching skill:
 
 - Selector decisions → `selectors` skill (priority hierarchy, Radix exception, anchor + drill)
-- POM class structure → `page-objects` skill (TBD — until populated, follow patterns in existing `pages/app/*`)
+- POM class structure → `page-objects` skill
 - UI strings → `enums` skill (capture exact text, encode as `as const` constant)
 - Schemas/contracts → `api-testing` for API-side, or directly in the test for UI-side
 
@@ -170,5 +170,5 @@ This is the **stop-and-notify** path:
 - **`enums`** — capturing exact UI text from the live app and encoding it as `as const` constants.
 - **`api-testing`** — sister skill for API specs (no UI exploration involved).
 - **`debugging`** — when a test fails after exploration, choosing the right tool (UI Mode, Trace Viewer, Inspector).
-- **`page-objects`** *(TBD)* — POM class structure and registration.
+- **`page-objects`** — POM class structure and registration.
 - **`~/.claude/CLAUDE.md`** — orchestrator constitution; the **Explore Before Generate** MUST rule and the **No Substitute UI Exploration** WON'T row both reference this skill.

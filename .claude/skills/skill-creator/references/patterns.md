@@ -17,7 +17,7 @@ The standardized SKILL.md structure (§0 below) is the **frame** every skill fit
 
 Every SKILL.md in this repo follows the exact section order below. The frame is mandatory; the body patterns (§1–§4) live *inside* the workflow / decision sections. Skipping a structural section is the #1 reason skills fail review — Tier 1 audits caught dozens of inconsistencies because earlier skills predated this standardization.
 
-The hook ([skill-validate.py](../../hooks/skill-validate.py)) enforces frontmatter + length + signature device. Manual review (via [`checklist.md`](checklist.md) §3) gates on every other section.
+The validator (`npm run validate`) enforces frontmatter, section presence and length. Manual review (via [`checklist.md`](checklist.md) §3) gates on what each section contains, and on the signature device.
 
 ### Mandatory section order
 
@@ -31,9 +31,9 @@ The hook ([skill-validate.py](../../hooks/skill-validate.py)) enforces frontmatt
 | 6 | **Workflow / phases / decision tables** | Usually | The skill's substance. Use one or more body patterns from §1–§4. |
 | 7 | **`## Anti-patterns`** | Yes | Bulleted ❌ list of mistakes that real authors hit. Each anti-pattern names the fix. |
 | 8 | **`## Self-review checklist`** | Yes | Checkboxes the model walks through before declaring the artifact done. |
-| 9 | **`## Examples`** | Yes (2–3) | Worked walkthroughs that cite the workflow steps. **REAL codebase names only — no placeholders** (`MyResource`, `<resource>`). |
+| 9 | **`## Examples`** | Yes (2–3) | Worked walkthroughs that cite the workflow steps. **Concrete, realistic illustrative names** (`UsersPage`, `createUser`) — not bare placeholders (`MyResource`, `<resource>`), and not one product's files. |
 | 10 | **`## Troubleshooting`** | Yes | Symptom → cause → fix table. Real failure modes a future author will hit. |
-| 11 | **`## See Also`** | Yes | Paired rule (or `(none)`), sibling cluster (verified populated, not TBD), orchestration doc, identity, companion plan. **Bidirectional cross-references** — when this section cites a sibling, that sibling's See Also mentions this skill back. |
+| 11 | **`## See Also`** | Yes | Paired rule (or `(none)`), sibling cluster (verified populated, not TBD), orchestration doc, identity. **Bidirectional cross-references** — when this section cites a sibling, that sibling's See Also mentions this skill back. |
 
 ### Why the frame is non-negotiable
 
@@ -146,7 +146,7 @@ Good:
 page.getByTestId('synthetic-uptime-tile');
 ```
 
-**The rule:** prefer `getByRole > getByLabel > getByText > getByTitle > getByTestId`. Never use raw CSS or XPath when one of the semantic locators applies.
+**The rule:** prefer `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId`. Never use raw CSS or XPath when one of the semantic locators applies.
 ````
 
 **When this pattern wins:** stylistic choices, test names, commit messages, file naming, anywhere the *shape* of the output matters.

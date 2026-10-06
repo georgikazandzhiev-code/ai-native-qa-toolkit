@@ -1,6 +1,6 @@
 ---
 name: fixtures
-version: 1.0.0
+version: 1.0.1
 description: Playwright fixture authoring — POM dependency injection, the test-options.ts merge point, apiRequest/mailpit/loginUser fixtures, scoping (test vs worker), and kebab-case naming. Use when adding a fixture, registering a page object for DI, or extending FrameworkFixtures. Triggers — "fixture", "test-options", "register page object", "worker scope". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or plain helpers (helpers).
 metadata:
   category: domain
@@ -28,7 +28,7 @@ Non-negotiable. Every rule below is enforced by the orchestrator (`~/.claude/CLA
 - **Default fixture scope is `{ scope: 'test' }`.** Use `{ scope: 'worker' }` only for genuinely expensive shared setup (auth storage state, full app boot). Misusing `worker` causes shared mutable state across parallel tests — silent flake. The framework has **no** `worker`-scoped fixtures today.
 - **File naming is `<name>-fixture.ts` (kebab-case).** Examples: `page-object-fixture.ts`, `api-request-fixture.ts`, `mailpit-fixture.ts`, `login-fixture.ts`. CamelCase fixture filenames are drift — do not introduce.
 - **Fixture lifecycle is `setup → await use(value) → teardown`.** Code after `await use(value)` is the teardown and runs even if the test fails. Code before `await use(...)` is the setup. Skipping `await use(...)` means the test never sees the fixture.
-- **The decisive reason to choose a fixture over `beforeEach`/`afterEach` is guaranteed teardown on failure.** Playwright runs the post-`use` block even if the test threw; a manual `afterEach` can be skipped in some failure modes. If the setup needs no failure-safe cleanup, it is a helper or an inline hook — not a fixture. (The full `apiRequest`-direct vs helper vs fixture decision is owned by `api-testing` § Three callable shapes.)
+- **The decisive reason to choose a fixture over `beforeEach`/`afterEach` is that setup and teardown become one self-contained unit.** Both run after a failed test — Playwright runs `afterEach` too — so the difference is not *whether* cleanup runs but *what it knows*. The post-`use` block tears down exactly what its own setup created, with no shared `let` variable linking two hooks; if setup throws, `use` is never reached and teardown never tries to delete something that was never created; only tests that request the fixture pay for it; and any spec reuses it by name instead of copying both hooks. If the setup needs none of that, it is a helper or an inline hook — not a fixture. (The full `apiRequest`-direct vs helper vs fixture decision is owned by `api-testing` § Three callable shapes.)
 - **Keep the fixture body trivial.** A POM fixture body is `await use(new XPage(page))`. A service fixture builds a context, `await use(...)`, then disposes. Anything more — token refresh, retry loops, env branching — belongs in a helper the fixture body calls.
 - **No conditional fixtures.** A fixture either provides a value or it does not. Branching by env/browser inside a fixture body is a smell — branch in the POM/helper instead.
 - **Composition is a one-way DAG.** Dependency direction is `service/POM → apiRequest`, never back (`loginUser` depends on `apiRequest`; `apiRequest` must not depend on `loginUser`). A cycle surfaces as a `mergeTests` runtime error.
@@ -180,7 +180,7 @@ User says: *"Every synthetics-mutation test needs a probe seeded first. Should I
 - **`recipes.md`** — end-to-end wiring scenarios (add a POM fixture, seed-in-UI-spec, mailpit loop, guest flow, persona add, domain fixture, `mergeTests`, helper-with-cleanup, debug table).
 - **`api-testing`** skill — § Three callable shapes is the canonical decision rule for `apiRequest` direct vs helper function vs helper fixture. This skill defers to it.
 - **`selectors`** skill — selectors-vs-POM placement; page-object registration through this skill's `page-object-fixture.ts` is what makes locators reachable from specs.
-- **`page-objects`** skill (TBD) — POM class structure (constructor, getters, action methods). When populated, will pair with this skill on every "add a new page object" task.
+- **`page-objects`** skill — POM class structure (constructor, getters, action methods). Pairs with this skill on every "add a new page object" task.
 - **`helpers`** skill — plain utility functions that are NOT fixtures (no `use()` lifecycle). The helper-vs-fixture decision lives in `api-testing` § Three callable shapes.
 - **`type-safety`** skill — typing rules for fixture function signatures and yielded values; the canonical `process.env.X!` access pattern (no `??` defaulting at call sites).
 - **`scaffold-spec`** skill — when scaffolding a new spec, the fixture import line comes from this skill.

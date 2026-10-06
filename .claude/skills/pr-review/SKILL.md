@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 1.0.0
+version: 2.0.0
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -52,7 +52,7 @@ Group the output by **file kind** — each kind has its own checklist below:
 Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modified spec:
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
-- [ ] Each `test(...)` has **exactly one** tag from the whitelist (`@App-API | @App-E2E | @App-Smoke | @App-regression` — lowercase `regression`, matching the `package.json` greps). No combined tags. No tags on `test.describe(...)`.
+- [ ] Each `test(...)` has **exactly one** tag from the `test-standards` whitelist (casing exact — lowercase `@App-regression`, matching the `package.json` greps). No combined tags. No tags on `test.describe(...)`.
 - [ ] Each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
@@ -60,7 +60,7 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 - [ ] **No `if`/`else`/ternary in test bodies.** Tests are deterministic; one case per test.
 - [ ] Page objects consumed via fixture destructuring (`async ({ syntheticsPage }) => {...}`). **No `new SyntheticsPage(page)`** inside the test.
 - [ ] State-mutating tests have `afterEach`/`afterAll` cleanup via the matching `helpers/app/<resource>.ts` helper. **No UI deletes** — API only.
-- [ ] **No `test.only(...)`** anywhere. **No `.skip` without `// FIXME: <TICKET>`** — or use the comment-out-with-TODO pattern instead of `test.skip`.
+- [ ] **No `test.only(...)`** anywhere. **No `test.skip`** — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] **No `console.log`/`console.debug`** in committed code.
 - [ ] **No commented-out scratch code** — only `// TODO:`, `// FIXME:`, `// BUG:` with context.
 
@@ -80,11 +80,11 @@ Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../sele
 - [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` field in constructor.**
 - [ ] **No JSDoc on locator getters.** JSDoc with `@param`/`@returns` is required only on public action methods.
 - [ ] Every public action method has a built-in wait: web-first assertion, `waitForResponse`, or toast check. **No "thin" methods** that only call `click()` / `fill()`.
-- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > getByAltText/Title > page.locator(css)`. **Radix exception:** `getByTestId` jumps above `getByText` for Radix primitives, state-changing text, and testid contracts.
+- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception:** `getByTestId` jumps above `getByText` for Radix primitives, state-changing text, and testid contracts.
 - [ ] **No XPath.** **No top-level CSS class/id selectors** (`page.locator('.btn')`, `page.locator('#foo')`). CSS only chained off a higher-priority anchor.
 - [ ] **No `page.waitForTimeout(...)`.**
 - [ ] Form/CRUD POMs include feedback locators (success toast, error toast, field validation, empty state, loading).
-- [ ] New POMs are registered on `FrameworkFixtures` in [`fixtures/pom/page-object-fixture.ts`](../../../fixtures/pom/page-object-fixture.ts).
+- [ ] New POMs are registered on `FrameworkFixtures` in `fixtures/pom/page-object-fixture.ts`.
 - [ ] Radix trigger-swallow `try/catch` (the one allowed exception) is annotated `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`.
 - [ ] **Substring match guard:** Every `filter({ hasText: value })` and `getByText(value)` in a dynamic method (where `value` is a parameter) uses `{ exact: true }` or wraps in `filter({ has: page.getByText(value, { exact: true }) })`. Substring matching causes false positives when one name is a prefix of another (e.g., "Item9" matching "Item90").
 - [ ] **Post-action table stabilization:** Any action method that triggers a data reload (pagination click, sort header click, page-size change, filter toggle) ends with `await this.waitForTableSettled()` or equivalent. Asserting only the UI control change (e.g., page counter updated) without waiting for rows to reload is a flake source.
@@ -139,7 +139,7 @@ Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 - [ ] Supplementary files (`reference.md`, `templates.md`, `<topic>.md`) have **Load-When** annotations in SKILL.md's `## What's in each file` table.
 - [ ] **No README.md** inside the skill folder. Docs go in SKILL.md or `references/`.
 - [ ] Cross-skill references use relative paths (`../<skill>/SKILL.md`).
-- [ ] Renamed/deleted skills updated in `~/.claude/CLAUDE.md § Routed Detail Index`.
+- [ ] Renamed/deleted skills updated in `~/.claude/CLAUDE.md § Routed Skill Index`.
 
 ### Step 3 — Run the affected specs
 
@@ -205,7 +205,7 @@ Before declaring the PR ready:
 - [ ] Ran `npx playwright test <affected> --workers=1` and recorded pass/fail.
 - [ ] Ran `npx eslint <changed>` and `npx tsc --noEmit` — both clean (or pre-existing errors are documented).
 - [ ] PR description has Summary + Test plan + Risk sections.
-- [ ] No `.only`, no `console.log`, no commented-out code without context, no `test.skip` without a ticket.
+- [ ] No `.only`, no `console.log`, no commented-out code without context, no `test.skip` (comment the test out with a ticket instead).
 - [ ] Renamed/deleted skills updated in `~/.claude/CLAUDE.md`.
 - [ ] If the change touches shared infra (BasePage, fixtures, base helpers): listed downstream-affected specs in the Risk section.
 

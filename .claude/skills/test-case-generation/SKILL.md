@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 1.0.0
+version: 1.0.1
 description: Generate requirements and test cases from a user story or acceptance criteria — 6-section package: story analysis, functional requirements, categorized test cases, security & compliance, k6 candidates, unclear requirements. Use when a story/AC is pasted and the user wants test cases or a test plan. Triggers — "generate test cases", "test plan", "user story", "acceptance criteria". Produces documents, not Playwright code (scaffold-spec for code).
 metadata:
   category: authoring
@@ -242,7 +242,7 @@ User story: *"As a tenant user, I want to update my own profile name."*
 - **Paired rule:** (none) — this skill is a manual-invocation generator with no glob attachment.
 - **Sibling cluster (domain orientation):** `master-context` (project repo only — trimmed from this toolkit) — full cross-repo platform encyclopedia; `metrics-api-tests-context` (project repo only — trimmed from this toolkit) — deep metrics-API endpoint specifics.
 - **Implementation skills (next phase, after the test-case package is approved):** [`api-testing`](../api-testing/SKILL.md), [`test-standards`](../test-standards/SKILL.md), [`page-objects`](../page-objects/SKILL.md), [`scaffold-spec`](../scaffold-spec/SKILL.md), [`k6-load-testing`](../k6-load-testing/SKILL.md) — generate the actual code from the test-case package.
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Detail Index lists this skill.
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.
 
 ---
 

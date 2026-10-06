@@ -13,7 +13,7 @@
  */
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { join, dirname, basename } from 'node:path';
+import { join, dirname, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -778,6 +778,160 @@ for (const dir of CI_DIRS) {
     .then((m) => m.checkStamp())
     .catch((e) => ({ errors: [`scripts/stamp-version.mjs could not be loaded: ${e.message}`] }));
   for (const e of stampResult.errors) err('version', e);
+}
+
+// ── 15. Files that point at each other still agree ─────────────────────────────
+//
+// Skills, personas and the constitution are written at different times and cite each other.
+// When one of them changes, the files describing it do not change with it. On 2026-10-01 this
+// repository had nine files citing `CLAUDE.md § Routed Detail Index` (the section is "Routed
+// Skill Index"), an orientation skill calling three fully written skills "empty placeholders",
+// and a skill list naming skills that did not exist while missing four that did. Each file was
+// true when it was written. Nothing re-checked it afterwards.
+//
+// Deliberately narrow. Two kinds of reference can be resolved exactly, so they are errors:
+//   a. every `CLAUDE.md § <section>` names a real heading or MUST / SHOULD / WON'T rule;
+//   b. the Routed Skill Index, the persona list and the folders on disk name the same things;
+//   c. no file calls a skill "(TBD)" once that skill exists. Six See Also entries in five
+//      skills still called page-objects and common-tasks "TBD" long after both were written.
+//   d. every relative markdown link resolves to a file. The skills were written inside a product
+//      repository and copied out without its code and docs: on 2026-10-01, 432 links pointed at
+//      files this repository has never contained — a plan document cited sixty times, page
+//      objects, helpers, specs. skill-creator's checklist already said "no broken markdown links";
+//      as a line for a reviewer to tick, it held for none of them.
+// A fuzzy matcher over every `§` in every file would also fire on correct references, and a
+// gate that cries wolf is switched off within a week — memory case #003 is that lesson.
+
+{
+  const CONSTITUTION_PATH = join(ROOT, '.claude', 'CLAUDE.md');
+  const norm = (s) =>
+    s
+      .replace(/[`*_"“”]/g, '')
+      .replace(/[’‘]/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  const stripFences = (t) => t.replace(/```[\s\S]*?```/g, '');
+  const mdFiles = (d) =>
+    existsSync(d)
+      ? readdirSync(d).flatMap((f) => {
+          const p = join(d, f);
+          return statSync(p).isDirectory() ? mdFiles(p) : p.endsWith('.md') ? [p] : [];
+        })
+      : [];
+
+  if (existsSync(CONSTITUTION_PATH)) {
+    const constitution = read(CONSTITUTION_PATH);
+
+    // a. `CLAUDE.md § <section>` references resolve.
+    const anchors = new Set();
+    for (const m of stripFences(constitution).matchAll(/^#{1,6}\s+(.+)$/gm)) {
+      const heading = norm(m[1].replace(/^[^\p{L}\p{N}]+/u, ''));
+      anchors.add(heading);
+      anchors.add(heading.split(' — ')[0].trim()); // "WON'T — Forbidden, …" is cited as "WON'T"
+    }
+    for (const m of constitution.matchAll(/^\|\s*\*\*(.+?)\*\*\s*\|/gm)) anchors.add(norm(m[1]));
+    const known = [...anchors].filter((a) => a.length >= 3);
+
+    const ref = /CLAUDE\.md`?\]?(?:\([^)]*\))?\s*(?:—\s*)?§\s*([^\n`|]+)/g;
+    for (const file of mdFiles(join(ROOT, '.claude'))) {
+      if (file === CONSTITUTION_PATH) continue;
+      for (const m of stripFences(read(file)).matchAll(ref)) {
+        const phrase = norm(m[1]);
+        if (!known.some((a) => phrase.startsWith(a))) {
+          err(
+            relative(ROOT, file).replace(/\\/g, '/'),
+            `cites "CLAUDE.md § ${m[1].trim().slice(0, 60)}" — no such section or rule in the constitution`
+          );
+        }
+      }
+    }
+
+    // c. A skill marked "(TBD)" must not exist yet. Marking a genuinely unwritten skill TBD is
+    //    fine and stays silent; marking a written one TBD tells agents to avoid it.
+    const written = new Set(skillDirs.filter((d) => existsSync(join(SKILLS, d, 'SKILL.md'))));
+    const tbd = /`([a-z0-9-]+)`\*{0,2}(?:\s+skill)?\s*\*?\(TBD\b/g;
+    for (const file of mdFiles(join(ROOT, '.claude'))) {
+      for (const m of stripFences(read(file)).matchAll(tbd)) {
+        if (written.has(m[1])) {
+          err(
+            relative(ROOT, file).replace(/\\/g, '/'),
+            `marks skill "${m[1]}" as TBD, but it exists — the label tells agents to avoid a written skill`
+          );
+        }
+      }
+    }
+
+    // d. Relative links resolve. Only file existence is checked, not `#anchors`. Exempt, because
+    //    they are not links into this tree: URLs, `~/` paths (the reader's home directory),
+    //    `<placeholder>` targets, links inside code, and `*-template.md` files, whose links are
+    //    written relative to the folder the template is copied into.
+    const link = /\[(?:[^[\]]|\[[^\]]*\])*\]\(([^)\s]+)\)/g;
+    const linkFiles = [
+      ...readdirSync(ROOT).filter((f) => f.endsWith('.md')).map((f) => join(ROOT, f)),
+      ...mdFiles(join(ROOT, '.claude')),
+    ];
+    for (const file of linkFiles) {
+      if (file.endsWith('-template.md')) continue;
+      let fenced = false;
+      read(file)
+        .split('\n')
+        .forEach((line, i) => {
+          if (/^\s*```/.test(line)) {
+            fenced = !fenced;
+            return;
+          }
+          if (fenced) return;
+          const code = [...line.matchAll(/`[^`]*`/g)].map((m) => [m.index, m.index + m[0].length]);
+          for (const m of line.matchAll(link)) {
+            if (code.some(([a, b]) => m.index >= a && m.index < b)) continue;
+            const target = m[1];
+            if (/^(?:[a-z]+:|#|~)/i.test(target) || target.includes('<')) continue;
+            const path = decodeURIComponent(target.split('#')[0]);
+            if (path && !existsSync(join(dirname(file), path))) {
+              err(
+                `${relative(ROOT, file).replace(/\\/g, '/')}:${i + 1}`,
+                `links to ${path}, which does not exist — point it at a real file or remove the link`
+              );
+            }
+          }
+        });
+    }
+
+    // b. The Routed Skill Index names exactly the skills on disk, and the persona line exactly
+    //    the commands on disk.
+    const indexStart = constitution.search(/^## Routed Skill Index/m);
+    if (indexStart < 0) {
+      err('.claude/CLAUDE.md', 'no "## Routed Skill Index" section — nothing routes to the skills');
+    } else {
+      const rest = constitution.slice(indexStart);
+      const next = rest.slice(1).search(/^## /m);
+      const index = next < 0 ? rest : rest.slice(0, next + 1);
+
+      const indexed = new Set([...index.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm)].map((m) => m[1]));
+      const onDisk = new Set(skillDirs.filter((d) => existsSync(join(SKILLS, d, 'SKILL.md'))));
+      for (const s of onDisk) {
+        if (!indexed.has(s)) err('.claude/CLAUDE.md', `skill "${s}" exists but is not in the Routed Skill Index`);
+      }
+      for (const s of indexed) {
+        if (!onDisk.has(s)) err('.claude/CLAUDE.md', `Routed Skill Index lists "${s}", which has no SKILL.md`);
+      }
+
+      const personaLine = index.match(/^Personas available as slash commands:(.*)$/m);
+      if (personaLine) {
+        const listed = new Set([...personaLine[1].matchAll(/`\/([a-z0-9-]+)`/g)].map((m) => m[1]));
+        const commands = new Set(
+          existsSync(cmdDir) ? readdirSync(cmdDir).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)) : []
+        );
+        for (const c of commands) {
+          if (!listed.has(c)) err('.claude/CLAUDE.md', `persona "/${c}" exists but is not listed with the personas`);
+        }
+        for (const c of listed) {
+          if (!commands.has(c)) err('.claude/CLAUDE.md', `lists persona "/${c}", which has no file in .claude/commands`);
+        }
+      }
+    }
+  }
 }
 
 // ── report ──────────────────────────────────────────────────────────────────────

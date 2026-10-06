@@ -40,6 +40,14 @@ jobs:
       - name: Constitution rule ownership — unrouted rules must fail
         run: npm run test:rules-owned
 
+      # Check 15 the same way. Skills cite the constitution and each other, and they are written
+      # at different times: a section gets renamed, a skill gets written, and the files that
+      # describe it keep saying the old thing. A stale section reference, a skill the index does
+      # not route to, and an index row for a skill that does not exist must each fail -- and a
+      # correct reference must not, or the check gets switched off.
+      - name: Cross-references — files that point at each other must agree
+        run: npm run test:xref
+
       # Check 14 the same way. VERSION never travels to a consumer - they copy .claude/, not
       # the repo - so the version lives as a stamp inside the constitution. If the stamp lags a
       # bump, every install reports the old number and `npm run audit` answers "who is current"

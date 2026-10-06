@@ -28,7 +28,7 @@ Cross-link from [SKILL.md](SKILL.md). For locator-by-locator API reference, see 
 
 ## 1. Tables — row by name, cell by column
 
-When the table has a `data-testid="data-table"` wrapper and per-row `table-row-<id>` prefix testids. This is exactly what [`DataTableBase`](../../../pages/baseClasses/DataTableBase.ts) provides — extend it for any table-bearing page instead of re-rolling these getters.
+When the table has a `data-testid="data-table"` wrapper and per-row `table-row-<id>` prefix testids. This is exactly what `DataTableBase` provides — extend it for any table-bearing page instead of re-rolling these getters.
 
 ```typescript
 get dataTable(): Locator {
@@ -220,7 +220,7 @@ async selectCheckIntervalOption(optionLabel: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts) `selectCheckIntervalOption`. The "open with retry" wrapper is necessary because Radix occasionally swallows the first click on a stubborn trigger.
+From `pages/app/SyntheticsPage.ts` `selectCheckIntervalOption`. The "open with retry" wrapper is necessary because Radix occasionally swallows the first click on a stubborn trigger.
 
 For toolbar filters that use `getByRole('option')` (status / type / health filters):
 
@@ -243,7 +243,7 @@ There is no generic confirmation-modal base class in `pages/baseClasses/` — ev
 
 ### 4.1 Per-feature confirm-delete dialog (Reports delete-widget)
 
-The frontend's shared confirm-delete dialog component renders with a per-feature `testId` — on the Reports page it's `delete-widget`. Verified against [pages/app/ReportsPage.ts](../../../pages/app/ReportsPage.ts):
+The frontend's shared confirm-delete dialog component renders with a per-feature `testId` — on the Reports page it's `delete-widget`. Verified against `pages/app/ReportsPage.ts`:
 
 ```typescript
 get confirmDeleteDialog(): Locator {
@@ -314,7 +314,7 @@ async expectSuccessToastForMonitor(name: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Filtering by the monitor name first protects against a second toast firing in the same window (e.g. an auto-refresh "Loaded N monitors" toast).
+From `pages/app/SyntheticsPage.ts`. Filtering by the monitor name first protects against a second toast firing in the same window (e.g. an auto-refresh "Loaded N monitors" toast).
 
 For a generic per-event toast assertion:
 
@@ -388,7 +388,7 @@ Rules:
 
 ## 7. Sidebar navigation
 
-Pattern: click sidebar link → wait for URL → assert page shell visible. Driven by [pages/app/SideNavigation.ts](../../../pages/app/SideNavigation.ts).
+Pattern: click sidebar link → wait for URL → assert page shell visible. Driven by `pages/app/SideNavigation.ts`.
 
 ```typescript
 get synthetics(): Locator {
@@ -419,7 +419,7 @@ Rules:
 
 ## 8. Pagination
 
-One canonical shape — the pagination API on [`DataTableBase`](../../../pages/baseClasses/DataTableBase.ts), inherited by the standard `data-table` pages (`SyntheticsPage`, `InventoryPage`, `ProbesPage`, `PoliciesPage`; pages with non-standard table roots like `AlertsPage` don't extend it):
+One canonical shape — the pagination API on `DataTableBase`, inherited by the standard `data-table` pages (`SyntheticsPage`, `InventoryPage`, `ProbesPage`, `PoliciesPage`; pages with non-standard table roots like `AlertsPage` don't extend it):
 
 ```typescript
 get pageSizeSelect(): Locator {
@@ -478,7 +478,7 @@ async downloadPdf(): Promise<Download> {
 }
 ```
 
-From [pages/app/ReportsPage.ts](../../../pages/app/ReportsPage.ts). The caller asserts on the returned `Download` (`suggestedFilename()` regex + non-zero `statSync(await download.path()).size`).
+From `pages/app/ReportsPage.ts`. The caller asserts on the returned `Download` (`suggestedFilename()` regex + non-zero `statSync(await download.path()).size`).
 
 Rules:
 - `waitForEvent('download')` MUST be armed **before** the click that triggers the download.
@@ -539,7 +539,7 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts).
+From `pages/app/SyntheticsPage.ts`.
 
 Rules:
 - Active-state assertion is `toHaveAttribute('data-state', 'active' | 'on')` — matches Radix's emitted attribute. Do not use class-name regex (`/_active_/`) unless the markup actually uses CSS-module classes.
@@ -609,7 +609,7 @@ async clickManualRefreshAndWaitForRefresh(timeout = 30_000): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts). Click → network confirmation → button-re-enabled assertion. Three independent signals.
+From `pages/app/SyntheticsPage.ts`. Click → network confirmation → button-re-enabled assertion. Three independent signals.
 
 For monitor creation, the canonical "click submit" wait is the sheet-hidden + Sonner-toast pair:
 
@@ -671,7 +671,7 @@ async selectStatusOption(label: string): Promise<void> {
 }
 ```
 
-From [pages/app/SyntheticsPage.ts](../../../pages/app/SyntheticsPage.ts).
+From `pages/app/SyntheticsPage.ts`.
 
 For a searchable filter popover (the Policies type filter's bespoke MetricDropdown):
 
@@ -696,7 +696,7 @@ async selectTypeOption(label: string): Promise<void> {
 }
 ```
 
-From [pages/app/PoliciesPage.ts](../../../pages/app/PoliciesPage.ts) — open the popover, assert the list is visible, search-narrow, prefix-match the label (the FE appends unit suffixes like `[ms]`), then settle the table.
+From `pages/app/PoliciesPage.ts` — open the popover, assert the list is visible, search-narrow, prefix-match the label (the FE appends unit suffixes like `[ms]`), then settle the table.
 
 Rules:
 - Search inputs in this app debounce client-side; pair the `fill` with a row-visibility assertion (above) — never with `waitForTimeout`.
@@ -728,7 +728,7 @@ Rules:
 
 ## 17. POM vs spec — the placement decision in one flow
 
-A typical ICMP CRUD test illustrating where each locator should live. The shape below mirrors the actual flow in [tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts](../../../tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts):
+A typical ICMP CRUD test illustrating where each locator should live. The shape below mirrors the actual flow in `tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts`:
 
 ```typescript
 import { expect, test } from '../../../fixtures/pom/test-options';
@@ -870,11 +870,11 @@ Use the parameterized `verifyInlineMsLabels` helper on `SyntheticsPage` — work
 
 ### Anti-pattern reference
 
-[`tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor-view.spec.ts`](../../../tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor-view.spec.ts) (qase 931) pre-dates this convention and is the **anti-pattern**: it repeats the full UI-creation CRUD flow just to re-verify structural assertions already covered by `icmp-monitor-expanded-view.spec.ts`. **Do not replicate this layout for any new monitor type.** Keep it in-tree until product decides to prune it; it's allowed to exist, but it's not a template.
+`tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor-view.spec.ts` (qase 931) pre-dates this convention and is the **anti-pattern**: it repeats the full UI-creation CRUD flow just to re-verify structural assertions already covered by `icmp-monitor-expanded-view.spec.ts`. **Do not replicate this layout for any new monitor type.** Keep it in-tree until product decides to prune it; it's allowed to exist, but it's not a template.
 
 ### Pre-seeded monitor exception (WebSocket)
 
-Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the [`websocket-monitor-detail-view.spec.ts`](../../../tests/app/functional/monitoring-service/synthetics/websocket-monitor-detail-view.spec.ts) targets a **pre-seeded monitor** named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If the named monitor is missing, the spec **skips with a clear message** in `beforeAll` (via `listSynthetics`) rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
+Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the `websocket-monitor-detail-view.spec.ts` targets a **pre-seeded monitor** named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If the named monitor is missing, the spec **skips with a clear message** in `beforeAll` (via `listSynthetics`) rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
 
 ---
 

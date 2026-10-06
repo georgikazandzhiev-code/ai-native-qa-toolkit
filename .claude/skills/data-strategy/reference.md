@@ -4,16 +4,16 @@ Catalogs of every data source the framework already provides. Use these tables t
 
 ## 1. Env-var catalog
 
-All env vars resolve from `env/.env.<ENVIRONMENT>` (or [env/.env.example](../../../env/.env.example) shape) loaded in [playwright.config.ts](../../../playwright.config.ts).
+All env vars resolve from `env/.env.<ENVIRONMENT>` (or `env/.env.example` shape) loaded in `playwright.config.ts`.
 
 ### 1.1 URLs (one per area, never inline a URL)
 
 | Var | Used by |
 |-----|---------|
-| `APP_URL` | UI baseURL (registration/login/dashboard flows); read in [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) and [config/app.ts](../../../config/app.ts) (`appConfig.baseUrl`) |
-| `API_URL` | API baseURL; backs `appConfig.apiUrl` in [config/app.ts](../../../config/app.ts) |
-| `KEYCLOAK_URL` | KC user/admin clients; read in [helpers/util/keyCloak.ts](../../../helpers/util/keyCloak.ts) and `appConfig.keycloakUrl` |
-| `MAILPIT_URL` | Email loop tests; read in [helpers/util/mailpit.ts](../../../helpers/util/mailpit.ts) (default `http://localhost:8025`) and [fixtures/api/mailpit-fixture.ts](../../../fixtures/api/mailpit-fixture.ts) |
+| `APP_URL` | UI baseURL (registration/login/dashboard flows); read in `tests/app/login.setup.ts` and `config/app.ts` (`appConfig.baseUrl`) |
+| `API_URL` | API baseURL; backs `appConfig.apiUrl` in `config/app.ts` |
+| `KEYCLOAK_URL` | KC user/admin clients; read in `helpers/util/keyCloak.ts` and `appConfig.keycloakUrl` |
+| `MAILPIT_URL` | Email loop tests; read in `helpers/util/mailpit.ts` (default `http://localhost:8025`) and `fixtures/api/mailpit-fixture.ts` |
 
 ### 1.2 Bearer access tokens (read in helpers/specs, written ONLY in `login.setup.ts`)
 
@@ -21,13 +21,13 @@ All env vars resolve from `env/.env.<ENVIRONMENT>` (or [env/.env.example](../../
 |-----|---------|--------|
 | `USER_ACCESS_TOKEN_FULL` | Tenant-scoped user with **all** permissions in the `<realm>` realm; default for any 200/201 path on tenant-scoped endpoints | Provisioned |
 | `USER_ACCESS_TOKEN_ADMIN` | Platform admin in the **master** realm; required for `/admin/*` endpoints | Provisioned |
-| `USER_ACCESS_TOKEN_ZERO` | Tenant-scoped user with **no** permissions; default for any 403 path | **Planned** per [`docs/framework-alignment-plan.md` § 6.2](../../../docs/framework-alignment-plan.md). Until provisioned, guard with `test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "ZERO token not provisioned")` |
+| `USER_ACCESS_TOKEN_ZERO` | Tenant-scoped user with **no** permissions; default for any 403 path | **Planned.** Until provisioned, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` |
 
 > Naming rule: `USER_ACCESS_TOKEN_<PERSONA>` is the canonical pattern. New tokens MUST follow this pattern.
 
 ### 1.3 User credentials (email / password / TOTP secret triplets)
 
-Each persona has a 3-tuple. Use these only in [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) to build storage states or KC clients; do not import them into specs to log in by hand.
+Each persona has a 3-tuple. Use these only in `tests/app/login.setup.ts` to build storage states or KC clients; do not import them into specs to log in by hand.
 
 | Persona | Email var | Password var | TOTP secret var |
 |---------|-----------|--------------|-----------------|
@@ -41,7 +41,7 @@ Side credentials: `APP_RESET_EMAIL` / `APP_RESET_PASSWORD` (per-test reset-passw
 
 | Var | Used by |
 |-----|---------|
-| `KEYCLOAK_REALM` | the Keycloak realm — `appConfig.keycloakRealm`, used in [helpers/util/keyCloak.ts](../../../helpers/util/keyCloak.ts) |
+| `KEYCLOAK_REALM` | the Keycloak realm — `appConfig.keycloakRealm`, used in `helpers/util/keyCloak.ts` |
 | `KEYCLOAK_CLIENT_ID` / `KEYCLOAK_CLIENT_SECRET` | Tenant user client (token exchange for the `<realm>` realm) |
 | `KEYCLOAK_ADMIN_CLIENT_ID` / `KEYCLOAK_ADMIN_CLIENT_SECRET` | Master-realm admin client; used in `login.setup.ts` to mint `USER_ACCESS_TOKEN_ADMIN` |
 | `KEYCLOAK_QA_CLIENT_ID` / `KEYCLOAK_QA_CLIENT_SECRET` | QA automation client (reserved for QA-only flows) |
@@ -75,7 +75,7 @@ Exception: when a spec passes the same token through multiple helper calls AND g
 
 ## 2. JSON file catalog
 
-All test data JSON lives under [test-data/app/](../../../test-data/app/) and is split into four categories.
+All test data JSON lives under `test-data/app/` and is split into four categories.
 
 ### 2.1 Validation matrices (Pattern 4)
 
@@ -83,9 +83,9 @@ Boundary lists for parametrized negative tests.
 
 | File | Keys |
 |------|------|
-| [test-data/app/httpSyntheticValidation.json](../../../test-data/app/httpSyntheticValidation.json) | `invalidNames`, `invalidTargets`, `validMethods`, `methodsWithBody`, `methodsWithoutBody` |
-| [test-data/app/sslSyntheticValidation.json](../../../test-data/app/sslSyntheticValidation.json) | SSL boundary cases |
-| [test-data/app/mcpSyntheticValidation.json](../../../test-data/app/mcpSyntheticValidation.json) | MCP boundary cases |
+| `test-data/app/httpSyntheticValidation.json` | `invalidNames`, `invalidTargets`, `validMethods`, `methodsWithBody`, `methodsWithoutBody` |
+| `test-data/app/sslSyntheticValidation.json` | SSL boundary cases |
+| `test-data/app/mcpSyntheticValidation.json` | MCP boundary cases |
 
 > Gap: no `dnsSyntheticValidation.json` / `tcpSyntheticValidation.json` / `websocketSyntheticValidation.json` / `icmpSyntheticValidation.json` / `probeValidation.json` files yet. Add when a per-type negative matrix grows beyond inline use.
 
@@ -95,19 +95,19 @@ Fixed ids and reference values.
 
 | File | Keys |
 |------|------|
-| [test-data/app/probe.json](../../../test-data/app/probe.json) | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, `sortFields`, `statuses`, `maxPageSize`, `defaultPageSize`, `defaultSort`, `defaultDirection`, `deploymentTypes`, `schemaNames` |
-| [test-data/app/probes.json](../../../test-data/app/probes.json) | `statusFilterOptions`, `typeFilterOptions`, `tableColumns`, `sortableColumns`, `statusCardTitles` (UI lookups) |
-| [test-data/app/alerts.json](../../../test-data/app/alerts.json) | `invalidAlertIds`, `nonExistentAlertId`, `severities`, `states`, `activeStates`, `validTimeframes`, `sortableFields`, `sortDirections` |
-| [test-data/app/policy.json](../../../test-data/app/policy.json) | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, sort/paging defaults, `policyTypes`, `statuses`, `monitorTypes`, `severities`, `operators`, `evaluationWindows`, plus `name` / `description` / `consecutiveCount` / `severityCascade` boundary sub-objects |
-| [test-data/app/i18n.json](../../../test-data/app/i18n.json) | Expected EN/DE UI strings per page area (`sidebar`, `dashboard`, `synthetics`, `alerts`, `policies`, `probes`, `metrics`, `profile`, `common`, `userMenu`, `theme`) for locale tests |
-| [test-data/app/synthetic-common.json](../../../test-data/app/synthetic-common.json) | `checkIntervals`, `timeout` |
-| [test-data/app/metrics.json](../../../test-data/app/metrics.json) | metric query / sentinels |
-| [test-data/app/http-synthetic.json](../../../test-data/app/http-synthetic.json) | HTTP monitor config + sentinels |
-| [test-data/app/dns-synthetic.json](../../../test-data/app/dns-synthetic.json) | DNS monitor config + sentinels |
-| [test-data/app/tcp-synthetic.json](../../../test-data/app/tcp-synthetic.json) | TCP monitor config + sentinels |
-| [test-data/app/ssl-synthetic.json](../../../test-data/app/ssl-synthetic.json) | SSL monitor config + sentinels |
-| [test-data/app/mcp-synthetic.json](../../../test-data/app/mcp-synthetic.json) | MCP monitor config + sentinels |
-| [test-data/app/websocket-synthetic.json](../../../test-data/app/websocket-synthetic.json) | WebSocket monitor config + sentinels |
+| `test-data/app/probe.json` | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, `sortFields`, `statuses`, `maxPageSize`, `defaultPageSize`, `defaultSort`, `defaultDirection`, `deploymentTypes`, `schemaNames` |
+| `test-data/app/probes.json` | `statusFilterOptions`, `typeFilterOptions`, `tableColumns`, `sortableColumns`, `statusCardTitles` (UI lookups) |
+| `test-data/app/alerts.json` | `invalidAlertIds`, `nonExistentAlertId`, `severities`, `states`, `activeStates`, `validTimeframes`, `sortableFields`, `sortDirections` |
+| `test-data/app/policy.json` | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, sort/paging defaults, `policyTypes`, `statuses`, `monitorTypes`, `severities`, `operators`, `evaluationWindows`, plus `name` / `description` / `consecutiveCount` / `severityCascade` boundary sub-objects |
+| `test-data/app/i18n.json` | Expected EN/DE UI strings per page area (`sidebar`, `dashboard`, `synthetics`, `alerts`, `policies`, `probes`, `metrics`, `profile`, `common`, `userMenu`, `theme`) for locale tests |
+| `test-data/app/synthetic-common.json` | `checkIntervals`, `timeout` |
+| `test-data/app/metrics.json` | metric query / sentinels |
+| `test-data/app/http-synthetic.json` | HTTP monitor config + sentinels |
+| `test-data/app/dns-synthetic.json` | DNS monitor config + sentinels |
+| `test-data/app/tcp-synthetic.json` | TCP monitor config + sentinels |
+| `test-data/app/ssl-synthetic.json` | SSL monitor config + sentinels |
+| `test-data/app/mcp-synthetic.json` | MCP monitor config + sentinels |
+| `test-data/app/websocket-synthetic.json` | WebSocket monitor config + sentinels |
 
 ### 2.3 Mock fixtures (Pattern 5 — but treat as TECHNICAL DEBT when introduced)
 
@@ -135,25 +135,25 @@ Some JSON files are consumed via a loader rather than a direct import to compute
 
 | File | Generator | Pattern |
 |------|-----------|---------|
-| [helpers/app/probes.ts](../../../helpers/app/probes.ts) | `buildCreateProbeBody(overrides?)` | 2 — **typed factory missing**; returns `Record<string, unknown>` (see playbook §3) |
-| [helpers/app/probes.ts](../../../helpers/app/probes.ts) | `buildUpdateProbeBody(overrides?)` | 2 |
-| [helpers/app/probes.ts](../../../helpers/app/probes.ts) | `buildListProbesUrl(params?)` | 2 (request shaping) |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateSyntheticBody(probeIds, overrides?)` (ICMP — base) | 2 — **typed factory missing** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateHTTPSyntheticBody(probeIds, overrides?)` | 2 — **centralize per [plan § 6.4](../../../docs/framework-alignment-plan.md)** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateWebSocketSyntheticBody(probeIds, overrides?)` | 2 — **centralize per plan § 6.4** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateTCPSyntheticBody(probeIds, overrides?)` | 2 — **centralize per plan § 6.4** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateDNSSyntheticBody(probeIds, overrides?)` | 2 — **centralize per plan § 6.4** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateSSLSyntheticBody(probeIds, overrides?)` | 2 — **centralize per plan § 6.4** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildCreateMCPSyntheticBody(probeIds, overrides?)` | 2 — **centralize per plan § 6.4** |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildUpdateSyntheticBody(overrides?)` | 2 |
-| [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) | `buildListSyntheticsUrl(params?)` | 2 (request shaping) |
-| [helpers/app/adminUsers.ts](../../../helpers/app/adminUsers.ts) | `generateUserPayload()` | 2 — **lacks `Partial<T>` overrides** |
-| [helpers/app/users.ts](../../../helpers/app/users.ts) | `buildCreateUserBody(overrides?)` | 2 |
-| [helpers/app/users.ts](../../../helpers/app/users.ts) | `buildUpdateUserBody(overrides?)` | 2 |
-| [helpers/app/users.ts](../../../helpers/app/users.ts) | `buildListUsersUrl(params?)` | 2 (request shaping) |
-| [helpers/app/adminRealms.ts](../../../helpers/app/adminRealms.ts) | `buildRealmSettings()` | 2 — **lacks `Partial<T>` overrides** |
-| [helpers/app/data.ts](../../../helpers/app/data.ts) | `buildDataQueryUrl(params)` | 2 (request shaping) |
-| [helpers/util/dataGenerator.ts](../../../helpers/util/dataGenerator.ts) | `generateRandomAmount(min?, max?)` | 1/2 — **prefer faker; see playbook §6** |
+| `helpers/app/probes.ts` | `buildCreateProbeBody(overrides?)` | 2 — **typed factory missing**; returns `Record<string, unknown>` (see playbook §3) |
+| `helpers/app/probes.ts` | `buildUpdateProbeBody(overrides?)` | 2 |
+| `helpers/app/probes.ts` | `buildListProbesUrl(params?)` | 2 (request shaping) |
+| `helpers/app/synthetics.ts` | `buildCreateSyntheticBody(probeIds, overrides?)` (ICMP — base) | 2 — **typed factory missing** |
+| `helpers/app/synthetics.ts` | `buildCreateHTTPSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/synthetics.ts` | `buildCreateWebSocketSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/synthetics.ts` | `buildCreateTCPSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/synthetics.ts` | `buildCreateDNSSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/synthetics.ts` | `buildCreateSSLSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/synthetics.ts` | `buildCreateMCPSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/synthetics.ts` | `buildUpdateSyntheticBody(overrides?)` | 2 |
+| `helpers/app/synthetics.ts` | `buildListSyntheticsUrl(params?)` | 2 (request shaping) |
+| `helpers/app/adminUsers.ts` | `generateUserPayload()` | 2 — **lacks `Partial<T>` overrides** |
+| `helpers/app/users.ts` | `buildCreateUserBody(overrides?)` | 2 |
+| `helpers/app/users.ts` | `buildUpdateUserBody(overrides?)` | 2 |
+| `helpers/app/users.ts` | `buildListUsersUrl(params?)` | 2 (request shaping) |
+| `helpers/app/adminRealms.ts` | `buildRealmSettings()` | 2 — **lacks `Partial<T>` overrides** |
+| `helpers/app/data.ts` | `buildDataQueryUrl(params)` | 2 (request shaping) |
+| `helpers/util/dataGenerator.ts` | `generateRandomAmount(min?, max?)` | 1/2 — **prefer faker; see playbook §6** |
 
 When `rg buildCreate<Entity>Body|create<Entity>Data helpers/` returns a hit for your entity, consume it. If the existing factory does not accept overrides, add `overrides?: Partial<T>` rather than forking.
 
@@ -163,47 +163,47 @@ Always paired: `createX` + `deleteX` (or equivalent cleanup). Body comes from a 
 
 ### Synthetics
 
-- [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts):
+- `helpers/app/synthetics.ts`:
   - **CRUD**: `createSyntheticMonitor` / `getSyntheticMonitor` / `updateSyntheticMonitor` / `deleteSyntheticMonitor` / `listSynthetics`
   - **Cleanup**: `cleanupUiCreatedSyntheticMonitors(apiRequest, token, refs)` — UI-friendly delete-by-name with retry; `cleanupProbesAndSynthetics(apiRequest, probeIds, syntheticIds, headers)` — orchestrated cleanup respecting probe→synthetic dependency
 
 ### Probes
 
-- [helpers/app/probes.ts](../../../helpers/app/probes.ts):
+- `helpers/app/probes.ts`:
   - **CRUD**: `createProbe` / `listProbes` / `getProbe` / `updateProbe` / `deleteProbe`
   - **Read**: `getProbesByIds(apiRequest, ids, headers)`, `getProbeConfig(apiRequest, id, type, headers)`, `getProbeSchema(apiRequest, name, headers)`
   - **Cleanup**: `cleanupProbes(apiRequest, probeIds, headers)`
 
 ### Admin tenants
 
-- [helpers/app/adminTenants.ts](../../../helpers/app/adminTenants.ts) — `createTenant` / `getTenant` / `patchTenant` / `deleteTenant`
+- `helpers/app/adminTenants.ts` — `createTenant` / `getTenant` / `patchTenant` / `deleteTenant`
 
 ### Admin users (per-tenant)
 
-- [helpers/app/adminUsers.ts](../../../helpers/app/adminUsers.ts):
+- `helpers/app/adminUsers.ts`:
   - **CRUD**: `createUser` / `listUsers` / `getUser` / `updateUser` / `deleteUser`
   - **Per-test user lifecycle (Pattern 7 backbone)**: `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` / `teardownTestUser(apiRequest, mailpit, tenantId, email, userId, adminToken)`
   - **Body builder**: `generateUserPayload()`
 
 ### Tenant-side users
 
-- [helpers/app/users.ts](../../../helpers/app/users.ts) — `createUser` / `listUsers` / `getUser` / `updateUser` / `logoutUserSession` / `deleteAdminTenantUser` / `buildCreateUserBody` / `buildUpdateUserBody` / `buildListUsersUrl`
+- `helpers/app/users.ts` — `createUser` / `listUsers` / `getUser` / `updateUser` / `logoutUserSession` / `deleteAdminTenantUser` / `buildCreateUserBody` / `buildUpdateUserBody` / `buildListUsersUrl`
 
 ### Admin realms
 
-- [helpers/app/adminRealms.ts](../../../helpers/app/adminRealms.ts) — `getRealm` / `createRealm` / `patchRealm` / `buildRealmSettings`
+- `helpers/app/adminRealms.ts` — `getRealm` / `createRealm` / `patchRealm` / `buildRealmSettings`
 
 ### Tenant schema
 
-- [helpers/app/tenant-schema.ts](../../../helpers/app/tenant-schema.ts) — `getTenantSchema(apiRequest, name?, token?)`
+- `helpers/app/tenant-schema.ts` — `getTenantSchema(apiRequest, name?, token?)`
 
 ### Data / metrics
 
-- [helpers/app/data.ts](../../../helpers/app/data.ts) — `getSyntheticMetrics` / `queryData` / `queryMetrics` / `buildDataQueryUrl`
+- `helpers/app/data.ts` — `getSyntheticMetrics` / `queryData` / `queryMetrics` / `buildDataQueryUrl`
 
 ### User lifecycle (Pattern 7 backbone — Keycloak side)
 
-- [helpers/util/keyCloak.ts](../../../helpers/util/keyCloak.ts):
+- `helpers/util/keyCloak.ts`:
   - **Authentication clients**: `getAuthenticatedKcAdminClient` (master realm), `getAuthenticatedKcUserClient({ username, password, otpSecret?, clientId?, clientSecret?, realm? })`
   - **Read**: `getUserIdByEmail`, `findUserByEmail`, `getUserById`, `getEmailVerifiedStatus`, `listUserCredentialsById`
   - **Write**: `resetUserPasswordById(userId, newPassword, kcAdminClient?)`
@@ -211,7 +211,7 @@ Always paired: `createX` + `deleteX` (or equivalent cleanup). Body comes from a 
 
 > Note: this project does **not** export `createUserByEmail` / `deleteUserByEmail` / `updateUserById` directly from `keyCloak.ts`. User creation goes through the admin API (`POST /admin/tenants/{id}/users` via `setupTestUser`) which provisions a Keycloak-backed user under the hood; subsequent password reset and lookups go through the Keycloak admin client.
 
-- [helpers/util/mailpit.ts](../../../helpers/util/mailpit.ts):
+- `helpers/util/mailpit.ts`:
   - **Class**: `MailpitHelper.getLastEmail(email, retries?, interval?)`, `.deleteAllEmails()`, `.deleteEmailsForRecipient(email)`
   - **Module exports**: `extractLinkFromEmail(body)`, `extractOtpFromEmail(body)`, `getInviteLinkFromEmail(mailpit, email)`, `getNextTestEmail(baseEmail)` (synchronous; do NOT await)
 
@@ -228,17 +228,17 @@ If a partial helper exists (only GET, only POST), extend it. Don't open a new fi
 
 ## 5. Storage state catalog
 
-Storage states live under `.auth/app/<persona>Session.json` and are produced by [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) running once per environment.
+Storage states live under `.auth/app/<persona>Session.json` and are produced by `tests/app/login.setup.ts` running once per environment.
 
 | Storage state | Persona | Produced in |
 |---------------|---------|-------------|
-| [.auth/app/appMainUserSession.json](../../../.auth/app/appMainUserSession.json) | App main | [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) |
+| `.auth/app/appMainUserSession.json` | App main | `tests/app/login.setup.ts` |
 
 Storage state factory:
 
-- [helpers/app/createStorageState.ts](../../../helpers/app/createStorageState.ts) — `createAppStorageState({ email, password, totpSecret, storageStatePath })` opens the app, completes Keycloak login (with optional TOTP), waits for the app sidebar, and saves the browser storage state to the supplied path.
+- `helpers/app/createStorageState.ts` — `createAppStorageState({ email, password, totpSecret, storageStatePath })` opens the app, completes Keycloak login (with optional TOTP), waits for the app sidebar, and saves the browser storage state to the supplied path.
 
-[tests/app/login.setup.ts](../../../tests/app/login.setup.ts) ALSO populates `process.env.USER_ACCESS_TOKEN_*` for personas that need bearer tokens for API specs. UI projects in `playwright.config.ts` reference the JSON file via `use.storageState`; API specs read the env var.
+`tests/app/login.setup.ts` ALSO populates `process.env.USER_ACCESS_TOKEN_*` for personas that need bearer tokens for API specs. UI projects in `playwright.config.ts` reference the JSON file via `use.storageState`; API specs read the env var.
 
 Rule: never mutate a stored session at runtime (e.g., changing the user's password). If the test needs to mutate user state, switch to Pattern 7 (per-test user).
 

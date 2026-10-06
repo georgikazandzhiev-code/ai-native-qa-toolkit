@@ -17,7 +17,12 @@
  * invisible when rendered. A stamp in `package.json` or in a root `VERSION` would not travel,
  * because consumers copy `.claude/`, not the repository.
  *
- * `--check` verifies VERSION and the stamp agree and exits non-zero if they do not. A stamp
+ * The product-side testability constitutions travel the same way, one hop further: they are
+ * copied into frontend, mobile and backend repos as those repos' CLAUDE.md. They carry the same stamp, so
+ * a product repo can tell which version of the testability rules it took, and a stale copy is
+ * visible instead of silent.
+ *
+ * `--check` verifies VERSION and every stamp agree and exits non-zero if they do not. A stamp
  * that disagrees with VERSION makes every install report the wrong version, which turns the
  * audit into an instrument that lies — worse than having no audit.
  *
@@ -31,6 +36,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const VERSION_FILE = join(ROOT, 'VERSION');
 const CONSTITUTION = join(ROOT, '.claude', 'CLAUDE.md');
+/** Copied into product repos as their CLAUDE.md, so they carry the stamp too. Checked when present. */
+const PRODUCT_CONSTITUTIONS = ['web-testability.md', 'mobile-testability.md', 'api-testability.md'].map((f) =>
+  join(ROOT, '.claude', 'constitutions', f)
+);
+const rel = (p) => p.slice(ROOT.length + 1).replace(/\\/g, '/');
 
 const STAMP_RE = /<!--\s*toolkit-version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*-->/;
 const SEMVER_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
@@ -76,7 +86,35 @@ export function checkStamp() {
     );
   }
 
-  return { errors, version, stamp };
+  const products = [];
+  for (const file of PRODUCT_CONSTITUTIONS) {
+    if (!existsSync(file)) continue;
+    const s = readStamp(readFileSync(file, 'utf8'));
+    products.push({ file: rel(file), stamp: s });
+    if (s === null) {
+      errors.push(
+        `${rel(file)} carries no \`<!-- toolkit-version: x.y.z -->\` stamp, so a product repo ` +
+          `that copies it cannot tell which version of the testability rules it has. Run \`npm run stamp\`.`
+      );
+    } else if (s !== version) {
+      errors.push(
+        `VERSION says ${version} but the ${rel(file)} stamp says ${s}. Every product repo that ` +
+          `copies it would report ${s}. Run \`npm run stamp\`.`
+      );
+    }
+  }
+
+  return { errors, version, stamp, products };
+}
+
+/** Put the stamp right after the H1, or replace the one already there. Idempotent. */
+function stampText(md, line) {
+  if (STAMP_RE.test(md)) return md.replace(STAMP_RE, line);
+  const lines = md.split('\n');
+  const h1 = lines.findIndex((l) => /^# /.test(l));
+  const at = h1 < 0 ? 0 : h1 + 1;
+  lines.splice(at, 0, '', line);
+  return lines.join('\n');
 }
 
 function write() {
@@ -90,24 +128,14 @@ function write() {
     return 2;
   }
 
-  const md = readFileSync(CONSTITUTION, 'utf8');
+  // Immediately after the H1, so it travels with the file and renders as nothing.
   const line = `<!-- toolkit-version: ${version} -->`;
-  let out;
-
-  if (STAMP_RE.test(md)) {
-    out = md.replace(STAMP_RE, line);
-  } else {
-    // Immediately after the H1, so it travels with the file and renders as nothing.
-    const lines = md.split('\n');
-    const h1 = lines.findIndex((l) => /^# /.test(l));
-    const at = h1 < 0 ? 0 : h1 + 1;
-    lines.splice(at, 0, '', line);
-    out = lines.join('\n');
-  }
-
-  writeFileSync(CONSTITUTION, out);
+  const targets = [CONSTITUTION, ...PRODUCT_CONSTITUTIONS.filter((f) => existsSync(f))];
   console.log('');
-  console.log(`  stamped .claude/CLAUDE.md with toolkit-version ${version}`);
+  for (const file of targets) {
+    writeFileSync(file, stampText(readFileSync(file, 'utf8'), line));
+    console.log(`  stamped ${rel(file)} with toolkit-version ${version}`);
+  }
   console.log('');
   return 0;
 }
@@ -115,19 +143,20 @@ function write() {
 function main(argv) {
   if (!argv.includes('--check')) return write();
 
-  const { errors, version, stamp } = checkStamp();
+  const { errors, version, stamp, products = [] } = checkStamp();
   console.log('');
   console.log('Version stamp');
   console.log('');
   console.log(`  VERSION            ${version ?? '(missing)'}`);
   console.log(`  CLAUDE.md stamp    ${stamp ?? '(none)'}`);
+  for (const p of products) console.log(`  ${p.file.split('/').pop().padEnd(22)} ${p.stamp ?? '(none)'}`);
   console.log('');
   if (errors.length) {
     for (const e of errors) console.log(`  ✗ ${e}`);
     console.log('');
     return 1;
   }
-  console.log('  they agree — an install taken from this tree reports the right version');
+  console.log('  they agree — an install or a product-repo copy taken from this tree reports the right version');
   console.log('');
   return 0;
 }

@@ -1,6 +1,6 @@
 ---
 name: config
-version: 1.0.0
+version: 1.0.1
 description: Env-var and configuration conventions — env/.env.* layout, dotenv loading via ENVIRONMENT, the appConfig object in config/app.ts (URLs, api paths, UI routes, timeouts), and the config/util/ per-service convention (future — not yet created). Use when adding an env var, config property, environment file, or endpoint/route constant. Triggers — "env var", "appConfig", "config", "new URL". Not for static test data (data-strategy) or the process.env.X! call-site idiom (type-safety).
 metadata:
   category: domain
@@ -128,7 +128,7 @@ User says: *"Add a read-only test user so we can prove 403 on write endpoints fr
    ```
 3. **Add the real values to `env/.env.dev`** (and `.env.test` for CI). Confirm `git status` does not show those files as modified-and-staged.
 4. **Wire up token minting** in the auth-bootstrap setup that already produces `USER_ACCESS_TOKEN_ADMIN` / `USER_ACCESS_TOKEN_FULL` — the new token (`USER_ACCESS_TOKEN_READONLY`, say) is populated at runtime, **not** added to `env/.env.example`.
-5. **Consume `process.env.USER_ACCESS_TOKEN_READONLY`** at the spec call site for the 403 test, guarded with `test.skip(!process.env.USER_ACCESS_TOKEN_READONLY, "READONLY token not provisioned")` until the env is fully provisioned (matches the existing `USER_ACCESS_TOKEN_ZERO` guard pattern in `api-testing`).
+5. **Consume `process.env.USER_ACCESS_TOKEN_READONLY`** at the spec call site for the 403 test. Until the token is provisioned in an environment, write the test as the contract says and comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET> READONLY token not provisioned` — never a conditional `test.skip` (constitution pre-edit checklist #1; same rule as `USER_ACCESS_TOKEN_ZERO` in `api-testing`).
 
 ### Example 2 — Adding a new utility service (Grafana annotations)
 
@@ -167,7 +167,7 @@ User says: *"Set up a staging environment file pointing at the staging cluster."
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `process.env.X` is `undefined` at runtime                                                 | Key missing from the active `.env.${ENVIRONMENT}` file, or that file doesn't exist on disk                              | Confirm the key exists in `env/.env.${ENVIRONMENT}` (default `env/.env.dev`). Confirm the file exists. If recently added, also check `env/.env.example` for the key.       |
 | Wrong environment is loaded                                                               | `ENVIRONMENT` unset, misspelled, or points at a missing file (`dotenv` is silent on missing paths)                     | Default is `dev`. Set `ENVIRONMENT=test` (or `perf`, `staging`) **in the shell** — not in an `.env` file. Confirm `env/.env.${ENVIRONMENT}` exists.                          |
-| `USER_ACCESS_TOKEN_ADMIN` / `USER_ACCESS_TOKEN_FULL` not in `env/.env.example`            | These tokens are minted at runtime by an auth-bootstrap setup (Keycloak login → token), not committed                  | Do not add them to `env/.env.example`. Confirm the auth-bootstrap setup ran (login.setup.ts / equivalent). For 403 tests, guard with `test.skip(!process.env.USER_ACCESS_TOKEN_ZERO, "...")`. |
+| `USER_ACCESS_TOKEN_ADMIN` / `USER_ACCESS_TOKEN_FULL` not in `env/.env.example`            | These tokens are minted at runtime by an auth-bootstrap setup (Keycloak login → token), not committed                  | Do not add them to `env/.env.example`. Confirm the auth-bootstrap setup ran (login.setup.ts / equivalent). For 403 tests while `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment the test out with `// TODO: FIXME: <TICKET>` — never a conditional `test.skip`. |
 | TypeScript: `process.env.X` is `string \| undefined`                                      | `process.env` values are always optional in Node                                                                       | See the `type-safety` skill — it owns the canonical access pattern. The codebase currently mixes `!`, `as string`, `?? "default"`, and `string \| undefined`; do not assume any one of those is correct without reading `type-safety`. |
 | Self-signed certificate errors | TLS validation enabled | If an override is already set above the dotenv call for an admin client, do not remove it without auditing that client. Prefer trusting the certificate. |
 | Accidentally committed `env/.env.dev` (or `.env.test`, `.env.perf`)                        | `.gitignore` rule didn't catch it (e.g. file added with `-f`)                                                          | `git rm --cached env/.env.dev`; verify `.gitignore` covers `env/.env.dev` and `.env.*` (with `!.env.example`); rotate every credential exposed in the file.              |

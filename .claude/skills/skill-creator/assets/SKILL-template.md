@@ -6,7 +6,7 @@
   Every section header below is required (or marked "(when applicable)" /
   "(when multi-file)"). Do NOT delete sections — fill them or mark them
   explicitly absent. The checklist (references/checklist.md) gates on
-  presence; the hook (skill-validate.py) gates on frontmatter + length.
+  presence; `npm run validate` gates on frontmatter, sections + length.
 
   IMPORTANT: All relative paths below are written from the perspective of the
   destination (~/.claude/skills/<your-skill>/SKILL.md), NOT from this template's
@@ -55,10 +55,6 @@ non-negotiable invariants. **Read that rule first** if it exists. This skill
 orchestrates the full authoring workflow on top of it.
 <!-- If no paired rule exists, replace the line above with:
 "This skill has no paired rule (rule disposition: skill-only)." -->
-
-> **Companion plan.** When this skill cites "drift" or "planned", it points at
-> a numbered section of [docs/framework-alignment-plan.md](../../../docs/framework-alignment-plan.md).
-> Delete this callout if the skill has no companion plan.
 
 ## Critical
 
@@ -126,7 +122,7 @@ Pick the project-signature device that fits the domain:
   patterns based on inputs. Example: data-strategy decision tree, selectors
   decision tree.
 
-You can include more than one. The hook flags missing signature devices.
+You can include more than one. Review (checklist.md §1) flags a missing signature device.
 -->
 
 ## Workflow — <verb the artifact>
@@ -200,10 +196,11 @@ verification, drift triggers absent, tests pass, linter clean.
 <!--
 REQUIRED. 2-3 worked walkthroughs that cite the workflow steps.
 
-Use REAL codebase names — never placeholders. The Tier 1 audit caught skills
-using `MyResource` / `<resource>` placeholders; the model extrapolates better
-from real names (`synthetics`, `probes`, `adminTenants`, `SyntheticsPage`,
-`schema-field-monitorName`, etc.).
+Use concrete, realistic names that read as illustrations (`UsersPage`,
+`createUser`, `orders.spec.ts`) — not bare placeholders like `MyResource` /
+`<resource>`, and never one product's files as if every repository had them.
+The model extrapolates better from concrete examples, and this toolkit is
+installed into many repositories.
 
 Each example should:
 1. Open with a quoted user request
@@ -268,6 +265,5 @@ Cluster siblings (pick the cluster from skill-creator Phase 2):
 
 - **Paired rule:** [.cursor/rules/<rule>.mdc](../../rules/<rule>.mdc) — non-negotiable invariants for this domain. <!-- Or: "No paired rule (skill-only)." -->
 - **Sibling cluster (<cluster name>):** [`<sibling-1>`](../<sibling-1>/SKILL.md), [`<sibling-2>`](../<sibling-2>/SKILL.md), [`<sibling-3>`](../<sibling-3>/SKILL.md).
-- **Orchestration:** [`docs/cursor-skills-orchestration.md`](../../../docs/cursor-skills-orchestration.md) §6.4 cross-reference matrix.
-- **Companion plan:** [`docs/framework-alignment-plan.md`](../../../docs/framework-alignment-plan.md) §<N>. <!-- Delete if no plan section applies. -->
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Detail Index lists this skill.
+- **Orchestration:** the Routed Skill Index in `~/.claude/CLAUDE.md` — add this skill's row there.
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.

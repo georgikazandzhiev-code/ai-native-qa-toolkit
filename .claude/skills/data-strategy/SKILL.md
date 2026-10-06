@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 1.1.0
+version: 1.1.1
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -21,9 +21,9 @@ Single source of truth for **where test data comes from** in this framework. Sis
 
 ## Critical
 
-- **NEVER** redefine universal type-mismatch arrays (`[123, true, null, undefined]`, etc.) inline in a spec, helper, or schema. Import from [`fixtures/api/invalid-types.ts`](../../../fixtures/api/invalid-types.ts) (`invalidString`, `invalidStringTypes`, `invalidNumber`, etc.). Why: every API spec needs the same negative coverage; inlining duplicates the contract and produces drift across resources.
+- **NEVER** redefine universal type-mismatch arrays (`[123, true, null, undefined]`, etc.) inline in a spec, helper, or schema. Import from `fixtures/api/invalid-types.ts` (`invalidString`, `invalidStringTypes`, `invalidNumber`, etc.). Why: every API spec needs the same negative coverage; inlining duplicates the contract and produces drift across resources.
 - **NEVER** re-declare an array or constant that already exists in `test-data/app/*.json`. Import it (`import alertsData from "../../../test-data/app/alerts.json"`) and reference the property (e.g. `alertsData.severities`). Before adding a local constant, search `test-data/app/` for the value. Why: duplicated constants diverge silently when only one copy is updated.
-- **NEVER** generate app-defined strings with Faker — error messages, button labels, toast text, page headings, validation messages all live in [`enums/app/*`](../../../enums/app). Why: Faker output is random; app-defined strings are contracts the UI emits verbatim. Encoding them in `enums/` keeps spec assertions in sync with the running UI.
+- **NEVER** generate app-defined strings with Faker — error messages, button labels, toast text, page headings, validation messages all live in `enums/app/*`. Why: Faker output is random; app-defined strings are contracts the UI emits verbatim. Encoding them in `enums/` keeps spec assertions in sync with the running UI.
 - **NEVER** hardcode test content strings (names, emails, todo text, monitor names, descriptions) in a spec. Generate with `faker.<...>` (e.g., `faker.string.alphanumeric(6)`) for uniqueness — required for parallel safety. Why: hardcoded names collide under `fullyParallel: true`; the framework runs every spec concurrently.
 - **NEVER** store fixed expected values used in a single assertion in a `test-data/app/*.json` file. Keep them inline in the test. Why: single-use sentinels in JSON force readers to jump files for one literal; only multi-use sentinels (`invalidId`, `nonExistentId`, boundary matrices) earn a JSON home.
 - **NEVER** introduce magic numbers (timeouts, retry counts, page-size limits, polling intervals) inline in helpers or specs. Route through `playwright.config.ts` for test-suite tuning, an enum in `enums/app/*` for domain-level limits, or `appConfig.timeouts.X` from `config/app.ts`. Why: scattered magic numbers can't be tuned centrally and rot independently.
@@ -40,30 +40,30 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 
 | Kind of data | Lives in | Owner pattern | Example |
 |--------------|----------|---------------|---------|
-| **Static — boundary / validation matrices** | `test-data/app/<resource>Validation.json` | Pattern 4 | [test-data/app/httpSyntheticValidation.json](../../../test-data/app/httpSyntheticValidation.json), [test-data/app/sslSyntheticValidation.json](../../../test-data/app/sslSyntheticValidation.json), [test-data/app/mcpSyntheticValidation.json](../../../test-data/app/mcpSyntheticValidation.json) |
-| **Static — sentinels & lookup ids** | `test-data/app/<resource>.json` (keys: `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, etc.) | Pattern 5 | [test-data/app/probe.json](../../../test-data/app/probe.json), [test-data/app/synthetic-common.json](../../../test-data/app/synthetic-common.json), [test-data/app/http-synthetic.json](../../../test-data/app/http-synthetic.json), [test-data/app/dns-synthetic.json](../../../test-data/app/dns-synthetic.json) |
+| **Static — boundary / validation matrices** | `test-data/app/<resource>Validation.json` | Pattern 4 | `test-data/app/httpSyntheticValidation.json`, `test-data/app/sslSyntheticValidation.json`, `test-data/app/mcpSyntheticValidation.json` |
+| **Static — sentinels & lookup ids** | `test-data/app/<resource>.json` (keys: `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, etc.) | Pattern 5 | `test-data/app/probe.json`, `test-data/app/synthetic-common.json`, `test-data/app/http-synthetic.json`, `test-data/app/dns-synthetic.json` |
 | **Static — frontend mock payloads** | `test-data/app/<resource>.json` (used in `route.fulfill`) | Pattern 5 (route stub) | No mock-JSON fixtures in this project today; reserved for future use — see `refactor-playbook.md §4` |
 | **Static loader (JSON + transformation)** | `helpers/app/<topic>Loader.ts` (or `testDataLoader.ts`) | Pattern 5 wrapper | No loader helpers in this project today; reserved for future use |
-| **Dynamic — typed factory (`createXData`)** | `helpers/app/testDataGenerators.ts` (planned per [`docs/framework-alignment-plan.md` § 6.4](../../../docs/framework-alignment-plan.md)), OR co-located in `helpers/app/<topic>.ts` for topic-specific data today | Pattern 2 | [helpers/app/probes.ts](../../../helpers/app/probes.ts) (`buildCreateProbeBody`, `buildUpdateProbeBody`), [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) (`buildCreateSyntheticBody` + 6 sibling per-type builders), [helpers/app/adminUsers.ts](../../../helpers/app/adminUsers.ts) (`generateUserPayload`) |
+| **Dynamic — typed factory (`createXData`)** | `helpers/app/testDataGenerators.ts` (planned), OR co-located in `helpers/app/<topic>.ts` for topic-specific data today | Pattern 2 | `helpers/app/probes.ts` (`buildCreateProbeBody`, `buildUpdateProbeBody`), `helpers/app/synthetics.ts` (`buildCreateSyntheticBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
 | **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | Planned alongside the centralized `testDataGenerators.ts` (e.g. `createProbeForRegion`, `createMatchedProbeAndSyntheticPair`); none today |
-| **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | [helpers/app/probes.ts](../../../helpers/app/probes.ts) (`buildListProbesUrl`), [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts) (`buildListSyntheticsUrl`) |
-| **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | [helpers/app/probes.ts](../../../helpers/app/probes.ts), [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts), [helpers/app/adminTenants.ts](../../../helpers/app/adminTenants.ts), [helpers/app/adminUsers.ts](../../../helpers/app/adminUsers.ts) |
-| **Per-test user lifecycle (admin-API + Keycloak)** | [helpers/app/adminUsers.ts](../../../helpers/app/adminUsers.ts) (`setupTestUser` / `teardownTestUser`); password reset via [helpers/util/keyCloak.ts](../../../helpers/util/keyCloak.ts) (`getAuthenticatedKcAdminClient`, `getUserIdByEmail`, `resetUserPasswordById`) | Pattern 7 | `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` |
-| **Per-test user emails (Mailpit plus-addressing)** | [helpers/util/mailpit.ts](../../../helpers/util/mailpit.ts) | Pattern 7 | `getNextTestEmail(baseEmail)`, `MailpitHelper` |
-| **Personas — UI session (storage state JSON)** | `.auth/app/<persona>Session.json` (generated; not committed) | Pattern (persona) | [.auth/app/appMainUserSession.json](../../../.auth/app/appMainUserSession.json) |
-| **Personas — UI session generator** | [helpers/app/createStorageState.ts](../../../helpers/app/createStorageState.ts) | Pattern (persona) | `createAppStorageState({ email, password, totpSecret, storageStatePath })` |
-| **Personas — bearer tokens** | `process.env.USER_ACCESS_TOKEN_*`, populated by [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) | Pattern (persona) | `USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN` |
-| **Persona credentials (email/password/TOTP)** | `env/.env.<environment>` (shape in [env/.env.example](../../../env/.env.example)); read only inside `login.setup.ts` | Pattern (persona) | See [reference.md §1.3](reference.md#13-user-credentials-email--password--totp-secret-triplets) |
-| **URLs and endpoint paths** | [config/app.ts](../../../config/app.ts) (`appConfig.apiUrl`, `appConfig.api.SYNTHETICS`, `appConfig.api.PROBES`, …) | n/a | `appConfig.api.ADMIN_TENANT`, `appConfig.api.SYNTHETICS`, `appConfig.api.PROBES` |
-| **Reference enums (Qase suites, monitor types)** | `enums/app/<topic>.ts` | n/a | [enums/app/qase-suites.ts](../../../enums/app/qase-suites.ts) |
+| **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | `helpers/app/probes.ts` (`buildListProbesUrl`), `helpers/app/synthetics.ts` (`buildListSyntheticsUrl`) |
+| **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | `helpers/app/probes.ts`, `helpers/app/synthetics.ts`, `helpers/app/adminTenants.ts`, `helpers/app/adminUsers.ts` |
+| **Per-test user lifecycle (admin-API + Keycloak)** | `helpers/app/adminUsers.ts` (`setupTestUser` / `teardownTestUser`); password reset via `helpers/util/keyCloak.ts` (`getAuthenticatedKcAdminClient`, `getUserIdByEmail`, `resetUserPasswordById`) | Pattern 7 | `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` |
+| **Per-test user emails (Mailpit plus-addressing)** | `helpers/util/mailpit.ts` | Pattern 7 | `getNextTestEmail(baseEmail)`, `MailpitHelper` |
+| **Personas — UI session (storage state JSON)** | `.auth/app/<persona>Session.json` (generated; not committed) | Pattern (persona) | `.auth/app/appMainUserSession.json` |
+| **Personas — UI session generator** | `helpers/app/createStorageState.ts` | Pattern (persona) | `createAppStorageState({ email, password, totpSecret, storageStatePath })` |
+| **Personas — bearer tokens** | `process.env.USER_ACCESS_TOKEN_*`, populated by `tests/app/login.setup.ts` | Pattern (persona) | `USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN` |
+| **Persona credentials (email/password/TOTP)** | `env/.env.<environment>` (shape in `env/.env.example`); read only inside `login.setup.ts` | Pattern (persona) | See [reference.md §1.3](reference.md#13-user-credentials-email--password--totp-secret-triplets) |
+| **URLs and endpoint paths** | `config/app.ts` (`appConfig.apiUrl`, `appConfig.api.SYNTHETICS`, `appConfig.api.PROBES`, …) | n/a | `appConfig.api.ADMIN_TENANT`, `appConfig.api.SYNTHETICS`, `appConfig.api.PROBES` |
+| **Reference enums (Qase suites, monitor types)** | `enums/app/<topic>.ts` | n/a | `enums/app/qase-suites.ts` |
 | **Zod request/response schemas (the contract)** | `fixtures/api/schemas/app/<resource>.ts` | n/a | `fixtures/api/schemas/app/synthetic.ts`, `fixtures/api/schemas/app/probe.ts`, `fixtures/api/schemas/app/tenant.ts` |
 
 ### Forbidden locations
 
 - JSON test data outside `test-data/` → move it under `test-data/app/`.
 - Faker payloads inline in a spec when an entity already has a builder → move to `helpers/app/<topic>.ts` or call the existing `buildCreate<X>Body` / `buildUpdate<X>Body`.
-- `process.env.USER_ACCESS_TOKEN_*` written outside [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) → forbidden.
-- New env vars added without a matching entry in [env/.env.example](../../../env/.env.example) → must be documented.
+- `process.env.USER_ACCESS_TOKEN_*` written outside `tests/app/login.setup.ts` → forbidden.
+- New env vars added without a matching entry in `env/.env.example` → must be documented.
 - Storage-state JSON committed to git → these belong in `.auth/` (gitignored), produced by `login.setup.ts` per environment.
 
 For the full enumeration of every file in each location, see [reference.md](reference.md). The decision tree below picks the right cell of this table for any new piece of data.
@@ -119,12 +119,12 @@ Rules ([patterns.md § Pattern 1](patterns.md)):
 
 ### Pattern 2 — Typed factory with `Partial<T>` overrides (default)
 
-Target shape per plan § 6.4 — code in [patterns.md § Pattern 2](patterns.md). Mandatory shape:
+Target shape — code in [patterns.md § Pattern 2](patterns.md). Mandatory shape:
 - Exported `type X` next to the factory; or import it from the matching schema file.
 - Function returns the type, takes `Partial<T> = {}` last.
 - Defaults are realistic and pass server validation.
 - `...options` spread must be the LAST property (overrides win).
-- One factory per entity. Per-entity files in `helpers/app/testDataGenerators.ts` (target) or in the topic-specific helper today (e.g. `buildCreateProbeBody` in [helpers/app/probes.ts](../../../helpers/app/probes.ts), `buildCreateSyntheticBody` + 6 sibling per-type builders in [helpers/app/synthetics.ts](../../../helpers/app/synthetics.ts)).
+- One factory per entity. Per-entity files in `helpers/app/testDataGenerators.ts` (target) or in the topic-specific helper today (e.g. `buildCreateProbeBody` in `helpers/app/probes.ts`, `buildCreateSyntheticBody` + 6 sibling per-type builders in `helpers/app/synthetics.ts`).
 
 > Drift today: existing `buildCreate<X>Body` builders return `Record<string, unknown>` instead of an exported `XData` type. Refactor playbook §§ 1 + 3 cover the migration.
 
@@ -153,7 +153,7 @@ For fixed ids and environment-pinned references (`probe.json` sentinels like `in
 
 ### Pattern 6 — API seeder helper
 
-Target shape per plan § 4.2 (assertion-style `setupX`/`teardownX` pair); current passthrough `createProbe` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. Mandatory shape:
+Target shape (assertion-style `setupX`/`teardownX` pair); current passthrough `createProbe` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. Mandatory shape:
 - Always exposed as a pair: `setupX` (or `createX`) + `teardownX` (or `deleteX`). The pair lives in the same file.
 - **Accepts `overrides?: Partial<T>` and forwards them to the factory** (`body: createXData(overrides)`). A seeder with no override parameter is a refactor target: a test that needs a specific field value (e.g. a fixed `name` to assert on, or a `status: 'disabled'` seed state) cannot use it without forking into a second seeder. Overrides are what make a single seeder reusable across scenarios.
 - Body is built by a Pattern-2 factory (`createXData`), never inline. If the factory does not exist, create it first.
@@ -228,12 +228,12 @@ flowchart LR
 
 ## Parallel-safety rules
 
-The framework runs `fullyParallel: true` (see [playwright.config.ts](../../../playwright.config.ts)). Data must be independent per worker AND per test.
+The framework runs `fullyParallel: true` (see `playwright.config.ts`). Data must be independent per worker AND per test.
 
 1. **Uniqueness sources** — `faker.string.uuid()`, `faker.string.alphanumeric(N)`, `Date.now()`, `getNextTestEmail(baseEmail)`. Module-level counters (`let counter = 0`) are forbidden.
 2. **No mutable module state** — factories and Object Mothers are pure functions of their inputs.
 3. **Faker seeding** — the framework does not globally seed faker. If you need a reproducible failure, seed at the start of the test with `faker.seed(testInfo.testId.split('').reduce((a, c) => a + c.charCodeAt(0), 0))`. Do not seed in factories themselves.
-4. **`process.env` writes** — only [tests/app/login.setup.ts](../../../tests/app/login.setup.ts) may write `process.env.USER_ACCESS_TOKEN_*`. Specs and helpers READ env vars; they never write them.
+4. **`process.env` writes** — only `tests/app/login.setup.ts` may write `process.env.USER_ACCESS_TOKEN_*`. Specs and helpers READ env vars; they never write them.
 5. **Per-test user emails** are intrinsically parallel-safe via plus-addressing.
 6. **Storage states** are read-only files; multiple workers can share them. Personas that need to mutate user attributes during a test must use Pattern 7, not a shared storage state.
 7. **Don't share helper-returned objects** — if `createProbe` returns `body`, the consuming test owns it; don't cache it across describes.
@@ -269,7 +269,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 - **OCP** — Factories accept `Partial<T>` overrides. Add new scenarios via Object Mothers or new overrides; don't edit the factory's defaults to satisfy a single test.
 - **LSP** — Object Mother return types must be assignable to the base factory's return type (use the same `Type` everywhere).
 - **ISP** — Don't pass a "god params" object to a helper. `createProbe(apiRequest, body, headers)` + `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` is better than one mega-helper that does everything.
-- **DIP** — Helpers depend on the `ApiRequestFn` abstraction (from [fixtures/api/api-types.ts](../../../fixtures/api/api-types.ts)), never on `request` directly.
+- **DIP** — Helpers depend on the `ApiRequestFn` abstraction (from `fixtures/api/api-types.ts`), never on `request` directly.
 
 ## Anti-patterns catalog
 
@@ -281,7 +281,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 | `const token = process.env.USER_ACCESS_TOKEN_X` aliased then passed around | Hides the canonical name; grep misses it | Use `process.env.USER_ACCESS_TOKEN_X` directly at the call site |
 | Hardcoded uuid in a spec for "non-existent" id | Magic value; can't be updated centrally | `test-data/app/<resource>.json` `nonExistentId` |
 | `await getNextTestEmail()` | The function is synchronous; await produces noise | Drop the `await` |
-| `Math.random()` based amount generators ([helpers/util/dataGenerator.ts](../../../helpers/util/dataGenerator.ts) `generateRandomAmount`) | Bypasses the project's faker-everywhere convention | `faker.number.float({ min, max, multipleOf: 0.01 })` |
+| `Math.random()` based amount generators (`helpers/util/dataGenerator.ts` `generateRandomAmount`) | Bypasses the project's faker-everywhere convention | `faker.number.float({ min, max, multipleOf: 0.01 })` |
 | API seeder that builds its body inline with faker | Couples seeding (HTTP) and shaping (factory) — violates SRP | Body comes from a Pattern-2 factory; seeder only POSTs and parses |
 | Storage state mutated during a test | Breaks isolation for parallel workers | Pattern 7 (per-test user) or a fresh persona |
 | Mock JSON used as if it described a live backend resource | Drift between mock JSON and real backend | Pattern 6 + Pattern 7; keep mocks only for purely-frontend assertions |

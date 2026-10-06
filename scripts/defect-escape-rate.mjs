@@ -244,8 +244,12 @@ try {
     console.log('');
   }
 
-  process.exit(gateFailed ? 1 : 0);
+  // exitCode, not exit(): calling process.exit() while fetch's sockets are still closing
+  // crashes Node 24 on Windows (libuv "!(handle->flags & UV_HANDLE_CLOSING)", exit 0xC0000409)
+  // after the correct result has already been printed. Letting the loop drain exits cleanly
+  // with the same code on every platform.
+  process.exitCode = gateFailed ? 1 : 0;
 } catch (e) {
   console.error(asJson ? JSON.stringify({ error: e.message }) : `ERROR: ${e.message}`);
-  process.exit(1);
+  process.exitCode = 1;
 }

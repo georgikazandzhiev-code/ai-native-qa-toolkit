@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 1.1.0 -->
+<!-- toolkit-version: 1.2.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -44,7 +44,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Imports** | Import `test`/`expect` from the project's fixtures barrel (e.g. `fixtures/pom/test-options.ts`), never directly from `@playwright/test` in spec files |
 | **Dependency Injection** | Use fixtures for page objects / API clients. Never `new PageObject(page)` inside a test |
 | **Type Safety** | Strict TS. No `any` / `as any` / `@ts-ignore`. Explicit return types on exported functions. No `console.*` |
-| **Selectors** | Priority: `getByRole()` > `getByText()` > `getByLabel()` > `getByPlaceholder()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
+| **Selectors** | Priority: `getByRole()` > `getByLabel()` > `getByPlaceholder()` > `getByText()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
 | **Schemas** | Validate every API response against a Zod schema. New schemas use `z.strictObject()`. Never loosen a schema to make a test pass |
 | **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();` |
 | **Sources of Truth** | Tokens/URLs from `process.env.*`. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |
@@ -161,6 +161,7 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `qe-pattern-memory` | Cross-session learning — git-tracked pattern store with confidence, tier promotion and falsification |
 | `pr-review` | Pre-push self-review against MUSTs and WON'Ts |
 | `k6-load-testing` | Load / performance test work |
+| `accessibility-testing` | Accessibility (a11y) tests — axe scans per page state with `@axe-core/playwright`, WCAG A/AA tags, keyboard and focus checks, ARIA snapshots, known-violations policy |
 | `owasp-security-testing` | Security testing — OWASP Top 10 (web) + API Security Top 10 mapped to QA tests; access control / BOLA / BFLA / injection / XSS / SSRF; pre-release security review gate |
 | `ai-native-workflow` | "How should I work with AI here?", multi-skill planning |
 | `skill-creator` | Authoring or refactoring a skill (manual) — owns the SKILL.md structure contract |

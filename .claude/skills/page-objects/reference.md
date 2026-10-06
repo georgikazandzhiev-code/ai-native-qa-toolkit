@@ -32,21 +32,21 @@ Companion file to [`SKILL.md`](SKILL.md). This catalogs **what already exists** 
 
 | Fixture | Class | File |
 |---|---|---|
-| `loginPage` | `LoginPage` | [`pages/util/LoginPage.ts`](../../../pages/util/LoginPage.ts) |
-| `sideNavigation` | `SideNavigation` | [`pages/app/SideNavigation.ts`](../../../pages/app/SideNavigation.ts) |
-| `alertsPage` | `AlertsPage` | [`pages/app/AlertsPage.ts`](../../../pages/app/AlertsPage.ts) |
-| `dashboardPage` | `DashboardPage` | [`pages/app/DashboardPage.ts`](../../../pages/app/DashboardPage.ts) |
-| `syntheticsPage` | `SyntheticsPage` | [`pages/app/SyntheticsPage.ts`](../../../pages/app/SyntheticsPage.ts) |
-| `inventoryPage` | `InventoryPage` | [`pages/app/InventoryPage.ts`](../../../pages/app/InventoryPage.ts) |
-| `policiesPage` | `PoliciesPage` | [`pages/app/PoliciesPage.ts`](../../../pages/app/PoliciesPage.ts) |
-| `createMonitorPage` | `CreateMonitorPage` | [`pages/app/CreateMonitorPage.ts`](../../../pages/app/CreateMonitorPage.ts) |
-| `createPolicyPage` | `CreatePolicyPage` | [`pages/app/CreatePolicyPage.ts`](../../../pages/app/CreatePolicyPage.ts) |
-| `probesPage` | `ProbesPage` | [`pages/app/ProbesPage.ts`](../../../pages/app/ProbesPage.ts) |
-| `metricsPage` | `MetricsPage` | [`pages/app/MetricsPage.ts`](../../../pages/app/MetricsPage.ts) |
-| `syntheticMetricsViewPage` | `SyntheticMetricsViewPage` | [`pages/app/SyntheticMetricsViewPage.ts`](../../../pages/app/SyntheticMetricsViewPage.ts) |
-| `settingsProfilePage` | `SettingsProfilePage` | [`pages/app/SettingsProfilePage.ts`](../../../pages/app/SettingsProfilePage.ts) |
-| `profileSettingsPage` | `ProfileSettingsPage` | [`pages/app/ProfileSettingsPage.ts`](../../../pages/app/ProfileSettingsPage.ts) |
-| `reportsPage` | `ReportsPage` | [`pages/app/ReportsPage.ts`](../../../pages/app/ReportsPage.ts) |
+| `loginPage` | `LoginPage` | `pages/util/LoginPage.ts` |
+| `sideNavigation` | `SideNavigation` | `pages/app/SideNavigation.ts` |
+| `alertsPage` | `AlertsPage` | `pages/app/AlertsPage.ts` |
+| `dashboardPage` | `DashboardPage` | `pages/app/DashboardPage.ts` |
+| `syntheticsPage` | `SyntheticsPage` | `pages/app/SyntheticsPage.ts` |
+| `inventoryPage` | `InventoryPage` | `pages/app/InventoryPage.ts` |
+| `policiesPage` | `PoliciesPage` | `pages/app/PoliciesPage.ts` |
+| `createMonitorPage` | `CreateMonitorPage` | `pages/app/CreateMonitorPage.ts` |
+| `createPolicyPage` | `CreatePolicyPage` | `pages/app/CreatePolicyPage.ts` |
+| `probesPage` | `ProbesPage` | `pages/app/ProbesPage.ts` |
+| `metricsPage` | `MetricsPage` | `pages/app/MetricsPage.ts` |
+| `syntheticMetricsViewPage` | `SyntheticMetricsViewPage` | `pages/app/SyntheticMetricsViewPage.ts` |
+| `settingsProfilePage` | `SettingsProfilePage` | `pages/app/SettingsProfilePage.ts` |
+| `profileSettingsPage` | `ProfileSettingsPage` | `pages/app/ProfileSettingsPage.ts` |
+| `reportsPage` | `ReportsPage` | `pages/app/ReportsPage.ts` |
 
 `resetStorageState` is also exported from `fixtures/pom/page-object-fixture.ts` — call it in `beforeEach` for unauthenticated flows.
 
@@ -54,7 +54,7 @@ Companion file to [`SKILL.md`](SKILL.md). This catalogs **what already exists** 
 
 ## `SyntheticsPage` — key methods
 
-Lives at [`pages/app/SyntheticsPage.ts`](../../../pages/app/SyntheticsPage.ts).
+Lives at `pages/app/SyntheticsPage.ts`.
 
 - `open()` — navigate to `/synthetics` and wait for list-ready signal.
 - `verifyPageLoaded()` — assert `page-synthetics` root + table chrome.
@@ -74,7 +74,7 @@ Lives at [`pages/app/SyntheticsPage.ts`](../../../pages/app/SyntheticsPage.ts).
 
 ## `CreateMonitorPage` — key methods
 
-Lives at [`pages/app/CreateMonitorPage.ts`](../../../pages/app/CreateMonitorPage.ts). Shared across HTTP, ICMP, WebSocket, TCP, DNS, SSL, MCP create/edit flows.
+Lives at `pages/app/CreateMonitorPage.ts`. Shared across HTTP, ICMP, WebSocket, TCP, DNS, SSL, MCP create/edit flows.
 
 - `fillHttpMonitorForm(data)`, `fillIcmpMonitorForm(data)`, `fillWebSocketMonitorForm(data)`, … — per-type form fillers. Use the matching `buildCreate<TYPE>SyntheticBody` from `helpers/app/synthetics.ts` to build `data`.
 - `monitorTypeCard(type)` → `Locator` — step-1 type chooser card (cards share `monitor-type-card` testid; scope by title text).
@@ -90,7 +90,7 @@ Lives at [`pages/app/CreateMonitorPage.ts`](../../../pages/app/CreateMonitorPage
 
 ## `SideNavigation` — key methods
 
-Lives at [`pages/app/SideNavigation.ts`](../../../pages/app/SideNavigation.ts). Does **not** extend `BasePage` — sidebar is a shell component, not a page.
+Lives at `pages/app/SideNavigation.ts`. Does **not** extend `BasePage` — sidebar is a shell component, not a page.
 
 - `navigateToApp()` — navigate to `/` and wait for the sidebar to render.
 - `navigateToSynthetics()`, `navigateToMetrics()`, `navigateToDashboard()`, `navigateToReports()`, `navigateToInventory()`, `navigateToPolicies()`, `navigateToSettings()` — click the matching nav link (`nav-link-<feature>` testid) and wait for the destination page root.
@@ -103,7 +103,7 @@ Locator getters: `sidebar`, `logo`, `dashboard`, `metrics`, `synthetics`, `inven
 
 ## `ProbesPage` — key methods
 
-Lives at [`pages/app/ProbesPage.ts`](../../../pages/app/ProbesPage.ts). Extends `DataTableBase`. Status cards + filters + table + register / edit / details / download-config sheets.
+Lives at `pages/app/ProbesPage.ts`. Extends `DataTableBase`. Status cards + filters + table + register / edit / details / download-config sheets.
 
 - `open()` / `verifyPageLoaded()` — navigate to `/settings/probes` and assert the page root.
 - Status cards: `totalProbesCard`, `onlineCard`, `offlineCard`, `provisioningCard` (scope `status-card` by title text); `getAllStatusCounts()`, `verifyStatusCards()`, `verifyStatusCardCounts()`.
@@ -119,7 +119,7 @@ Lives at [`pages/app/ProbesPage.ts`](../../../pages/app/ProbesPage.ts). Extends 
 
 ## `MetricsPage` — key methods
 
-Lives at [`pages/app/MetricsPage.ts`](../../../pages/app/MetricsPage.ts). Host picker, metric selection, chart toolbar, expanded dialog.
+Lives at `pages/app/MetricsPage.ts`. Host picker, metric selection, chart toolbar, expanded dialog.
 
 - `open()` / `verifyPageLoaded()` — navigate to `/metrics` and assert the page root.
 - Host selection: `selectHost(name)`, `clearHostSelection()`.
@@ -131,7 +131,7 @@ Lives at [`pages/app/MetricsPage.ts`](../../../pages/app/MetricsPage.ts). Host p
 
 ## `DashboardPage` — key methods
 
-Lives at [`pages/app/DashboardPage.ts`](../../../pages/app/DashboardPage.ts). Read-only landing page (route `/`) — Active alerts / Synthetics / Probes / Monitors-by-Type / Quick Actions sections.
+Lives at `pages/app/DashboardPage.ts`. Read-only landing page (route `/`) — Active alerts / Synthetics / Probes / Monitors-by-Type / Quick Actions sections.
 
 - `open()` — navigate to `/` and wait for `page-dashboard` root.
 - `verifyPageLoaded()` — minimal ready-state assertion (page root + page title visible).
@@ -159,7 +159,7 @@ Public constants exported from the same file (used by the dashboard spec):
 
 ## `AlertsPage` — key methods
 
-Lives at [`pages/app/AlertsPage.ts`](../../../pages/app/AlertsPage.ts). Extends `BasePage` (its table root differs from the standard `data-table`, so it does not extend `DataTableBase`). Covers `/alerts` (Active list) and `/alerts/history`.
+Lives at `pages/app/AlertsPage.ts`. Extends `BasePage` (its table root differs from the standard `data-table`, so it does not extend `DataTableBase`). Covers `/alerts` (Active list) and `/alerts/history`.
 
 - Page roots: `pageRoot` (`page-alerts`), `historyPageRoot` (`page-alerts-history`); tabs: `alertsTabs`, `activeTab`, `historyTab`.
 - Severity cards: `severityCard(severity)` for `critical | error | warning | info`, plus `totalCard`.
@@ -173,7 +173,7 @@ Lives at [`pages/app/AlertsPage.ts`](../../../pages/app/AlertsPage.ts). Extends 
 
 ## `InventoryPage` — key methods
 
-Lives at [`pages/app/InventoryPage.ts`](../../../pages/app/InventoryPage.ts). Extends `DataTableBase`. Inventory ("Assets") flat list at `/inventory`, backed by the `/synthetics` endpoints.
+Lives at `pages/app/InventoryPage.ts`. Extends `DataTableBase`. Inventory ("Assets") flat list at `/inventory`, backed by the `/synthetics` endpoints.
 
 - `open()` / `verifyPageLoaded()` / `expectInventoryListReady()` — navigate to `/inventory` and assert list-ready.
 - Overview cards (double as health filters): `totalAssetsCard`, `healthyCard`, `warningCard`, `criticalCard`, `unknownCard`, `healthCard(state)`, `getAllHealthCounts()`, `verifyOverviewCards()`.
@@ -186,7 +186,7 @@ Lives at [`pages/app/InventoryPage.ts`](../../../pages/app/InventoryPage.ts). Ex
 
 ## `PoliciesPage` — key methods
 
-Lives at [`pages/app/PoliciesPage.ts`](../../../pages/app/PoliciesPage.ts). Extends `DataTableBase`. Policies list — filter cards, toolbar filters, table, row actions, delete dialog, edit/details sheets.
+Lives at `pages/app/PoliciesPage.ts`. Extends `DataTableBase`. Policies list — filter cards, toolbar filters, table, row actions, delete dialog, edit/details sheets.
 
 - `open()` / `verifyPageLoaded()` — navigate to `/policies` and assert page root + table.
 - Filter cards: `totalPoliciesCard`, `enabledCard`, `criticalCard`, `errorCard`, `warningCard`, `infoCard`, `severityCard(state)`, `getAllCardCounts()`, `verifyFilterCards()`, `verifyCardActive/Inactive(card)`.
@@ -200,7 +200,7 @@ Lives at [`pages/app/PoliciesPage.ts`](../../../pages/app/PoliciesPage.ts). Exte
 
 ## `CreatePolicyPage` — key methods
 
-Lives at [`pages/app/CreatePolicyPage.ts`](../../../pages/app/CreatePolicyPage.ts). Extends `BasePage`. Two-step create-policy sheet (step-1 type cards → step-2 schema form).
+Lives at `pages/app/CreatePolicyPage.ts`. Extends `BasePage`. Two-step create-policy sheet (step-1 type cards → step-2 schema form).
 
 - Sheet chrome: `sheet`, `sheetHeading`, `closeButton`, `cancelButton`, `backButton`, `submitButton`; `openWizard()`, `selectPolicyType(id)`, `goBackToTypeSelection()`, `cancelWizard()`, `closeWizard()`.
 - Step 1: `policyTypeGrid`, `typeCards`, `typeCardByTitle(title)`, `typeCardForId(id)`.
@@ -215,7 +215,7 @@ Lives at [`pages/app/CreatePolicyPage.ts`](../../../pages/app/CreatePolicyPage.t
 
 ## `SyntheticMetricsViewPage` — key methods
 
-Lives at [`pages/app/SyntheticMetricsViewPage.ts`](../../../pages/app/SyntheticMetricsViewPage.ts). Extends `BasePage`. Per-monitor metrics view at `/synthetics/$syntheticId` (opened from row-action "View Metrics" or a monitor name link).
+Lives at `pages/app/SyntheticMetricsViewPage.ts`. Extends `BasePage`. Per-monitor metrics view at `/synthetics/$syntheticId` (opened from row-action "View Metrics" or a monitor name link).
 
 - `open(syntheticId?)` / `verifyPageLoaded()`; states: `errorState`, `dataErrorState`, `emptyState`, `loadingSkeleton`.
 - Header: `header`, `backButton`, `monitorNameHeading`, `protocolBadge`, `subtitleWithTarget(target)`.
@@ -227,7 +227,7 @@ Lives at [`pages/app/SyntheticMetricsViewPage.ts`](../../../pages/app/SyntheticM
 
 ## `SettingsProfilePage` — key methods
 
-Lives at [`pages/app/SettingsProfilePage.ts`](../../../pages/app/SettingsProfilePage.ts). Extends `BasePage`. Settings > Profile tab — profile card, invite banner, invite-member sheet.
+Lives at `pages/app/SettingsProfilePage.ts`. Extends `BasePage`. Settings > Profile tab — profile card, invite banner, invite-member sheet.
 
 - `open()` / `verifyPageLoaded()` — navigate to `/settings/profile` and assert `page-profile`.
 - Structure: `pageRoot`, `settingsNav`, `settingsNavProfileItem`, `inviteBanner`, `inviteButton`.
@@ -239,7 +239,7 @@ Lives at [`pages/app/SettingsProfilePage.ts`](../../../pages/app/SettingsProfile
 
 ## `ReportsPage` — key methods
 
-Lives at [`pages/app/ReportsPage.ts`](../../../pages/app/ReportsPage.ts). Extends `BasePage`. Reports page at `/reports` — purely client-side widget canvas (no API, no cleanup).
+Lives at `pages/app/ReportsPage.ts`. Extends `BasePage`. Reports page at `/reports` — purely client-side widget canvas (no API, no cleanup).
 
 - `open()` / `verifyPageLoaded()` — navigate to `/reports` and assert the canvas.
 - Canvas: `canvas`, `widgets`, `widget(index)`, `titleFor(widget)`, empty state (`emptyState`, `emptyHeading`, `emptyDescription`, `verifyEmptyState()`).
@@ -250,7 +250,7 @@ Lives at [`pages/app/ReportsPage.ts`](../../../pages/app/ReportsPage.ts). Extend
 
 ## `LoginPage` — key methods
 
-Lives at [`pages/util/LoginPage.ts`](../../../pages/util/LoginPage.ts). Targets the **Keycloak login page** with the custom Keycloak theme — selectors match the custom theme at `frontend/keycloak/themes/<theme>/login/login.ftl`.
+Lives at `pages/util/LoginPage.ts`. Targets the **Keycloak login page** with the custom Keycloak theme — selectors match the custom theme at `frontend/keycloak/themes/<theme>/login/login.ftl`.
 
 - `open()` — navigate to the Keycloak login URL.
 - `login(email, password)` / `loginAndVerify(email, password)` — fill credentials, submit, wait for redirect.
@@ -264,8 +264,8 @@ The directory contains exactly **two** files: `BasePage.ts` and `DataTableBase.t
 
 | Class | File | Used by |
 |---|---|---|
-| `BasePage` | [`BasePage.ts`](../../../pages/baseClasses/BasePage.ts) | Every app POM extends this (directly or via `DataTableBase`) — provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `getPageTitle`, `refresh`. |
-| `DataTableBase` | [`DataTableBase.ts`](../../../pages/baseClasses/DataTableBase.ts) | Abstract base (extends `BasePage`) for pages built around the standard `data-table` component — extended by `SyntheticsPage`, `InventoryPage`, `ProbesPage`, `PoliciesPage`. Subclasses must override `get searchInput()`. |
+| `BasePage` | `BasePage.ts` | Every app POM extends this (directly or via `DataTableBase`) — provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `getPageTitle`, `refresh`. |
+| `DataTableBase` | `DataTableBase.ts` | Abstract base (extends `BasePage`) for pages built around the standard `data-table` component — extended by `SyntheticsPage`, `InventoryPage`, `ProbesPage`, `PoliciesPage`. Subclasses must override `get searchInput()`. |
 
 ### `DataTableBase` — API
 
