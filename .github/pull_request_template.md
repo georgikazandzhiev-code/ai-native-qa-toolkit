@@ -2,6 +2,10 @@
 
 <!-- One or two sentences. Not a file list — the diff already is one. -->
 
+## Scope
+
+- [ ] This PR is **one logical change** that can ship on its own (`GOVERNANCE.md` § One logical change per PR). If it isn't, say why it can't be split:
+
 ## Change class
 
 <!-- Pick one. GOVERNANCE.md § Change classes decides by what happens to output that was
