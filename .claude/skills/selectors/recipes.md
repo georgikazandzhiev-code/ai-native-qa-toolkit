@@ -159,11 +159,11 @@ async createIcmpMonitor(data: {
     await this.timeoutInput.fill(String(data.timeout));
     await this.timeoutInput.blur();
 
-    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: 20000 });
+    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
 
     if (data.submit) {
         await this.createMonitorSubmitButton.click();
-        await expect(this.createMonitorSheet).toBeHidden({ timeout: 15000 });
+        await expect(this.createMonitorSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
     } else {
         await this.cancelButton.click();
         await expect(this.createMonitorSheet).toBeHidden();
@@ -195,12 +195,12 @@ async selectCheckIntervalOption(optionLabel: string): Promise<void> {
         const content = this.page.getByTestId('select-content').last();
         await trigger.click();
         try {
-            await expect(content).toBeVisible({ timeout: 5000 });
+            await expect(content).toBeVisible({ timeout: appConfig.timeouts.fastFail });
             return content;
         } catch {
             // eslint-disable-next-line playwright/no-force-option -- Radix select trigger
             await trigger.click({ force: true });
-            await expect(content).toBeVisible({ timeout: 5000 });
+            await expect(content).toBeVisible({ timeout: appConfig.timeouts.fastFail });
             return content;
         }
     };
@@ -210,7 +210,7 @@ async selectCheckIntervalOption(optionLabel: string): Promise<void> {
     const item = content
         .getByTestId('select-item')
         .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) });
-    await expect(item.first()).toBeVisible({ timeout: 8000 });
+    await expect(item.first()).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
     await item.first().scrollIntoViewIfNeeded();
     await item.first().click();
 }
@@ -302,7 +302,7 @@ This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notif
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {
     const toast = this.page.getByRole('status').filter({ hasText: name });
-    await expect(toast).toBeVisible({ timeout: 15000 });
+    await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
@@ -324,12 +324,12 @@ class SonnerToast {
     }
 
     async assertVisibleWith(expected: string | RegExp): Promise<void> {
-        await expect(this.forText(expected)).toBeVisible({ timeout: 15000 });
+        await expect(this.forText(expected)).toBeVisible({ timeout: appConfig.timeouts.persist });
     }
 
     async assertDismissed(expected: string | RegExp): Promise<void> {
         // Sonner toasts auto-dismiss; await before continuing the flow.
-        await expect(this.forText(expected)).toBeHidden({ timeout: 10000 });
+        await expect(this.forText(expected)).toBeHidden({ timeout: appConfig.timeouts.uiResponse });
     }
 }
 ```
@@ -371,7 +371,7 @@ Use `[title=…]` / `[name=…]` / `[id=…]` / `[src*=…]` in priority order. 
 ```typescript
 await expect(
     this.frameLocator.getByRole('heading', { name: 'Verification complete' })
-).toBeVisible({ timeout: 30000 });
+).toBeVisible({ timeout: appConfig.timeouts.longPoll });
 ```
 
 Rules:
@@ -443,7 +443,7 @@ async goToNextPage(): Promise<void> {
     await expect(this.pageInfoText).toHaveAttribute(
         'data-current-page',
         String(current + 1),
-        { timeout: 10_000 }
+        { timeout: appConfig.timeouts.uiResponse }
     );
     await this.waitForTableSettled();
 }
@@ -583,7 +583,7 @@ Rules (when a hover menu first ships):
 The canonical pattern after any non-GET click, or after a refresh that should produce new data:
 
 ```typescript
-async clickManualRefreshAndWaitForRefresh(timeout = 30_000): Promise<void> {
+async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll): Promise<void> {
     await expect(this.manualRefreshButton).toBeEnabled();
     const responsePromise = this.page.waitForResponse(
         (r) => {
@@ -610,7 +610,7 @@ For monitor creation, the canonical "click submit" wait is the sheet-hidden + So
 async createMonitor(data: MonitorData): Promise<void> {
     await this.fillForm(data);
     await this.createMonitorSubmitButton.click();
-    await expect(this.createMonitorSheet).toBeHidden({ timeout: 15000 });
+    await expect(this.createMonitorSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
     await this.expectSuccessToastForMonitor(data.name);
 }
 ```
@@ -618,7 +618,7 @@ async createMonitor(data: MonitorData): Promise<void> {
 Rules:
 - For TanStack-Start `_serverFn` calls: predicate matches URL substring (`_serverFn` or `/api/data`) + method.
 - Status codes vary in this codebase (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
-- For long-running async (first probe data after creating an ICMP monitor), increase the **assertion** timeout (wait for first probe data via `toPass({ timeout: 90_000 })` — see § 18 Synthetic Monitor expanded-view tests below), NOT the response timeout.
+- For long-running async (first probe data after creating an ICMP monitor), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Synthetic Monitor expanded-view tests below), not on the response wait.
 
 ## 14. Multi-page (popup) flows — prescriptive
 
@@ -650,7 +650,7 @@ async searchByName(name: string): Promise<void> {
 
 async expectMonitorListed(name: string): Promise<void> {
     const search = this.syntheticsListSearchInput;
-    await expect(search).toBeVisible({ timeout: 5000 });
+    await expect(search).toBeVisible({ timeout: appConfig.timeouts.fastFail });
     await search.clear();
     await search.fill(name);
     await expect(this.getRowByName(name).first()).toBeVisible({
@@ -671,7 +671,7 @@ For a searchable filter popover (the Policies type filter's bespoke MetricDropdo
 ```typescript
 async openTypeFilter(): Promise<void> {
     await this.typeFilter.click();
-    await expect(this.typeFilterList).toBeVisible({ timeout: 5_000 });
+    await expect(this.typeFilterList).toBeVisible({ timeout: appConfig.timeouts.fastFail });
 }
 
 async selectTypeOption(label: string): Promise<void> {
@@ -683,7 +683,7 @@ async selectTypeOption(label: string): Promise<void> {
     const option = this.typeFilterOptions.filter({
         hasText: new RegExp(`^\\s*${escaped}(\\s|\\[|$)`, 'i'),
     });
-    await expect(option.first()).toBeVisible({ timeout: 8_000 });
+    await expect(option.first()).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
     await option.first().click();
     await this.waitForTableSettled();
 }
@@ -706,7 +706,7 @@ async createIcmpAndVerify(data: { name: string; target: string; checkIntervalLab
 
     await this.searchByName(data.name);
     const newRow = this.getRowByName(data.name);
-    await expect(newRow).toBeVisible({ timeout: 15000 });
+    await expect(newRow).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(newRow).toContainText('ICMP');
     await expect(newRow).toContainText(data.checkIntervalLabel);
     await expect(newRow).toContainText(data.target);
@@ -715,7 +715,7 @@ async createIcmpAndVerify(data: { name: string; target: string; checkIntervalLab
 
 Rules:
 - Do NOT poll with `await loc.count()` in a loop. `expect(loc).toBeVisible()` already retries.
-- If the table refresh is debounced, increase the assertion timeout; do not add `waitForTimeout`.
+- If the table refresh is debounced, wait for the refresh response (registered before the action), then assert with the default timeout; do not raise budgets or add `waitForTimeout`.
 - For deletion: `await expect(this.getRowByName(name)).toBeHidden();`.
 - The first probe data may take up to 90 seconds to flow into the row's health badge — that wait belongs in the **detail-view functional spec**, not in the CRUD spec (see § 18 Synthetic Monitor expanded-view tests below).
 
@@ -763,21 +763,21 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
                 checkInterval: '1 minute',
                 timeout: '5',
             });
-            await expect(createMonitorPage.createButton).toBeEnabled({ timeout: 20_000 });
+            await expect(createMonitorPage.createButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
             await createMonitorPage.createButton.click();
         });
 
         // INLINE — TOLERATED: one-shot success-toast assertion, never interacted with, no reuse.
         await test.step('Verify create success toast', async () => {
             const toast = page.getByText(new RegExp(`"${monitorName}" created successfully`));
-            await expect(toast).toBeVisible({ timeout: 10_000 });
+            await expect(toast).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
         });
 
         // POM dynamic locator — exposed publicly so specs can assert against any row.
         await test.step('Verify ICMP monitor in grid', async () => {
             await syntheticsPage.searchByName(monitorName);
             const row = syntheticsPage.getRowByName(monitorName);
-            await expect(row).toHaveCount(1, { timeout: 15_000 });
+            await expect(row).toHaveCount(1, { timeout: appConfig.timeouts.persist });
             await expect(row).toContainText('ICMP');
             await expect(row).toContainText('1 minute');
             await expect(row).toContainText(target);
@@ -837,7 +837,7 @@ Do **not** assert metric cards, timing breakdowns, tooltips, tabs, or section ca
 Single source of truth for view structure and behaviour:
 
 - **`beforeAll` seeds one monitor via the API** (use `buildCreate{TYPE}SyntheticBody` + `createSyntheticMonitor` from `helpers/app/synthetics.ts`). **Never through the UI** — UI creation adds 60+ seconds per run and is non-deterministic.
-- **Wait for first probe data** via `expect(async () => { ... }).toPass({ timeout: 90_000 })` polling a known metric. Probes typically need a minute or two before the first check completes.
+- **Wait for first probe data** via `expect(async () => { ... }).toPass({ timeout: appConfig.timeouts.firstData })` polling a known metric. Probes typically need a minute or two before the first check completes.
 - **Assertions must be semantic, not just presence:**
   - Metric cards: regex that matches the value shape (`/^(OPEN|CLOSED)$/`, `/\d+(\.\d+)?ms/`, `/\d{3}/`), not `toBeVisible()` alone.
   - Timing breakdown: iterate POM constants (`TCP_TIMING_SEGMENTS`, `WS_TIMING_SEGMENTS`, etc.), assert label + color dot + ms value per segment.

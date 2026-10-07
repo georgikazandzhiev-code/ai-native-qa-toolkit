@@ -95,8 +95,8 @@ async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
 
     await expect(async () => {
         await actionBtn.click();
-        await item.click({ timeout: 3_000 });
-    }).toPass({ timeout: 15_000 });
+        await item.click({ timeout: appConfig.timeouts.fastFail });
+    }).toPass({ timeout: appConfig.timeouts.retryBlock });
 }
 ```
 
@@ -275,7 +275,7 @@ await expect(this.something).toBeVisible();
 
 ```typescript
 async submitCreateMonitor(): Promise<void> {
-    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: 20000 });
+    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
     const created = this.page.waitForResponse((r) => r.url().includes('/api/synthetics') && r.request().method() === 'POST');
     await this.createMonitorSubmitButton.click();
     expect((await created).ok()).toBe(true);
@@ -292,7 +292,7 @@ async expectCreateFlowCompleteOnList(): Promise<void> {
 
 async expectSuccessToastForMonitor(name: string): Promise<void> {
     const toast = this.page.getByRole('status').filter({ hasText: name });
-    await expect(toast).toBeVisible({ timeout: 15000 });
+    await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
@@ -389,7 +389,7 @@ async verifyPauseOrResume(): Promise<void> {
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {
     const toast = this.page.getByRole('status').filter({ hasText: name });
-    await expect(toast).toBeVisible({ timeout: 15000 });
+    await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
@@ -512,7 +512,7 @@ Single CSS string mixing Playwright's `:has-text` pseudo with attribute selector
 ```typescript
 async expectMonitorListed(name: string): Promise<void> {
     const search = this.syntheticsListSearchInput;
-    await expect(search).toBeVisible({ timeout: 5000 });
+    await expect(search).toBeVisible({ timeout: appConfig.timeouts.fastFail });
     await search.clear();
     await search.fill(name);
     await expect(this.getRowByName(name)).toBeVisible({
@@ -588,7 +588,7 @@ await expect(async () => {
   expect(counts.total).toBe(
     counts.healthy + counts.warning + counts.critical + counts.unknown,
   );
-}).toPass({ timeout: 15_000 });
+}).toPass({ timeout: appConfig.timeouts.retryBlock });
 ```
 
 ### Bad

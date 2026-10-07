@@ -29,7 +29,7 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Rules, tag whitelist, structural workflow, anti-patterns, examples for spec authoring across all four test types. | **Always** — on any task that creates / extends / refactors a spec under `tests/app/**`. |
-| **[`reference.md`](reference.md)** *(TBD — inline catalog below for now)* | Catalog: tag → npm-script mapping, `SUITES.X` enum keys, env var → token catalog, `MS = {...}` E2E timeout idiom, list of canonical example specs per type. | **Load on lookup** — "Which `SUITES.X` for probes?" / "What's the npm command for the smoke tag?" |
+| **[`reference.md`](reference.md)** *(TBD — inline catalog below for now)* | Catalog: tag → npm-script mapping, `SUITES.X` enum keys, env var → token catalog, the `appConfig.timeouts` budgets used in E2E specs, list of canonical example specs per type. | **Load on lookup** — "Which `SUITES.X` for probes?" / "What's the npm command for the smoke tag?" |
 
 **Boundary rule:** rules, decisions, and anti-patterns live in this `SKILL.md`. POM class structure is the [`page-objects`](../page-objects/SKILL.md) skill. Locator priority is the [`selectors`](../selectors/SKILL.md) skill. The deep API negative-test matrix and per-verb coverage live in [`api-testing`](../api-testing/SKILL.md) — **do not duplicate them here**. Spec scaffolding (templates) lives in [`scaffold-spec`](../scaffold-spec/SKILL.md). If you find rule content in a sibling skill (or vice versa), it's drift — fix it before adding more.
 
@@ -61,7 +61,7 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 **Functional vs E2E** is a frequent decision point:
 
 - A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@App-regression`.**
-- An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@App-E2E`. Use `test.setTimeout(300_000)` at the describe level.**
+- An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@App-E2E`. Set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level.**
 
 **E2E `beforeAll` boundary.** `beforeAll` seeds **background infrastructure** that the journey needs but that isn't the story being tested (e.g., a probe or monitor that a policy-crud E2E needs). The **lifecycle actions under test** must be visible `test.step()`s inside the test body. If the most interesting action is hidden in `beforeAll`, the test shape is wrong. Example: a policy-crud E2E seeds a probe + monitor via API in `beforeAll` (infrastructure), then the test walks create → view → disable → enable → edit → delete (the journey). An alerts E2E should seed monitors + policy in `beforeAll` (infrastructure), then the first visible step is "wait for alert to fire" — that's where the journey starts.
 
@@ -180,7 +180,7 @@ Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized pre
 
 ### Step 7 — E2E cleanup
 
-E2E describes set `test.setTimeout(300_000)`, declare `const MS = { sheet: 15_000, toast: 10_000, button: 20_000, grid: 15_000 };` at file scope, track names in `const createdMonitorNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror `http-synthetic-monitor-crud.spec.ts` verbatim. Don't invent new timeout-constant names per file.
+E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take every explicit wait from `appConfig.timeouts` (the `config` skill § Timeout budgets) — no timeout constants or numbers in the spec, track names in `const createdMonitorNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror `http-synthetic-monitor-crud.spec.ts` verbatim. Don't invent timeout constants per file.
 
 ### Step 8 — data-driven tests
 
@@ -239,7 +239,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - [ ] `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows if applicable. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`.
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.
-- [ ] E2E specs: `test.setTimeout(300_000)` + `MS = { sheet, toast, button, grid }` + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
+- [ ] E2E specs: `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
 - [ ] No hardcoded URLs / tokens / endpoints / strings — all from `process.env.*`, `appConfig.*`, `enums/app/*`, `test-data/app/*`.
 - [ ] No `.only`. No `test.skip` — comment out the test with `// TODO: FIXME: <TICKET> <description>` instead (Qase ID preservation).
 - [ ] When assertions reference strings from a `test-data/app/*.json` file, every relevant entry in that file has a corresponding assertion. Cross-reference the data file against the test to catch missing coverage.
@@ -315,20 +315,20 @@ For larger or domain-specific data sets, see the [`data-strategy`](../data-strat
 User says: *"E2E test for HTTP monitor: create via UI → verify in grid → edit → delete via UI."*
 
 1. **Step 1.** Multi-phase journey → **E2E** (`tests/app/e2e/`, `@App-E2E`).
-2. **Step 7.** `test.setTimeout(300_000)`, `MS = {...}`, `createdMonitorNames` array, `test.afterAll` cleanup via `listSynthetics` + `deleteSyntheticMonitor`. Mirror `http-synthetic-monitor-crud.spec.ts` verbatim.
+2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdMonitorNames` array, `test.afterAll` cleanup via `listSynthetics` + `deleteSyntheticMonitor`. Mirror `http-synthetic-monitor-crud.spec.ts` verbatim.
 
 ```typescript
 import { expect, test } from "../../../fixtures/pom/test-options";
+import { appConfig } from "../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
 import { SUITES } from "../../../enums/app/qase-suites";
 import { deleteSyntheticMonitor, listSynthetics } from "../../../helpers/app/synthetics";
 
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
-const MS = { sheet: 15_000, toast: 10_000, button: 20_000, grid: 15_000 };
 
 test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
-  test.setTimeout(300_000);
+  test.setTimeout(appConfig.timeouts.e2eJourney);
   const createdMonitorNames: string[] = [];
 
   test.afterAll(async ({ apiRequest }) => {
@@ -358,7 +358,7 @@ test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
         await createMonitorPage.submit();
       });
       await test.step("THEN: Monitor appears in the grid", async () => {
-        await expect(syntheticsPage.getRowByName(monitorName)).toBeVisible({ timeout: MS.grid });
+        await expect(syntheticsPage.getRowByName(monitorName)).toBeVisible({ timeout: appConfig.timeouts.persist });
       });
       // ... edit phase, delete phase
     },
@@ -385,8 +385,8 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES
 | `expect(locator).toHaveText('...')` fails with the locator showing a partial / streamed value. | Missing `.toHaveText()` is an exact match by default; the value is loading. | Either await visibility first, then `.toHaveText`, or switch to `.toContainText('...')`. Don't add `waitForTimeout`. |
 | Need to disable a test for a known bug. | `test.skip` corrupts Qase ID mappings; ESLint also blocks bare `.skip`. | **Comment out** the entire `test(...)` block. Add `// TODO: FIXME: <TICKET> <description>` directly above the commented-out code. Do not use `test.skip`. |
 | Spec creates 50 monitors / probes per run, never deletes. | No `test.afterAll` cleanup. | Track names in a `createdNames: string[]` and call the matching `helpers/app/<resource>.ts` `cleanup<X>` / `delete<X>` inside `test.afterAll`. |
-| Test fails with `Test timeout of 30000ms exceeded`. | E2E test missing `test.setTimeout(300_000)` at the describe level. | Add it as the first line inside `test.describe`. UI E2E flows commonly need 300 seconds for the full create→edit→delete loop. |
-| Functional test with many interactions times out at 30s on CI. | Default 30s is too short for specs with 6+ UI navigation steps (e.g., policy wizard with 8 type cards). | Add `test.setTimeout(60_000)` or `test.setTimeout(120_000)` **on the individual test**, not the describe. Unlike E2E (where `300_000` at the describe is standard), functional tests set timeouts per-test, only where needed — the 30s default is correct for most single-behaviour tests. |
+| Test fails with `Test timeout of 30000ms exceeded`. | An E2E journey without its test-level budget — or a real slowdown. | E2E journeys set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level. If the budget is already set, investigate with the `debugging` skill first: never raise a budget to turn a failure green. |
+| Functional test with many interactions times out at 30s on CI. | Specs with 6+ UI navigation steps (e.g. a policy wizard with 8 type cards) can exceed the default. | Set a test-level budget (`appConfig.timeouts.asyncFlow`) **on the individual test**, not the describe, only where needed — the default is right for most single-behaviour tests. Investigate first if the test used to pass within the default. |
 | `ZodError` thrown on `Schema.parse(body)`. | API contract has drifted, OR the schema is wrong. | Read the Zod error path. If the API is wrong, file a bug → comment out the test with `// TODO: FIXME: <TICKET>`. If the schema is wrong, fix it. **Never** loosen the schema with `.passthrough()` or `z.any()` to silence the error — that masks real drift. See the `api-testing` skill § Skipping. |
 
 ## See Also

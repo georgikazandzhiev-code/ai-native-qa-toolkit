@@ -207,7 +207,7 @@ For **every** generated artifact, regardless of category:
 - [ ] New POMs registered in `fixtures/pom/page-object-fixture.ts` in the same edit batch.
 - [ ] New schemas use `z.strictObject()`. Every API response asserted with `expect(SchemaName.parse(body)).toBeTruthy();`.
 - [ ] API specs include the negative matrix when applicable (empty body, per-field omission, per-field invalid-type loops via `fixtures/api/invalid-types.ts`, 401/403/405 where relevant). See the `api-testing` skill.
-- [ ] E2E specs have `test.setTimeout(300_000)` + `MS = { sheet, toast, button, grid }` constants + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
+- [ ] E2E specs have `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
 - [ ] No `.only`. No `test.skip` — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] Affected tests run green before declaring done.
 
