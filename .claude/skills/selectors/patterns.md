@@ -100,7 +100,7 @@ async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Identifies the row by content; survives column reordering. The `:not([data-testid="expanded-row"])` exclusion guards against strict-mode double-matches when a row is expanded.
+Adapted from `pages/app/SyntheticsPage.ts`, which filters on the row text and excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded; matching the name **cell** exactly does that job without the testid. Identifies the row by content; survives column reordering. **Check the live app before switching an existing locator** (`npx playwright open`): an exact cell match fails when the name cell holds more than the name — an icon label, a badge — and then the row needs a filter on the cell's own child element instead.
 
 ### Bad
 

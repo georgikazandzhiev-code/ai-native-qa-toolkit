@@ -297,7 +297,7 @@ Rules:
 
 ## 5. Toasts / Sonner notifications
 
-This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message.
+This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message. Confirm the role on your build before switching an existing toast locator (`npx playwright open`, inspect the toast) — if it isn't there, use the `[data-sonner-toast]` fallback.
 
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {

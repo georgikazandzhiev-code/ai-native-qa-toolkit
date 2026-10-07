@@ -175,7 +175,7 @@ export class SettingsPage extends BasePage {
 
 The shape is fixed: imports → class header → `open()` → page structure → interactive locators → feedback locators → actions. The visual headers (`═════`) are the existing convention across `DashboardPage`, `SyntheticsPage`, `CreateMonitorPage`. Don't substitute.
 
-**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the schema-form helpers for the test-id fallback** — use `getByLabel(...)` and `getByRole('alert')` first, and these only where the label or error is not associated. They they wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). When the fallback is needed, use these helpers instead of inline testid strings.
+**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the schema-form helpers for the test-id fallback** — use `getByLabel(...)` and `getByRole('alert')` first, and these only where the label or error is not associated. They wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). When the fallback is needed, use these helpers instead of inline testid strings.
 
 ### Step 5 — pick locator strategies
 
