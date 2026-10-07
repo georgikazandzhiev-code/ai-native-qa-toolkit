@@ -16,6 +16,11 @@
 /** Lifecycle hooks — setup/teardown, never a test. */
 const HOOKS = new Set(['beforeAll', 'afterAll', 'beforeEach', 'afterEach']);
 
+// Playwright configuration calls on `test`: they declare no test, so they carry no tag and no
+// assertion. Without this, a describe-level `test.setTimeout(...)` or `test.use(...)` was reported
+// as "This test has no tag" — a false alarm on correct code.
+const CONFIG_CALLS = new Set(['setTimeout', 'use', 'slow', 'info', 'extend']);
+
 /** Playwright/Vitest test-declaring callees: test(), it(), test.only(), it.each()`...` */
 function isTestCall(node) {
   if (node.type !== 'CallExpression') return false;
@@ -30,6 +35,7 @@ function isTestCall(node) {
     // Lifecycle hooks are setup/teardown, not tests. They carry no tag, and the
     // constitution explicitly REQUIRES seeding (and therefore branching) in them.
     if (HOOKS.has(prop)) return false;
+    if (CONFIG_CALLS.has(prop)) return false;
     c = c.object;
   }
   return c.type === 'Identifier' && (c.name === 'test' || c.name === 'it');
