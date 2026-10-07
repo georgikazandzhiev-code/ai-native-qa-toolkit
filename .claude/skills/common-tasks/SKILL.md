@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 2.0.0
+version: 2.0.1
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -22,7 +22,7 @@ These rules apply to **every** generated artifact in the framework — page obje
 - **ALWAYS** pull URLs / credentials / env-driven values from `process.env.X!` (no defaults at call sites; defaults belong in `config/util/<service>.ts`). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`Messages.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
 - **ALWAYS** use `z.strictObject()` for new schemas (rejects extra keys — catches API drift). **ALWAYS** validate every API response with `expect(SchemaName.parse(body)).toBeTruthy();`. **NEVER** stop at `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper. **NEVER** use `z.any()` to silence a `ZodError`. See the `api-testing` and `type-safety` skills.
-- **ALWAYS** explore the live UI with `npx playwright open` before writing any locator (the `playwright-cli` skill). **ALWAYS** read OpenAPI / Swagger before writing any API test (the `api-testing` skill, Phase 1). **NEVER** guess from frontend source, wireframes, or screenshots.
+- **ALWAYS** explore the live UI with `npx playwright open` before writing any locator (the `playwright-cli` skill). **ALWAYS** read OpenAPI / Swagger before writing any API test (the `api-testing` skill, Phase 1). **NEVER** guess from wireframes or screenshots. Verify stable facts against the frontend source (the `frontend-cross-check` skill) and behaviour on the live app.
 - **ALWAYS** consume page objects via fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** `new <Page>(page)` inside a spec. See the `page-objects` skill.
 - **NEVER** use XPath or top-level CSS class / id selectors. **NEVER** `page.waitForTimeout(...)`. Use the `selectors` skill's priority order (default + Radix exception) and web-first assertions.
 - **ALWAYS** call `apiRequest` directly in API specs by default. Promote to a `helpers/app/<resource>.ts` helper only on reuse (2+ specs), multi-step flows, or precondition setup. Promote to a `helper-fixture` only when the same setup/teardown is reused across **3+** spec files. See the `helpers` and `fixtures` skills.
@@ -207,7 +207,7 @@ For **every** generated artifact, regardless of category:
 - [ ] New POMs registered in `fixtures/pom/page-object-fixture.ts` in the same edit batch.
 - [ ] New schemas use `z.strictObject()`. Every API response asserted with `expect(SchemaName.parse(body)).toBeTruthy();`.
 - [ ] API specs include the negative matrix when applicable (empty body, per-field omission, per-field invalid-type loops via `fixtures/api/invalid-types.ts`, 401/403/405 where relevant). See the `api-testing` skill.
-- [ ] E2E specs have `test.setTimeout(300_000)` + `MS = { sheet, toast, button, grid }` constants + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
+- [ ] E2E specs have `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
 - [ ] No `.only`. No `test.skip` — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] Affected tests run green before declaring done.
 

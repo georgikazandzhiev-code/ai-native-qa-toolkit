@@ -1,6 +1,6 @@
 ---
 name: config
-version: 1.0.1
+version: 1.1.0
 description: Env-var and configuration conventions — env/.env.* layout, dotenv loading via ENVIRONMENT, the appConfig object in config/app.ts (URLs, api paths, UI routes, timeouts), and the config/util/ per-service convention (future — not yet created). Use when adding an env var, config property, environment file, or endpoint/route constant. Triggers — "env var", "appConfig", "config", "new URL". Not for static test data (data-strategy) or the process.env.X! call-site idiom (type-safety).
 metadata:
   category: domain
@@ -54,9 +54,29 @@ Before adding anything, walk this table. If the value fits no row, stop and ask 
 | Dynamic auth token populated at runtime (`USER_ACCESS_TOKEN_*`) | env var consumed via `process.env.*` — populated by an auth-bootstrap helper / setup project, **not** declared in `env/.env.example` |
 | Endpoint path (e.g. `/synthetics`) or route (e.g. `/login`)     | `appConfig.api.*` or `appConfig.paths.*` in `config/app.ts`, or `enums/app/*` — **never** an env var |
 | Message string, suite name, role, status                        | `enums/app/*` or `enums/util/*` — see the `enums` skill                     |
-| Timeout / retry (Playwright-level)                              | `playwright.config.ts`. Cross-cutting timeouts already live in `appConfig.timeouts` (`navigation`, `element`, `api`) |
+| Timeout / retry                                                  | Project defaults in `playwright.config.ts`. Every explicit timeout is a named budget on `appConfig.timeouts` — see § Timeout budgets |
 | Static test constant (boundary values, invalid ids)             | `test-data/app/*.json` — see `data-strategy` skill                          |
 | Runtime selector (`ENVIRONMENT`, `CI`, `QASE_REPORT`)           | Shell-level env var only — **never** in `env/.env.example`                  |
+
+## Timeout budgets
+
+Specs, page objects, helpers and templates never contain a timeout number. Every explicit timeout is a **named budget** on `appConfig.timeouts`, so the values live in one file, each repository tunes them for its own environment, and a reader can tell from the name *why* a wait is long. Agreed in #5. Most assertions need no explicit timeout at all: trust the project default.
+
+| Budget | Use for | Typical value |
+|---|---|---|
+| `navigation`, `element`, `api` | Page navigation, element waits and API calls beyond the project defaults (existing) | repo-defined |
+| `fastFail` | Inner waits inside a retry block, which should fail fast so the block retries | 3–5 s |
+| `uiResponse` | The UI reacting to a network call: a row appears, a dialog closes, an option list loads | 10 s |
+| `persist` | A save or create round trip becoming visible: the submit button enables, the sheet closes, the new row or the toast appears | 15 s |
+| `retryBlock` | The outer budget of an `expect(async () => { … }).toPass()` block | 15–20 s |
+| `longPoll` | `waitForResponse` on a slow endpoint, long-poll assertions | 30 s |
+| `firstData` | The first data from an asynchronous pipeline (e.g. the first probe result) | 90 s |
+| `asyncFlow` | Test-level (`test.setTimeout`): API seeding without identity-provider admin, single-email flows, async polling | 60 s |
+| `asyncFlowHeavy` | Test-level: identity-provider admin workflows, multi-user email flows, heavy fixtures | 90 s |
+| `crossTenantSetup` | Test-level: setups spanning several tenants with full identity-provider cycles | 120 s |
+| `e2eJourney` | Test-level: a full end-to-end journey (create → verify → edit → delete) | 300 s |
+
+**A budget is not a fix.** When a test times out, investigate with the `debugging` skill first — the cause is usually a missing wait or a slow dependency. Never raise a budget, or switch to a bigger one, to turn a failure green. Add a new budget only for a genuinely new kind of wait, here, with its purpose.
 
 ## Adding a new env variable
 

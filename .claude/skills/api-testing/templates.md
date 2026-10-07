@@ -893,6 +893,7 @@ For multi-endpoint flows that touch Mailpit. Use `@App-E2E` tag, explicit timeou
 
 ```typescript
 import { expect, test } from "../../../fixtures/pom/test-options";
+import { appConfig } from "../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { SUITES } from "../../../enums/app/qase-suites";
 import { faker } from "@faker-js/faker";
@@ -924,7 +925,7 @@ test(
     async ({ apiRequest, mailpit }) => {
         qase.suite(SUITES.API_E2E_TENANT_ONBOARDING);
         // qase.id(<id>);
-        test.setTimeout(60_000);
+        test.setTimeout(appConfig.timeouts.asyncFlow);
 
         let tenantId: string | undefined;
         const userIds: string[] = [];

@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 2.1.0
+version: 2.1.1
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -79,11 +79,11 @@ API specs additionally — routed skill: [`api-testing`](../api-testing/SKILL.md
 
 Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md):
 
-- [ ] New POMs extend `BasePage` (except `SideNavigation` and `LoginPage` exceptions).
-- [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` field in constructor.**
+- [ ] New POMs extend `BasePage` / `DataTableBase`, except the shell and sheet components listed in `selectors/reference.md` § 7.2 Class shape.
+- [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` locator fields in the constructor**, except a composed component or a single anchor every getter chains off (`selectors` patterns P4).
 - [ ] **No JSDoc on locator getters.** JSDoc with `@param`/`@returns` is required only on public action methods.
 - [ ] Every public action method has a built-in wait: web-first assertion, `waitForResponse`, or toast check. **No "thin" methods** that only call `click()` / `fill()`.
-- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception:** `getByTestId` jumps above `getByText` for Radix primitives, state-changing text, and testid contracts.
+- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception (narrow, per element):** a single locator may promote `getByTestId` above `getByText`, never higher, only when **that element** has visible text or an accessible name that changes with state or is unreliable, and only after `getByRole` / `getByLabel` were tried. Being a Radix primitive, or having a test-id, is not on its own a reason. It covers the trigger, not the portal content (options, dialogs, alerts and toasts are addressed by role). See `selectors` § Critical.
 - [ ] **No XPath.** **No top-level CSS class/id selectors** (`page.locator('.btn')`, `page.locator('#foo')`). CSS only chained off a higher-priority anchor.
 - [ ] **No `page.waitForTimeout(...)`.**
 - [ ] Form/CRUD POMs include feedback locators (success toast, error toast, field validation, empty state, loading).

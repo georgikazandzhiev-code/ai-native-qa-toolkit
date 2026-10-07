@@ -123,14 +123,10 @@ get schemaForm(): Locator {
     return this.page.getByTestId('schema-form');
 }
 get monitorNameInput(): Locator {
-    return this.page
-        .getByTestId('field-field-name')
-        .or(this.page.getByLabel(/^Monitor Name/i));
+    return this.page.getByLabel('Monitor Name', { exact: true });
 }
 get targetInput(): Locator {
-    return this.page
-        .getByTestId('field-field-target')
-        .or(this.page.getByLabel(/^Target/i));
+    return this.page.getByLabel('Target', { exact: true });
 }
 get createMonitorSubmitButton(): Locator {
     return this.page.getByTestId('create-button');
@@ -163,11 +159,11 @@ async createIcmpMonitor(data: {
     await this.timeoutInput.fill(String(data.timeout));
     await this.timeoutInput.blur();
 
-    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: 20000 });
+    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
 
     if (data.submit) {
         await this.createMonitorSubmitButton.click();
-        await expect(this.createMonitorSheet).toBeHidden({ timeout: 15000 });
+        await expect(this.createMonitorSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
     } else {
         await this.cancelButton.click();
         await expect(this.createMonitorSheet).toBeHidden();
@@ -199,12 +195,12 @@ async selectCheckIntervalOption(optionLabel: string): Promise<void> {
         const content = this.page.getByTestId('select-content').last();
         await trigger.click();
         try {
-            await expect(content).toBeVisible({ timeout: 5000 });
+            await expect(content).toBeVisible({ timeout: appConfig.timeouts.fastFail });
             return content;
         } catch {
             // eslint-disable-next-line playwright/no-force-option -- Radix select trigger
             await trigger.click({ force: true });
-            await expect(content).toBeVisible({ timeout: 5000 });
+            await expect(content).toBeVisible({ timeout: appConfig.timeouts.fastFail });
             return content;
         }
     };
@@ -214,7 +210,7 @@ async selectCheckIntervalOption(optionLabel: string): Promise<void> {
     const item = content
         .getByTestId('select-item')
         .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`) });
-    await expect(item.first()).toBeVisible({ timeout: 8000 });
+    await expect(item.first()).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
     await item.first().scrollIntoViewIfNeeded();
     await item.first().click();
 }
@@ -227,12 +223,14 @@ For toolbar filters that use `getByRole('option')` (status / type / health filte
 ```typescript
 async selectFilterOption(filter: Locator, label: string): Promise<void> {
     await filter.click();
+    await expect(this.page.getByRole('listbox')).toBeVisible();
     await this.page.getByRole('option', { name: label, exact: true }).click();
+    await expect(filter).toContainText(label);
 }
 ```
 
 Rules:
-- The chain `getByTestId('field-field-<fieldPath>')` (the input/trigger testid) → click → drill into `getByTestId('select-content')` → `getByTestId('select-item')` is the blessed shape for schema-form Radix selects; do not invent variations. (`schema-field-<fieldName>` is the field *wrapper*, not the trigger.)
+- The chain `getByTestId('field-field-<fieldPath>')` (the input/trigger testid) → click → drill into `getByTestId('select-content')` → `getByTestId('select-item')` is the agreed **fallback** for schema-form Radix selects, for when the role path fails (try `getByRole('combobox', { name })`, then `getByRole('option', { name, exact: true })` inside the open `listbox`, first); do not invent other variations. (`schema-field-<fieldName>` is the field *wrapper*, not the trigger.)
 - For non-schema-form selects (toolbar filters, page-size), `getByRole('option', { name, exact: true })` is fine because the listbox is `role="listbox"` with proper option roles.
 - Confirm selection with the trigger's visible value or by re-opening and asserting the chosen item carries `data-state="checked"`.
 - Never click an option without first asserting `select-content` (or the listbox) is visible.
@@ -299,17 +297,12 @@ Rules:
 
 ## 5. Toasts / Sonner notifications
 
-This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Toasts render with `data-sonner-toast` attribute and **stack** (multiple toasts can be on screen simultaneously).
+This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message.
 
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {
-    const byToast = this.page
-        .locator('[data-sonner-toast]')
-        .filter({ hasText: name })
-        .first();
-    const byTestId = this.page.getByTestId('sonner').filter({ hasText: name });
-    const toast = byToast.or(byTestId);
-    await expect(toast).toBeVisible({ timeout: 15000 });
+    const toast = this.page.getByRole('status').filter({ hasText: name });
+    await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
@@ -331,12 +324,12 @@ class SonnerToast {
     }
 
     async assertVisibleWith(expected: string | RegExp): Promise<void> {
-        await expect(this.forText(expected)).toBeVisible({ timeout: 15000 });
+        await expect(this.forText(expected)).toBeVisible({ timeout: appConfig.timeouts.persist });
     }
 
     async assertDismissed(expected: string | RegExp): Promise<void> {
         // Sonner toasts auto-dismiss; await before continuing the flow.
-        await expect(this.forText(expected)).toBeHidden({ timeout: 10000 });
+        await expect(this.forText(expected)).toBeHidden({ timeout: appConfig.timeouts.uiResponse });
     }
 }
 ```
@@ -378,7 +371,7 @@ Use `[title=…]` / `[name=…]` / `[id=…]` / `[src*=…]` in priority order. 
 ```typescript
 await expect(
     this.frameLocator.getByRole('heading', { name: 'Verification complete' })
-).toBeVisible({ timeout: 30000 });
+).toBeVisible({ timeout: appConfig.timeouts.longPoll });
 ```
 
 Rules:
@@ -450,7 +443,7 @@ async goToNextPage(): Promise<void> {
     await expect(this.pageInfoText).toHaveAttribute(
         'data-current-page',
         String(current + 1),
-        { timeout: 10_000 }
+        { timeout: appConfig.timeouts.uiResponse }
     );
     await this.waitForTableSettled();
 }
@@ -590,7 +583,7 @@ Rules (when a hover menu first ships):
 The canonical pattern after any non-GET click, or after a refresh that should produce new data:
 
 ```typescript
-async clickManualRefreshAndWaitForRefresh(timeout = 30_000): Promise<void> {
+async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll): Promise<void> {
     await expect(this.manualRefreshButton).toBeEnabled();
     const responsePromise = this.page.waitForResponse(
         (r) => {
@@ -617,7 +610,7 @@ For monitor creation, the canonical "click submit" wait is the sheet-hidden + So
 async createMonitor(data: MonitorData): Promise<void> {
     await this.fillForm(data);
     await this.createMonitorSubmitButton.click();
-    await expect(this.createMonitorSheet).toBeHidden({ timeout: 15000 });
+    await expect(this.createMonitorSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
     await this.expectSuccessToastForMonitor(data.name);
 }
 ```
@@ -625,7 +618,7 @@ async createMonitor(data: MonitorData): Promise<void> {
 Rules:
 - For TanStack-Start `_serverFn` calls: predicate matches URL substring (`_serverFn` or `/api/data`) + method.
 - Status codes vary in this codebase (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
-- For long-running async (first probe data after creating an ICMP monitor), increase the **assertion** timeout (wait for first probe data via `toPass({ timeout: 90_000 })` — see § 18 Synthetic Monitor expanded-view tests below), NOT the response timeout.
+- For long-running async (first probe data after creating an ICMP monitor), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Synthetic Monitor expanded-view tests below), not on the response wait.
 
 ## 14. Multi-page (popup) flows — prescriptive
 
@@ -657,7 +650,7 @@ async searchByName(name: string): Promise<void> {
 
 async expectMonitorListed(name: string): Promise<void> {
     const search = this.syntheticsListSearchInput;
-    await expect(search).toBeVisible({ timeout: 5000 });
+    await expect(search).toBeVisible({ timeout: appConfig.timeouts.fastFail });
     await search.clear();
     await search.fill(name);
     await expect(this.getRowByName(name).first()).toBeVisible({
@@ -678,7 +671,7 @@ For a searchable filter popover (the Policies type filter's bespoke MetricDropdo
 ```typescript
 async openTypeFilter(): Promise<void> {
     await this.typeFilter.click();
-    await expect(this.typeFilterList).toBeVisible({ timeout: 5_000 });
+    await expect(this.typeFilterList).toBeVisible({ timeout: appConfig.timeouts.fastFail });
 }
 
 async selectTypeOption(label: string): Promise<void> {
@@ -690,7 +683,7 @@ async selectTypeOption(label: string): Promise<void> {
     const option = this.typeFilterOptions.filter({
         hasText: new RegExp(`^\\s*${escaped}(\\s|\\[|$)`, 'i'),
     });
-    await expect(option.first()).toBeVisible({ timeout: 8_000 });
+    await expect(option.first()).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
     await option.first().click();
     await this.waitForTableSettled();
 }
@@ -713,7 +706,7 @@ async createIcmpAndVerify(data: { name: string; target: string; checkIntervalLab
 
     await this.searchByName(data.name);
     const newRow = this.getRowByName(data.name);
-    await expect(newRow).toBeVisible({ timeout: 15000 });
+    await expect(newRow).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(newRow).toContainText('ICMP');
     await expect(newRow).toContainText(data.checkIntervalLabel);
     await expect(newRow).toContainText(data.target);
@@ -722,7 +715,7 @@ async createIcmpAndVerify(data: { name: string; target: string; checkIntervalLab
 
 Rules:
 - Do NOT poll with `await loc.count()` in a loop. `expect(loc).toBeVisible()` already retries.
-- If the table refresh is debounced, increase the assertion timeout; do not add `waitForTimeout`.
+- If the table refresh is debounced, wait for the refresh response (registered before the action), then assert with the default timeout; do not raise budgets or add `waitForTimeout`.
 - For deletion: `await expect(this.getRowByName(name)).toBeHidden();`.
 - The first probe data may take up to 90 seconds to flow into the row's health badge — that wait belongs in the **detail-view functional spec**, not in the CRUD spec (see § 18 Synthetic Monitor expanded-view tests below).
 
@@ -770,21 +763,21 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
                 checkInterval: '1 minute',
                 timeout: '5',
             });
-            await expect(createMonitorPage.createButton).toBeEnabled({ timeout: 20_000 });
+            await expect(createMonitorPage.createButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
             await createMonitorPage.createButton.click();
         });
 
         // INLINE — TOLERATED: one-shot success-toast assertion, never interacted with, no reuse.
         await test.step('Verify create success toast', async () => {
             const toast = page.getByText(new RegExp(`"${monitorName}" created successfully`));
-            await expect(toast).toBeVisible({ timeout: 10_000 });
+            await expect(toast).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
         });
 
         // POM dynamic locator — exposed publicly so specs can assert against any row.
         await test.step('Verify ICMP monitor in grid', async () => {
             await syntheticsPage.searchByName(monitorName);
             const row = syntheticsPage.getRowByName(monitorName);
-            await expect(row).toHaveCount(1, { timeout: 15_000 });
+            await expect(row).toHaveCount(1, { timeout: appConfig.timeouts.persist });
             await expect(row).toContainText('ICMP');
             await expect(row).toContainText('1 minute');
             await expect(row).toContainText(target);
@@ -844,7 +837,7 @@ Do **not** assert metric cards, timing breakdowns, tooltips, tabs, or section ca
 Single source of truth for view structure and behaviour:
 
 - **`beforeAll` seeds one monitor via the API** (use `buildCreate{TYPE}SyntheticBody` + `createSyntheticMonitor` from `helpers/app/synthetics.ts`). **Never through the UI** — UI creation adds 60+ seconds per run and is non-deterministic.
-- **Wait for first probe data** via `expect(async () => { ... }).toPass({ timeout: 90_000 })` polling a known metric. Probes typically need a minute or two before the first check completes.
+- **Wait for first probe data** via `expect(async () => { ... }).toPass({ timeout: appConfig.timeouts.firstData })` polling a known metric. Probes typically need a minute or two before the first check completes.
 - **Assertions must be semantic, not just presence:**
   - Metric cards: regex that matches the value shape (`/^(OPEN|CLOSED)$/`, `/\d+(\.\d+)?ms/`, `/\d{3}/`), not `toBeVisible()` alone.
   - Timing breakdown: iterate POM constants (`TCP_TIMING_SEGMENTS`, `WS_TIMING_SEGMENTS`, etc.), assert label + color dot + ms value per segment.
@@ -909,24 +902,26 @@ and assorted state attributes — not a native `<select>`.
 2. **The role is right, but the accessible name is unreliable.** Radix wrappers nest the user-facing
    label deep — `getByRole('combobox', { name: 'Target' })` works only when Radix exposes the name
    correctly, which varies by component version and prop usage. **Try the role first anyway**; fall
-   back only once you have seen it fail.
+   back only once you have seen it fail, and file the unreliable name as an accessibility defect
+   (the `accessibility-testing` skill).
 3. **There is a test-id contract.** The frontend systematically emits stable test-ids, agreed between
    FE and QA, which do not change without coordination. Prefixes and the field-wrapper vs
    input/trigger distinction: [reference.md § 4](reference.md).
 
-### Promote `getByTestId` to priority 4 — only when ANY of these hold, for THAT element
+### Promote `getByTestId` to priority 4 — only when BOTH hold, for THAT element
 
-- The element is a Radix primitive (`<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`)
-- Its visible text changes with state (loading labels, Radix placeholders, dynamic counts)
-- A test-id contract exists for it (see the prefixes in `reference.md`)
+- Reason 1 or 2 above applies to it: its visible text changes with state, or its accessible name is unreliable.
+- `getByRole` and `getByLabel` were tried on it first, and failed.
 
-### Keep the default order (semantic above test-id) when ALL of these hold
+Being a Radix primitive is **not** on its own a reason, and neither is the existence of a test-id. Reason 3 (a test-id contract) is what makes the fallback safe to rely on, not a reason to use it. The promotion covers the trigger only: the portal content keeps its roles (`listbox` / `option`, `dialog`, `alert`, `status`).
 
-- The element renders as plain HTML rather than through a Radix primitive — login forms, raw
-  `<button>` / `<input>`, static page content
+### Keep the default order (semantic above test-id) — the normal case
+
+- A role, label or stable-text locator finds the element reliably — whatever library renders it,
+  Radix included (`getByRole('combobox', { name })`, `getByRole('switch', { name })` often work)
 - Its visible text is part of the contract — page headings, success and error message strings,
   empty-state markers
-- No test-id exists for it and adding one is out of scope
+- Whether a test-id exists does not matter: a test-id is a fallback, not a reason
 
 ### The trap this exception creates
 

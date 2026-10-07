@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 1.1.0
+version: 1.2.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -121,6 +121,7 @@ test.describe("METHOD /path - Description", () => {
 
 ```typescript
 import { expect, test } from "../../../fixtures/pom/test-options";
+import { appConfig } from "../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
 import { SUITES } from "../../../enums/app/qase-suites";
@@ -128,15 +129,8 @@ import { SUITES } from "../../../enums/app/qase-suites";
 
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
 
-const MS = {
-  sheet: 15_000,
-  toast: 10_000,
-  button: 20_000,
-  grid: 15_000,
-};
-
 test.describe("E2E — <Feature> CRUD", () => {
-  test.setTimeout(300_000);
+  test.setTimeout(appConfig.timeouts.e2eJourney); // explicit waits also come from appConfig.timeouts
   const createdNames: string[] = [];
 
   test.afterAll(async ({ apiRequest }) => {
@@ -454,7 +448,7 @@ Database collation differs from JavaScript's `localeCompare`. When testing sort 
 
 ### E2E timeouts
 
-E2E CRUD flows need `test.setTimeout(300_000)` at the describe level. Without it, a slow sheet animation or network hiccup will fail the test with a timeout error that looks like a real bug. Email-based flows need 60-90s timeouts.
+E2E CRUD journeys set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level, and email-based flows use `asyncFlow` / `asyncFlowHeavy` (the `config` skill § Timeout budgets). A budget sizes a long journey; it is never the fix for a test that times out — investigate with the `debugging` skill first.
 
 ### Functional tests: always close the sheet
 

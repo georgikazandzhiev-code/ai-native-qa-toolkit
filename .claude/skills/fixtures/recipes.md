@@ -80,7 +80,7 @@ test.describe('SSL monitor detail view', () => {
     });
 
     test.afterAll(async ({ apiRequest }) => {
-        test.setTimeout(60_000);
+        test.setTimeout(appConfig.timeouts.asyncFlow);
         await cleanupProbesAndSynthetics(
             apiRequest,
             [probeId],

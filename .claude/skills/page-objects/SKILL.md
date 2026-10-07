@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.1
+version: 2.0.2
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -13,12 +13,12 @@ Page Object classes are the seam between specs and the UI: they own every locato
 ## Critical
 
 - **ALWAYS** put page-object classes in `pages/app/<Name>.ts` (PascalCase, no `.page.ts` suffix). `LoginPage` is the only exception — it lives at `pages/util/LoginPage.ts` because it targets the Keycloak login theme, not the app shell. Why: all 15 existing POMs (14 classes in `pages/app/` plus `LoginPage` in `pages/util/`) use this convention; deviating breaks the fixture-registration import paths and the orchestrator's mental model.
-- **ALWAYS** extend the correct base class. Pages **with a data table** (Synthetics, Inventory, Probes, Policies, and any new table-bearing page) extend `DataTableBase` from `pages/baseClasses/DataTableBase.ts` — it provides `dataTable`, `tableRows`, `noResultsMessage`, `cellForRow`, `getColumnTexts`, sorting helpers, pagination controls, `selectPageSize`, `goToNextPage`, `goToPreviousPage`, and `waitForTableSettled`. Pages **without a table** extend `BasePage` from `pages/baseClasses/BasePage.ts` — it provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `refresh`. Why: bypassing the right base duplicates logic per page and produces drift. `SideNavigation` is the documented exception — it's a sidebar component, not a page. `AlertsPage` uses `BasePage` because its table root differs (`pageRoot` instead of `dataTable`).
-- **ALWAYS** define locators as `get` accessors returning `Locator`. Never `async`, never `Promise<Locator>`, never `readonly` field set in constructor. Why: Playwright's `Locator` is lazy — it re-queries on every action. The `get` form is terser, groups locators in the class body, and matches every existing POM in `pages/app/`.
+- **ALWAYS** extend the correct base class. Pages **with a data table** (Synthetics, Inventory, Probes, Policies, and any new table-bearing page) extend `DataTableBase` from `pages/baseClasses/DataTableBase.ts` — it provides `dataTable`, `tableRows`, `noResultsMessage`, `cellForRow`, `getColumnTexts`, sorting helpers, pagination controls, `selectPageSize`, `goToNextPage`, `goToPreviousPage`, and `waitForTableSettled`. Pages **without a table** extend `BasePage` from `pages/baseClasses/BasePage.ts` — it provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `refresh`. Why: bypassing the right base duplicates logic per page and produces drift. Classes that legitimately skip a base class — shell and sheet components such as `SideNavigation` and the `CreateMonitorPage` sheet — are listed in one place: `selectors/reference.md` § 7.2 Class shape. `AlertsPage` uses `BasePage` because its table root differs (`pageRoot` instead of `dataTable`).
+- **ALWAYS** define locators as `get` accessors returning `Locator`. Never `async`, never `Promise<Locator>`. A `readonly` field set in the constructor is allowed for exactly two things: a composed component object (§ Extract a component), and a single anchor locator that every getter in the class chains off (`selectors` patterns P4). Why: Playwright's `Locator` is lazy — it re-queries on every action. The `get` form is terser, groups locators in the class body, and matches every existing POM in `pages/app/`.
 - **NEVER** put a locator that the framework interacts with (`click`, `fill`, `hover`, `press`, `setInputFiles`) inline in a spec. Locators interacted with live in a page object. Inline `page.getBy*` in specs is reserved for one-off arrival markers and Sonner toast assertions only. See the `selectors` skill § Where selectors live — POM vs spec.
 - **NEVER** use `page.waitForTimeout(...)` inside a page object. Replace with a web-first assertion (`await expect(locator).toBeVisible()`), `page.waitForResponse(...)` for known XHRs, or `expect(async () => { … }).toPass({ timeout })` for reads of a value that legitimately keeps changing. Why: hard waits are flake amplifiers and mask real timing bugs.
-- **Radix trigger-swallow retry.** When a Radix dropdown trigger swallows the first click (known race — the menu doesn't open), use `try { click + expect(item).toBeVisible({ timeout: 5_000 }) } catch { click({ force: true }) + expect visible }`. This is the **one accepted `try/catch`** in a POM action method — annotate with `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`. Do not generalize this pattern beyond confirmed Radix trigger issues.
-- **ALWAYS** explore the live app with `npx playwright open` before writing locators (see the `playwright-cli` skill). No guessing from wireframes, frontend source, or screenshots — verify roles, accessible names, and testids on the running app. If the app is unreachable, **stop and notify the human** — never ship placeholder locators with guessed names.
+- **Radix trigger-swallow retry.** When a Radix dropdown trigger swallows the first click (known race — the menu doesn't open), use `try { click + expect(item).toBeVisible({ timeout: appConfig.timeouts.fastFail }) } catch { click({ force: true }) + expect visible }`. This is the **one accepted `try/catch`** in a POM action method — annotate with `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`. Do not generalize this pattern beyond confirmed Radix trigger issues.
+- **ALWAYS** explore the live app with `npx playwright open` before writing locators (see the `playwright-cli` skill). Never guess from wireframes or screenshots. Verify stable facts (test-ids, routes, component type) against the frontend source with `frontend-cross-check`, and roles, accessible names and runtime behaviour on the running app. If the app is unreachable, **stop and notify the human** — never ship placeholder locators with guessed names.
 - **ALWAYS** include feedback locators (success toast, error toast, field validation, empty state, loading) on any POM that covers a form or CRUD operation. Why: a POM without feedback locators forces specs to assert state via timing instead of UI signals — the `selectors` skill calls a feedback-less POM "incomplete".
 - **ALWAYS** register every new app POM as a property on `FrameworkFixtures` in `fixtures/pom/page-object-fixture.ts`. Tests consume page objects through the fixture (`async ({ dashboardPage }) => { ... }`), never via `new DashboardPage(page)`. Why: bypassing the fixture means specs miss `mergeTests` integration (api-request, login, mailpit) and the centralized lifecycle.
 - **NEVER** write JSDoc on locator getters. Names are self-documenting; JSDoc on `get submitButton(): Locator { ... }` adds noise and ages badly. JSDoc with `@param` / `@returns` is required on every public action method (see § Step 6 below).
@@ -139,14 +139,16 @@ export class SettingsPage extends BasePage {
     return this.page.getByTestId(`error-${fieldName}`);
   }
 
+  get saveButton(): Locator {
+    return this.page.getByRole("button", { name: "Save" });
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // Feedback locators
   // ═══════════════════════════════════════════════════════════════
 
   get successToast(): Locator {
-    return this.page.locator("[data-sonner-toast]").filter({
-      hasText: Messages.PROFILE_SAVED,
-    });
+    return this.page.getByRole("status").filter({ hasText: Messages.PROFILE_SAVED });
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -161,11 +163,11 @@ export class SettingsPage extends BasePage {
   async saveProfile(overrides: Partial<ProfileFields>): Promise<void> {
     for (const [name, value] of Object.entries(overrides)) {
       await this.fieldInput(name).fill(value);
+      await expect(this.fieldInput(name)).toHaveValue(value);
     }
-    await Promise.all([
-      this.page.waitForResponse((r) => r.url().includes("/api/profile") && r.request().method() === "PUT"),
-      this.page.getByRole("button", { name: "Save" }).click(),
-    ]);
+    const saved = this.page.waitForResponse((r) => r.url().includes("/api/profile") && r.request().method() === "PUT");
+    await this.saveButton.click();
+    expect((await saved).ok()).toBe(true);
     await expect(this.successToast).toBeVisible();
   }
 }
@@ -173,14 +175,14 @@ export class SettingsPage extends BasePage {
 
 The shape is fixed: imports → class header → `open()` → page structure → interactive locators → feedback locators → actions. The visual headers (`═════`) are the existing convention across `DashboardPage`, `SyntheticsPage`, `CreateMonitorPage`. Don't substitute.
 
-**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the canonical schema-form helpers** — they wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). Use these helpers instead of inline testid strings whenever the page has a schema-form.
+**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the schema-form helpers for the test-id fallback** — use `getByLabel(...)` and `getByRole('alert')` first, and these only where the label or error is not associated. They they wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). When the fallback is needed, use these helpers instead of inline testid strings.
 
 ### Step 5 — pick locator strategies
 
 This is the [`selectors`](../selectors/SKILL.md) skill's domain. Brief recap so you don't have to leave the page:
 
 - **Default order:** `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`.
-- **Radix exception:** for Radix primitives (Select, Switch, Dialog, DropdownMenu, Popover, Tabs), elements whose text changes with state, or framework testid contracts (`schema-field-*`, `error-*`, `monitor-actions-*`, `data-sonner-toast`), `getByTestId` jumps above `getByText`.
+- **Radix exception (narrow, per element):** a single locator may promote `getByTestId` above `getByText`, never higher, only when **that element** has visible text or an accessible name that changes with state or is unreliable, and only after `getByRole` / `getByLabel` were tried. Being a Radix primitive, or having a test-id, is not on its own a reason. It covers the trigger, not the portal content (options, dialogs, alerts and toasts are addressed by role). See `selectors` § Critical.
 - **Strings inside `getByText(...)` come from `enums/app/*`** (`Messages.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
 - **No XPath. No top-level CSS class / id selectors.** Both are forbidden by `selectors` § Critical.
 
@@ -214,7 +216,7 @@ async submitCreateMonitor(): Promise<void> {
 }
 ```
 
-Verification methods (the `xxxAndVerify()` pattern, e.g. `loginAndVerify`) may use `expect(...)` internally and are encouraged when the same success check is reused across 3+ specs. Plain action methods in `pages/app/*` rarely assert — the spec asserts business outcomes.
+Verification methods (the `xxxAndVerify()` pattern, e.g. `loginAndVerify`) may use `expect(...)` internally and are encouraged when the same success check is reused across 3+ specs. Every action method still confirms its own result (§ Critical — no thin methods): the UI reacted, the response arrived, the sheet closed. What stays in the spec is the **business** assertion — the right value, the right row, the right message.
 
 ### Step 7 — register the fixture
 
@@ -270,7 +272,7 @@ For tag rules (lowercase `@App-regression` for functional specs — this exact c
 ## Anti-patterns
 
 - ❌ **Filename uses `dashboard.page.ts` or `dashboard-page.ts`.** Doesn't match the 15 existing POMs. Fix: rename to PascalCase + no suffix (`DashboardPage.ts`).
-- ❌ **`readonly` field set in the constructor instead of `get` accessor.** Both work at runtime, but the `readonly` form is verbose and breaks consistency with every other POM in `pages/app/`. Fix: convert to `get`.
+- ❌ **`readonly` locator fields set in the constructor instead of `get` accessors.** Both work at runtime, but the `readonly` form is verbose and breaks consistency. The two exceptions are a composed component object and a single anchor every getter chains off (`selectors` patterns P4). Fix: convert to `get`.
 - ❌ **`page.waitForTimeout(1000)` inside a POM action.** Hard wait — masks timing bugs and produces parallel-run flake. Fix: replace with `await expect(locator).toBeVisible()` for state, `page.waitForResponse(...)` for known XHRs.
 - ❌ **Locator-getter has JSDoc.** Names are self-documenting. Fix: delete the JSDoc; keep JSDoc only on action / verification methods.
 - ❌ **Action method calls `click()` and returns.** No wait, no assertion — flake amplifier. Fix: add `await expect(toast).toBeVisible()` or `page.waitForResponse(...)` before returning.
@@ -287,7 +289,7 @@ For tag rules (lowercase `@App-regression` for functional specs — this exact c
 ## Self-review checklist
 
 - [ ] File lives at `pages/app/<Name>.ts` (or `pages/util/<Name>.ts` for auth) with PascalCase name, no `.page.ts` suffix.
-- [ ] Class `extends BasePage` (or — for sidebar / shared shell components — extends nothing, mirroring `SideNavigation`).
+- [ ] Class `extends BasePage` / `DataTableBase`, unless it is one of the shell or sheet components listed in `selectors/reference.md` § 7.2.
 - [ ] Constructor is `constructor(page: Page) { super(page); }` (or, for non-`BasePage` classes, `constructor(private page: Page) {}`).
 - [ ] Every locator is a `get` accessor returning `Locator`. No async, no `Promise<Locator>`, no field-set-in-constructor.
 - [ ] Locator priority follows the `selectors` skill (default order + Radix exception). No XPath, no top-level CSS class / id selectors.
@@ -312,7 +314,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 2. **Step 2 — exploration.** Run `npx playwright open` and walk `/settings`. Capture: profile form fields (firstName, lastName, email, phone) and their `field-field-*` testids; dark-mode toggle role + accessible name; success toast text on save; error toast on validation failure; per-field validation messages.
 3. **Step 3 — location.** App screen → `pages/app/SettingsPage.ts`. Resolve `appConfig.paths.SETTINGS` (or add it under `config/app.ts` if missing — see the `config` skill).
 4. **Step 4 — author.** `extends BasePage`. Section headers Interactive / Feedback / Actions. Use `fieldInput(fieldPath)` / `fieldError(fieldName)` for the schema-form fields.
-5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByTestId(\`field-field-${path}\`)` for form fields (Radix exception — schema-form testid contract). `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
+5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
 6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PUT /api/profile` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
 7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `metricsPage`.
 8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
