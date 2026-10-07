@@ -109,7 +109,7 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 9. **Auth coverage**:
    - 401 without token (omit `headers` entirely — never empty string).
    - 401 with admin token on a tenant-scoped list (synthetics rejects `USER_ACCESS_TOKEN_ADMIN` because admin has no tenant scope).
-   - 403 with `USER_ACCESS_TOKEN_ZERO` if provisioned (skip-guarded otherwise).
+   - 403 with `USER_ACCESS_TOKEN_ZERO`. If the token isn't provisioned, write the test and comment it out under `// TODO: FIXME: <TICKET>`.
 10. **405** — at minimum, one wrong-verb on this collection path (covered by the spec's dedicated 405 block per § 11; do not duplicate inline).
 
 ### Don't test
@@ -449,7 +449,7 @@ The contract distinguishes **wrong realm** (401, gateway rejects) from **wrong s
 - **Wrong-realm 401 (admin → tenant path)** — every method on every tenant-scoped spec. Use the `... returns 401 with admin token (tenant-scoped endpoint)` test-name shape.
 - **Wrong-scope 403 (tenant → admin path)** — every method on every admin-scoped spec. Use the `... returns 403 for tenant-scoped user` test-name shape.
 - **403 ZERO** — every method, every spec. Until the token is provisioned, keep the test written and commented out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` ([reference.md § Token catalog](reference.md#token-catalog)).
-- **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs (`cross-tenant-isolation.spec.ts`, `cross-tenant-metrics-isolation.spec.ts`). Skip with a drift note if no canned wrong-realm token exists.
+- **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs (`cross-tenant-isolation.spec.ts`, `cross-tenant-metrics-isolation.spec.ts`). If no wrong-realm token exists, write the test and comment it out under `// TODO: FIXME: <TICKET>`, naming the missing token.
 
 ### 12.3 Cascade & dependency rules
 

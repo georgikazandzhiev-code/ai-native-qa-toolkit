@@ -53,7 +53,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Assertions** | Web-first only. Prefer strict (`toBe`, `toEqual`) over loose. Exception: `toBeTruthy()` for `Schema.parse(body)` |
 | **Cleanup** | Tests that mutate state revert it in `afterEach`/`afterAll`. Capture initial state in `beforeAll` for shared mutable resources. Leave the environment exactly as found |
 | **API Steps** | 2+ API calls in a test → each in its own `test.step()` with assertions inside |
-| **Coverage Plan** | Before API tests for a new endpoint: enumerate every status code from the contract (OpenAPI) as a comment block at the top of the spec. Untestable statuses get `// SKIP:` with justification |
+| **Coverage Plan** | Before API tests for a new endpoint: enumerate every status code from the contract (OpenAPI) as a comment block at the top of the spec. A status that can never be produced on purpose gets `// SKIP: <reason>` in the plan; a testable status that is blocked (missing token, open bug) gets its test written and commented out under `// TODO: FIXME: <TICKET>` |
 | **Explore Before Generate** | **API:** the contract (OpenAPI) is truth; live requests only when no docs exist. **UI:** explore via `npx playwright open` per the `playwright-cli` skill. If it can't reach the app or auth fails — stop and notify the human |
 | **Search Before Creating** | Grep helpers/pages/fixtures/enums/config for existing equivalents before adding anything new |
 | **Lint & Format** | Zero lint/format warnings. Pre-commit hooks must pass — never bypass with `--no-verify` |
@@ -86,7 +86,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **No tags on `describe` / no multi-tag** | Exactly one tag, on `test()` only |
 | **No magic numbers** | Timeouts and constants live in config or enums |
 | **No JSDoc on locator getters** | Action methods only |
-| **No commented-out code** | Delete dead code. `// TODO:` / `// FIXME:` / `// BUG:` annotations only, with context |
+| **No commented-out code** | Delete dead code. `// TODO:` / `// FIXME:` / `// BUG:` annotations only, with context. The two sanctioned exceptions: a disabled `test(...)` block under `// TODO: FIXME: <TICKET>` (see No silent coverage drops), and the `// qase.id(N);` placeholder |
 | **No silent coverage drops** | API doesn't match docs → write the test, comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>`, report the bug. Never `test.skip` |
 | **No substitute UI exploration** | Only `npx playwright open` per `playwright-cli` skill. Forbidden: `codegen`, IDE browser MCP, and other automation as a substitute |
 | **No empty-body-only 400 tests** | Every required field needs per-field omission + invalid-type loop tests |

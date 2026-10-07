@@ -384,7 +384,7 @@ Before declaring a spec done, verify:
 - [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-synthetic-validation.json`), never camelCase.
 - [ ] Mailpit recipients use `@<your-test-domain>` — never `@automation.test`, `@<alt-test-domain>`, or any other domain (the test infra catches only `@<your-test-domain>`).
 - [ ] Specs that exercise 403 from a no-permission token: if `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`.
-- [ ] No `test.fixme()` without a linked `// BUG:` annotation.
+- [ ] No `test.fixme()` / `test.skip()`. A disabled test is commented out under `// TODO: FIXME: <TICKET>`.
 - [ ] Linter passes for the spec, schema, helper, and test-data files.
 
 ## Examples
