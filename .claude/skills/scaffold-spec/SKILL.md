@@ -93,11 +93,11 @@ const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 // ═══════════════════════════════════════════════════════════════
 
 test.describe("METHOD /path - Description", () => {
-  const createdIds: string[] = [];
+  const createdIds: Array<string | undefined> = [];
 
   test.afterAll(async ({ apiRequest }) => {
-    for (const id of createdIds) {
-      // cleanup via DELETE helper
+    for (const id of createdIds.filter((x): x is string => x !== undefined)) {
+      // cleanup via the DELETE helper, tolerating 404 (already gone)
     }
   });
 
@@ -142,17 +142,20 @@ test.describe("E2E — <Feature> CRUD", () => {
     { tag: "@App-E2E" },
     async ({ page, sideNavigation, syntheticsPage, createMonitorPage, apiRequest }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
+      // qase.id(N);
+      const name = `qa-${faker.string.alphanumeric(8).toLowerCase()}`;
+      createdNames.push(name);
 
       await test.step("GIVEN: User navigates to page", async () => {
-        // navigation
+        // navigation via page-object actions
       });
 
       await test.step("WHEN: User creates resource", async () => {
-        // creation
+        // creation via page-object actions, using `name`
       });
 
       await test.step("THEN: Resource appears in grid", async () => {
-        // verification
+        await expect(syntheticsPage.getRowByName(name)).toBeVisible({ timeout: appConfig.timeouts.persist });
       });
     },
   );
@@ -269,12 +272,18 @@ test("Create resource", async ({ apiRequest }) => {
   expect(ResourceSchema.parse(body)).toBeTruthy();
 });
 
-// ACCEPTABLE — try/catch only when you must capture state for cleanup
+// ACCEPTABLE — the one sanctioned try/catch: capturing the id of a resource a bug created, for teardown.
+// No `if` in the body (the constitution forbids it); the marker comment is what the lint accepts.
 test("Verify invalid payload returns 400", async ({ apiRequest }) => {
   const { status, body } = await createResource(apiRequest, TOKEN, invalidData);
-  if (status === 201 && body?.id) {
-    createdIds.push(body.id); // defensive capture — bug created a resource
+  let createdId: string | undefined;
+  // eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
+  try {
+    createdId = ResourceSchema.parse(body).id;
+  } catch {
+    createdId = undefined; // the expected error body: nothing was created
   }
+  createdIds.push(createdId);
   expect(status).toBe(400);
 });
 ```
@@ -426,13 +435,18 @@ When testing invalid input, the API might accept it due to a bug. If you don't c
 
 ```typescript
 const { status, body } = await createResource(apiRequest, TOKEN, invalidData);
-if (status === 201 && body?.id) {
-  createdIds.push(body.id); // defensive capture
+let createdId: string | undefined;
+// eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
+try {
+  createdId = ResourceSchema.parse(body).id;
+} catch {
+  createdId = undefined; // the expected error body: nothing was created
 }
+createdIds.push(createdId);
 expect(status).toBe(400);
 ```
 
-Always add this defensive capture in validation tests for POST endpoints.
+Add this capture to validation tests for POST endpoints. It is the constitution's one `try/catch` exception, marked with `eslint-allow-cleanup-capture` so the lint accepts it, and it needs no `if` in the test body: `createdIds` holds `undefined` when nothing was created, and the teardown hook skips those.
 
 ### Shared fixtures across `test.describe` blocks
 

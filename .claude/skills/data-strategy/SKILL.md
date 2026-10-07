@@ -166,7 +166,7 @@ Target shape (assertion-style `setupX`/`teardownX` pair); current passthrough `c
 For flows that require a brand new user. This project provisions users through the tenant admin API (`POST /admin/tenants/{id}/users`), which creates a Keycloak-backed user under the hood; password reset goes through the Keycloak admin client. `setupTestUser`/`teardownTestUser` hook code in [patterns.md § Pattern 7](patterns.md). Rules:
 - `getNextTestEmail(baseEmail)` produces `local+<8-char>@domain` from the supplied base email. All plus-addresses route to one Mailpit inbox — parallel-safe.
 - `getNextTestEmail` is **synchronous**. Do not `await` it.
-- Pair every `setupTestUser` with `teardownTestUser` in `afterEach`/`afterAll`. Wrap the delete in `try {} catch {}` only when the test itself may have already deleted the user.
+- Pair every `setupTestUser` with `teardownTestUser` in `afterEach`/`afterAll`. When the test itself may have deleted the user already, make the teardown tolerate it — treat a 404 as success (e.g. `Promise.allSettled` in the helper) — never an empty `try {} catch {}`, which the lint rejects and which would hide a real failure.
 - For pre-existing personas (main, full, admin, zero) use the storage state + env token instead — see [reference.md](reference.md).
 
 ## Lifecycle map — when to seed and when to clean up

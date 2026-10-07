@@ -919,6 +919,23 @@ function generateE2EUserPayload() {
     };
 }
 
+let tenantId: string | undefined;
+const userIds: string[] = [];
+const user = generateE2EUserPayload();
+
+// Teardown lives in a hook, which runs even when the test fails, and may branch.
+// Cleanup order: emails → users → tenant.
+test.afterAll(async ({ apiRequest, mailpit }) => {
+    await mailpit.deleteEmailsForRecipient(user.email);
+    if (tenantId) {
+        for (const id of userIds) {
+            // adminUsers.deleteUser signature: (apiRequest, tenantId, userId, headers)
+            await deleteUser(apiRequest, tenantId, id, process.env.USER_ACCESS_TOKEN_ADMIN!);
+        }
+        await deleteTenant(apiRequest, tenantId, process.env.USER_ACCESS_TOKEN_ADMIN!);
+    }
+});
+
 test(
     "Verify tenant onboarding sends invitation email and link is extractable",
     { tag: "@App-E2E" },
@@ -927,58 +944,42 @@ test(
         // qase.id(<id>);
         test.setTimeout(appConfig.timeouts.asyncFlow);
 
-        let tenantId: string | undefined;
-        const userIds: string[] = [];
-        const user = generateE2EUserPayload();
-
-        try {
-            await test.step("Purge previous emails for the recipient", async () => {
-                await mailpit.deleteEmailsForRecipient(user.email);
-            });
-
-            await test.step("Create tenant", async () => {
-                const { status, body } = await createTenant(
-                    apiRequest,
-                    `qa-onboard-${faker.string.alphanumeric(8).toLowerCase()}`,
-                    process.env.USER_ACCESS_TOKEN_ADMIN!,
-                );
-                expect(status).toBe(200);
-                tenantId = body.tenantId;
-            });
-
-            await test.step("Create user (triggers invitation email)", async () => {
-                // adminUsers.createUser signature: (apiRequest, tenantId, body, headers)
-                const { status, body } = await createUser(
-                    apiRequest,
-                    tenantId!,
-                    user,
-                    process.env.USER_ACCESS_TOKEN_ADMIN!,
-                );
-                expect(status).toBe(200);
-                userIds.push(body.userId);
-            });
-
-            await test.step("Verify Mailpit received the invitation", async () => {
-                // Option A — manual extraction (use when you need the raw message):
-                const message = await mailpit.getLastEmail(user.email, 10, 2000);
-                expect(message).not.toBeNull();
-                const link = extractLinkFromEmail(message!.Content.Body); // single arg
-                expect(link).not.toBeNull();
-
-                // Option B — one-liner that retries + asserts + extracts:
-                // const link = await getInviteLinkFromEmail(mailpit, user.email);
-            });
-        } finally {
-            // Cleanup order: emails → users → tenant. Guard each.
+        await test.step("GIVEN: no earlier email for the recipient", async () => {
             await mailpit.deleteEmailsForRecipient(user.email);
-            if (tenantId) {
-                for (const id of userIds) {
-                    // adminUsers.deleteUser signature: (apiRequest, tenantId, userId, headers)
-                    await deleteUser(apiRequest, tenantId, id, process.env.USER_ACCESS_TOKEN_ADMIN!);
-                }
-                await deleteTenant(apiRequest, tenantId, process.env.USER_ACCESS_TOKEN_ADMIN!);
-            }
-        }
+        });
+
+        await test.step("GIVEN: a tenant exists", async () => {
+            const { status, body } = await createTenant(
+                apiRequest,
+                `qa-onboard-${faker.string.alphanumeric(8).toLowerCase()}`,
+                process.env.USER_ACCESS_TOKEN_ADMIN!,
+            );
+            expect(status).toBe(200);
+            tenantId = body.tenantId;
+        });
+
+        await test.step("WHEN: a user is created (triggers the invitation email)", async () => {
+            // adminUsers.createUser signature: (apiRequest, tenantId, body, headers)
+            const { status, body } = await createUser(
+                apiRequest,
+                tenantId!,
+                user,
+                process.env.USER_ACCESS_TOKEN_ADMIN!,
+            );
+            expect(status).toBe(200);
+            userIds.push(body.userId);
+        });
+
+        await test.step("THEN: Mailpit received the invitation with a usable link", async () => {
+            // Option A — manual extraction (use when you need the raw message):
+            const message = await mailpit.getLastEmail(user.email, 10, 2000);
+            expect(message).not.toBeNull();
+            const link = extractLinkFromEmail(message!.Content.Body); // single arg
+            expect(link).not.toBeNull();
+
+            // Option B — one-liner that retries + asserts + extracts:
+            // const link = await getInviteLinkFromEmail(mailpit, user.email);
+        });
     },
 );
 ```
