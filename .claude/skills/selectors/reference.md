@@ -97,14 +97,14 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 | `checkbox` | Native checkboxes / Radix checkbox primitives | scoped under a row/section (`probe-location-checkbox`) |
 | `switch` | Radix `Switch` (auto-refresh toggle) | "Auto-refresh" — toggled via `aria-checked` / `data-state` |
 | `radio` | Chart timeframe selector (`pages/app/SyntheticsPage.ts` `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
-| `dialog` | Confirmation / delete dialogs (testid-based today; role is also exposed via the Radix primitive) | use the testid (`delete-monitor-dialog`, `delete-probe-dialog`) for stability |
-| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | prefer `getByTestId('data-table')` |
-| `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | prefer `[data-testid^='table-row-']` |
+| `dialog` | Confirmation / delete dialogs (Radix dialogs expose the role) | `getByRole('dialog', { name })` first; the testids (`delete-monitor-dialog`, `delete-probe-dialog`) are the fallback, and testid-first page objects are drift to fix on next touch |
+| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | `getByRole('table')` first (with `{ name }` if there are several); `getByTestId('data-table')` is the anchor fallback — `DataTableBase` uses the testid today, drift to fix on next touch |
+| `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | `getByRole('row').filter({ has: getByRole('cell', { name: id, exact: true }) })` first; the `table-row-<id>` testid is the fallback when the business id isn't rendered in a cell |
 | `cell` | Native `<td>` (used in `pages/baseClasses/DataTableBase.ts` `noResultsMessage`) | `getByRole('cell', { name: /no results/i })` |
 | `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of `pages/app/SyntheticsPage.ts`, `ProbesPage`, `PoliciesPage`, `InventoryPage` | column name (`"Health"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`) |
 | `listbox` | Radix select content / page-size dropdown content | usually closed-state assertion (`toBeHidden`) after option pick |
 | `img` | Images with `alt` — no current callers in `pages/`; prefer a testid when the first one ships | — |
-| `alert` | Toasts/notifications (Sonner emits `role="status"`, but the `[data-sonner-toast]` attribute filter is the canonical hook in this codebase) | use the data-attribute selector (Recipe 5) |
+| `alert` / `status` | Validation errors announce as `alert`; Sonner toasts render as `status` | `getByRole('alert')` / `getByRole('status')` filtered by text; the `[data-sonner-toast]` attribute filter is the fallback (Recipe 5) |
 
 Roles **not** used in this framework today (don't claim them in new code without checking the markup):
 

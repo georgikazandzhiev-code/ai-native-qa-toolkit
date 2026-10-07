@@ -173,14 +173,14 @@ export class SettingsPage extends BasePage {
 
 The shape is fixed: imports → class header → `open()` → page structure → interactive locators → feedback locators → actions. The visual headers (`═════`) are the existing convention across `DashboardPage`, `SyntheticsPage`, `CreateMonitorPage`. Don't substitute.
 
-**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the canonical schema-form helpers** — they wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). Use these helpers instead of inline testid strings whenever the page has a schema-form.
+**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the schema-form helpers for the test-id fallback** — use `getByLabel(...)` and `getByRole('alert')` first, and these only where the label or error is not associated. They they wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). When the fallback is needed, use these helpers instead of inline testid strings.
 
 ### Step 5 — pick locator strategies
 
 This is the [`selectors`](../selectors/SKILL.md) skill's domain. Brief recap so you don't have to leave the page:
 
 - **Default order:** `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`.
-- **Radix exception:** for Radix primitives (Select, Switch, Dialog, DropdownMenu, Popover, Tabs), elements whose text changes with state, or framework testid contracts (`schema-field-*`, `error-*`, `monitor-actions-*`, `data-sonner-toast`), `getByTestId` jumps above `getByText`.
+- **Radix exception (narrow, per element):** a single locator may promote `getByTestId` above `getByText`, never higher, only when **that element** has visible text or an accessible name that changes with state or is unreliable, and only after `getByRole` / `getByLabel` were tried. Being a Radix primitive, or having a test-id, is not on its own a reason. It covers the trigger, not the portal content (options, dialogs, alerts and toasts are addressed by role). See `selectors` § Critical.
 - **Strings inside `getByText(...)` come from `enums/app/*`** (`Messages.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
 - **No XPath. No top-level CSS class / id selectors.** Both are forbidden by `selectors` § Critical.
 
@@ -312,7 +312,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 2. **Step 2 — exploration.** Run `npx playwright open` and walk `/settings`. Capture: profile form fields (firstName, lastName, email, phone) and their `field-field-*` testids; dark-mode toggle role + accessible name; success toast text on save; error toast on validation failure; per-field validation messages.
 3. **Step 3 — location.** App screen → `pages/app/SettingsPage.ts`. Resolve `appConfig.paths.SETTINGS` (or add it under `config/app.ts` if missing — see the `config` skill).
 4. **Step 4 — author.** `extends BasePage`. Section headers Interactive / Feedback / Actions. Use `fieldInput(fieldPath)` / `fieldError(fieldName)` for the schema-form fields.
-5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByTestId(\`field-field-${path}\`)` for form fields (Radix exception — schema-form testid contract). `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
+5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
 6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PUT /api/profile` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
 7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `metricsPage`.
 8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.

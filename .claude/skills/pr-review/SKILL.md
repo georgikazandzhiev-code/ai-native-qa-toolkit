@@ -83,7 +83,7 @@ Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../sele
 - [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` field in constructor.**
 - [ ] **No JSDoc on locator getters.** JSDoc with `@param`/`@returns` is required only on public action methods.
 - [ ] Every public action method has a built-in wait: web-first assertion, `waitForResponse`, or toast check. **No "thin" methods** that only call `click()` / `fill()`.
-- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception:** `getByTestId` jumps above `getByText` for Radix primitives, state-changing text, and testid contracts.
+- [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception (narrow, per element):** a single locator may promote `getByTestId` above `getByText`, never higher, only when **that element** has visible text or an accessible name that changes with state or is unreliable, and only after `getByRole` / `getByLabel` were tried. Being a Radix primitive, or having a test-id, is not on its own a reason. It covers the trigger, not the portal content (options, dialogs, alerts and toasts are addressed by role). See `selectors` § Critical.
 - [ ] **No XPath.** **No top-level CSS class/id selectors** (`page.locator('.btn')`, `page.locator('#foo')`). CSS only chained off a higher-priority anchor.
 - [ ] **No `page.waitForTimeout(...)`.**
 - [ ] Form/CRUD POMs include feedback locators (success toast, error toast, field validation, empty state, loading).

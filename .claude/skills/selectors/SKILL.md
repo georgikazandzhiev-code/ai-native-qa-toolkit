@@ -49,7 +49,7 @@ Non-negotiable. Violating any of these breaks the framework's contract.
 
 ## Core principle
 
-> Every locator describes the user-visible role first, falls back to a stable test attribute second, and never depends on implementation classes or DOM position. If a locator can break because the styling changed or a column was added, it's the wrong locator.
+> Every locator describes the user-visible role first, falls back to a stable test attribute only when no stable role, label or text exists, and never depends on implementation classes or DOM position. If a locator can break because the styling changed or a column was added, it's the wrong locator.
 
 ## Where selectors live — POM vs spec
 
@@ -152,7 +152,7 @@ flowchart TD
     Q2 -->|Yes| Label[getByLabel]
     Q2 -->|No| Q3{Form input with<br/>a stable placeholder?}
     Q3 -->|Yes| Placeholder[getByPlaceholder]
-    Q3 -->|No| QR{Radix exception applies?<br/>- Radix primitive Select/Switch/Dialog/...<br/>- text changes with state<br/>- testid contract exists}
+    Q3 -->|No| QR{Narrow exception applies to THIS element?<br/>- its text or name changes with state, or is unreliable<br/>- AND role / label were tried and failed}
     QR -->|Yes| Anchor[getByTestId<br/>plus drill if it's a wrapper]
     QR -->|No| Q4{Stable static UI string<br/>not reused on the page?}
     Q4 -->|Yes - title, message, empty state| Text[getByText with exact: true]
@@ -177,11 +177,11 @@ Each pattern below covers one selector shape. Skeletons live in `patterns.md` (g
 
 ### 1. Bare semantic locator (`getByRole` only)
 
-Use ONLY when the element is a real native or ARIA-mapped role AND the accessible name is stable across states. Headings → exact heading text. Buttons whose label changes by state (`"Submit"` vs `"Submitting…"`) → use `getByTestId` instead. **Code:** [patterns.md § P7](patterns.md).
+Use ONLY when the element is a real native or ARIA-mapped role AND the accessible name is stable across states. Headings → exact heading text. Buttons whose label changes by state (`"Submit"` vs `"Submitting…"`) → match the stable part with a regex name (`getByRole('button', { name: /^Submit/ })`); fall back to `getByTestId` only if the accessible name itself is unreliable. **Code:** [patterns.md § P7](patterns.md).
 
-### 2. `getByTestId` — the workhorse
+### 2. `getByTestId` — the planned fallback
 
-Use when the element has a `data-testid` AND no equivalent stable role. **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-monitor-button`, `delete-monitor-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-checkInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^monitor-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row health badges). Need a new testid? **Ask the front-end team to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
+Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-monitor-button`, `delete-monitor-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-checkInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^monitor-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row health badges). Need a new testid? **Ask the front-end team to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
 
 ### 3. Anchor + drill (composition over deep CSS) — the most important pattern
 
@@ -234,10 +234,10 @@ Every page object that covers a form or CRUD operation **must** include selector
 
 | Feedback type | When it appears | Selector strategy |
 |---------------|-----------------|-------------------|
-| Success toast (Sonner) | After successful create / update / delete | Filter on `[data-sonner-toast]` by the unique part of the message (the monitor name); never bare `[data-sonner-toast]` (multiple toasts can stack — see [recipes.md § 5](recipes.md)) |
+| Success toast (Sonner) | After successful create / update / delete | `getByRole('status')` filtered by the unique part of the message (the monitor name) — Sonner toasts render with `role="status"`. Fall back to `[data-sonner-toast]` with the same filter only if the role is missing. Never unfiltered: toasts stack (see [recipes.md § 5](recipes.md)) |
 | Error toast (Sonner) | After failed mutation or server error | Same shape as success toast; assert `toContainText(/error|failed/i)` |
-| Field validation message | On blur or submit with invalid input | Schema-form fields render errors as `[data-testid='error-<fieldName>']` — pair with `field-field-<fieldPath>` for the input. Generic helpers: `fieldError(name)` / `fieldInput(path)` (see `pages/app/CreateMonitorPage.ts`) |
-| Confirmation modal | Destructive action (delete) | Per-feature delete dialog testids (`delete-monitor-dialog` / `delete-monitor-confirm` on `pages/app/SyntheticsPage.ts`, `delete-probe-dialog` on `pages/app/ProbesPage.ts`) — see [recipes.md § 4](recipes.md) |
+| Field validation message | On blur or submit with invalid input | Prefer the role: `getByRole('alert')` scoped to the field, or `expect(input).toHaveAccessibleErrorMessage(...)`. The schema-form's `error-<fieldName>` test-id is the fallback when the error has no role or association; helpers `fieldError(name)` / `fieldInput(path)` (see `pages/app/CreateMonitorPage.ts`) |
+| Confirmation modal | Destructive action (delete) | `getByRole('dialog', { name })` — Radix dialogs expose the role. The per-feature delete dialog testids are the fallback (`delete-monitor-dialog` / `delete-monitor-confirm` on `pages/app/SyntheticsPage.ts`, `delete-probe-dialog` on `pages/app/ProbesPage.ts`) — see [recipes.md § 4](recipes.md) |
 | Loading state | During async operations | Spinner / skeleton testid scoped under the data container — `getByRole('progressbar')` when exposed |
 | Empty state | List or table with no data | `getByText('No <X> Available', { exact: true })` — the exact strings live in `enums/app/*` (e.g. `Messages.NO_ICMP_METRICS`); inline `getByText` in a spec is tolerated only as a one-off arrival marker (see § Where selectors live) |
 
@@ -358,17 +358,15 @@ Walk the workflow:
 
 User says: *"The monitor name input has `data-testid='field-field-name'` AND a `<label>Monitor Name</label>`. Which do I use?"*
 
-**Use both, with `.or()` at the anchor level (Pattern 3 — anchor + drill).** The current UI exposes the testid; older specs and any pre-Radix variants expose only the label. `.or()` lets the locator survive either shape:
+**The label.** It's priority 2, above any test-id, and it's what a user (and a screen reader) finds the field by:
 
 ```typescript
 get monitorNameInput(): Locator {
-    return this.page
-        .getByTestId('field-field-name')
-        .or(this.page.getByLabel(/^Monitor Name/i));
+    return this.page.getByLabel('Monitor Name', { exact: true });
 }
 ```
 
-This is the **only** place `.or()` belongs — at the anchor for legacy/current dual hooks, never at a downstream step. **Code:** [patterns.md § P11](patterns.md).
+The `field-field-name` test-id is the fallback, only if exploration shows the label is not associated with the input. A missing association is also an accessibility defect worth filing. Don't combine the two with `.or()` "to be safe": both would match the same input, and `.or()` is for alternatives that never match at once (see § Strict mode and [patterns.md § P11](patterns.md)).
 
 ### Example 3 — Confirmation modal for delete
 
@@ -385,7 +383,7 @@ User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
 |---------|-------|-----|
 | `Error: strict mode violation: locator(...) resolved to N elements` | The locator matches multiple elements; an action is ambiguous | Decide a strategy from § Strict mode — disambiguation rules. Most often: scope to a parent (`getByTestId('data-table')` first), or `.filter({ hasText })` to pick by content. `.first()` only with a comment explaining DOM order. |
 | Locator returns "stale" or "element not attached" | Misdiagnosis. `Locator` is lazy; it re-queries the DOM on every action — it never goes stale | Real cause is one of: (a) the element legitimately isn't there yet → `await expect(loc).toBeVisible()` to wait; (b) the selector no longer matches the new DOM → re-snapshot and update; (c) frame/iframe context changed → scope with `frameLocator(...)` |
-| Tempted to write XPath because nothing semantic works | Markup likely lacks accessible naming (`<button><svg/></button>`) | Re-snapshot — `aria-label` or visible icon label may give a semantic hook. If truly nothing exists, coordinate with engineering to add `data-testid`; never fall back to XPath. See [reference.md § 4.11 Adding a new test id](reference.md). |
+| Tempted to write XPath because nothing semantic works | Markup likely lacks accessible naming (`<button><svg/></button>`) | Re-snapshot — `aria-label` or visible icon label may give a semantic hook. If truly nothing exists, file the missing accessible name as an accessibility defect (the `accessibility-testing` skill), and meanwhile use a `data-testid` agreed with engineering; never fall back to XPath. See [reference.md § 4.11 Adding a new test id](reference.md). |
 | `page.locator('.btn-primary')` because the button has no accessible name | App class tracks styling, not semantics; unstable across redesigns | First re-check the snapshot for an `aria-label` or hidden role. If absent, request a `data-testid` from FE; until then, anchor under a higher-priority parent and drill (Pattern 3). Never ship a top-level CSS-class locator. |
 | Sonner toast assertion is flaky / matches the wrong toast | Bare `[data-sonner-toast]` matches every stacked toast on screen (auto-refresh "Loaded N monitors" can fire alongside "created successfully") | Filter by the unique part of the message — usually the monitor name. Pattern in [recipes.md § 5](recipes.md). Invented `notification-success`/`notification-error` testids do **not** exist in Sonner's DOM — always use the `[data-sonner-toast]` attribute filter. |
 | `getByText('Edit')` matches multiple elements | Substring matching catches "Edit monitor", "Edit profile", etc. | Always pass `exact: true` for short strings: `getByText('Edit', { exact: true })`. Or use `getByRole('button', { name: 'Edit', exact: true })` when the role is exposed. |

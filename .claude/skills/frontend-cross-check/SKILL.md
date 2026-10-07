@@ -135,12 +135,12 @@ User says: *"Write an e2e for the alerts history page."*
 
 ### Example 4 — Cross-check a Radix primitive claim before writing a selector
 
-User says: *"The `selectors` skill says the create-monitor button is wrapped in a Radix `<Select>` — confirm so I can apply the Radix exception."*
+User says: *"The `selectors` skill says the create-monitor button is wrapped in a Radix `<Select>` — is that right, and does it change the locator?"*
 
 1. **`git pull` frontend.**
 2. **Grep:** `grep -rn "create-monitor-button" <sibling-repos>/frontend/src/`.
 3. Read the component file. Look for `import { Select as SelectPrimitive } from 'radix-ui'` (or `@/components/ui/select`) — that confirms a Radix primitive.
-4. If the import is a plain `<button>` from React, it's NOT a Radix primitive — the Radix exception in the `selectors` skill priority hierarchy does **not** apply; use Playwright's default order (`getByRole` first, testid as fallback).
+4. Either way, start with Playwright's default order (`getByRole` first, test-id as fallback). Knowing it's Radix only tells you the accessible name *may* be nested or unstable. The `selectors` exception applies only if the role or label locator then fails for one of its two named reasons. A plain `<button>` from React makes that even less likely.
 
 ## Troubleshooting
 

@@ -129,7 +129,7 @@ User says: *"Add a page object for the synthetics list."*
 1. Run `npx playwright open --load-storage .auth/app/appMainUserSession.json https://<app-host>/synthetics` (path from `playwright.config.ts`).
 2. The human lands on the synthetics list. Observes: page heading `"Synthetics"`, a `Create Monitor` button (role=button), a search input (role=textbox, labelled `Search by name`), a data table with row testids matching `monitor-actions-<id>`.
 3. The human reports observations to the model.
-4. The model authors the page object following the `selectors` skill — `getByRole('heading', { name: 'Synthetics' })` for the title; `getByTestId('create-monitor-button')` because the button is a Radix primitive (Radix exception); `getByTestId('synthetics-name-search')` as the anchor for the search field, `.or(getByLabel(/^Search by name/i))` for legacy fallback.
+4. The model authors the page object following the `selectors` skill — `getByRole('heading', { name: 'Synthetics' })` for the title; `getByRole('button', { name: 'Create Monitor' })`, since exploration showed role=button with that name (being a Radix primitive is not on its own a reason for a test-id); `getByLabel(/^Search by name/i)` for the labelled search field.
 
 ### Example 2 — Re-exploring after a UI change broke a test
 

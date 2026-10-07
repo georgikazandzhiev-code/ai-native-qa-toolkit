@@ -232,7 +232,7 @@ async selectFilterOption(filter: Locator, label: string): Promise<void> {
 ```
 
 Rules:
-- The chain `getByTestId('field-field-<fieldPath>')` (the input/trigger testid) → click → drill into `getByTestId('select-content')` → `getByTestId('select-item')` is the blessed shape for schema-form Radix selects; do not invent variations. (`schema-field-<fieldName>` is the field *wrapper*, not the trigger.)
+- The chain `getByTestId('field-field-<fieldPath>')` (the input/trigger testid) → click → drill into `getByTestId('select-content')` → `getByTestId('select-item')` is the agreed **fallback** for schema-form Radix selects, for when the role path fails (try `getByRole('combobox', { name })`, then `getByRole('option', { name, exact: true })` inside the open `listbox`, first); do not invent other variations. (`schema-field-<fieldName>` is the field *wrapper*, not the trigger.)
 - For non-schema-form selects (toolbar filters, page-size), `getByRole('option', { name, exact: true })` is fine because the listbox is `role="listbox"` with proper option roles.
 - Confirm selection with the trigger's visible value or by re-opening and asserting the chosen item carries `data-state="checked"`.
 - Never click an option without first asserting `select-content` (or the listbox) is visible.
@@ -909,24 +909,26 @@ and assorted state attributes — not a native `<select>`.
 2. **The role is right, but the accessible name is unreliable.** Radix wrappers nest the user-facing
    label deep — `getByRole('combobox', { name: 'Target' })` works only when Radix exposes the name
    correctly, which varies by component version and prop usage. **Try the role first anyway**; fall
-   back only once you have seen it fail.
+   back only once you have seen it fail, and file the unreliable name as an accessibility defect
+   (the `accessibility-testing` skill).
 3. **There is a test-id contract.** The frontend systematically emits stable test-ids, agreed between
    FE and QA, which do not change without coordination. Prefixes and the field-wrapper vs
    input/trigger distinction: [reference.md § 4](reference.md).
 
-### Promote `getByTestId` to priority 4 — only when ANY of these hold, for THAT element
+### Promote `getByTestId` to priority 4 — only when BOTH hold, for THAT element
 
-- The element is a Radix primitive (`<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`)
-- Its visible text changes with state (loading labels, Radix placeholders, dynamic counts)
-- A test-id contract exists for it (see the prefixes in `reference.md`)
+- Reason 1 or 2 above applies to it: its visible text changes with state, or its accessible name is unreliable.
+- `getByRole` and `getByLabel` were tried on it first, and failed.
 
-### Keep the default order (semantic above test-id) when ALL of these hold
+Being a Radix primitive is **not** on its own a reason, and neither is the existence of a test-id. Reason 3 (a test-id contract) is what makes the fallback safe to rely on, not a reason to use it. The promotion covers the trigger only: the portal content keeps its roles (`listbox` / `option`, `dialog`, `alert`, `status`).
 
-- The element renders as plain HTML rather than through a Radix primitive — login forms, raw
-  `<button>` / `<input>`, static page content
+### Keep the default order (semantic above test-id) — the normal case
+
+- A role, label or stable-text locator finds the element reliably — whatever library renders it,
+  Radix included (`getByRole('combobox', { name })`, `getByRole('switch', { name })` often work)
 - Its visible text is part of the contract — page headings, success and error message strings,
   empty-state markers
-- No test-id exists for it and adding one is out of scope
+- Whether a test-id exists does not matter: a test-id is a fallback, not a reason
 
 ### The trap this exception creates
 

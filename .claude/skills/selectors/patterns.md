@@ -125,16 +125,16 @@ class DeleteMonitorDialog {
     private readonly dialog: Locator;
 
     constructor(private page: Page) {
-        this.dialog = this.page.getByTestId('delete-monitor-dialog');
+        this.dialog = this.page.getByRole('dialog', { name: /delete monitor/i });
     }
 
     get title(): Locator { return this.dialog.getByRole('heading'); }
-    get confirmButton(): Locator { return this.page.getByTestId('delete-monitor-confirm'); }
+    get confirmButton(): Locator { return this.dialog.getByRole('button', { name: /^delete$/i }); }
     get cancelButton(): Locator { return this.dialog.getByRole('button', { name: /cancel/i }); }
 }
 ```
 
-Pattern mirrors the inline delete-dialog scoping in `pages/app/SyntheticsPage.ts` (`deleteDialog`, `deleteConfirmButton`, `deleteCancelButton`) and the equivalent `delete-probe-*` getters in `pages/app/ProbesPage.ts`. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
+The existing delete dialogs in `pages/app/SyntheticsPage.ts` and `pages/app/ProbesPage.ts` anchor on test-ids (`delete-monitor-dialog`, `delete-probe-*`) — drift to fix on next touch; the test-id is the fallback if the dialog has no accessible name. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
 
 > **Anchor as a field is the one exception** to the "always use getters" rule shown in P14: when a single locator is the parent of every getter in the class, store it once in the constructor. Locators are lazy, so the field still re-resolves on each downstream `.click()` / `expect()`.
 
