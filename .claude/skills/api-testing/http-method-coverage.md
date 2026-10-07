@@ -42,7 +42,7 @@ Every method, on every resource, is tested along the same eight axes. Methods di
 | **Body schema** | Does the response body match the contract? | `expect(<Schema>.parse(body)).toBeTruthy()` |
 | **Field semantics** | Did the right fields change / persist / get echoed? | `expect(body.<resource>.<field>).toBe(<value>)` |
 | **Identity** | Is the entity the one we asked about (no cross-tenant leak, no mistaken id)? | `expect(body.<resource>.id).toBe(<expected>)` plus cross-tenant 404 contract |
-| **Authentication** | Does each token / no-token scenario return the right status? | `expect(status).toBe(401 \| 403)` per token shape |
+| **Authentication** | Does each token / no-token scenario return the right status? | `expect(status).toBe(401)` or `expect(status).toBe(403)` — the one the contract documents for that token shape. Never `toBe(401 \| 403)`: in JavaScript that's a bitwise OR, which evaluates to `403` |
 | **Idempotency / state** | Does repeating the call do the right thing (idempotent for GET/PUT/DELETE; non-idempotent but conflict-aware for POST/PATCH)? | scenario-specific — see verb sections |
 | **Side effects** | What did this call mutate (Mailpit, downstream resource, cascade)? | follow-up GET / Mailpit assertion |
 | **Method allowance** | Does the path reject the verbs it doesn't support? | `expect(status).toBe(405)` (see § 11) |

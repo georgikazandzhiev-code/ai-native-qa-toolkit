@@ -1,6 +1,6 @@
 ---
 name: debugging
-version: 1.0.1
+version: 1.0.2
 description: Investigate any Playwright test failure — failure-mode taxonomy (TimeoutError, strict mode, ZodError, detachment, network race, stale storage state), trace capture/replay, and choosing UI Mode vs Trace Viewer vs Inspector. Load whenever a test fails or behaves unexpectedly. Triggers — "test fails", "timeout", "ZodError", "trace". Never to silence a failure; for intermittent failures use flakiness-triage first.
 metadata:
   category: running
@@ -64,7 +64,7 @@ Map the failure message to a category — each routes to a tool and (often) a si
 | Auth failure / 401 mid-test | `Unauthorized` after a previously-passing flow | Stale storage state at `.auth/app/appMainUserSession.json` | Re-run the `app-setup` project. Verify `login.setup.ts` produced the file. |
 | Token expiry mid-suite | 401s appearing only in the last ~20% of a long CI run (>1h) | Auth token lifespan shorter than total suite duration | Check Keycloak realm → Access Token Lifespan. Increase to 2× the longest suite duration, or implement token refresh in `beforeEach` via the auth-bootstrap helper. |
 | `beforeAll` timeout → cascading 401s | Multiple tests in a describe fail with 401 / "Request context disposed" / "`beforeAll` hook timeout exceeded" | `beforeAll` hook creates tenants/users/Keycloak entities and exceeds its timeout on a slow environment. The disposed request context causes every subsequent test to report 401. | Check the `beforeAll` timeout first. Size it to the number of slow operations (see `api-testing` § Setup timeouts). Do NOT raise the global `actionTimeout` or add retries. |
-| Stale UI aggregate | `expect(uiCount).toBe(apiCount)` fails with a small delta (e.g., 75 vs 77) | Dashboard/list page loaded with cached or pre-render data; API returned a fresher count | Move the API call outside the retry loop for a stable expected value. Inside `expect.toPass()`, call `page.reload()` + `verifyPageLoaded()` to force the UI to re-fetch, then re-read the UI value. Timeout 30s. |
+| Stale UI aggregate | `expect(uiCount).toBe(apiCount)` fails with a small delta (e.g., 75 vs 77) | Dashboard/list page loaded with cached or pre-render data; API returned a fresher count | Move the API call outside the retry loop for a stable expected value. Inside `expect(async () => { … }).toPass()`, call `page.reload()` + `verifyPageLoaded()` to force the UI to re-fetch, then re-read the UI value. Timeout 30s. |
 | 409 Conflict on cleanup | `cleanup failed: 409` deleting a probe in `afterAll` | Probe still bound to a synthetic — wrong delete order | Use `cleanupProbesAndSynthetics` (synthetics first, then probes). See `api-testing` § Cleanup patterns. |
 | Test passes alone, fails in suite | Green via `--grep`, red via `npm run app-test` | Test independence violation, shared state, parallel collision, missing cleanup | `test-standards` test isolation rules. Promote shared mutators to a fixture or `beforeEach`. |
 | `forbidOnly` failed CI | `Error: focused tests are not allowed in CI` | Committed `test.only(...)` | Remove `test.only(...)`. Use `--grep` instead. |

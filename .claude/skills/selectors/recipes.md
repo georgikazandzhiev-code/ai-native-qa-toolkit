@@ -556,16 +556,16 @@ get codeInput(): Locator {
     return this.page.getByTestId('otp-input-0');
 }
 
-// Caller
-await loginPage.codeInput.waitFor({ state: 'visible' });
+// Caller — click() already waits for the input to be visible and enabled
 await loginPage.codeInput.click();
+await expect(loginPage.codeInput).toBeFocused();
 await page.keyboard.type(code);
 ```
 
 Rules (when the first OTP component ships):
 - Click the first input, then `page.keyboard.type(code)` — typical OTP components auto-advance focus across `otp-input-0` … `otp-input-N`.
 - `fill` does NOT work for OTP inputs that listen to keystroke events; use `keyboard.type`.
-- If the test is flaky on the first keystroke, the right hardening is `await loginPage.codeInput.waitFor({ state: 'visible' })` (or `expect(loginPage.codeInput).toBeFocused()`) **before** `keyboard.type` — not retries, not lengthening timeouts on the typed assertion.
+- If the test is flaky on the first keystroke, the right hardening is `await expect(loginPage.codeInput).toBeFocused()` **before** `keyboard.type` — not a `waitFor` before the click (`click()` already waits), not retries, not lengthening timeouts on the typed assertion.
 
 For the existing mail-based reset flow, see the `mailpit` fixture in `fixtures/` and the [api-testing](../api-testing/SKILL.md) skill — both cover how the verification link is fetched.
 
@@ -646,7 +646,7 @@ await expect(popup.getByRole('heading', { name: 'Billing Portal' })).toBeVisible
 
 Rules:
 - Arm `waitForEvent('popup')` BEFORE the click that opens the popup.
-- The first `expect(popup.getBy…).toBeVisible()` auto-waits — you usually do NOT need `popup.waitForLoadState(...)`. Only add `waitForLoadState('domcontentloaded')` if you must read DOM state synchronously (e.g. via `popup.evaluate(...)`); never use `'networkidle'` (see reference.md).
+- The first `expect(popup.getBy…).toBeVisible()` auto-waits — you usually do NOT need `popup.waitForLoadState(...)`. Read state through locators and web-first assertions, never `popup.evaluate(...)` (the constitution forbids `page.evaluate` for DOM work), and never use `'networkidle'` (see reference.md).
 
 ## 15. Searching and filtering
 

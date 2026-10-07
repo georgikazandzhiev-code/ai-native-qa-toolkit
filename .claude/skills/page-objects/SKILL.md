@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.0
+version: 2.0.1
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -16,7 +16,7 @@ Page Object classes are the seam between specs and the UI: they own every locato
 - **ALWAYS** extend the correct base class. Pages **with a data table** (Synthetics, Inventory, Probes, Policies, and any new table-bearing page) extend `DataTableBase` from `pages/baseClasses/DataTableBase.ts` — it provides `dataTable`, `tableRows`, `noResultsMessage`, `cellForRow`, `getColumnTexts`, sorting helpers, pagination controls, `selectPageSize`, `goToNextPage`, `goToPreviousPage`, and `waitForTableSettled`. Pages **without a table** extend `BasePage` from `pages/baseClasses/BasePage.ts` — it provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `refresh`. Why: bypassing the right base duplicates logic per page and produces drift. `SideNavigation` is the documented exception — it's a sidebar component, not a page. `AlertsPage` uses `BasePage` because its table root differs (`pageRoot` instead of `dataTable`).
 - **ALWAYS** define locators as `get` accessors returning `Locator`. Never `async`, never `Promise<Locator>`, never `readonly` field set in constructor. Why: Playwright's `Locator` is lazy — it re-queries on every action. The `get` form is terser, groups locators in the class body, and matches every existing POM in `pages/app/`.
 - **NEVER** put a locator that the framework interacts with (`click`, `fill`, `hover`, `press`, `setInputFiles`) inline in a spec. Locators interacted with live in a page object. Inline `page.getBy*` in specs is reserved for one-off arrival markers and Sonner toast assertions only. See the `selectors` skill § Where selectors live — POM vs spec.
-- **NEVER** use `page.waitForTimeout(...)` inside a page object. Replace with a web-first assertion (`await expect(locator).toBeVisible()`), `page.waitForResponse(...)` for known XHRs, or `expect.toPass({ timeout })` for genuinely-flaky reads. Why: hard waits are flake amplifiers and mask real timing bugs.
+- **NEVER** use `page.waitForTimeout(...)` inside a page object. Replace with a web-first assertion (`await expect(locator).toBeVisible()`), `page.waitForResponse(...)` for known XHRs, or `expect(async () => { … }).toPass({ timeout })` for reads of a value that legitimately keeps changing. Why: hard waits are flake amplifiers and mask real timing bugs.
 - **Radix trigger-swallow retry.** When a Radix dropdown trigger swallows the first click (known race — the menu doesn't open), use `try { click + expect(item).toBeVisible({ timeout: 5_000 }) } catch { click({ force: true }) + expect visible }`. This is the **one accepted `try/catch`** in a POM action method — annotate with `// eslint-disable-next-line playwright/no-force-option -- Radix trigger retry`. Do not generalize this pattern beyond confirmed Radix trigger issues.
 - **ALWAYS** explore the live app with `npx playwright open` before writing locators (see the `playwright-cli` skill). No guessing from wireframes, frontend source, or screenshots — verify roles, accessible names, and testids on the running app. If the app is unreachable, **stop and notify the human** — never ship placeholder locators with guessed names.
 - **ALWAYS** include feedback locators (success toast, error toast, field validation, empty state, loading) on any POM that covers a form or CRUD operation. Why: a POM without feedback locators forces specs to assert state via timing instead of UI signals — the `selectors` skill calls a feedback-less POM "incomplete".
@@ -193,17 +193,18 @@ Every public method must:
 - Have an explicit `Promise<void>` (or `Promise<T>` for read methods) return type.
 - Carry JSDoc with `@param` and `@returns`.
 - Include at least one built-in validation: a web-first assertion, a `page.waitForResponse(...)`, or a toast check. **Never** end an action method on a bare `.click()` without a wait.
-- Encapsulate any waits or polling — specs must not see `waitForResponse` or `waitForSelector`.
+- Encapsulate any waits or polling — specs must not see `waitForResponse`. Register `waitForResponse` **before** the action that triggers the request; registered after, the response can arrive in between and the wait hangs or catches the wrong one. Use locators and web-first assertions, not `waitForSelector`.
 
 ```typescript
-// CORRECT — built-in wait + visible-state assertion
+// CORRECT — wait armed BEFORE the click, then a visible-state assertion
 /**
  * Submits the create-monitor sheet and waits for the success toast.
  * @returns Promise<void>
  */
 async submitCreateMonitor(): Promise<void> {
+  const created = this.page.waitForResponse((r) => r.url().includes("/api/synthetics") && r.request().method() === "POST");
   await this.submitButton.click();
-  await this.page.waitForResponse((r) => r.url().includes("/api/synthetics") && r.request().method() === "POST");
+  await created;
   await expect(this.successToast).toBeVisible();
 }
 

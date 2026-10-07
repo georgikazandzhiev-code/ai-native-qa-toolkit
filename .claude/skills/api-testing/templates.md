@@ -508,15 +508,13 @@ import {
 } from "../../../helpers/app/synthetics";
 import { buildCreateProbeBody, createProbe } from "../../../helpers/app/probes";
 
-const process.env.USER_ACCESS_TOKEN_FULL! = process.env.USER_ACCESS_TOKEN_FULL!;
-
 // `!` (definite assignment): set in test.beforeAll. Mirrors tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts.
 let probeId!: string;
 const createdProbeIds: string[] = [];
 const createdSyntheticIds: string[] = [];
 
 test.beforeAll(async ({ apiRequest }) => {
-    if (!process.env.USER_ACCESS_TOKEN_FULL!) {
+    if (!process.env.USER_ACCESS_TOKEN_FULL) {
         throw new Error("USER_ACCESS_TOKEN_FULL is required for synthetic API tests.");
     }
     const probeBody = buildCreateProbeBody();
@@ -910,8 +908,6 @@ import {
     extractLinkFromEmail,
     getInviteLinkFromEmail,
 } from "../../../helpers/util/mailpit";
-
-const process.env.USER_ACCESS_TOKEN_ADMIN! = process.env.USER_ACCESS_TOKEN_ADMIN!;
 
 function generateE2EUserPayload() {
     // E2E variant — uses @<your-test-domain> domain (Mailpit-catchable on test infra).

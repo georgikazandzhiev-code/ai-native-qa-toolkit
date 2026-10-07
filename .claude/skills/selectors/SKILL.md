@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 2.0.0
+version: 2.0.1
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -42,7 +42,7 @@ Non-negotiable. Violating any of these breaks the framework's contract.
 - **NEVER put JSDoc on a locator getter.** JSDoc belongs on action methods only. A comment restating what `getByRole('button', { name: 'Save' })` returns is noise, and the eval re-run caught it as a scored miss. See the `page-objects` skill.
 - **Locators are `get` accessors returning `Locator`.** Not async. Not `Promise<Locator>`. Playwright's `Locator` is lazy — it re-queries on every action. See § The nine blessed patterns.
 - **Locators interacted with (`click`, `fill`, `hover`, `press`, `setInputFiles`) live in a page object, never inline in a spec.** Inline `page.getBy*` in specs is reserved for one-off arrival markers and toast assertions only. See § Where selectors live — POM vs spec.
-- **No `waitForTimeout`, ever.** Use a web-first assertion, `waitForResponse` for known XHRs, or `expect.toPass({ timeout })` for genuinely-flaky reads. See § Web-first assertions.
+- **No `waitForTimeout`, ever.** Use a web-first assertion, `waitForResponse` for known XHRs, or `expect(async () => { … }).toPass({ timeout })` for reads of a value that legitimately keeps changing. See § Web-first assertions.
 - **ALWAYS use `exact: true` in dynamic locator methods.** When a method parameter flows into `filter({ hasText: value })` or `getByText(value)`, always use `filter({ has: this.page.getByText(value, { exact: true }) })` or `getByText(value, { exact: true })`. Without it, "Item9" matches "Item90" — a silent false positive that passes locally and breaks in production data. This applies to `getRowByName`, `probeLocationCard`, and any method that selects by user-supplied text.
 - **Assert a schema-validated submit/confirm button is `toBeEnabled` BEFORE clicking it.** Schema-form validation only enables the button once every required field passes; clicking a still-disabled button silently no-ops and the test races. `await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout }); await this.createMonitorSubmitButton.click();`
 - **After every `fill()` on a Radix-wrapped / component-library input, assert `toHaveValue(value)`.** Component libraries occasionally drop characters under fast programmatic input; the assertion catches the drop before the form is submitted. `await input.fill(value); await expect(input).toHaveValue(value);`
@@ -257,7 +257,7 @@ Playwright assertions auto-wait. Use them everywhere; do NOT mix with `await loc
 - A web-first assertion.
 - A `waitForResponse` / `waitForRequest` for a known XHR.
 - A re-read of a Locator after the triggering action (Locators are lazy).
-- An `expect.toPass({ timeout })` retry block when the assertion is genuinely flaky on first read (see `pages/app/SyntheticsPage.ts` `expandRow`, `openRowActionMenu`).
+- An `expect(async () => { … }).toPass({ timeout })` retry block when the value being read legitimately keeps changing (see `pages/app/SyntheticsPage.ts` `expandRow`, `openRowActionMenu`).
 
 ### Form interaction hygiene (mutation action methods)
 
@@ -333,7 +333,7 @@ Before finishing any selector-related change:
 - [ ] No `frameLocator('iframe')` without a stable attribute.
 - [ ] Every `.first()` / `.last()` / `.nth(N)` is intentional and either commented or used in a clearly named getter (`refreshButton`).
 - [ ] All assertions are web-first (`expect(locator).toBe…`); no `if (await locator.isVisible())` patterns.
-- [ ] No `waitForTimeout`; waits are `expect(...)` or `waitForResponse` or `expect.toPass({ timeout })`.
+- [ ] No `waitForTimeout`; waits are `expect(...)`, `waitForResponse` or `expect(async () => { … }).toPass({ timeout })`.
 - [ ] Sheet / dialog / expanded-row / tab-panel content is scoped under a single anchor locator. **Every new getter** added to a scoped section chains off the section's anchor (`this.<section>`), not `this.page` — verify by searching for `this.page.getBy` in the section and confirming it's the anchor definition, not a child getter.
 - [ ] Action methods include a post-condition assertion (visible/hidden/value/URL change) — see [`page-objects`](../page-objects/SKILL.md) § "No single-action methods — every POM method must include at least one built-in validation".
 - [ ] Locators interacted with (click/fill/hover/press) live in a page object, not inline in a spec. Inline `page.getBy*` in specs is reserved for one-off arrival or empty-state assertions only. Reused locators are promoted to POM getters on first duplication.

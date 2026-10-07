@@ -59,10 +59,10 @@ Lives at `pages/app/SyntheticsPage.ts`.
 - `open()` — navigate to `/synthetics` and wait for list-ready signal.
 - `verifyPageLoaded()` — assert `page-synthetics` root + table chrome.
 - `getRowByName(name)` → `Locator` — filter table rows by visible text. Excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded.
-- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit monitor`, `View details`, `Delete`). Wrapped in `expect.toPass({ timeout: 15_000 })` because the menu trigger occasionally needs a re-click on slow CI.
+- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit monitor`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: 15_000 })` because the menu trigger occasionally needs a re-click on slow CI.
 - `searchByName(name)` / `clearSearch()` — **inherited from `DataTableBase`** (debounced fill with re-fill retry + `waitForTableSettled`); `SyntheticsPage` only overrides `get searchInput()`.
 - `expandRow(row)` / `collapseRow(row)` — toggle the expanded-row UI.
-- `getAllHealthCounts()` → `{ total, healthy, warning, critical, unknown }` — read all 5 health stat cards. **Always wrap in `expect.toPass(...)` when comparing across counters** (see `selectors/patterns.md` P18).
+- `getAllHealthCounts()` → `{ total, healthy, warning, critical, unknown }` — read all 5 health stat cards. **Always wrap in `expect(async () => { … }).toPass(...)` when comparing across counters** (see `selectors/patterns.md` P18).
 - `expectSyntheticsListReady()` — composite ready-state assertion (page root + table or empty state).
 - Generic timing helpers (parameterized; reused across HTTP / TCP / WebSocket detail-view specs):
   - `timingLegendItemIn(card, label)`, `timingLegendItemsIn(card)`, `timingLegendColorDot(card, label)`
