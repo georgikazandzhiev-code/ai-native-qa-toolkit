@@ -1118,7 +1118,7 @@ test.describe("POST /synthetics — field validation", () => {
                 const body = { ...buildCreateSyntheticBody(probeIds), name: value };
                 const { status, body: err } = await createSyntheticMonitor(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
                 expect.soft(status, `name = ${JSON.stringify(value)}`).toBe(400);
-                expect.soft(APIErrorSchema.parse(err), `name = ${JSON.stringify(value)}`).toBeTruthy();
+                expect.soft(APIErrorSchema.safeParse(err).success, `name = ${JSON.stringify(value)}`).toBe(true);
             });
         }
     });
@@ -1130,14 +1130,14 @@ test.describe("POST /synthetics — field validation", () => {
                 const body = { ...buildCreateSyntheticBody(probeIds), checkInterval: value };
                 const { status, body: err } = await createSyntheticMonitor(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
                 expect.soft(status, `checkInterval = ${JSON.stringify(value)}`).toBe(400);
-                expect.soft(APIErrorSchema.parse(err), `checkInterval = ${JSON.stringify(value)}`).toBeTruthy();
+                expect.soft(APIErrorSchema.safeParse(err).success, `checkInterval = ${JSON.stringify(value)}`).toBe(true);
             });
         }
     });
 });
 ```
 
-**Why `expect.soft`:** the loop continues even when an iteration fails, so the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
+**Why `expect.soft` + `safeParse`:** `parse` throws a `ZodError` before `expect.soft` ever sees a value, which would stop the loop at the first bad response; `safeParse` returns `{ success }` instead, so the soft assertion records it and the loop goes on (the constitution's carve-out). And the loop continues even when an iteration fails, so the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
 
 ## 10. Per-field invalid-type loop (nested compact form)
 
@@ -1166,7 +1166,7 @@ test("Verify POST /synthetics returns 400 for invalid field values", { tag: "@Ap
                     process.env.USER_ACCESS_TOKEN_FULL!,
                 );
                 expect.soft(status, `${field} = ${JSON.stringify(invalid)}`).toBe(400);
-                expect.soft(APIErrorSchema.parse(body), `${field} = ${JSON.stringify(invalid)}`).toBeTruthy();
+                expect.soft(APIErrorSchema.safeParse(body).success, `${field} = ${JSON.stringify(invalid)}`).toBe(true);
             });
         }
     }
@@ -1190,7 +1190,7 @@ test("Verify POST /synthetics returns 400 when required fields are missing", { t
             const { [field]: _, ...payloadWithoutField } = validBody;
             const { status, body } = await createSyntheticMonitor(apiRequest, payloadWithoutField, process.env.USER_ACCESS_TOKEN_FULL!);
             expect.soft(status, `omit ${field}`).toBe(400);
-            expect.soft(APIErrorSchema.parse(body), `omit ${field}`).toBeTruthy();
+            expect.soft(APIErrorSchema.safeParse(body).success, `omit ${field}`).toBe(true);
         });
     }
 });
@@ -1216,7 +1216,7 @@ test("Verify GET /synthetics/:id returns 400 for invalid id formats", { tag: "@A
         await test.step(`id = ${description}`, async () => {
             const { status, body } = await getSyntheticMonitor(apiRequest, encodeURIComponent(value), process.env.USER_ACCESS_TOKEN_FULL!);
             expect.soft(status, `id = ${description}`).toBe(400);
-            expect.soft(APIErrorSchema.parse(body), `id = ${description}`).toBeTruthy();
+            expect.soft(APIErrorSchema.safeParse(body).success, `id = ${description}`).toBe(true);
         });
     }
 });

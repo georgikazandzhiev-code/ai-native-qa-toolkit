@@ -46,7 +46,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Type Safety** | Strict TS. No `any` / `as any` / `@ts-ignore`. Explicit return types on exported functions. No `console.*` |
 | **Selectors** | Priority: `getByRole()` > `getByLabel()` > `getByPlaceholder()` > `getByText()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
 | **Schemas** | Validate every API response against a Zod schema. New schemas use `z.strictObject()`. Never loosen a schema to make a test pass |
-| **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();` |
+| **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();`. **Carve-out for negative-matrix loops** (one test iterating invalid values): `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` per value — `parse` throws and would stop the loop |
 | **Sources of Truth** | Tokens/URLs from `process.env.*`. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |
 | **Tags** | Exactly **one** tag per `test()` — never on `test.describe()`. Match the project's tag whitelist and casing exactly. See `test-standards` skill |
 | **Qase (when used)** | Every new test gets `qase.suite(...)` as its first body line; `qase.id(N)` commented out until mapped |

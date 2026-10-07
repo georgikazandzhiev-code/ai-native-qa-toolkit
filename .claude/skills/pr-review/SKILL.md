@@ -70,7 +70,7 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 API specs additionally — routed skill: [`api-testing`](../api-testing/SKILL.md):
 
 - [ ] Coverage plan comment at the top of the spec enumerates every status code from the OpenAPI spec.
-- [ ] Every API response asserted with the exact idiom: `expect(SchemaName.parse(body)).toBeTruthy();` — not bare `Schema.parse(body)`.
+- [ ] Every API response asserted with the exact idiom: `expect(SchemaName.parse(body)).toBeTruthy();` — not bare `Schema.parse(body)` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out).
 - [ ] **No redundant field assertions after `Schema.parse`** (`expect(body.id).toBeTruthy()`, `expect(typeof body.id).toBe("string")` — these are noise; the schema proved it).
 - [ ] Per-field omission tests and per-field invalid-type loop tests are present for required fields. Empty-body-only 400 test is insufficient.
 - [ ] If a status code can't be tested (e.g. 403 token not provisioned), test is commented-out with `// TODO: FIXME: <TICKET>` — not silently dropped.

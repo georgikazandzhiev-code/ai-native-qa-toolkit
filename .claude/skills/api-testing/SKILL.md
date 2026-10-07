@@ -213,7 +213,7 @@ Import and iterate. **Never redefine inline.** Each array is curated for what th
 
 Use a valid payload as the base and override one field at a time. This isolates the field under test.
 
-**Convention: loop INSIDE `test()`, never outside.** One `test()` per validation concern; the loop iterates invalid values inside the test body. Wrap each iteration in `test.step()` so the trace shows which value broke. Use `expect.soft()` for inner-loop assertions so the loop continues past failures and the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
+**Convention: loop INSIDE `test()`, never outside, and check the schema with `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`** (the constitution's carve-out — `parse` would throw and stop the loop). One `test()` per validation concern; the loop iterates invalid values inside the test body. Wrap each iteration in `test.step()` so the trace shows which value broke. Use `expect.soft()` for inner-loop assertions so the loop continues past failures and the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
 
 This matches the project's 405 catch-all pattern (see `http-method-coverage.md` for the full per-verb playbook) and avoids the per-value test explosion that the loop-outside form produces.
 
@@ -358,6 +358,7 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 - ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`.
 - ❌ `for...of` loop **outside** `test()` for invalid-value validation (one-test-per-value pattern). Loop INSIDE `test()` with `test.step` + `expect.soft` per § Per-field invalid-type loop. The loop-outside form generates dozens of nearly-identical tests, hammers the API with extra auth cycles, and clutters Qase reporting.
 - ❌ Hard `expect()` inside an in-test validation loop. Use `expect.soft()` so all iterations report — a failing first iteration must not silence the rest.
+- ❌ `expect.soft(Schema.parse(body))` inside a loop. `parse` throws before `expect.soft` sees anything, so the loop still stops at the first bad response. Use `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`.
 - ❌ Asserting on **exact error message text** (`expect(body.error).toBe("Resource not found")`) unless the message is part of the documented API contract. Assert on status code + envelope schema shape; brittle copy comparisons fail every time the backend tweaks wording.
 - ❌ Inline `setTimeout` / `await new Promise((r) => setTimeout(r, 1000))` polling inside a spec. Use Playwright's built-in retry mechanisms (`expect(async () => { … }).toPass({ timeout })`, `expect.poll`) or a helper that polls with explicit timeout + interval (mirror `Mailpit.getLastEmail(email, 10, 2000)`).
 

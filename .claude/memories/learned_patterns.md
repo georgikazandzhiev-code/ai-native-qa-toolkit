@@ -83,12 +83,13 @@ await expect(page.getByRole('option')).not.toHaveCount(0);
 - **Evidence:** EXECUTED — `node tests/fault-injection.test.mjs` → `FALSE + schema-parse-idiom  1 on smoke/good/: projects.spec.ts:57`.
 - **Learned fix:** when a rule must decide "is this value used?", ask that question directly — walk out to the nearest enclosing statement and check whether anything reads the result. Do not enumerate the good cases. **Generalises beyond linting:** an allowlist of accepted forms is a false-positive generator wherever the set of valid forms is open.
 
-### 📌 Case #004: `expect.soft(...)` is the idiom in a negative-case loop, not a violation
+### 📌 Case #004: `expect.soft(...)` is the idiom in a negative-case loop, not a violation — falsified in part
 
 - **Issue:** a rule demanded bare `expect(Schema.parse(body)).toBeTruthy()` and rejected `expect.soft(Schema.parse(body), label).toBeTruthy()`.
-- **Root cause:** a per-field omission loop must keep running after the first failure, or you learn about one field per run. `expect.soft` is the correct form and is modelled five times in `api-testing/templates.md`.
+- **Root cause:** a per-field omission loop must keep running after the first failure, or you learn about one field per run. ~~`expect.soft` is the correct form and is modelled five times in `api-testing/templates.md`.~~
 - **Evidence:** EXECUTED — 5 of 41 findings in the first pass of eval run 3 were this.
 - **Learned fix:** before believing a tool that reports your own convention as a violation, **open the line**. A report is not evidence; the line is.
+- **Falsified 2026-10-07 (in part):** `expect.soft(Schema.parse(body))` cannot keep the loop running — `parse` throws a `ZodError` before `expect.soft` receives a value. The loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`, now the constitution's carve-out (#5). The learned fix still holds; this time the line itself was wrong as well.
 
 ### 📌 Case #005: a +1 score change was noise, and the baseline proved it
 
