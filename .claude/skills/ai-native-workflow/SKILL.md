@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.0.0
+version: 2.1.0
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -52,10 +52,10 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 1. **Understand** — re-read the prompt, restate the goal in one sentence, confirm the work category (new artifact / edit / refactor / debug / investigate).
 2. **Locate** — open `~/.claude/CLAUDE.md § Routed Skill Index` and identify the matching skill. If the repository has its own `CLAUDE.md` or a repo-context skill, read it too — it holds the folder map the skills assume.
 3. **Audit** — read existing code from disk (`ls`, then `Read` the relevant files). Never propose from memory. For API work, also confirm the endpoint contract via OpenAPI; for UI work, run `npx playwright open` (see the `playwright-cli` skill) per `~/.claude/CLAUDE.md` MUST: Explore Before Generate.
-4. **Plan** — for multi-step or multi-file changes, write the scope: what changes, in which files, why, what's deliberately out of scope. Wait for human approval on non-trivial work.
+4. **Plan** — for multi-step or multi-file changes, write the scope: what changes, in which files, why, what's deliberately out of scope. If the work has several logical parts, name the **PR boundaries** now — one PR per part (`GOVERNANCE.md` § One logical change per PR). Wait for human approval on non-trivial work.
 5. **Generate** — author the code following the matched skill's `## Critical` rules and the relevant `~/.claude/CLAUDE.md` MUST/WON'T entries. Re-check the Critical block while generating, not after.
 6. **Verify** — walk `~/.claude/CLAUDE.md § Verification Standard`: re-read from disk, run the linter, run the affected tests (`npx playwright test [path]`), report actual results. On red, load the `debugging` skill — failure-mode taxonomy, UI Mode / Trace Viewer / Inspector workflow.
-7. **Surface** — report what changed (files, substantive edits), flag any drift discovered (legacy filename inconsistency, schema duplication, dead code), and ask whether to commit.
+7. **Surface** — report what changed (files, substantive edits), flag any drift discovered (legacy filename inconsistency, schema duplication, dead code), and ask whether to commit. When a shippable unit is done, propose opening its PR rather than continuing on the same branch.
 
 ## Principles that make this scaffold AI-native
 
@@ -76,6 +76,7 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 - ❌ Skipping verification. "The test should pass" is not a verification result. Run the linter, run the tests, report actual output.
 - ❌ Treating a skill as the constitution. `~/.claude/CLAUDE.md` wins on conflict, every time.
 - ❌ Restating rules — or the skill index — from another file in this skill. This is the orientation layer; rules and routing live in their owners.
+- ❌ Letting one branch grow into many unrelated changes. Each logical unit ships as its own PR (`GOVERNANCE.md` § One logical change per PR).
 - ❌ Stacking five skills' Critical blocks before writing a single line. Load one entry-point skill; chain to the next only when the first phase is done.
 - ❌ Substituting another browser tool (IDE browser MCP, Cursor browser, `npx playwright codegen`) when `npx playwright open` cannot reach the app. Per `~/.claude/CLAUDE.md § No substitute UI exploration`, stop and notify the human.
 - ❌ Silent coverage drops, schema loosening, raised timeouts, or `try/catch` on `expect` to make red turn green. Load `debugging` — it owns the failure-mode taxonomy and the right tool per failure type.
