@@ -6,8 +6,10 @@
  * while the check stays green in four ways, and each is covered below: a skill cites a
  * constitution section that does not exist, a skill folder exists that the index does not
  * route to, the index routes to a skill that does not exist, and a persona is listed without a
- * command file behind it; a written skill is still labelled "(TBD)"; and a link points at a file
- * that does not exist. Silent cases prove the check stays quiet on a correct reference, on a TBD
+ * command file behind it; a written skill is still labelled "(TBD)"; a link points at a file
+ * that does not exist; a section name runs on past its end ("§ Verificationx"); the persona line
+ * is missing altogether; and a link climbs out of `.claude/`, which works here and is dead in an
+ * installed `~/.claude`. Silent cases prove the check stays quiet on a correct reference, on a TBD
  * label for a skill not yet written, on a link to a real file, and on placeholders, code and
  * URLs, because a gate that fires on correct text gets switched off.
  *
@@ -68,6 +70,14 @@ const CASES = [
     expect: 'no such section or rule in the constitution',
   },
   {
+    name: 'a section name that runs on past a word boundary',
+    // "Verification" is a real heading's prefix; "Verificationx" must not match it.
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- See \`~/.claude/CLAUDE.md § Verificationx\`.\n`, 'append a run-on reference'),
+    exit: 1,
+    expect: 'no such section or rule in the constitution',
+  },
+  {
     name: 'a correct section reference stays silent',
     break: (dir) =>
       edit(dir, PR_REVIEW, (md) => `${md}\n- See \`~/.claude/CLAUDE.md § Verification Standard\`.\n`, 'append a valid reference'),
@@ -88,11 +98,19 @@ const CASES = [
   },
   {
     name: 'a link points at a file that does not exist',
-    // The 432-link case: a skill copied out of a product repo still linking to its code.
+    // The 416-link case: a skill copied out of a product repo still linking to its code.
     break: (dir) =>
       edit(dir, PR_REVIEW, (md) => `${md}\n- See [SyntheticsPage](../../../pages/app/SyntheticsPage.ts).\n`, 'append a dead link'),
     exit: 1,
     expect: 'links to ../../../pages/app/SyntheticsPage.ts, which does not exist',
+  },
+  {
+    name: 'a link that leaves .claude/',
+    // Resolves in this repository, dead in an installed ~/.claude.
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- See [the README](../../../README.md).\n`, 'append a link out of .claude'),
+    exit: 1,
+    expect: 'outside .claude/',
   },
   {
     name: 'a link to a real file stays silent',
@@ -136,6 +154,14 @@ const CASES = [
       ),
     exit: 1,
     expect: 'which has no SKILL.md',
+  },
+  {
+    name: 'the persona line is missing',
+    // Without the line the persona check used to skip itself silently.
+    break: (dir) =>
+      edit(dir, CONSTITUTION, (md) => md.replace(/^Personas available as slash commands:.*\n/m, ''), 'remove the persona line'),
+    exit: 1,
+    expect: 'no "Personas available as slash commands:" line',
   },
   {
     name: 'a persona is listed with no command file',

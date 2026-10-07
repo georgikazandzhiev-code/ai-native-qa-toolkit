@@ -1,6 +1,6 @@
 # Quality checklist
 
-The shipping gate for any new (or refactored) skill in this repo. Run all sections before merging. The validator ([scripts/validate.mjs](../../../../scripts/validate.mjs), `npm run validate`, also run in CI) enforces the structural items it can; the rest is human (or subagent) review.
+The shipping gate for any new (or refactored) skill in this repo. Run all sections before merging. The validator (`scripts/validate.mjs` in the toolkit repository, run with `npm run validate`, also run in CI) enforces the structural items it can; the rest is human (or subagent) review.
 
 This checklist gates on the **standardized SKILL.md structure** mandated by skill-creator. Every section is required (or marked "(when applicable)"). Skills authored before this standardization are TBD-tracked separately and migrate during their next legitimate edit.
 
