@@ -261,6 +261,7 @@ test.describe("Settings — Profile", () => {
     { tag: "@App-regression" },
     async ({ settingsPage }) => {
       qase.suite(SUITES.APP_SETTINGS);
+      // qase.id(N);
       await settingsPage.saveProfile({ "profile.firstName": "Jordan" });
     },
   );

@@ -28,7 +28,7 @@ This API does **not** use a global success envelope. Match the actual shape for 
 ### List (paginated)
 
 ```typescript
-z.object({
+z.strictObject({
     pageInfo: PageInfoSchema,
     <resourcePlural>: z.array(<Resource>Schema),
 });
@@ -39,7 +39,7 @@ z.object({
 ### Single (GET by id)
 
 ```typescript
-z.object({ <resource>: <Resource>Schema });
+z.strictObject({ <resource>: <Resource>Schema });
 ```
 
 The body is wrapped under the singular resource name. Examples: `GetSyntheticResponseSchema` → `body.synthetic`, `GetTenantResponseSchema` → `body.tenant`, `GetUserResponseSchema` → `body.user`, `GetProbeResponseSchema` → `body.probe`.
@@ -47,7 +47,7 @@ The body is wrapped under the singular resource name. Examples: `GetSyntheticRes
 ### Create (POST)
 
 ```typescript
-z.object({
+z.strictObject({
     <resource>Id: z.string(),     // tenantId, syntheticId, userId, probeId
     status: StatusSchema,         // OR z.string() for some endpoints
 });
@@ -65,11 +65,11 @@ Two flavors in this codebase, both valid — match the API:
 
 ```typescript
 // Minimal (admin tenants, admin realms, admin users)
-z.object({ status: StatusSchema });
-z.object({ <resource>Id: z.string(), status: StatusSchema });
+z.strictObject({ status: StatusSchema });
+z.strictObject({ <resource>Id: z.string(), status: StatusSchema });
 
 // With echoed entity (synthetics)
-z.object({
+z.strictObject({
     status: z.string(),
     synthetic: SyntheticSchema,
 });
@@ -78,9 +78,9 @@ z.object({
 ### Delete (DELETE)
 
 ```typescript
-z.object({
+z.strictObject({
     <resource>Id: z.string(),
-    status: StatusSchema | z.string(),
+    status: StatusSchema,         // OR z.string() for synthetics/probes — match the API
 });
 ```
 
@@ -196,7 +196,7 @@ The fixture parses `application/json` automatically; non-JSON returns the raw va
 | Env var | Purpose | Typical 401 surface |
 |---------|---------|---------------------|
 | `process.env.USER_ACCESS_TOKEN_ADMIN` | Admin scope (admin/tenants, admin/realms, admin/users) | Tenant-scoped endpoints (returns 401, not 403) |
-| `process.env.USER_ACCESS_TOKEN_FULL` | Tenant-scoped full permissions (synthetics, probes, users, data, metrics) | Admin endpoints |
+| `process.env.USER_ACCESS_TOKEN_FULL` | Tenant-scoped full permissions (synthetics, probes, users, data, metrics) | None — admin endpoints reject it with **403** (wrong scope, [http-method-coverage.md § 12.2](http-method-coverage.md#122-authentication-coverage-matrix)) |
 | `process.env.USER_ACCESS_TOKEN_ZERO` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat:** this env var is **not always provisioned** in the test environment; there's an open TODO to re-add it for RBAC/403 testing. Until it is re-added, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
 | `process.env.FRONT_MAIN_PASSWORD` | Default password for KC users created in E2E onboarding | n/a |
 | `process.env.MAILPIT_URL` | Mailpit base URL (default `http://localhost:8025`) | n/a |

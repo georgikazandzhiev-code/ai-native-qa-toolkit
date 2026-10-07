@@ -57,6 +57,15 @@ import {
 } from "../../../helpers/app/<resource>";
 import resourceData from "../../../test-data/app/<resource>.json";
 
+// Coverage plan — <METHOD> <path>, every status code in the OpenAPI contract:
+// 200 — happy path, schema + business values
+// 400 — per-field omission loop, per-field invalid-type loop, invalid id format
+// 401 — no token; admin token on a tenant-scoped path (wrong realm)
+// 403 — USER_ACCESS_TOKEN_ZERO (commented out under // TODO: FIXME: <TICKET> while unprovisioned)
+// 404 — non-existent id
+// 405 — unsupported verbs (dedicated 405 block)
+// SKIP: 500 — cannot be produced on purpose
+
 // No token aliases — use process.env.USER_ACCESS_TOKEN_* directly at every call site.
 // See data-strategy/reference.md §1.6 for rationale (grepability, no alias-name drift).
 // Existing specs with aliases are tech debt; normalize when next touching the file.
@@ -95,6 +104,7 @@ test.describe("GET /<resource>s — List", () => {
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { status, body } = await list<Resource>s<GatewayError>(apiRequest);
 
@@ -108,6 +118,7 @@ test.describe("GET /<resource>s — List", () => {
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             // Cast generic to `null` because at 403 the body is null, not List<Resource>sResponse.
             const { status, body } = await list<Resource>s<null>(apiRequest, process.env.USER_ACCESS_TOKEN_ZERO!);
@@ -149,6 +160,7 @@ test.describe("POST /<resource>s — Create", () => {
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const baseBody = buildCreate<Resource>Body();
 
@@ -169,6 +181,7 @@ test.describe("POST /<resource>s — Create", () => {
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { status, body } = await create<Resource><GatewayError>(
                 apiRequest,
@@ -185,6 +198,7 @@ test.describe("POST /<resource>s — Create", () => {
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { status, body } = await create<Resource><null>(
                 apiRequest,
@@ -225,10 +239,11 @@ test.describe("GET /<resource>s/:id — Single", () => {
     });
 
     test(
-        "Verify GET /<resource>s/:id returns 200",
+        "Verify GET /<resource>s/{id} returns 200",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { status, body } = await get<Resource>(apiRequest, seeded.id, process.env.USER_ACCESS_TOKEN_FULL!);
 
@@ -239,10 +254,11 @@ test.describe("GET /<resource>s/:id — Single", () => {
     );
 
     test(
-        "Verify GET /<resource>s/:id returns 400 for invalid id format",
+        "Verify GET /<resource>s/{id} returns 400 for invalid id format",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { invalidId } = resourceData;
             const { status, body } = await get<Resource><APIError>(apiRequest, invalidId, process.env.USER_ACCESS_TOKEN_FULL!);
@@ -253,10 +269,11 @@ test.describe("GET /<resource>s/:id — Single", () => {
     );
 
     test(
-        "Verify GET /<resource>s/:id returns 404 for non-existent id",
+        "Verify GET /<resource>s/{id} returns 404 for non-existent id",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { nonExistentId } = resourceData;
             const { status, body } = await get<Resource><APIError>(apiRequest, nonExistentId, process.env.USER_ACCESS_TOKEN_FULL!);
@@ -296,22 +313,23 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
     });
 
     test(
-        "Verify PATCH /<resource>s/:id updates ONLY name and preserves all other fields",
+        "Verify PATCH /<resource>s/{id} updates ONLY name and preserves all other fields",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const newName = `qa-<resource>-upd-${faker.string.alphanumeric(8).toLowerCase()}`;
             // `!` is needed for the same reason — `before` is set inside the first test.step.
             let before!: <Resource>;
 
-            await test.step("GET before PATCH", async () => {
+            await test.step("GIVEN: the <resource> as it is before the PATCH", async () => {
                 const { status, body } = await get<Resource>(apiRequest, resource.id, process.env.USER_ACCESS_TOKEN_FULL!);
                 expect(status).toBe(200);
                 before = body.<resource>;
             });
 
-            await test.step("PATCH with only name", async () => {
+            await test.step("WHEN: PATCH sends only name", async () => {
                 const { status, body } = await update<Resource>(
                     apiRequest,
                     resource.id,
@@ -322,7 +340,7 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
                 expect(Update<Resource>ResponseSchema.parse(body)).toBeTruthy();
             });
 
-            await test.step("GET after PATCH and verify name changed, all other fields preserved", async () => {
+            await test.step("THEN: name changed and every other field is preserved", async () => {
                 const { status, body } = await get<Resource>(apiRequest, resource.id, process.env.USER_ACCESS_TOKEN_FULL!);
                 expect(status).toBe(200);
                 expect(body.<resource>.name).toBe(newName);
@@ -377,10 +395,11 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
     for (const [field, invalidValues] of Object.entries(fieldMatrix)) {
         for (const invalid of invalidValues) {
             test(
-                `Verify PATCH /<resource>s/:id rejects invalid ${field}: ${JSON.stringify(invalid)}`,
+                `Verify PATCH /<resource>s/{id} rejects invalid ${field}: ${JSON.stringify(invalid)}`,
                 { tag: "@App-API" },
                 async ({ apiRequest }) => {
                     qase.suite(SUITES.API_<SUITE>);
+                    // qase.id(N);
 
                     const { status, body } = await update<Resource>(
                         apiRequest,
@@ -397,10 +416,11 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
     }
 
     test(
-        "Verify PATCH /<resource>s/:id with empty body returns 400",
+        "Verify PATCH /<resource>s/{id} with empty body returns 400",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { status, body } = await update<Resource><APIError>(
                 apiRequest,
@@ -425,10 +445,11 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
 
 test.describe("DELETE /<resource>s/:id", () => {
     test(
-        "Verify DELETE /<resource>s/:id returns 200",
+        "Verify DELETE /<resource>s/{id} returns 200",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const created = await create<Resource>(
                 apiRequest,
@@ -450,10 +471,11 @@ test.describe("DELETE /<resource>s/:id", () => {
     );
 
     test(
-        "Verify DELETE /<resource>s/:id returns 404 for non-existent id",
+        "Verify DELETE /<resource>s/{id} returns 404 for non-existent id",
         { tag: "@App-API" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
+            // qase.id(N);
 
             const { nonExistentId } = resourceData;
             const { status, body } = await delete<Resource><APIError>(
@@ -477,6 +499,7 @@ test(
     { tag: "@App-API" },
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_<SUITE>);
+        // qase.id(N);
 
         const UNSUPPORTED = ["PUT", "PATCH"] as const; // adjust per endpoint
         for (const method of UNSUPPORTED) {
@@ -1114,6 +1137,7 @@ test.describe("POST /synthetics — field validation", () => {
 
     test("Verify POST /synthetics returns 400 for invalid name values", { tag: "@App-API" }, async ({ apiRequest }) => {
         qase.suite(SUITES.API_SYNTHETICS);
+        // qase.id(N);
         for (const value of invalidString) {
             await test.step(`name = ${JSON.stringify(value)}`, async () => {
                 const body = { ...buildCreateSyntheticBody(probeIds), name: value };
@@ -1126,6 +1150,7 @@ test.describe("POST /synthetics — field validation", () => {
 
     test("Verify POST /synthetics returns 400 for invalid checkInterval values", { tag: "@App-API" }, async ({ apiRequest }) => {
         qase.suite(SUITES.API_SYNTHETICS);
+        // qase.id(N);
         for (const value of invalidIntegerTypes) {
             await test.step(`checkInterval = ${JSON.stringify(value)}`, async () => {
                 const body = { ...buildCreateSyntheticBody(probeIds), checkInterval: value };
@@ -1149,6 +1174,7 @@ import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invali
 
 test("Verify POST /synthetics returns 400 for invalid field values", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_SYNTHETICS);
+    // qase.id(N);
     const validBody = buildCreateSyntheticBody([probeId]);
 
     const fields: Record<string, readonly unknown[]> = {
@@ -1183,6 +1209,7 @@ One `test()` covers every required field. The loop runs **inside** the test; eac
 ```typescript
 test("Verify POST /synthetics returns 400 when required fields are missing", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_SYNTHETICS);
+    // qase.id(N);
     const validBody = buildCreateSyntheticBody(probeIds);
     const requiredFields = ["name", "target", "type", "timeout", "probeIds"] as const;
 
@@ -1202,8 +1229,9 @@ test("Verify POST /synthetics returns 400 when required fields are missing", { t
 One `test()` covers every invalid-id case. Labeled cases (`{ description, value }`) so each `test.step` reads cleanly. Loop is **inside** the test; `expect.soft` keeps every iteration running. `encodeURIComponent` keeps the URL well-formed.
 
 ```typescript
-test("Verify GET /synthetics/:id returns 400 for invalid id formats", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify GET /synthetics/{id} returns 400 for invalid id formats", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_SYNTHETICS);
+    // qase.id(N);
 
     const invalidIds = [
         { description: "non-uuid string", value: "not-a-uuid" },
@@ -1236,6 +1264,7 @@ When API behavior diverges from the documented contract, write the test as the c
 //     { tag: "@App-API" },
 //     async ({ apiRequest }) => {
 //         qase.suite(SUITES.API_SYNTHETICS);
+//         // qase.id(N);
 //         const { status, body } = await createSyntheticMonitor(apiRequest, buildCreateSyntheticBody([probeId], { name: "" }), process.env.USER_ACCESS_TOKEN_FULL!);
 //         expect(status).toBe(400);
 //         expect(APIErrorSchema.parse(body)).toBeTruthy();
@@ -1293,19 +1322,20 @@ When a test makes 2+ API calls, each must be wrapped in `test.step()`. Failures 
 **Correct:**
 
 ```typescript
-test("Verify POST /tenants creates and GETs back", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_ADMIN_TENANTS);
+    // qase.id(N);
     const body = buildCreateTenantBody();
     let tenantId: string;
 
-    await test.step("POST /admin/tenants", async () => {
+    await test.step("WHEN: POST /admin/tenants creates a tenant", async () => {
         const { status, body: created } = await createTenant(apiRequest, body.name, process.env.USER_ACCESS_TOKEN_ADMIN!);
         expect(status).toBe(200);
         expect(CreateTenantResponseSchema.parse(created)).toBeTruthy();
         tenantId = created.tenantId;
     });
 
-    await test.step("GET /admin/tenants/:id and verify echo", async () => {
+    await test.step("THEN: GET /admin/tenants/{id} echoes it", async () => {
         const { status, body: fetched } = await getTenant(apiRequest, tenantId, process.env.USER_ACCESS_TOKEN_ADMIN!);
         expect(status).toBe(200);
         expect(GetTenantResponseSchema.parse(fetched)).toBeTruthy();
@@ -1318,8 +1348,9 @@ test("Verify POST /tenants creates and GETs back", { tag: "@App-API" }, async ({
 
 ```typescript
 // FORBIDDEN: failures don't localize, trace has no structure
-test("Verify POST /tenants creates and GETs back", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_ADMIN_TENANTS);
+    // qase.id(N);
     const body = buildCreateTenantBody();
 
     const { status: createStatus, body: created } = await createTenant(apiRequest, body.name, process.env.USER_ACCESS_TOKEN_ADMIN!);

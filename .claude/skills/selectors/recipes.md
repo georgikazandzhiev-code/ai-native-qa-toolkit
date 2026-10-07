@@ -737,8 +737,8 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         syntheticsPage,
         createMonitorPage,
     }) => {
-        qase.id(656);
         qase.suite(SUITES.APP_SYNTHETICS);
+        qase.id(656);
 
         const monitorName = `e2e-icmp-${faker.string.alphanumeric(6).toLowerCase()}`;
         const target = faker.internet.ipv4();
@@ -751,7 +751,7 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         });
 
         // POM action — every field locator (role-based textboxes, field-field-* select triggers) lives in pages/app/CreateMonitorPage.ts.
-        await test.step('Create ICMP monitor through the sheet', async () => {
+        await test.step('WHEN: User creates an ICMP monitor through the sheet', async () => {
             await syntheticsPage.createMonitorButton.click();
             await expect(createMonitorPage.sheet).toBeVisible();
             await createMonitorPage.waitForTypeSelection();
@@ -768,13 +768,13 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         });
 
         // INLINE — TOLERATED: one-shot success-toast assertion, never interacted with, no reuse.
-        await test.step('Verify create success toast', async () => {
+        await test.step('THEN: Create success toast is visible', async () => {
             const toast = page.getByText(new RegExp(`"${monitorName}" created successfully`));
             await expect(toast).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
         });
 
         // POM dynamic locator — exposed publicly so specs can assert against any row.
-        await test.step('Verify ICMP monitor in grid', async () => {
+        await test.step('AND: ICMP monitor appears in the grid', async () => {
             await syntheticsPage.searchByName(monitorName);
             const row = syntheticsPage.getRowByName(monitorName);
             await expect(row).toHaveCount(1, { timeout: appConfig.timeouts.persist });
@@ -784,7 +784,7 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         });
 
         // POM action — openRowActionMenu encapsulates the click + retry + menu-item click.
-        await test.step('Open View Details and verify', async () => {
+        await test.step('AND: View Details shows the monitor', async () => {
             const row = syntheticsPage.getRowByName(monitorName);
             await syntheticsPage.openRowActionMenu(row, 'View details');
             await expect(syntheticsPage.detailsSheet).toBeVisible();

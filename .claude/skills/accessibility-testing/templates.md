@@ -96,6 +96,7 @@ import { qase } from "playwright-qase-reporter";
 test.describe("Settings accessibility", () => {
     test("Verify the delete-account dialog has no automated a11y violations", { tag: "@App-regression" }, async ({ settingsPage, makeAxeBuilder }, testInfo) => {
         qase.suite(SUITES.APP_SETTINGS);
+        // qase.id(N);
 
         await test.step("GIVEN: the delete-account dialog is open", async () => {
             await settingsPage.openDeleteAccountDialog(); // action method waits for the dialog
@@ -126,6 +127,7 @@ What no rule engine can judge: can the flow be done without a mouse, and does fo
 ```typescript
 test("Verify Escape closes the delete-account dialog and returns focus to its trigger", { tag: "@App-regression" }, async ({ page, settingsPage }) => {
     qase.suite(SUITES.APP_SETTINGS);
+    // qase.id(N);
 
     await test.step("GIVEN: the dialog was opened from its trigger", async () => {
         await settingsPage.openDeleteAccountDialog();

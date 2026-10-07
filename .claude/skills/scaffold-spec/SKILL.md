@@ -84,6 +84,15 @@ import { faker } from "@faker-js/faker";
 // Import helpers from helpers/app/<resource>
 // Import invalid-type arrays from fixtures/api/invalid-types
 
+// Coverage plan — <METHOD> <path>, every status code in the OpenAPI contract:
+// 200 — happy path, schema + business values
+// 400 — per-field omission loop, per-field invalid-type loop, invalid id format
+// 401 — no token; admin token on a tenant-scoped path (wrong realm)
+// 403 — USER_ACCESS_TOKEN_ZERO (commented out under // TODO: FIXME: <TICKET> while unprovisioned)
+// 404 — non-existent id
+// 405 — unsupported verbs (dedicated 405 block)
+// SKIP: 500 — cannot be produced on purpose
+
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 // OR for tenant-scoped endpoints:
 // const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
@@ -102,7 +111,7 @@ test.describe("METHOD /path - Description", () => {
   });
 
   test(
-    "Verify METHOD /path returns expected result",
+    "Verify <METHOD> <path> returns <status> [with <reason>]",
     { tag: "@App-API" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
@@ -187,6 +196,7 @@ test.describe("<Feature> — Form Validation", () => {
     { tag: "@App-regression" },
     async ({ createMonitorPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
+      // qase.id(N);
       // validation test body
       // close sheet at end to leave clean state
     },
@@ -223,7 +233,7 @@ After creating the spec, update the matching router in the repository's repo-con
 - [ ] `qase.suite()` is the first line in every test
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
-- [ ] Test names start with "Verify ..." (API) or describe the flow (E2E)
+- [ ] API test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (variants: `api-testing/http-method-coverage.md` § 14); E2E names describe the flow
 - [ ] No `any` types — explicit generics on `apiRequest<T>()`
 - [ ] `test.step` used for multi-phase tests with GIVEN/WHEN/THEN
 
@@ -389,23 +399,46 @@ test("Verify GET returns 404 for non-existent resource", async ({ apiRequest }) 
 ### Wrong: 405 loop outside the test block
 
 ```typescript
-// BAD — creates a separate test per method, pollutes test count
+// BAD — one test per method: the report and Qase fill up with near-identical tests
 const UNSUPPORTED = ["PUT", "PATCH", "DELETE"] as const;
 for (const method of UNSUPPORTED) {
-  test(`Verify ${method} returns 405`, async ({ apiRequest }) => {
-    const { status } = await apiRequest[method.toLowerCase()](url, { token });
+  test(`Verify ${method} /<resource>s returns 405`, { tag: "@App-API" }, async ({ apiRequest }) => {
+    qase.suite(SUITES.API_<RESOURCE>);
+    // qase.id(N);
+    const { status } = await apiRequest({
+      method,
+      url: appConfig.api.<RESOURCE>,
+      baseUrl: appConfig.apiUrl,
+      headers: process.env.USER_ACCESS_TOKEN_FULL!,
+    });
     expect(status).toBe(405);
   });
 }
 ```
 
 ```typescript
-// CORRECT — one test, loop inside
-test("Verify unsupported methods return 405", { tag: "@App-API" }, async ({ apiRequest }) => {
-  const UNSUPPORTED = ["PUT", "PATCH", "DELETE"] as const;
-  for (const method of UNSUPPORTED) {
-    const { status } = await apiRequest[method.toLowerCase()](url, { token });
-    expect(status, `${method} should return 405`).toBe(405);
+// CORRECT — one test, loop inside, a step and soft assertions per verb.
+// Full skeleton (collection + {id} paths, request bodies): api-testing/http-method-coverage.md § 11.
+test("Verify unsupported methods on /<resource>s return 405", { tag: "@App-API" }, async ({ apiRequest }) => {
+  qase.suite(SUITES.API_<RESOURCE>);
+  // qase.id(N);
+  const UNSUPPORTED = [
+    { method: "PUT", requestBody: {} },
+    { method: "PATCH", requestBody: {} },
+    { method: "DELETE", requestBody: undefined },
+  ] as const;
+  for (const { method, requestBody } of UNSUPPORTED) {
+    await test.step(`${method} /<resource>s`, async () => {
+      const { status, body } = await apiRequest({
+        method,
+        url: appConfig.api.<RESOURCE>,
+        baseUrl: appConfig.apiUrl,
+        headers: process.env.USER_ACCESS_TOKEN_FULL!,
+        body: requestBody,
+      });
+      expect.soft(status, `${method} /<resource>s`).toBe(405);
+      expect.soft(body, `${method} /<resource>s body`).toBeNull();
+    });
   }
 });
 ```

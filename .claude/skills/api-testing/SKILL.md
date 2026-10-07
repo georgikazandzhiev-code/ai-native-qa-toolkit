@@ -61,7 +61,7 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
         `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used in 100% of
         specs today (e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`).
         Keep `<reason>` short and behavior-focused; omit it when the status alone is unambiguous (e.g.
-        `Verify DELETE /synthetics/:id returns 200`).
+        `Verify DELETE /synthetics/{id} returns 200`).
 - [ ] 8. Cover the negative matrix (see § The negative test matrix).
 - [ ] 9. Wire cleanup (afterEach/afterAll DELETE through the helper). For synthetics-with-probes use
         `cleanupProbesAndSynthetics` — synthetics MUST be deleted before probes (409 otherwise).
@@ -355,7 +355,7 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 - ❌ Deleting probes before synthetics — returns 409 because the synthetic still references the probe. Always cleanup synthetics first (use `cleanupProbesAndSynthetics`).
 - ❌ Asserting exact ordering on sort tests — DB collation differs from JavaScript string sort. Assert that the endpoint accepts the sort param and returns valid items.
 - ❌ Wrapping a single one-shot request in a helper "for tidiness" — reach for a helper only on reuse / multi-step / preconditions.
-- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`.
+- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`, with `{id}` for path parameters; the per-verb variants (create-and-GET-back, PATCH per-field, the 405 catch-all, cross-tenant) are listed once, in [http-method-coverage.md § 14](http-method-coverage.md#14-test-name-templates-per-verb).
 - ❌ `for...of` loop **outside** `test()` for invalid-value validation (one-test-per-value pattern). Loop INSIDE `test()` with `test.step` + `expect.soft` per § Per-field invalid-type loop. The loop-outside form generates dozens of nearly-identical tests, hammers the API with extra auth cycles, and clutters Qase reporting.
 - ❌ Hard `expect()` inside an in-test validation loop. Use `expect.soft()` so all iterations report — a failing first iteration must not silence the rest.
 - ❌ `expect.soft(Schema.parse(body))` inside a loop. `parse` throws before `expect.soft` sees anything, so the loop still stops at the first bad response. Use `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`.
@@ -398,7 +398,7 @@ Walk the workflow:
 1. **Confirm route in `config/app.ts`** — add `SYNTHETICS_PAUSE: "/api/v1/synthetics/:id/pause"` if missing.
 2. **Schema** — open `fixtures/api/schemas/app/synthetic.ts`. Add `PauseSyntheticResponseSchema = z.strictObject({ syntheticId: z.string().uuid(), status: StatusSchema })`. Specs deep-import from the resource file (there is no `app/` schema barrel).
 3. **Helper** — only if ≥ 2 specs need it. Likely not yet, so call `apiRequest` directly.
-4. **Coverage Plan** (§ Critical) — comment block at the top of the spec listing every status code: 200 happy path, 400 invalid id format, 401 (no token), 403 (admin token on tenant endpoint), 404 (non-existent uuid), 405 (wrong verbs), 409 (already paused).
+4. **Coverage Plan** (§ Critical) — comment block at the top of the spec listing every status code: 200 happy path, 400 invalid id format, 401 (no token, and the admin token on this tenant endpoint — wrong realm), 403 (`USER_ACCESS_TOKEN_ZERO`), 404 (non-existent uuid), 405 (wrong verbs), 409 (already paused).
 5. **Spec** — author `tests/app/api/monitoring-service/synthetics/synthetic-pause.spec.ts` from `templates.md § 1`. Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]`.
 6. **Negative matrix** — apply: per-field validation isn't needed (no request body), but path-parameter fuzzing is mandatory (§ Path parameter fuzzing). 405 catch-all loop. 401/403 auth coverage.
 7. **Cleanup** — pause is reversible via unpause; restore in `afterAll`.

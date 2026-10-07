@@ -3,7 +3,7 @@
 A condensed pass/flag checklist across both OWASP lists, for auditing a feature or PR **without writing tests**. Walk it against the diff or the story. Mark each line **PASS** (covered / not applicable with reason), **FLAG** (gap a QA test should close — point at the recipe), or **OUT OF SCOPE** (needs SAST / dependency scan / crypto / pen-test — name the tooling). Pair with the `pr-review` skill for the full pre-push gate.
 
 ## Access control (highest weight — most findings live here)
-- [ ] Every endpoint that takes an object id enforces ownership — a cross-principal request returns `403/404`, not `200` (BOLA / A01). → `api-top10.md` API1
+- [ ] Every endpoint that takes an object id enforces ownership — a cross-principal request returns the documented deny status (`404` across tenants, `403` for a lower role), not `200` (BOLA / A01). → `api-top10.md` API1
 - [ ] Every privileged/admin operation denies lower-role callers (`403`) (BFLA / A01). → API5
 - [ ] Responses don't over-expose properties for lower-privileged principals; create/update ignore privileged fields (BOPLA / mass assignment). → API3
 - [ ] No forced-browsing / direct-navigation path reaches a route the role shouldn't see.
