@@ -123,14 +123,10 @@ get schemaForm(): Locator {
     return this.page.getByTestId('schema-form');
 }
 get monitorNameInput(): Locator {
-    return this.page
-        .getByTestId('field-field-name')
-        .or(this.page.getByLabel(/^Monitor Name/i));
+    return this.page.getByLabel('Monitor Name', { exact: true });
 }
 get targetInput(): Locator {
-    return this.page
-        .getByTestId('field-field-target')
-        .or(this.page.getByLabel(/^Target/i));
+    return this.page.getByLabel('Target', { exact: true });
 }
 get createMonitorSubmitButton(): Locator {
     return this.page.getByTestId('create-button');
@@ -299,16 +295,11 @@ Rules:
 
 ## 5. Toasts / Sonner notifications
 
-This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Toasts render with `data-sonner-toast` attribute and **stack** (multiple toasts can be on screen simultaneously).
+This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message.
 
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {
-    const byToast = this.page
-        .locator('[data-sonner-toast]')
-        .filter({ hasText: name })
-        .first();
-    const byTestId = this.page.getByTestId('sonner').filter({ hasText: name });
-    const toast = byToast.or(byTestId);
+    const toast = this.page.getByRole('status').filter({ hasText: name });
     await expect(toast).toBeVisible({ timeout: 15000 });
     await expect(toast).toContainText(/created successfully/i);
 }

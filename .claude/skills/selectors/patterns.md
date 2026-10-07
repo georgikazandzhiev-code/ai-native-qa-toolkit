@@ -30,19 +30,15 @@ Cross-link from [SKILL.md](SKILL.md). For end-to-end flows, see [recipes.md](rec
 
 ```typescript
 get monitorNameInput(): Locator {
-    return this.page
-        .getByTestId('field-field-name')
-        .or(this.page.getByLabel(/^Monitor Name/i));
+    return this.page.getByLabel('Monitor Name', { exact: true });
 }
 
 get targetInput(): Locator {
-    return this.page
-        .getByTestId('field-field-target')
-        .or(this.page.getByLabel(/^Target/i));
+    return this.page.getByLabel('Target', { exact: true });
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. The `field-field-*` testid is on the schema-form input that the front-end team owns; `.or()` widens to the labelled control so older specs and the current UI both work. The chain stays at one level — never CSS at the top.
+The fields have visible labels, so `getByLabel` is the locator (priority 2). The schema-form's `field-field-*` test-id is the fallback only where a label is not associated with its input — not something to `.or()` with the label, because both would match the same input. `pages/app/SyntheticsPage.ts` still uses the test-id-plus-`.or()` shape: drift, fix on next touch. The chain stays at one level — never CSS at the top.
 
 ### Bad
 
@@ -89,8 +85,8 @@ Tolerated for full-sentence Sonner-toast messages because no other string contai
 ```typescript
 getRowByName(name: string): Locator {
     return this.page
-        .locator('tbody tr:not([data-testid="expanded-row"])')
-        .filter({ hasText: name });
+        .getByRole('row')
+        .filter({ has: this.page.getByRole('cell', { name, exact: true }) });
 }
 
 async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
@@ -292,12 +288,7 @@ async expectCreateFlowCompleteOnList(): Promise<void> {
 }
 
 async expectSuccessToastForMonitor(name: string): Promise<void> {
-    const byToast = this.page
-        .locator('[data-sonner-toast]')
-        .filter({ hasText: name })
-        .first();
-    const byTestId = this.page.getByTestId('sonner').filter({ hasText: name });
-    const toast = byToast.or(byTestId);
+    const toast = this.page.getByRole('status').filter({ hasText: name });
     await expect(toast).toBeVisible({ timeout: 15000 });
     await expect(toast).toContainText(/created successfully/i);
 }
@@ -364,7 +355,7 @@ async verifyActionMenuOptions(): Promise<void> {
 
 From `pages/app/SyntheticsPage.ts`. Two menu items are mutually exclusive (a paused monitor shows "Resume"; a running one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
 
-`.or()` is also the right tool for legacy-vs-current testid duals (older specs use `synthetics-name-search`, the current UI exposes the search via a labelled textbox):
+`.or()` also fits a legacy-vs-current pair, **but only when the two can never match at the same time**. If both hooks exist on the current page, the union matches twice and strict mode fails. Once the legacy markup is gone, drop the `.or()` and keep the label:
 
 ```typescript
 get searchInput(): Locator {
@@ -394,18 +385,13 @@ async verifyPauseOrResume(): Promise<void> {
 
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {
-    const byToast = this.page
-        .locator('[data-sonner-toast]')
-        .filter({ hasText: name })
-        .first();
-    const byTestId = this.page.getByTestId('sonner').filter({ hasText: name });
-    const toast = byToast.or(byTestId);
+    const toast = this.page.getByRole('status').filter({ hasText: name });
     await expect(toast).toBeVisible({ timeout: 15000 });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Filters the Sonner stack by the monitor name first, so two toasts firing in rapid succession (create + auto-refresh) don't trip strict mode. `.or()` widens to the regional `sonner` testid as a fallback.
+Sonner renders each toast with `role="status"`. Filtering by the monitor name keeps a second toast firing in the same window (create + auto-refresh) from tripping strict mode, so no `.first()` is needed. If your Sonner build doesn't expose the role, fall back to `this.page.locator('[data-sonner-toast]').filter({ hasText: name })`. Never `.or()` the toast with the toaster region (`getByTestId('sonner')`): the region contains the toast, so both match at once and strict mode fails. `pages/app/SyntheticsPage.ts` still has that shape: drift, fix on next touch.
 
 ### Bad — hypothetical, do not write this
 
@@ -489,15 +475,13 @@ Storing every leaf locator in a field is technically valid (Locators are lazy an
 getProbeOptionByName(probeName: string): Locator {
     return this.probeSelection
         .locator('label')
-        .filter({
-            has: this.page.locator(`text="${probeName}"`),
-        });
+        .filter({ has: this.page.getByText(probeName, { exact: true }) });
 }
 ```
 
 Picks the `<label>` whose subtree contains the given probe name — useful when the row also has a tooltip or description that repeats the name and `hasText` over-matches.
 
-### Better
+### Avoid for dynamic values
 
 ```typescript
 getProbeOptionByName(probeName: string): Locator {
@@ -507,7 +491,7 @@ getProbeOptionByName(probeName: string): Locator {
 }
 ```
 
-`hasText` matches when **any descendant text** of `<label>` contains the string. In the probe-selection block today, only the inner label text shows the probe name, so `hasText` and `filter({ has: <text> })` resolve to the same element. They are NOT equivalent in general — switch to `has: <Locator>` only when text alone over-matches (e.g. a tooltip repeats the name, or a sibling description includes it).
+`hasText` is a **substring** match: "probe-1" also matches "probe-10". For a value passed in as a parameter, use the exact `has:` form above (§ Critical: `exact: true` in dynamic methods). `hasText` also matches when **any descendant text** of `<label>` contains the string. In the probe-selection block today, only the inner label text shows the probe name, so `hasText` and `filter({ has: <text> })` resolve to the same element. They are NOT equivalent in general — switch to `has: <Locator>` only when text alone over-matches (e.g. a tooltip repeats the name, or a sibling description includes it).
 
 ### Bad
 
@@ -528,7 +512,7 @@ async expectMonitorListed(name: string): Promise<void> {
     await expect(search).toBeVisible({ timeout: 5000 });
     await search.clear();
     await search.fill(name);
-    await expect(this.getRowByName(name).first()).toBeVisible({
+    await expect(this.getRowByName(name)).toBeVisible({
         timeout: appConfig.timeouts.navigation,
     });
 }

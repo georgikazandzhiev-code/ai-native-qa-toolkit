@@ -40,7 +40,7 @@ Complete API reference grouped by intent. Cross-link from [SKILL.md](SKILL.md). 
 | `loc.filter({ has: <Locator> })` | Keep matches whose subtree contains the inner locator |
 | `loc.filter({ hasNot: <Locator> })` | Inverse of `has` |
 | `loc.and(other)` | Match elements that satisfy both locators |
-| `loc.or(other)` | Match elements that satisfy either (good for legacy/current testid duals — see `pages/app/SyntheticsPage.ts` `searchInput`) |
+| `loc.or(other)` | Match elements that satisfy either. Only for alternatives that never match at the same moment — mutually exclusive states (Pause / Resume) or legacy vs current markup (patterns P11). If both can match at once, strict mode fails |
 | `loc.first()` | Pick first match |
 | `loc.last()` | Pick last match |
 | `loc.nth(n)` | Pick the n-th (0-based) match |
