@@ -162,7 +162,7 @@ All return `Promise<void>`, all auto-retry until the configured timeout. Negate 
 |--------|-----|
 | `await page.waitForResponse(predicate)` | Wait for a specific HTTP response |
 | `await page.waitForRequest(predicate)` | Wait for a specific HTTP request |
-| `await page.waitForLoadState('networkidle')` | Avoid. The Playwright team discourages this — long-polling/analytics traffic can keep the network busy forever. Use it only when opening a brand-new `Page` (popup) before any other locator-based assertion is meaningful. Otherwise rely on `expect(loc).toBe…` to auto-wait. |
+| `await page.waitForLoadState('networkidle')` | Avoid. The Playwright team discourages this — long-polling/analytics traffic can keep the network busy forever. Rely on `expect(loc).toBe…` to auto-wait, including on a newly opened popup. |
 | `await page.waitForLoadState('domcontentloaded')` | OK on a freshly-opened popup before the first assertion; redundant on the main page in most flows. |
 
 `waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — see `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh`.
@@ -174,11 +174,11 @@ All assertions accept `{ timeout?: number }`. Default is project-wide (configure
 | Value | Where it's used | Purpose |
 |-------|-----------------|---------|
 | (default) | The vast majority of assertions | Trust the project default; do not override |
-| `{ timeout: 3_000 }` | Inner clicks inside an `expect.toPass()` retry block — e.g. `item.click({ timeout: 3_000 })` in `pages/app/SyntheticsPage.ts` `openRowActionMenu` | Fail fast inside a polling loop; the outer `toPass({ timeout: 15_000 })` owns the real budget |
+| `{ timeout: 3_000 }` | Inner clicks inside an `expect(async () => { … }).toPass()` retry block — e.g. `item.click({ timeout: 3_000 })` in `pages/app/SyntheticsPage.ts` `openRowActionMenu` | Fail fast inside a polling loop; the outer `toPass({ timeout: 15_000 })` owns the real budget |
 | `{ timeout: 5_000 }` | Inner assertions inside polling blocks (Radix select content visible after trigger click) | Same fast-fail pattern |
 | `{ timeout: 10_000 }` | The most common explicit override. Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/SyntheticsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
 | `{ timeout: 15_000 }` | Sheet "save enabled" / sheet-hidden after submit; new-row visibility after create — see `pages/app/SyntheticsPage.ts` `expectMonitorListed`, `expectSuccessToastForMonitor` | Backend creates that include validation + persistence + table refresh |
-| `{ timeout: 20_000 }` | Outer budget on `expect.toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
+| `{ timeout: 20_000 }` | Outer budget on `expect(async () => { … }).toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
 | `{ timeout: 30_000 }` | **Reserved for `waitForResponse(...)` and long-poll metric assertions** — used in `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh`. Functional detail-view specs use `toPass({ timeout: 90_000 })` for the very-first probe-data wait (see [`recipes.md` § 18 Synthetic Monitor expanded-view tests](recipes.md)). | Long backend ops |
 
 Rules of thumb:
@@ -457,7 +457,7 @@ Full canonical rules in [`page-objects`](../page-objects/SKILL.md). Quick recap:
 - Methods represent meaningful flows, not single clicks ("**No single-action methods** — every POM method must include at least one built-in validation").
 - Every action method validates success (visible/hidden/value/URL change, or `waitForResponse`, or a Sonner toast assertion).
 - Every public method has JSDoc with `@param` and `@returns`.
-- Encapsulate waits — put `waitForSelector` / `waitForResponse` inside the POM method, not in the test.
+- Encapsulate waits — put `waitForResponse` (registered before the triggering action) and web-first assertions inside the POM method, not in the test. Prefer locators over `waitForSelector`.
 - Explicit `Promise<void>` return types on all async methods.
 
 ## 8. Cross-references

@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 1.1.0
+version: 1.1.1
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -72,7 +72,7 @@ Test fails intermittently
 
 Before any classification, capture:
 
-1. **Failure rate** — out of N runs, how many failed? (Bitbucket CI shows historical pass rate per spec.) <50% flake rate = probably real bug; >50% flake rate = probably environmental.
+1. **Failure rate** — out of N runs, how many failed? (Bitbucket CI shows historical pass rate per spec.) A test that fails **every** isolated run isn't flaky — it's a real bug (§ Decision tree). A mix of passes and failures is a flake; check whether the failures cluster in one environment (CI only, one worker count) before blaming the test or the app.
 2. **Failure mode** — TimeoutError? Strict-mode violation? ZodError? 401/403? Network race? (Load `debugging` skill for the taxonomy.)
 3. **Failure site** — same line every time, or different lines? Same-line failures classify faster than wandering failures.
 4. **Local vs CI** — does it fail locally too, or only in CI?
@@ -119,13 +119,13 @@ If the failing spec passes when its preceding peers are removed, one of those pe
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `TimeoutError` on `expect(locator).toBeVisible()` | Element not rendered when assertion runs — race with async data | Wait on the upstream signal: `page.waitForResponse(url => url.includes('/api/data'))` before the assertion |
-| `TimeoutError` on `getByRole("button", { name: "X" }).click()` | Button re-renders after data load — clicked stale element | Anchor the click on a parent that stabilizes: `await expect(container).toBeVisible(); await container.getByRole(...).click()` |
+| `TimeoutError` on `expect(locator).toBeVisible()` | Element not rendered when assertion runs — race with async data | Wait on the upstream signal inside the page-object action: register `page.waitForResponse(url => url.includes('/api/data'))` **before** the action that triggers it, then await it |
+| `TimeoutError` on `getByRole("button", { name: "X" }).click()` | Button re-renders after data load and the click lands mid-re-render (locators are lazy and never go stale — the element was replaced during the action) | Anchor the click on a parent that stabilizes: `await expect(container).toBeVisible(); await container.getByRole(...).click()` |
 | Strict-mode violation: "resolved to N elements" | Duplicate elements appear briefly (skeleton + final) | Scope the locator: `card.getByRole(...)` not `page.getByRole(...)` |
 | `ZodError` intermittently on `Schema.parse(body)` | API response shape varies (optional field appears sometimes) | Either: API is non-deterministic (real bug — file ticket), or schema is wrong (missing `.optional()`) |
 | `401` from `apiRequest` after long local session | Storage-state token expired | Re-run `npx playwright test --grep "@setup"` to refresh storage state |
 | `409` on creation | Previous test's resource not cleaned | Cleanup-order issue — see § Step 3 |
-| Network race (response arrives mid-assertion) | `expect(locator).toHaveText(...)` runs before the XHR completes | Use `page.waitForResponse(...)` to gate the assertion |
+| Network race (response arrives mid-assertion) | `expect(locator).toHaveText(...)` runs before the XHR completes | Register `page.waitForResponse(...)` before the action that triggers the XHR, inside the page-object method, and await it before asserting |
 
 ### Step 5 — Verify the fix holds
 
@@ -260,12 +260,17 @@ The most common per-test flake causes in this framework, in rough frequency orde
 1. Step 2 isolation: 3/5 green → confirms genuine flake.
 2. Trace replay: the alerts XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/alerts` resolves.
 
-**Fix:** Gate the assertion on the response:
+**Fix:** Make the page object's `refresh()` wait for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call:
 ```ts
-await Promise.all([
-  page.waitForResponse(r => r.url().includes('/api/v1/alerts')),
-  alertsPage.refresh(),
-]);
+// AlertsPage
+async refresh(): Promise<void> {
+  const loaded = this.page.waitForResponse((r) => r.url().includes('/api/v1/alerts'));
+  await this.refreshButton.click();
+  await loaded;
+}
+
+// spec
+await alertsPage.refresh();
 await expect(alertsPage.firstAlertRow).toBeVisible();
 ```
 

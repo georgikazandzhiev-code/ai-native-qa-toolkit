@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 1.1.2
+version: 1.1.3
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -359,7 +359,7 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 - ❌ `for...of` loop **outside** `test()` for invalid-value validation (one-test-per-value pattern). Loop INSIDE `test()` with `test.step` + `expect.soft` per § Per-field invalid-type loop. The loop-outside form generates dozens of nearly-identical tests, hammers the API with extra auth cycles, and clutters Qase reporting.
 - ❌ Hard `expect()` inside an in-test validation loop. Use `expect.soft()` so all iterations report — a failing first iteration must not silence the rest.
 - ❌ Asserting on **exact error message text** (`expect(body.error).toBe("Resource not found")`) unless the message is part of the documented API contract. Assert on status code + envelope schema shape; brittle copy comparisons fail every time the backend tweaks wording.
-- ❌ Inline `setTimeout` / `await new Promise((r) => setTimeout(r, 1000))` polling inside a spec. Use Playwright's built-in retry mechanisms (`expect.toPass({ timeout })`, `expect.poll`) or a helper that polls with explicit timeout + interval (mirror `Mailpit.getLastEmail(email, 10, 2000)`).
+- ❌ Inline `setTimeout` / `await new Promise((r) => setTimeout(r, 1000))` polling inside a spec. Use Playwright's built-in retry mechanisms (`expect(async () => { … }).toPass({ timeout })`, `expect.poll`) or a helper that polls with explicit timeout + interval (mirror `Mailpit.getLastEmail(email, 10, 2000)`).
 
 ## Self-review checklist
 
