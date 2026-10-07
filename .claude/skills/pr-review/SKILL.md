@@ -79,8 +79,8 @@ API specs additionally — routed skill: [`api-testing`](../api-testing/SKILL.md
 
 Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md):
 
-- [ ] New POMs extend `BasePage` (except `SideNavigation` and `LoginPage` exceptions).
-- [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` field in constructor.**
+- [ ] New POMs extend `BasePage` / `DataTableBase`, except the shell and sheet components listed in `selectors/reference.md` § 7.2 Class shape.
+- [ ] Locators are `get accessor` returning `Locator`. **Not async. Not `Promise<Locator>`. No `readonly` locator fields in the constructor**, except a composed component or a single anchor every getter chains off (`selectors` patterns P4).
 - [ ] **No JSDoc on locator getters.** JSDoc with `@param`/`@returns` is required only on public action methods.
 - [ ] Every public action method has a built-in wait: web-first assertion, `waitForResponse`, or toast check. **No "thin" methods** that only call `click()` / `fill()`.
 - [ ] Locator priority: `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. **Radix exception (narrow, per element):** a single locator may promote `getByTestId` above `getByText`, never higher, only when **that element** has visible text or an accessible name that changes with state or is unreliable, and only after `getByRole` / `getByLabel` were tried. Being a Radix primitive, or having a test-id, is not on its own a reason. It covers the trigger, not the portal content (options, dialogs, alerts and toasts are addressed by role). See `selectors` § Critical.

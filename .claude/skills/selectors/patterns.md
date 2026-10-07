@@ -275,8 +275,11 @@ await expect(this.something).toBeVisible();
 
 ```typescript
 async submitCreateMonitor(): Promise<void> {
-    await this.waitForCreateMonitorEnabled();   // toBeEnabled({ timeout: 20000 })
+    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: 20000 });
+    const created = this.page.waitForResponse((r) => r.url().includes('/api/synthetics') && r.request().method() === 'POST');
     await this.createMonitorSubmitButton.click();
+    expect((await created).ok()).toBe(true);
+    await expect(this.createMonitorSheet).toBeHidden();
 }
 
 async expectCreateFlowCompleteOnList(): Promise<void> {
@@ -294,7 +297,7 @@ async expectSuccessToastForMonitor(name: string): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Click → button-disabled wait → DOM confirmation → URL confirmation → Sonner toast. Multiple independent signals.
+The action confirms its own result: enabled → response wait armed → click → the create succeeded → the sheet closed. The `expect…` methods add the business-level signals (list, URL, toast). Multiple independent signals.
 
 ### Bad
 

@@ -223,7 +223,9 @@ For toolbar filters that use `getByRole('option')` (status / type / health filte
 ```typescript
 async selectFilterOption(filter: Locator, label: string): Promise<void> {
     await filter.click();
+    await expect(this.page.getByRole('listbox')).toBeVisible();
     await this.page.getByRole('option', { name: label, exact: true }).click();
+    await expect(filter).toContainText(label);
 }
 ```
 

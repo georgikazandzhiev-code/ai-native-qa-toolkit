@@ -164,7 +164,7 @@ test(
     });
 
     await test.step("WHEN: User submits a valid HTTP monitor", async () => {
-      await syntheticsPage.createMonitorButton.click();
+      await syntheticsPage.openCreateMonitor();
       await createMonitorPage.fillHttpMonitorForm({ name: monitorName, url: TARGET });
       await createMonitorPage.submit();
     });
@@ -353,7 +353,7 @@ test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
         await syntheticsPage.verifyPageLoaded();
       });
       await test.step("WHEN: User creates an HTTP monitor", async () => {
-        await syntheticsPage.createMonitorButton.click();
+        await syntheticsPage.openCreateMonitor();
         await createMonitorPage.fillHttpMonitorForm({ name: monitorName, url: "https://example.com/health" });
         await createMonitorPage.submit();
       });
