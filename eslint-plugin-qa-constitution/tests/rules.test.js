@@ -234,6 +234,16 @@ tester.run('regression/hooks-are-not-tests', plugin.rules['single-tag-on-test'],
     `test.afterAll(async ({ apiRequest }) => { await cleanup(apiRequest); });`,
     `test.beforeEach(async () => { await reset(); });`,
     `beforeAll(async () => { await seed(); });`,
+    // Playwright configuration calls are not tests either (false positive found 2026-10-07):
+    // a describe-level test.setTimeout / test.use was reported as "This test has no tag".
+    `test.describe('journey', () => {
+       test.setTimeout(appConfig.timeouts.e2eJourney);
+       test.use({ storageState: { cookies: [], origins: [] } });
+       test.slow();
+     });`,
+    `test.setTimeout(60_000);`,
+    `const extended = test.extend({ settingsPage: async ({ page }, use) => { await use(new SettingsPage(page)); } });`,
+    `test('@App-Smoke reads test info', async () => { expect(test.info().title).toBeTruthy(); });`,
   ],
   invalid: [],
 });

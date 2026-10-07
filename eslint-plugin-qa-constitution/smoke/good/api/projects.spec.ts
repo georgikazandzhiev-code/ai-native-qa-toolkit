@@ -71,3 +71,16 @@ test('@App-Smoke renames the profile', async ({ settingsPage }) => {
   await settingsPage.rename('renamed');
   await settingsPage.expectSaved();
 });
+
+// Playwright configuration calls at describe level are not tests: no tag, no assertion needed.
+const timeouts = { e2eJourney: 300_000 } as const;
+
+test.describe('profile journey', () => {
+  test.setTimeout(timeouts.e2eJourney);
+  test.use({ locale: 'en-US' });
+
+  test('@App-E2E renames the profile and sees it saved', async ({ settingsPage }) => {
+    await settingsPage.rename('journey');
+    await settingsPage.expectSaved();
+  });
+});
