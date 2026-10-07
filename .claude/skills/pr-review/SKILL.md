@@ -15,7 +15,7 @@ Last-line-of-defense self-review before a PR opens. The framework already has `/
 - **ALWAYS run this skill BEFORE `git push`.** Husky's `lint-staged` only runs ESLint + Prettier on staged files; it cannot catch a missing `qase.suite()`, a `getByTestId` violating the Radix exception, or a leftover `console.log`. This skill closes that gap.
 - **ALWAYS run the affected specs with `--workers=1` before declaring the PR ready.** A passing lint is not a passing test. Per memory: shared tenant env causes cross-spec flakes in parallel — always single-worker.
 - **NEVER bypass this skill to ship faster.** Every shipped convention violation becomes future drift. The 5 minutes this skill takes saves a reviewer round-trip.
-- **ALWAYS check the scope before the conventions.** The PR must be one logical change that can ship on its own (`GOVERNANCE.md` § One logical change per PR). If the diff mixes unrelated parts, split it into separate branches and PRs before pushing. There is no size limit; the test is coherence.
+- **ALWAYS check the scope before the conventions, and advise — never block.** A PR should be one logical change that can ship on its own (`GOVERNANCE.md` § One logical change per PR, a SHOULD). If the diff mixes unrelated parts, flag it and propose the split. If the author keeps the scope — for example coupled changes that cannot pass CI separately — continue the review and make sure the PR description says why. There is no size limit; the test is coherence.
 - **NEVER reuse this skill for actual bug-hunting or efficiency review.** Bugs are `/code-review`. Skill-canon depth is `/review-changes`. This skill is the convention layer between them.
 
 ## What's in each file
@@ -36,7 +36,7 @@ git diff --name-status main...HEAD
 git diff --name-status origin/main...HEAD
 ```
 
-**Scope check first.** Read the inventory as a whole: does every file serve the same logical change? A fix plus an unrelated refactor plus a new rule is three PRs, not one. Split before going further — reviewing conventions on a PR that should not exist in this shape is wasted effort.
+**Scope check first (advisory).** Read the inventory as a whole: does every file serve the same logical change? A fix plus an unrelated refactor plus a new rule is usually three PRs, not one. If the diff is mixed, say so and propose the split (which files go to which PR). Then continue with the per-kind checklist either way: the author decides the scope, and if they keep it, the PR description should explain why.
 
 Then group the output by **file kind** — each kind has its own checklist below:
 
@@ -205,7 +205,7 @@ Need a check before pushing?
 
 Before declaring the PR ready:
 
-- [ ] The PR is one logical change that can ship on its own; unrelated parts were split into their own PRs.
+- [ ] The PR is one logical change that can ship on its own — or a mixed scope was flagged with a proposed split, and the PR description explains why the author kept it.
 - [ ] Walked the per-kind checklist above for every file in `git diff --name-status main...HEAD`.
 - [ ] Ran `npx playwright test <affected> --workers=1` and recorded pass/fail.
 - [ ] Ran `npx eslint <changed>` and `npx tsc --noEmit` — both clean (or pre-existing errors are documented).

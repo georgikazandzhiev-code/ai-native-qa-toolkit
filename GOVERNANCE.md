@@ -54,13 +54,15 @@ A `major` bump with no history entry is the failure this table exists to prevent
 
 ## One logical change per PR
 
-A pull request carries **one logical change**: one fix, one rule, one skill, one tool. As soon as a coherent unit can be shipped on its own, it gets its own PR, branched from `main`. Work does not pile up on a long-lived branch, and unrelated changes go into separate PRs even when they were found together.
+**SHOULD, not MUST.** A pull request should carry **one logical change**: one fix, one rule, one skill, one tool. As soon as a coherent unit can be shipped on its own, it should get its own PR, branched from `main`, instead of piling up on a long-lived branch. Unrelated changes go into separate PRs even when they were found together.
 
 **Why.** A PR that bundles many parts is hard to review properly: it gets rubber-stamped or it stalls, and one disputed change holds every good one hostage. #4 bundled 37 commits into one PR. Every change in it was right, and it was still far too big to review comfortably. This rule exists because of it.
 
+**Exception: coupled changes.** Related changes that cannot pass CI on their own may ship in one PR. Example from #4: validator check 15 fails on dead links, so the check and the removal of the dead links had to land together. When a PR uses the exception, its description says why the parts can't ship separately.
+
 **There is no line or file limit.** The test is coherence, not size. One mechanical change across many files, such as a rename, is one PR; three small unrelated fixes are three PRs. A number would only invite splitting work into meaningless pieces to stay under it.
 
-**Agents follow the same rule.** When planning, they name the PR boundaries before starting (`ai-native-workflow`, Plan phase). When a shippable unit is done, they propose opening its PR instead of adding more commits to the branch. Before pushing, `pr-review` checks the scope.
+**Agents suggest, they don't block.** When planning, they name the PR boundaries before starting (`ai-native-workflow`, Plan phase). When a shippable unit is done, they propose opening its PR. Before pushing, `pr-review` flags a mixed diff and proposes a split. If the author decides to keep the scope, the agent carries on with the work and the review, and the PR description says why.
 
 ## What CI refuses, and what it cannot
 
