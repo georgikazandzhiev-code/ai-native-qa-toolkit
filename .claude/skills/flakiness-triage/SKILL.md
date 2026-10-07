@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 1.1.1
+version: 1.1.2
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -260,17 +260,17 @@ The most common per-test flake causes in this framework, in rough frequency orde
 1. Step 2 isolation: 3/5 green → confirms genuine flake.
 2. Trace replay: the alerts XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/alerts` resolves.
 
-**Fix:** Make the page object's `refresh()` wait for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call:
+**Fix:** Give the page object a `refreshAlerts()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: `BasePage` already provides one, and redefining it would silently override the base behaviour.)
 ```ts
 // AlertsPage
-async refresh(): Promise<void> {
+async refreshAlerts(): Promise<void> {
   const loaded = this.page.waitForResponse((r) => r.url().includes('/api/v1/alerts'));
   await this.refreshButton.click();
   await loaded;
 }
 
 // spec
-await alertsPage.refresh();
+await alertsPage.refreshAlerts();
 await expect(alertsPage.firstAlertRow).toBeVisible();
 ```
 

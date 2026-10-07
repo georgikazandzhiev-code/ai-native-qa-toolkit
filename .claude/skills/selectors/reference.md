@@ -40,7 +40,7 @@ Complete API reference grouped by intent. Cross-link from [SKILL.md](SKILL.md). 
 | `loc.filter({ has: <Locator> })` | Keep matches whose subtree contains the inner locator |
 | `loc.filter({ hasNot: <Locator> })` | Inverse of `has` |
 | `loc.and(other)` | Match elements that satisfy both locators |
-| `loc.or(other)` | Match elements that satisfy either (good for legacy/current testid duals — see `pages/app/SyntheticsPage.ts` `searchInput`) |
+| `loc.or(other)` | Match elements that satisfy either. Only for alternatives that never match at the same moment — mutually exclusive states (Pause / Resume) or legacy vs current markup (patterns P11). If both can match at once, strict mode fails |
 | `loc.first()` | Pick first match |
 | `loc.last()` | Pick last match |
 | `loc.nth(n)` | Pick the n-th (0-based) match |
@@ -97,14 +97,14 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 | `checkbox` | Native checkboxes / Radix checkbox primitives | scoped under a row/section (`probe-location-checkbox`) |
 | `switch` | Radix `Switch` (auto-refresh toggle) | "Auto-refresh" — toggled via `aria-checked` / `data-state` |
 | `radio` | Chart timeframe selector (`pages/app/SyntheticsPage.ts` `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
-| `dialog` | Confirmation / delete dialogs (testid-based today; role is also exposed via the Radix primitive) | use the testid (`delete-monitor-dialog`, `delete-probe-dialog`) for stability |
-| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | prefer `getByTestId('data-table')` |
-| `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | prefer `[data-testid^='table-row-']` |
+| `dialog` | Confirmation / delete dialogs (Radix dialogs expose the role) | `getByRole('dialog', { name })` first; the testids (`delete-monitor-dialog`, `delete-probe-dialog`) are the fallback, and testid-first page objects are drift to fix on next touch |
+| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | `getByRole('table')` first (with `{ name }` if there are several); `getByTestId('data-table')` is the anchor fallback — `DataTableBase` uses the testid today, drift to fix on next touch |
+| `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | `getByRole('row').filter({ has: getByRole('cell', { name: id, exact: true }) })` first; the `table-row-<id>` testid is the fallback when the business id isn't rendered in a cell |
 | `cell` | Native `<td>` (used in `pages/baseClasses/DataTableBase.ts` `noResultsMessage`) | `getByRole('cell', { name: /no results/i })` |
 | `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of `pages/app/SyntheticsPage.ts`, `ProbesPage`, `PoliciesPage`, `InventoryPage` | column name (`"Health"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`) |
 | `listbox` | Radix select content / page-size dropdown content | usually closed-state assertion (`toBeHidden`) after option pick |
 | `img` | Images with `alt` — no current callers in `pages/`; prefer a testid when the first one ships | — |
-| `alert` | Toasts/notifications (Sonner emits `role="status"`, but the `[data-sonner-toast]` attribute filter is the canonical hook in this codebase) | use the data-attribute selector (Recipe 5) |
+| `alert` / `status` | Validation errors announce as `alert`; Sonner toasts render as `status` | `getByRole('alert')` / `getByRole('status')` filtered by text; the `[data-sonner-toast]` attribute filter is the fallback (Recipe 5) |
 
 Roles **not** used in this framework today (don't claim them in new code without checking the markup):
 
@@ -169,21 +169,21 @@ All return `Promise<void>`, all auto-retry until the configured timeout. Negate 
 
 ### 3.6 Assertion options
 
-All assertions accept `{ timeout?: number }`. Default is project-wide (configured in `playwright.config.ts`). Audited values actually used in this framework:
+All assertions accept `{ timeout?: number }`. The default is project-wide (`playwright.config.ts`). An explicit timeout is always a named budget from `appConfig.timeouts` — never a number (the full list and typical values: `config` skill § Timeout budgets). The tiers used in this framework:
 
-| Value | Where it's used | Purpose |
+| Budget | Where it's used | Purpose |
 |-------|-----------------|---------|
 | (default) | The vast majority of assertions | Trust the project default; do not override |
-| `{ timeout: 3_000 }` | Inner clicks inside an `expect(async () => { … }).toPass()` retry block — e.g. `item.click({ timeout: 3_000 })` in `pages/app/SyntheticsPage.ts` `openRowActionMenu` | Fail fast inside a polling loop; the outer `toPass({ timeout: 15_000 })` owns the real budget |
-| `{ timeout: 5_000 }` | Inner assertions inside polling blocks (Radix select content visible after trigger click) | Same fast-fail pattern |
-| `{ timeout: 10_000 }` | The most common explicit override. Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/SyntheticsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
-| `{ timeout: 15_000 }` | Sheet "save enabled" / sheet-hidden after submit; new-row visibility after create — see `pages/app/SyntheticsPage.ts` `expectMonitorListed`, `expectSuccessToastForMonitor` | Backend creates that include validation + persistence + table refresh |
-| `{ timeout: 20_000 }` | Outer budget on `expect(async () => { … }).toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
-| `{ timeout: 30_000 }` | **Reserved for `waitForResponse(...)` and long-poll metric assertions** — used in `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh`. Functional detail-view specs use `toPass({ timeout: 90_000 })` for the very-first probe-data wait (see [`recipes.md` § 18 Synthetic Monitor expanded-view tests](recipes.md)). | Long backend ops |
+| `fastFail` | Inner clicks and assertions inside an `expect(async () => { … }).toPass()` retry block — e.g. in `pages/app/SyntheticsPage.ts` `openRowActionMenu`; Radix select content visible after a trigger click | Fail fast inside a polling loop; the outer `retryBlock` owns the real budget |
+| `uiResponse` | Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/SyntheticsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
+| `persist` | Sheet "save enabled" / sheet-hidden after submit; new-row and toast visibility after create — see `pages/app/SyntheticsPage.ts` `expectMonitorListed`, `expectSuccessToastForMonitor` | Backend creates that include validation + persistence + table refresh |
+| `retryBlock` | Outer budget on `expect(async () => { … }).toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
+| `longPoll` | **Reserved for `waitForResponse(...)` and long-poll metric assertions** — `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh` | A slow endpoint, not a slow locator |
+| `firstData` | The very first probe-data wait in functional detail-view specs (see [`recipes.md` § 18](recipes.md)) | An asynchronous pipeline producing its first result |
 
 Rules of thumb:
 - Don't override the timeout unless you can point at an existing assertion in `pages/**` or `tests/**` doing the same thing for the same reason.
-- If you reach for `{ timeout: 30_000 }` on a locator assertion, stop — the right tool is `waitForResponse(...)` for the underlying call, then a default-timeout `expect(...)` once it returns.
+- If you reach for `longPoll` on a locator assertion, stop — the right tool is `waitForResponse(...)` for the underlying call, then a default-timeout `expect(...)` once it returns.
 - `expect(loc).not.toBeVisible(...)` and `expect(loc).toBeHidden(...)` already auto-retry until the timeout confirms absence; do **not** invent shorter timeouts for negative checks unless you've measured a real slowdown — there are no examples of that in the codebase.
 
 ## 4. Framework testid taxonomy

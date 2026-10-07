@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 1.1.3
+version: 1.1.4
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -325,7 +325,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 ## Multi-step & E2E API tests
 
-- E2E onboarding tests use the `@App-E2E` tag, both `{ apiRequest, mailpit }` fixtures, and explicit timeouts (`test.setTimeout(60_000)` or `90_000`).
+- E2E onboarding tests use the `@App-E2E` tag, both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
 - Email tests **must** use `@<your-test-domain>` recipient domain — Mailpit catches only that domain on the test infra.
 - Mailpit pattern: `await mailpit.deleteEmailsForRecipient(email)` **before** triggering the action and again **after** the test finishes; then `const message = await mailpit.getLastEmail(email, 10, 2000)`. **`getLastEmail` returns `MailMessage | null`** — guard with `expect(message).not.toBeNull()` before dereferencing, then read `message!.Content.Body`.
 - For invite-style flows, prefer `getInviteLinkFromEmail(mailpit, email)` from `helpers/util/mailpit.ts` — it already retries, asserts non-null, and runs the body through `extractLinkFromEmail`.
