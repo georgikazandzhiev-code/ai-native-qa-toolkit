@@ -222,7 +222,7 @@ test(
 
 **Intent:** replace the entire resource. Sending a partial body must fail.
 
-> **No PUT endpoints exist in this API at the time of writing** — every "update" endpoint is `PATCH`. This section is the playbook to use **when** PUT is added (or if you need to test 405 against PUT on a path that only supports PATCH).
+> **No PUT endpoints exist in this API at the time of writing** — every "update" endpoint is `PATCH`. This section is the playbook to use **when** PUT is added (or if you need to test 405 against PUT on a path that only supports PATCH). The shape mirrors upstream's PUT specs ([assetsCRUD.spec.ts:350](<upstream-repo>/tests/back/api/assetsCRUD.spec.ts), [assetsPairs.spec.ts:321](<upstream-repo>/tests/back/api/assetsPairs.spec.ts)).
 
 ### What to test
 

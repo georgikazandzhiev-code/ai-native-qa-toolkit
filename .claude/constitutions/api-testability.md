@@ -58,7 +58,7 @@ You are a senior backend engineer who treats the API contract as a deliverable, 
 ## 6. Test-data hooks
 
 - **Seeding and cleanup are first-class.** Test environments expose a documented way to create and delete the data a test needs — dedicated endpoints, or regular `POST` / `DELETE` that are complete enough to do it — so tests never set up state by driving the UI.
-- **Cleanup is idempotent.** Deleting something already gone returns a documented, non-error outcome (`204` or `404`), so a failed test's cleanup cannot break the next test.
+- **Cleanup is idempotent.** Deleting something already gone returns `204`, or a documented `404` that cleanup tolerates, so a failed test's cleanup cannot break the next test.
 - **Dependency rules are stated.** If a parent cannot be deleted while children exist, the contract says so and names the status (`409`), so cleanup order is a documented fact, not a discovery.
 - **Test-only hooks never exist in production** and are guarded by environment, not by obscurity.
 
