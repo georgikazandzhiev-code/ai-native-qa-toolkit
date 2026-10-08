@@ -7,9 +7,9 @@ Side-by-side good/bad examples for every pattern in [SKILL.md](SKILL.md). All ex
 ### Good
 
 ```typescript
-test('rejects empty synthetic name', async ({ page }) => {
-    const monitorName = `qa-icmp-${faker.string.alphanumeric(8).toLowerCase()}`;
-    await page.getByLabel('Name').fill(monitorName);
+test('rejects empty job name', async ({ page }) => {
+    const jobName = `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`;
+    await page.getByLabel('Name').fill(jobName);
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText('Name is required')).toBeVisible();
 });
@@ -22,34 +22,34 @@ test('rejects empty synthetic name', async ({ page }) => {
 ```typescript
 let counter = 0;
 test('foo', async () => {
-    const name = `qa-probe-${counter++}`;        // module-level counter, parallel-unsafe
+    const name = `qa-worker-${counter++}`;        // module-level counter, parallel-unsafe
 });
 ```
 
 ```typescript
-test('non-existent probe returns 404', async ({ apiRequest }) => {
+test('non-existent worker returns 404', async ({ apiRequest }) => {
     const id = '00000000-0000-0000-0000-000000000000'; // hardcoded sentinel
 });
 ```
 
-Fix: pull `nonExistentId` from `test-data/app/probe.json` (Pattern 5).
+Fix: pull `nonExistentId` from `test-data/app/worker.json` (Pattern 5).
 
 ## Pattern 2 — Typed factory with `Partial<T>` overrides
 
 ### Good — target shape (planned)
 
 ```typescript
-export type ProbeData = {
+export type WorkerData = {
     name: string;
     location: string;
     region: string;
 };
 
-export function createProbeData(
-    options: Partial<ProbeData> = {}
-): ProbeData {
+export function createWorkerData(
+    options: Partial<WorkerData> = {}
+): WorkerData {
     return {
-        name: `qa-probe-${faker.string.alphanumeric(8).toLowerCase()}`,
+        name: `qa-worker-${faker.string.alphanumeric(8).toLowerCase()}`,
         location: faker.location.city(),
         region: faker.location.country(),
         ...options,
@@ -57,22 +57,22 @@ export function createProbeData(
 }
 ```
 
-- Exported `ProbeData` type, `Partial<ProbeData> = {}` defaulted, `...options` last.
+- Exported `WorkerData` type, `Partial<WorkerData> = {}` defaulted, `...options` last.
 
 Test consumes with overrides:
 
 ```typescript
-const probe = createProbeData({ region: 'EU' });
+const worker = createWorkerData({ region: 'EU' });
 ```
 
-### Drift today — `Record<string, unknown>` instead of typed factory (`helpers/app/probes.ts`)
+### Drift today — `Record<string, unknown>` instead of typed factory (`helpers/app/workers.ts`)
 
 ```typescript
-export function buildCreateProbeBody(
+export function buildCreateWorkerBody(
     overrides?: Record<string, unknown>,
 ): Record<string, unknown> {
     return {
-        name: `qa-probe-${faker.string.alphanumeric(8).toLowerCase()}`,
+        name: `qa-worker-${faker.string.alphanumeric(8).toLowerCase()}`,
         location: faker.location.city(),
         region: faker.location.country(),
         ...overrides,
@@ -80,53 +80,53 @@ export function buildCreateProbeBody(
 }
 ```
 
-The shape is right (defaults + spread overrides last) but the return type is `Record<string, unknown>` rather than an exported `ProbeData`. Refactor playbook § 3 covers the migration to typed factories paired with assertion-style setup helpers.
+The shape is right (defaults + spread overrides last) but the return type is `Record<string, unknown>` rather than an exported `WorkerData`. Refactor playbook § 3 covers the migration to typed factories paired with assertion-style setup helpers.
 
 ### Bad — Inline faker in spec when builder exists
 
 ```typescript
-test('Creates probe', async ({ apiRequest }) => {
+test('Creates worker', async ({ apiRequest }) => {
     const body = {
-        name: `qa-probe-${faker.string.alphanumeric(8).toLowerCase()}`,
+        name: `qa-worker-${faker.string.alphanumeric(8).toLowerCase()}`,
         location: faker.location.city(),
         region: faker.location.country(),
-    }; // ← duplicates buildCreateProbeBody
+    }; // ← duplicates buildCreateWorkerBody
 });
 ```
 
-Fix: `import { buildCreateProbeBody } from '../../../helpers/app/probes';` and call `buildCreateProbeBody({ region: 'EU' })`.
+Fix: `import { buildCreateWorkerBody } from '../../../helpers/app/workers';` and call `buildCreateWorkerBody({ region: 'EU' })`.
 
 ### Bad — Forking the builder instead of adding overrides
 
 Hypothetical drift to watch for:
 
 ```typescript
-export function buildCreateProbeBody(): Record<string, unknown> { /* … */ }
-export function buildCreateProbeBodyForUI(): Record<string, unknown> { /* same shape, hard-coded location */ }
+export function buildCreateWorkerBody(): Record<string, unknown> { /* … */ }
+export function buildCreateWorkerBodyForUI(): Record<string, unknown> { /* same shape, hard-coded location */ }
 ```
 
-Fix: one `buildCreateProbeBody(overrides?: Partial<ProbeData>)`; UI variant becomes Pattern 3 (Object Mother).
+Fix: one `buildCreateWorkerBody(overrides?: Partial<WorkerData>)`; UI variant becomes Pattern 3 (Object Mother).
 
 ## Pattern 3 — Object Mother on top of factory
 
 ### Good — target shape
 
 ```typescript
-export function createProbeForRegion(region = 'EU'): ProbeData {
-    return createProbeData({
+export function createWorkerForRegion(region = 'EU'): WorkerData {
+    return createWorkerData({
         region,
         location: `${region}-${faker.location.city()}`,
     });
 }
 
-export function createMatchedProbeAndSyntheticPair(): {
-    probeData: ProbeData;
-    syntheticData: SyntheticData;
+export function createMatchedWorkerAndJobPair(): {
+    workerData: WorkerData;
+    jobData: JobData;
 } {
-    const probeData = createProbeData();
+    const workerData = createWorkerData();
     return {
-        probeData,
-        syntheticData: createSyntheticData({ /* probeIds populated after seeding */ }),
+        workerData,
+        jobData: createJobData({ /* workerIds populated after seeding */ }),
     };
 }
 ```
@@ -136,20 +136,20 @@ export function createMatchedProbeAndSyntheticPair(): {
 ### Bad — Mother re-implements the factory
 
 ```typescript
-export function createOnlineProbeInEU(): ProbeData {
+export function createOnlineWorkerInEU(): WorkerData {
     return {
-        name: `qa-probe-${faker.string.alphanumeric(8).toLowerCase()}`,
+        name: `qa-worker-${faker.string.alphanumeric(8).toLowerCase()}`,
         location: 'EU-Amsterdam',
         region: 'EU',
     };
 }
 ```
 
-Fix: `return createProbeData({ region: 'EU', location: 'EU-Amsterdam' });`.
+Fix: `return createWorkerData({ region: 'EU', location: 'EU-Amsterdam' });`.
 
 ## Pattern 4 — JSON validation matrix
 
-### Good (`test-data/app/httpSyntheticValidation.json`)
+### Good (`test-data/app/httpJobValidation.json`)
 
 ```json
 {
@@ -160,9 +160,9 @@ Fix: `return createProbeData({ region: 'EU', location: 'EU-Amsterdam' });`.
 ```
 
 ```typescript
-import httpSyntheticValidation from '../../../test-data/app/httpSyntheticValidation.json';
+import httpJobValidation from '../../../test-data/app/httpJobValidation.json';
 
-for (const invalidName of httpSyntheticValidation.invalidNames) {
+for (const invalidName of httpJobValidation.invalidNames) {
     test(`rejects invalid name: '${invalidName}'`, async ({ apiRequest }) => {
         // ...
     });
@@ -179,22 +179,22 @@ Fix: move to `test-data/app/<resource>Validation.json` and import. The JSON is t
 
 ## Pattern 5 — JSON lookup / sentinel
 
-### Good (`test-data/app/probe.json`)
+### Good (`test-data/app/worker.json`)
 
 ```json
 {
     "invalidId": "not-a-uuid-!!!",
     "nonExistentId": "00000000-0000-0000-0000-000000000000",
-    "sqlInjectionId": "'; DROP TABLE probes; --",
+    "sqlInjectionId": "'; DROP TABLE workers; --",
     "xssId": "<script>alert(1)</script>"
 }
 ```
 
 ```typescript
-import probeData from '../../../test-data/app/probe.json';
+import workerData from '../../../test-data/app/worker.json';
 
 await apiRequest({
-    url: `${appConfig.api.PROBES}/${probeData.nonExistentId}`,
+    url: `${appConfig.api.WORKERS}/${workerData.nonExistentId}`,
     /* ... */
 });
 ```
@@ -213,36 +213,36 @@ Fix: every "non-existent" or "invalid" sentinel lives in `test-data/app/<resourc
 
 ```typescript
 // helpers/app/testDataGenerators.ts (factory — Pattern 2)
-export type ProbeData = { name: string; location: string; region: string };
-export function createProbeData(overrides: Partial<ProbeData> = {}): ProbeData {
+export type WorkerData = { name: string; location: string; region: string };
+export function createWorkerData(overrides: Partial<WorkerData> = {}): WorkerData {
     return {
-        name: `qa-probe-${faker.string.alphanumeric(8).toLowerCase()}`,
+        name: `qa-worker-${faker.string.alphanumeric(8).toLowerCase()}`,
         location: faker.location.city(),
         region: faker.location.country(),
         ...overrides,
     };
 }
 
-// helpers/app/probes.ts (seeder — Pattern 6)
-export async function setupProbe(
+// helpers/app/workers.ts (seeder — Pattern 6)
+export async function setupTestWorker(
     apiRequest: ApiRequestFn,
-    overrides?: Partial<ProbeData>,
-): Promise<CreateProbeResponse> {
-    const { status, body } = await apiRequest<CreateProbeResponse>({
+    overrides?: Partial<WorkerData>,
+): Promise<CreateWorkerResponse> {
+    const { status, body } = await apiRequest<CreateWorkerResponse>({
         method: 'POST',
-        url: appConfig.api.PROBES,
+        url: appConfig.api.WORKERS,
         baseUrl: appConfig.apiUrl,
         headers: process.env.USER_ACCESS_TOKEN_FULL,
-        body: createProbeData(overrides),
+        body: createWorkerData(overrides),
     });
     expect(status).toBe(201);
-    return CreateProbeResponseSchema.parse(body);
+    return CreateWorkerResponseSchema.parse(body);
 }
 
-export async function teardownProbe(
+export async function teardownTestWorker(
     apiRequest: ApiRequestFn,
     id: string,
-): Promise<void> { /* matches setupProbe */ }
+): Promise<void> { /* matches setupTestWorker */ }
 ```
 
 - Factory + seeder in two files; seeder consumes the factory; create + delete are paired.
@@ -250,30 +250,30 @@ export async function teardownProbe(
 Test usage:
 
 ```typescript
-const probeIds: string[] = [];
+const workerIds: string[] = [];
 
-test('seeded probe path', async ({ apiRequest }) => {
-    const probe = await setupProbe(apiRequest);
-    probeIds.push(probe.probeId);
+test('seeded worker path', async ({ apiRequest }) => {
+    const worker = await setupTestWorker(apiRequest);
+    workerIds.push(worker.workerId);
     // ...
 });
 
 test.afterAll(async ({ apiRequest }) => {
-    for (const id of probeIds) await teardownProbe(apiRequest, id);
+    for (const id of workerIds) await teardownTestWorker(apiRequest, id);
 });
 ```
 
-### Drift today — passthrough seeder + body builder (`helpers/app/probes.ts`)
+### Drift today — passthrough seeder + body builder (`helpers/app/workers.ts`)
 
 ```typescript
-export async function createProbe<T = CreateProbeResponse>(
+export async function createWorker<T = CreateWorkerResponse>(
     apiRequest: ApiRequestFn,
     body: Record<string, unknown>,
     headers?: string,
 ): Promise<ApiRequestResponse<T>> {
     return apiRequest<T>({
         method: 'POST',
-        url: appConfig.api.PROBES,
+        url: appConfig.api.WORKERS,
         baseUrl: appConfig.apiUrl,
         headers,
         body,
@@ -282,25 +282,25 @@ export async function createProbe<T = CreateProbeResponse>(
 ```
 
 Why this is interim:
-- Seeder is doing one job (HTTP only). Factory + seeder are NOT yet integrated into a single setup helper.
+- Seeder does one thing (HTTP only). Factory + seeder are NOT yet integrated into a single setup helper.
 - No `expect(status).toBe(201)` inside the helper → every spec must re-assert.
 - No Zod parse → every spec must re-parse.
 
-Fix: see [refactor-playbook §3](refactor-playbook.md#3-move-synthetic--probe--tenant--user-seeders-to-assertion-style-setup-helpers).
+Fix: see [refactor-playbook §3](refactor-playbook.md#3-move-job--worker--tenant--user-seeders-to-assertion-style-setup-helpers).
 
 ### Bad — Spec-inlined POST instead of using a seeder
 
 ```typescript
 const { body } = await apiRequest({
     method: 'POST',
-    url: appConfig.api.PROBES,
+    url: appConfig.api.WORKERS,
     baseUrl: appConfig.apiUrl,
     headers: process.env.USER_ACCESS_TOKEN_FULL,
-    body: { /* probe payload */ },
+    body: { /* worker payload */ },
 });
 ```
 
-Fix: `import { createProbe, buildCreateProbeBody } from '../../../helpers/app/probes';` then `await createProbe(apiRequest, buildCreateProbeBody(), process.env.USER_ACCESS_TOKEN_FULL);`.
+Fix: `import { createWorker, buildCreateWorkerBody } from '../../../helpers/app/workers';` then `await createWorker(apiRequest, buildCreateWorkerBody(), process.env.USER_ACCESS_TOKEN_FULL);`.
 
 ## Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
 
@@ -376,30 +376,30 @@ Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*`. S
 
 ## Lifecycle: id-array drain (the canonical leak guard)
 
-### Good (`tests/app/api/monitoring-service/probes/probes.spec.ts` pattern)
+### Good (`tests/app/api/jobs-service/workers/workers.spec.ts` pattern)
 
 ```typescript
-test.describe('POST /probes', () => {
-    const probeIds: string[] = [];
+test.describe('POST /workers', () => {
+    const workerIds: string[] = [];
 
-    test('creates a probe', async ({ apiRequest }) => {
-        const { body, status } = await apiRequest<CreateProbeResponse>({
+    test('creates a worker', async ({ apiRequest }) => {
+        const { body, status } = await apiRequest<CreateWorkerResponse>({
             method: 'POST',
-            url: appConfig.api.PROBES,
+            url: appConfig.api.WORKERS,
             baseUrl: appConfig.apiUrl,
             headers: process.env.USER_ACCESS_TOKEN_FULL,
-            body: buildCreateProbeBody(),
+            body: buildCreateWorkerBody(),
         });
         expect(status).toBe(201);
-        const parsed = CreateProbeResponseSchema.parse(body);
-        probeIds.push(parsed.probeId);
+        const parsed = CreateWorkerResponseSchema.parse(body);
+        workerIds.push(parsed.workerId);
     });
 
     test.afterAll(async ({ apiRequest }) => {
-        for (const id of probeIds) {
+        for (const id of workerIds) {
             await apiRequest<null>({
                 method: 'DELETE',
-                url: `${appConfig.api.PROBES}/${id}`,
+                url: `${appConfig.api.WORKERS}/${id}`,
                 baseUrl: appConfig.apiUrl,
                 headers: process.env.USER_ACCESS_TOKEN_FULL,
             });
@@ -411,14 +411,14 @@ test.describe('POST /probes', () => {
 ### Bad — Cleanup inside the same test
 
 ```typescript
-test('creates a probe', async ({ apiRequest }) => {
-    const created = await createProbe(...);
+test('creates a worker', async ({ apiRequest }) => {
+    const created = await createWorker(...);
     /* assertions */
-    await deleteProbe(apiRequest, created.probeId);   // skipped if assertion fails earlier
+    await deleteWorker(apiRequest, created.workerId);   // skipped if assertion fails earlier
 });
 ```
 
-Fix: push the id to `probeIds` immediately after the POST. Cleanup runs in `afterAll` regardless of test outcome.
+Fix: push the id to `workerIds` immediately after the POST. Cleanup runs in `afterAll` regardless of test outcome.
 
 ## Token usage
 
@@ -447,18 +447,18 @@ Fix: drop the alias; use `process.env.USER_ACCESS_TOKEN_FULL` directly. See [ref
 ### Good — purely-frontend assertion against a stub response
 
 ```typescript
-import probeStub from '../../../test-data/app/probe.json';
-await page.route('**/api/v1/probes/123', (route) =>
-    route.fulfill({ status: 200, body: JSON.stringify(probeStub) })
+import workerStub from '../../../test-data/app/worker.json';
+await page.route('**/api/v1/workers/123', (route) =>
+    route.fulfill({ status: 200, body: JSON.stringify(workerStub) })
 );
 ```
 
 ### Bad — using a mock JSON as if it described a real backend resource
 
 ```typescript
-import probeStub from '../../../test-data/app/probe.json';
-const { body } = await apiRequest({ url: `${path}/${probeStub.nonExistentId}`, /* ... */ });
-expect(body.name).toBe(probeStub.name); // backend may have drifted
+import workerStub from '../../../test-data/app/worker.json';
+const { body } = await apiRequest({ url: `${path}/${workerStub.nonExistentId}`, /* ... */ });
+expect(body.name).toBe(workerStub.name); // backend may have drifted
 ```
 
 Fix: seed via Pattern 6 + Pattern 7 (`setupTestUser` then call the resource API), then assert against the values you just seeded. See [refactor-playbook §4](refactor-playbook.md#4-replace-mockedcustomerjson-usage-with-real-seeding).
