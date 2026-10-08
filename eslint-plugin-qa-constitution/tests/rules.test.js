@@ -282,16 +282,25 @@ tester.run('regression/setup-may-catch', plugin.rules['no-try-catch-in-test'], {
 
 console.log('regression suite passed');
 
-tester.run('regression/expect-soft-is-the-idiom', plugin.rules['schema-parse-idiom'], {
+/**
+ * Reversed 2026-10 (#5 PR 3). This suite used to hold expect.soft(Schema.parse(body)) as VALID —
+ * eval run 3 called it "the correct negative-loop form". It is not soft: parse throws a ZodError
+ * before expect.soft receives anything, so the loop stops at the first bad response. The loop
+ * form is expect.soft(Schema.safeParse(body).success, label).toBe(true), the constitution's
+ * carve-out.
+ */
+tester.run('regression/expect-soft-parse-is-not-soft', plugin.rules['schema-parse-idiom'], {
   valid: [
-    // a negative-case loop uses expect.soft so one bad input does not abort the rest
-    "expect.soft(APIErrorSchema.parse(body), `omit ${field}`).toBeTruthy();",
-    "expect.soft(APIErrorSchema.parse(body), 'label').toBeTruthy();",
-    "expect.poll(() => 1).toBeTruthy(); expect.soft(ErrSchema.parse(b), 'x').toBeTruthy();",
+    // the carve-out: safeParse returns { success } and never throws, so every iteration reports
+    "expect.soft(APIErrorSchema.safeParse(body).success, `omit ${field}`).toBe(true);",
+    "expect.soft(APIErrorSchema.safeParse(body).success, 'label').toBe(true);",
+    "expect.poll(() => 1).toBeTruthy(); expect(ErrSchema.parse(b)).toBeTruthy();",
   ],
   invalid: [
-    // still caught: a soft assertion that does not end in toBeTruthy
-    { code: `expect.soft(APIErrorSchema.parse(body), 'x').toBeDefined();`, errors: [{ messageId: 'matcher' }] },
+    { code: "expect.soft(APIErrorSchema.parse(body), `omit ${field}`).toBeTruthy();", errors: [{ messageId: 'soft' }] },
+    { code: `expect.soft(APIErrorSchema.parse(body), 'label').toBeTruthy();`, errors: [{ messageId: 'soft' }] },
+    // the matcher doesn't matter: the parse throws before any matcher runs
+    { code: `expect.soft(APIErrorSchema.parse(body), 'x').toBeDefined();`, errors: [{ messageId: 'soft' }] },
   ],
 });
 
@@ -337,7 +346,7 @@ tester.run('require-assertion-in-test', plugin.rules['require-assertion-in-test'
   valid: [
     `test('@App-API a', async () => { expect(status).toBe(200); });`,
     // soft assertions in a negative-case loop
-    `test('@App-API a', async () => { for (const f of fields) expect.soft(S.parse(b), f).toBeTruthy(); });`,
+    `test('@App-API a', async () => { for (const f of fields) expect.soft(S.safeParse(b).success, f).toBe(true); });`,
     // assertion nested inside a step or a loop still counts
     `test('@App-API a', async () => { await test.step('check', async () => { expect(x).toBe(1); }); });`,
     // a page-object assertion helper counts
@@ -369,6 +378,47 @@ tester.run('no-empty-catch', plugin.rules['no-empty-catch'], {
     { code: `try { await f(); } catch (e) {}`, errors: [{ messageId: 'empty' }] },
     // a comment is not handling — core no-empty allows this, we do not
     { code: `try { await f(); } catch { /* ignore */ }`, errors: [{ messageId: 'empty' }] },
+  ],
+});
+
+tester.run('no-disabled-test', plugin.rules['no-disabled-test'], {
+  valid: [
+    `test('@App-API a', async () => { expect(1).toBe(1); });`,
+    // the sanctioned form: commented out under the one marker
+    `// TODO: FIXME: QA-123 API returns 500 on empty body
+// test('@App-API b', async () => {});`,
+    // test.skip inside a body is no-conditional-in-test's report — not reported twice
+    `test('@App-API a', async () => { test.skip(); expect(1).toBe(1); });`,
+    // a page object's own skip() method is not Playwright's
+    `await player.skip();`,
+  ],
+  invalid: [
+    { code: `test.skip('@App-API a', async () => {});`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.fixme(true, 'broken');`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.skip(process.env.CI !== undefined, 'not in CI');`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.describe.skip('area', () => {});`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.describe.fixme('area', () => {});`, errors: [{ messageId: 'disabled' }] },
+    { code: `it.skip('a', () => {});`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.fail('@App-API a', async () => {});`, errors: [{ messageId: 'fail' }] },
+    { code: `test('@App-API a', async () => { test.fail(); expect(1).toBe(1); });`, errors: [{ messageId: 'fail' }] },
+    { code: `test('@App-API a', async () => { test.fixme(); expect(1).toBe(1); });`, errors: [{ messageId: 'disabled' }] },
+  ],
+});
+
+/**
+ * Found linting the #5 PR 2 templates, 2026-10-07: a describe-level test.fixme(true, '...') was
+ * reported by single-tag-on-test as "This test has no tag". It must fail, but as a disabled test
+ * (no-disabled-test) — the "no tag" message sent the author to add a tag to a skip.
+ */
+tester.run('regression/disabled-tests-are-not-untagged', plugin.rules['single-tag-on-test'], {
+  valid: [
+    `test.describe('area', () => { test.fixme(true, 'broken'); test('@App-API a', async () => {}); });`,
+    `test.skip(process.env.CI !== undefined, 'not in CI');`,
+    `test.fail('known bug', async () => {});`,
+  ],
+  invalid: [
+    // a real test without a tag is still reported
+    { code: `test.describe('area', () => { test.fixme(true, 'x'); test('a', async () => {}); });`, errors: [{ messageId: 'none' }] },
   ],
 });
 

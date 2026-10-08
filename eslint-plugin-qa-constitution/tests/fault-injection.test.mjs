@@ -3,7 +3,7 @@
  *
  * A passing `RuleTester` suite proves a rule reports on a string of source handed straight to it.
  * It does not prove the rule still fires through the real ESLint CLI, on a real file, in the flat
- * config the gate actually uses, with the other fifteen rules loaded alongside it. Those are
+ * config the gate actually uses, with the other sixteen rules loaded alongside it. Those are
  * different claims, and only the second is what "the gate blocks this" means.
  *
  * README.md and the CI workflow both used to state the suites were "fault-injected to prove they

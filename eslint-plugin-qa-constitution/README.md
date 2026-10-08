@@ -30,7 +30,7 @@ export default [
 | `no-pom-instantiation-in-test` | MUST Dependency Injection | `new SettingsPage(page)` inside a test body |
 | `single-tag-on-test` | MUST Tags | Zero tags, two tags, a non-whitelisted tag, or a tag on `describe()` |
 | `require-strict-object` | MUST Schemas | `z.object(` — **autofixable** to `z.strictObject(` |
-| `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted |
+| `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted, and `expect.soft(Schema.parse(body))`, which isn't soft (the loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`) |
 | `require-env-non-null` | MUST Sources of Truth | `process.env.X` without `!`, or defaulted at the call site with `??` / `\|\|` |
 | `no-xpath` | WON'T No XPath | `locator('//…')`, `locator('xpath=…')`, `locator('(//…')` |
 | `no-hard-waits` | WON'T No hard waits | `waitForTimeout(…)` |
@@ -40,6 +40,7 @@ export default [
 | `no-not-tothrow` | WON'T No `.not.toThrow()` | `expect(…).not.toThrow()` / `.not.rejects` |
 | `no-jsdoc-on-locator-getter` | WON'T No JSDoc on locator getters | JSDoc above a `get` accessor returning a locator chain |
 | `commented-test-needs-ticket` | WON'T No silent coverage drops | A commented-out `test(` block with no `TODO` / `FIXME` / `BUG` marker |
+| `no-disabled-test` | WON'T No silent coverage drops | `test.skip` / `test.fixme` / `test.fail` and `describe.skip`/`.fixme`, in any form — comment the test out under `// TODO: FIXME: <TICKET>` instead |
 | `require-assertion-in-test` | DoD § 2 False-Green | A test containing **no assertion at all** — it runs, it passes, it proves nothing |
 | `no-empty-catch` | DoD § 2 False-Green | An empty `catch` anywhere (spec, helper or page object), including one holding only a comment |
 
@@ -117,7 +118,7 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-16 rules, 20 `RuleTester` suites (including four regression suites, one per false positive the eval exposed), plus valid cases per rule:
+17 rules, 23 `RuleTester` suites (including six regression suites, each locking in a defect found in the rules themselves), plus valid cases per rule:
 
 ```bash
 npm test

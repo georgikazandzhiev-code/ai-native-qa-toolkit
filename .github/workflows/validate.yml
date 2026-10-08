@@ -103,7 +103,7 @@ jobs:
           fi
 
       # The other half, and the one that decides whether anyone keeps the gate switched on:
-      # compliant code must lint clean with all sixteen rules enabled at once.
+      # compliant code must lint clean with all seventeen rules enabled at once.
       - name: Smoke test — the compliant tree must pass the gate
         run: npx eslint --config smoke/eslint.config.mjs "smoke/good/**/*.ts" --max-warnings 0
 

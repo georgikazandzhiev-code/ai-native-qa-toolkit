@@ -10,7 +10,7 @@
  * that already waits, and a `waitForResponse` registered after the click that triggers the request.
  * Both read as expert advice. Both were wrong.
  *
- * So the memory file is held to the same 16 rules the test suite is held to. Commented-out lines
+ * So the memory file is held to the same 17 rules the test suite is held to. Commented-out lines
  * survive as counter-examples on purpose — a `// ❌ await page.waitForTimeout(2000)` teaches by
  * contrast and is not code. Anything not commented out is code, and code is linted.
  */
