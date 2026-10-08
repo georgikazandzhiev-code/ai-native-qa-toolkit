@@ -29,7 +29,7 @@ Companion file to [`SKILL.md`](SKILL.md). This catalogs **what's already tested*
 | `@App-API` | `npm run app-api` | API contract + schema validation |
 | `@App-Integration` | `npm run app-integration` | Cross-component integration |
 | `@App-E2E` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
-| (union) | `npm run app-all` | Full nightly / pre-merge, single worker |
+| (union) | `npm run app-all` | Full nightly / pre-merge, single Playwright worker |
 
 Tag casing must match `package.json` greps exactly: Title-case for every tag **except** `@App-regression`, which is lowercase (`app-regression` and `app-all` both grep the lowercase form). The overwhelming majority of specs use `@App-regression` (~398 occurrences across ~34 files); zero tests use Title-case `@App-Regression`, and a Title-case tag would never run.
 
@@ -41,19 +41,19 @@ Live under `tests/app/e2e/`. Each is one test per flow with multiple `test.step`
 
 | Spec | Covers |
 |---|---|
-| `http-synthetic-monitor-crud.spec.ts` | Create / verify / edit / delete HTTP monitors for each method (GET, HEAD, DELETE, POST, PUT) + check-interval matrix. Includes the expanded-view-loads stub (one `test.step` of ~20 lines). |
-| `icmp-synthetic-monitor.spec.ts` | Create / verify / edit / delete ICMP monitor + check-interval matrix. |
-| `icmp-synthetic-monitor-view.spec.ts` | **⚠ ANTI-PATTERN — do not replicate for new monitor types.** Creates ICMP monitor through UI → expands row → verifies expanded view structure. Overlaps with `icmp-monitor-expanded-view.spec.ts` (functional). Retained for historical coverage; not a template. See [`selectors/recipes.md` § 18](../selectors/recipes.md). |
-| `tcp-synthetic-monitor-crud.spec.ts` | Create / verify / edit / delete TCP monitor + expanded-view-loads stub. |
-| `websocket-synthetic-monitor-crud.spec.ts` | Same pattern for WebSocket monitors + expanded-view-loads stub. |
-| `dns-synthetic-monitor-crud.spec.ts` | DNS monitor CRUD. |
-| `mcp-synthetic-monitor-crud.spec.ts` | MCP (AI/LLM health) monitor CRUD. |
+| `http-job-crud.spec.ts` | Create / verify / edit / delete HTTP jobs for each method (GET, HEAD, DELETE, POST, PUT) + run-interval matrix. Includes the expanded-view-loads stub (one `test.step` of ~20 lines). |
+| `export-job.spec.ts` | Create / verify / edit / delete `export` job + run-interval matrix. |
+| `export-job-view.spec.ts` | **⚠ ANTI-PATTERN — do not replicate for new job types.** Creates `export` job through UI → expands row → verifies expanded view structure. Overlaps with `export-job-expanded-view.spec.ts` (functional). Retained for historical coverage; not a template. See [`selectors/recipes.md` § 18](../selectors/recipes.md). |
+| `sftp-job-crud.spec.ts` | Create / verify / edit / delete SFTP job + expanded-view-loads stub. |
+| `stream-job-crud.spec.ts` | Same pattern for stream jobs + expanded-view-loads stub. |
+| `email-job-crud.spec.ts` | Email-job CRUD. |
+| `webhook-job-crud.spec.ts` | Webhook-job CRUD (outbound callback jobs). |
 | `login-smoke.spec.ts` | Login page elements, forgot-password link, successful login. **Tag:** `@App-Smoke`. |
 | `login-negative.spec.ts` | Invalid credentials, empty fields. |
 | `forgot-password.spec.ts` | Password reset flow (extracts link from Mailpit email). |
 | `terms-and-conditions.spec.ts` | Accept / decline flow. |
 | `initial-user-registration.spec.ts` | First-time user setup. |
-| `metrics-page-flow.spec.ts` | Metrics page end-to-end flow (host pick → metric pick → chart render). |
+| `run-stats-page-flow.spec.ts` | Run-stats page end-to-end flow (job pick → run-stat pick → chart render). |
 
 ---
 
@@ -61,36 +61,36 @@ Live under `tests/app/e2e/`. Each is one test per flow with multiple `test.step`
 
 Live under `tests/app/functional/`. One test per validation scenario, `beforeEach` navigates to the form. Tag: `@App-regression` unless noted.
 
-### Form validation specs (per monitor type)
+### Form validation specs (per job type)
 
 | Spec | Covers |
 |---|---|
-| `http-create-edit-monitor.spec.ts` | Type selection, navigation, form validation, method-specific fields, required fields, boundaries. |
-| `icmp-create-edit-monitor.spec.ts` | Required fields, name / target boundaries, timeout, check intervals, ICMP settings accordion, traceroute toggle, max hops, probe selection, navigation. |
-| `websocket-create-edit-monitor.spec.ts` | Same validation pattern for WebSocket. |
-| `dns-create-edit-monitor.spec.ts` | Same validation pattern for DNS. |
-| `mcp-create-edit-monitor.spec.ts` | Same validation pattern for MCP. |
+| `http-create-edit-job.spec.ts` | Type selection, navigation, form validation, method-specific fields, required fields, boundaries. |
+| `export-create-edit-job.spec.ts` | Required fields, name / target boundaries, timeout, run intervals, `export` settings accordion, record-run-steps toggle, max recorded run steps, worker selection, navigation. |
+| `stream-create-edit-job.spec.ts` | Same validation pattern for stream jobs. |
+| `email-create-edit-job.spec.ts` | Same validation pattern for email jobs. |
+| `webhook-create-edit-job.spec.ts` | Same validation pattern for webhook jobs. |
 
-### Detail-view specs (one per monitor type)
+### Detail-view specs (one per job type)
 
-Pattern: API-seeded monitor in `beforeAll`, semantic assertions on expanded-row UI, `afterAll` deletes via API. See [`selectors/recipes.md` § 18](../selectors/recipes.md) for the full design pattern.
+Pattern: API-seeded job in `beforeAll`, semantic assertions on expanded-row UI, `afterAll` deletes via API. See [`selectors/recipes.md` § 18](../selectors/recipes.md) for the full design pattern.
 
 | Spec | Covers |
 |---|---|
-| `icmp-monitor-expanded-view.spec.ts` | Expanded row structure, header controls (probe location, refresh, auto-refresh), tabs state (Metrics active, Traceroute / Path disabled), metric card labels, packet statistics card, empty state, collapse / re-expand, type isolation (HTTP ≠ ICMP view). Split into 8 granular tests with per-scenario Qase IDs — stylistic predecessor to the current consolidated pattern; both shapes valid. |
-| `tcp-monitor-detail-view.spec.ts` | TCP expanded row — 3 metric cards (**Port Available**, **DNS Lookup**, **TCP Connect**) with regex value validation, numeric validity (`>0ms`), decorative icon presence per card; header controls (probe selector + non-empty name, manual refresh, auto-refresh default ON, `Updated HH:MM[:SS]` timestamp); Connection Timing card; stacked bar with `0ms` left scale + right total-ms scale label and exactly 2 colored segments; **conditional inline ms labels** via `verifyInlineMsLabels` (frontend's >10% threshold); legend with 2 dot+label+ms items in correct visual order (DNS Lookup before TCP Connect); manual refresh via network-wait; auto-refresh toggle off→on flow; explicit absence of struck-through AC items (Service Responding, Status Code, TLS Handshake, Total Response, timeframe selector, Response Time History); collapse / re-expand re-verification. **Intentionally not tested:** Radix tooltip hover interactions (label text already in legend). |
-| `websocket-monitor-detail-view.spec.ts` | WebSocket expanded row — 4 metric cards (**Status**, **Connection Time**, **Message RTT**, **Success Rate**) with regex value validation, numeric validity (`>0ms` for Connection Time + Message RTT); header controls; Connection Timing Breakdown card with stacked bar + 4 colored segments; conditional inline ms labels; legend with 4 dot+label+ms items in order (DNS Lookup → TCP Connect → TLS Handshake → WS Upgrade); Message Statistics card + 7 labels (Sent, Received, Failed, Disconnects, Avg Size, Min RTT, Max RTT); Throughput card + 5 labels (Messages/sec, Bandwidth, Send Rate, Recv Rate, Send Time); manual refresh; auto-refresh toggle; explicit absence of timeframe selector; collapse / re-expand. Reuses generic parameterized timing helpers on `SyntheticsPage` scoped to `wsTimingBreakdownCard` — no WS-specific wrappers needed. **Precondition:** targets a pre-seeded monitor named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If it is missing, `beforeAll` must **fail fast** with a clear message — the current self-skip reads as green and is drift, fix on next touch. **Intentionally not tested:** Radix tooltips, Message Statistics / Throughput value formats. |
-| `http-monitor-detail-view.spec.ts` | HTTP/S expanded row — metric cards, header controls, timing breakdown with tooltips, response time history with timeframe toggle and legend averages, "Follow Redirects" exclusion, collapse / re-expand. |
-| `dns-monitor-detail-view.spec.ts` | DNS expanded row — DNS response card, semantic value assertions, header controls, collapse / re-expand. |
+| `export-job-expanded-view.spec.ts` | Expanded row structure, header controls (worker location, refresh, auto-refresh), tabs state (Run Stats active, Run Steps / Timeline disabled), run-stat card labels, record statistics card, empty state, collapse / re-expand, type isolation (HTTP ≠ `export` view). Split into 8 granular tests with per-scenario Qase IDs — stylistic predecessor to the current consolidated pattern; both shapes valid. |
+| `sftp-job-detail-view.spec.ts` | SFTP expanded row — 3 run-stat cards (**Connection Result**, **DNS Lookup**, **TCP Connect**) with regex value validation, numeric validity (`>0ms`), decorative icon presence per card; header controls (worker selector + non-empty name, manual refresh, auto-refresh default ON, `Updated HH:MM[:SS]` timestamp); Transfer Timing card; stacked bar with `0ms` left scale + right total-ms scale label and exactly 2 colored segments; **conditional inline ms labels** via `verifyInlineMsLabels` (frontend's >10% threshold); legend with 2 dot+label+ms items in correct visual order (DNS Lookup before TCP Connect); manual refresh via network-wait; auto-refresh toggle off→on flow; explicit absence of struck-through AC items (Service Responding, Status Code, TLS Handshake, Total Response, timeframe selector, Response Time History); collapse / re-expand re-verification. **Intentionally not tested:** Radix tooltip hover interactions (label text already in legend). |
+| `stream-job-detail-view.spec.ts` | Stream-job expanded row — 4 run-stat cards (**Stream State**, **Connection Time**, **Message RTT**, **Success Rate**) with regex value validation, numeric validity (`>0ms` for Connection Time + Message RTT); header controls; Connection Timing Breakdown card with stacked bar + 4 colored segments; conditional inline ms labels; legend with 4 dot+label+ms items in order (DNS Lookup → TCP Connect → TLS Handshake → Stream Subscribe); Message Statistics card + 7 labels (Sent, Received, Failed, Disconnects, Avg Size, Min RTT, Max RTT); Throughput card + 5 labels (Messages/sec, Bandwidth, Send Rate, Recv Rate, Send Time); manual refresh; auto-refresh toggle; explicit absence of timeframe selector; collapse / re-expand. Reuses generic parameterized timing helpers on `JobsPage` scoped to `streamTimingBreakdownCard` — no stream-specific wrappers needed. **Precondition:** targets a pre-seeded job named by `STREAM_FIXTURE_JOB_NAME` (no default committed). If it is missing, `beforeAll` must **fail fast** with a clear message — the current self-skip reads as green and is drift, fix on next touch. **Intentionally not tested:** Radix tooltips, Message Statistics / Throughput value formats. |
+| `http-job-detail-view.spec.ts` | HTTP/S expanded row — run-stat cards, header controls, timing breakdown with tooltips, response time history with timeframe toggle and legend averages, "Follow Redirects" exclusion, collapse / re-expand. |
+| `email-job-detail-view.spec.ts` | Email-job expanded row — email delivery card, semantic value assertions, header controls, collapse / re-expand. |
 
 ### Page-level specs
 
 | Spec | Covers |
 |---|---|
-| `synthetics-page.spec.ts` | Synthetics list page — page chrome, table interactions. |
-| `probes-page.spec.ts` | Probes-page layout (status cards, toolbar, table columns, pagination); status-card filtering (Total / Online / Offline / Provisioning); sorting (Name / Status / Location / Region); pagination (page size, next/prev, last page); status filter dropdown; type filter (Local / Global); search by name / location; combined filters; special characters; filter preservation after sheet overlay; delete dialog; register-probe sheet (fields, validation, cancel / close); view details; edit sheet (pre-filled, read-only ID, cancel / close); local-probe action restrictions. |
-| `dashboard-page.spec.ts` | Landing-page structure (greeting + Synthetics / Probes / Monitors-by-Type / Quick-Actions sections); sidebar Dashboard link round-trip; Synthetics stat cards (5× title + numeric, internal sum consistency, total vs Synthetics API `totalElements`); Synthetics card navigation with `?health=<value>` and filter-label assertion (looped per card); Probes stat cards (4× title + numeric, total vs Probes API `totalElements`); Probes card navigation with `?status=<value>` (looped per card); Monitors-by-Type (set of visible bars matches API `count > 0` types, aria-label count per bar, per-type click → `?type=<value>`); Quick Actions (3× title + description, 3-step combined navigation test + `href` attribute assertion); empty-tenant state (today it auto-skips when the tenant has monitors — drift: seed an empty tenant in setup, or fail fast, never skip). Read-only spec — no monitor / probe creation or cleanup. |
-| `metrics-page.spec.ts` | Metrics page — host picker, metric selection, chart toolbar, expanded dialog. |
+| `jobs-page.spec.ts` | Jobs list page — page chrome, table interactions. |
+| `workers-page.spec.ts` | Workers-page layout (status cards, toolbar, table columns, pagination); status-card filtering (Total / Online / Offline / Provisioning); sorting (Name / Status / Location / Region); pagination (page size, next/prev, last page); status filter dropdown; type filter (Local / Global); search by name / location; combined filters; special characters; filter preservation after sheet overlay; delete dialog; register-worker sheet (fields, validation, cancel / close); view details; edit sheet (pre-filled, read-only ID, cancel / close); local-worker action restrictions. |
+| `dashboard-page.spec.ts` | Landing-page structure (greeting + Jobs / Workers / Type-Breakdown / Quick-Actions sections); sidebar Dashboard link round-trip; Jobs stat cards (5× title + numeric, internal sum consistency, total vs Jobs API `totalElements`); Jobs card navigation with `?jobStatus=<value>` and filter-label assertion (looped per card); Workers stat cards (4× title + numeric, total vs Workers API `totalElements`); Workers card navigation with `?status=<value>` (looped per card); Type Breakdown (set of visible bars matches API `count > 0` types, aria-label count per bar, per-type click → `?type=<value>`); Quick Actions (3× title + description, 3-step combined navigation test + `href` attribute assertion); empty-tenant state (today it auto-skips when the tenant has jobs — drift: seed an empty tenant in setup, or fail fast, never skip). Read-only spec — no job / worker creation or cleanup. |
+| `run-stats-page.spec.ts` | Run-stats page — job picker, run-stat selection, chart toolbar, expanded dialog. |
 
 ---
 
@@ -103,13 +103,13 @@ Live under `tests/app/api/`. One spec per API resource. Tag: `@App-API`. The dee
 | `admin-tenants.spec.ts` | `POST/GET/PATCH/DELETE /api/v1/admin/tenants(/:id)` — admin-realm token. |
 | `admin-realms.spec.ts` | `POST/PATCH /api/v1/admin/realms` — admin-realm token (no path param). |
 | `admin-users.spec.ts` | `POST/GET/PATCH/DELETE /api/v1/admin/tenant/:tenant/user(s)`. |
-| `probes.spec.ts` | `POST/GET/PATCH/DELETE /api/v1/probes(/:id)` — tenant token. |
-| `http-synthetic-monitor.spec.ts` | HTTP monitor CRUD via `/api/v1/synthetics`. |
-| `dns-synthetic-monitor.spec.ts` | DNS monitor CRUD. |
-| `data-metrics.spec.ts` | `GET /api/v1/synthetics/:id/metrics` (metric definitions per monitor). |
-| `data-query.spec.ts` | `GET /api/v1/data` and `POST /api/v1/data/metrics` query endpoints. |
+| `workers.spec.ts` | `POST/GET/PATCH/DELETE /api/v1/workers(/:id)` — tenant token. |
+| `http-job.spec.ts` | HTTP job CRUD via `/api/v1/jobs`. |
+| `email-job.spec.ts` | Email-job CRUD. |
+| `run-stats-aggregate.spec.ts` | `GET /api/v1/jobs/:id/run-stats` (run-stat definitions per job). |
+| `run-stats-query.spec.ts` | `GET /api/v1/run-stats` and `POST /api/v1/run-stats/aggregate` query endpoints. |
 | `cross-tenant-isolation.spec.ts` | Cross-tenant isolation matrix — token from tenant A cannot read/write tenant B's resources. |
-| `cross-tenant-metrics-isolation.spec.ts` | Cross-tenant isolation specific to metrics queries. |
+| `cross-tenant-run-stats-isolation.spec.ts` | Cross-tenant isolation specific to run-stats queries. |
 | `e2e-tenant-onboarding-flow.spec.ts` | E2E onboarding — create tenant + invite user + verify Mailpit email + UUID immutability + multi-user emails. **Tag:** `@App-E2E`. |
 
 ---
@@ -128,11 +128,11 @@ Live at `tests/app/`. Filename pattern: `*.setup.ts`. No tag.
 
 These gaps are tracked here so reviewers don't ask "why isn't this tested?" — and so authors don't accidentally fill them without checking why they're open.
 
-- **Probe selector switching not tested** in any detail-view spec — requires multi-probe setup (≥ 2 active probes per tenant). Re-add when the probe-fleet helper supports multi-probe seeding.
+- **Worker selector switching not tested** in any detail-view spec — requires multi-worker setup (≥ 2 active workers per tenant). Re-add when the worker-fleet helper supports multi-worker seeding.
 - **Radix tooltip hover interactions** in detail-view specs — not an AC requirement; label text already visible verbatim in the legend; hover + Radix pointer-event timing is flaky under Playwright.
-- **WebSocket Message Statistics / Throughput value formats** — too many units (integers, B/KB/MB, B/s, ms) and low user-impact if slightly malformed.
+- **Stream-job Message Statistics / Throughput value formats** — too many units (integers, B/KB/MB, B/s, ms) and low user-impact if slightly malformed.
 - **Tenant requires primary user (AC 4 of onboarding)** — backend doesn't enforce yet; current behavior allows tenant creation without a primary user. The `e2e-tenant-onboarding-flow.spec.ts` does not assert this AC.
-- **`tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor-view.spec.ts`** — anti-pattern, retained for historical coverage. Don't replicate the layout for new monitor types. See [`selectors/recipes.md` § 18](../selectors/recipes.md).
+- **`tests/app/e2e/jobs-service/jobs/export-job-view.spec.ts`** — anti-pattern, retained for historical coverage. Don't replicate the layout for new job types. See [`selectors/recipes.md` § 18](../selectors/recipes.md).
 
 ---
 
