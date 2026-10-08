@@ -29,8 +29,8 @@ Cross-link from [SKILL.md](SKILL.md). For end-to-end flows, see [recipes.md](rec
 ### Good
 
 ```typescript
-get monitorNameInput(): Locator {
-    return this.page.getByLabel('Monitor Name', { exact: true });
+get jobNameInput(): Locator {
+    return this.page.getByLabel('Job Name', { exact: true });
 }
 
 get targetInput(): Locator {
@@ -38,7 +38,7 @@ get targetInput(): Locator {
 }
 ```
 
-The fields have visible labels, so `getByLabel` is the locator (priority 2). The schema-form's `field-field-*` test-id is the fallback only where a label is not associated with its input — not something to `.or()` with the label, because both would match the same input. `pages/app/SyntheticsPage.ts` still uses the test-id-plus-`.or()` shape: drift, fix on next touch. The chain stays at one level — never CSS at the top.
+The fields have visible labels, so `getByLabel` is the locator (priority 2). The schema-form's `field-field-*` test-id is the fallback only where a label is not associated with its input — not something to `.or()` with the label, because both would match the same input. `pages/app/JobsPage.ts` still uses the test-id-plus-`.or()` shape: drift, fix on next touch. The chain stays at one level — never CSS at the top.
 
 ### Bad
 
@@ -57,22 +57,22 @@ App-level / shadcn template classes track styling, not semantics; any theme twea
 ### Good
 
 ```typescript
-get createMonitorTitle(): Locator {
-    return this.page.getByText('Create Monitor', { exact: true });
+get createJobTitle(): Locator {
+    return this.page.getByText('Create Job', { exact: true });
 }
 
 get editMenuItem(): Locator {
-    return this.page.getByRole('menuitem', { name: 'Edit monitor' });
+    return this.page.getByRole('menuitem', { name: 'Edit job' });
 }
 ```
 
-`exact: true` prevents matches against "Create Monitor — HTTP", "Edit monitor (admin)", "Edit user". When a stable role (`menuitem`, `option`, `button`) is available, prefer it over `getByText` for short labels.
+`exact: true` prevents matches against "Create Job — HTTP", "Edit job (admin)", "Edit user". When a stable role (`menuitem`, `option`, `button`) is available, prefer it over `getByText` for short labels.
 
 ### Bad
 
 ```typescript
 get successCreateMsg(): Locator {
-    return this.page.getByText('Monitor created successfully');
+    return this.page.getByText('Job created successfully');
 }
 ```
 
@@ -90,7 +90,7 @@ getRowByName(name: string): Locator {
 }
 
 async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
-    const actionBtn = row.locator("[data-testid^='monitor-actions-']");
+    const actionBtn = row.locator("[data-testid^='job-actions-']");
     const item = this.page.getByRole('menuitem', { name: menuItem });
 
     await expect(async () => {
@@ -100,28 +100,28 @@ async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
 }
 ```
 
-Adapted from `pages/app/SyntheticsPage.ts`, which filters on the row text and excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded; matching the name **cell** exactly does that job without the testid. Identifies the row by content; survives column reordering. **Check the live app before switching an existing locator** (`npx playwright open`): an exact cell match fails when the name cell holds more than the name — an icon label, a badge — and then the row needs a filter on the cell's own child element instead.
+Adapted from `pages/app/JobsPage.ts`, which filters on the row text and excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded; matching the name **cell** exactly does that job without the testid. Identifies the row by content; survives column reordering. **Check the live app before switching an existing locator** (`npx playwright open`): an exact cell match fails when the name cell holds more than the name — an icon label, a badge — and then the row needs a filter on the cell's own child element instead.
 
 ### Bad
 
 ```typescript
-getMonitorTypeByName(monitorName: string): Locator {
-    return this.getRowByName(monitorName).locator('td').nth(3);
+getJobTypeByName(jobName: string): Locator {
+    return this.getRowByName(jobName).locator('td').nth(3);
 }
 ```
 
-Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids (`pages/app/SyntheticsPage.ts` `getSortHeader`); per-cell column testids are missing and should be requested from the front-end team. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
+Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids (`pages/app/JobsPage.ts` `getSortHeader`); per-cell column testids are missing and should be requested from the front-end team. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
 
 ## P4 — Component scoping (instead of repeated top-level lookups)
 
 ### Good
 
 ```typescript
-class DeleteMonitorDialog {
+class DeleteJobDialog {
     private readonly dialog: Locator;
 
     constructor(private page: Page) {
-        this.dialog = this.page.getByRole('dialog', { name: /delete monitor/i });
+        this.dialog = this.page.getByRole('dialog', { name: /delete job/i });
     }
 
     get title(): Locator { return this.dialog.getByRole('heading'); }
@@ -130,7 +130,7 @@ class DeleteMonitorDialog {
 }
 ```
 
-The existing delete dialogs in `pages/app/SyntheticsPage.ts` and `pages/app/ProbesPage.ts` anchor on test-ids (`delete-monitor-dialog`, `delete-probe-*`) — drift to fix on next touch; the test-id is the fallback if the dialog has no accessible name. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
+The existing delete dialogs in `pages/app/JobsPage.ts` and `pages/app/WorkersPage.ts` anchor on test-ids (`delete-job-dialog`, `delete-worker-*`) — drift to fix on next touch; the test-id is the fallback if the dialog has no accessible name. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
 
 > **Anchor as a field is the one exception** to the "always use getters" rule shown in P14: when a single locator is the parent of every getter in the class, store it once in the constructor. Locators are lazy, so the field still re-resolves on each downstream `.click()` / `expect()`.
 
@@ -141,7 +141,7 @@ get title(): Locator {
     return this.page.getByRole('heading', { name: /delete/i });
 }
 get confirmButton(): Locator {
-    return this.page.getByTestId('delete-monitor-confirm');
+    return this.page.getByTestId('delete-job-confirm');
 }
 get cancelButton(): Locator {
     return this.page.getByRole('button', { name: /cancel/i });
@@ -155,36 +155,36 @@ These work *until* the page also renders a "Cancel subscription" or a generic "C
 ### Good
 
 ```typescript
-healthCard(state: HealthState): Locator {
-    const map: Record<HealthState, Locator> = {
-        healthy: this.healthyCard,
-        warning: this.warningCard,
-        critical: this.criticalCard,
-        unknown: this.unknownCard,
+jobStatusCard(jobStatus: JobStatus): Locator {
+    const map: Record<JobStatus, Locator> = {
+        passing: this.passingCard,
+        degraded: this.degradedCard,
+        failing: this.failingCard,
+        paused: this.pausedCard,
     };
-    return map[state];
+    return map[jobStatus];
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Type-checked at compile time; adding a new `HealthState` member produces a TS error at the map.
+From `pages/app/JobsPage.ts`. Type-checked at compile time; adding a new `JobStatus` member produces a TS error at the map.
 
 ### Bad
 
 ```typescript
-async clickHealthCard(state: string): Promise<void> {
-    if (state === 'healthy') {
-        await this.page.getByTestId('filter-healthy').click();
-    } else if (state === 'warning') {
-        await this.page.getByTestId('filter-warning').click();
-    } else if (state === 'critical') {
-        await this.page.getByTestId('filter-critical').click();
-    } else if (state === 'unknown') {
-        await this.page.getByTestId('filter-unknown').click();
+async clickJobStatusCard(jobStatus: string): Promise<void> {
+    if (jobStatus === 'passing') {
+        await this.page.getByTestId('filter-passing').click();
+    } else if (jobStatus === 'degraded') {
+        await this.page.getByTestId('filter-degraded').click();
+    } else if (jobStatus === 'failing') {
+        await this.page.getByTestId('filter-failing').click();
+    } else if (jobStatus === 'paused') {
+        await this.page.getByTestId('filter-paused').click();
     }
 }
 ```
 
-Works, but: (1) the locators are constructed inline so they cannot be reused for assertions in the same flow or in specs, (2) every new state needs an extra `if` branch (no compile-time exhaustiveness check), (3) the testid strings are buried inside an action method, hidden from grep. Refactor toward an enum + map + helper getter as in the Good example.
+Works, but: (1) the locators are constructed inline so they cannot be reused for assertions in the same flow or in specs, (2) every new job status needs an extra `if` branch (no compile-time exhaustiveness check), (3) the testid strings are buried inside an action method, hidden from grep. Refactor toward an enum + map + helper getter as in the Good example.
 
 ## P6 — Frame selection by stable attribute
 
@@ -212,11 +212,11 @@ Picks up the wrong iframe the moment a second one mounts (chat widget, analytics
 
 ```typescript
 get pageTitle(): Locator {
-    return this.page.getByRole('heading', { name: 'Synthetics' });
+    return this.page.getByRole('heading', { name: 'Jobs' });
 }
 
-get metricsTab(): Locator {
-    return this.page.getByRole('tab', { name: 'Metrics' });
+get runStatsTab(): Locator {
+    return this.page.getByRole('tab', { name: 'Run Stats' });
 }
 
 get refreshButton(): Locator {
@@ -241,9 +241,9 @@ Tag + class is exactly what `getByRole('heading')` exists to replace.
 ### Good
 
 ```typescript
-await expect(this.createMonitorButton).toBeVisible();
-await this.createMonitorButton.click();
-await expect(this.createMonitorSheet).toBeVisible();
+await expect(this.createJobButton).toBeVisible();
+await this.createJobButton.click();
+await expect(this.createJobSheet).toBeVisible();
 ```
 
 ```typescript
@@ -255,8 +255,8 @@ Auto-retries until the assertion holds or the timeout elapses; no race condition
 ### Bad
 
 ```typescript
-if (await this.createMonitorButton.isVisible()) {
-    await this.createMonitorButton.click();
+if (await this.createJobButton.isVisible()) {
+    await this.createJobButton.click();
 }
 ```
 
@@ -274,23 +274,23 @@ await expect(this.something).toBeVisible();
 ### Good
 
 ```typescript
-async submitCreateMonitor(): Promise<void> {
-    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
-    const created = this.page.waitForResponse((r) => r.url().includes('/api/synthetics') && r.request().method() === 'POST');
-    await this.createMonitorSubmitButton.click();
+async submitCreateJob(): Promise<void> {
+    await expect(this.createJobSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
+    const created = this.page.waitForResponse((r) => r.url().includes('/api/jobs') && r.request().method() === 'POST');
+    await this.createJobSubmitButton.click();
     expect((await created).ok()).toBe(true);
-    await expect(this.createMonitorSheet).toBeHidden();
+    await expect(this.createJobSheet).toBeHidden();
 }
 
 async expectCreateFlowCompleteOnList(): Promise<void> {
-    await expect(this.createMonitorSheet).toBeHidden({
+    await expect(this.createJobSheet).toBeHidden({
         timeout: appConfig.timeouts.navigation,
     });
     await expect(this.pageRoot).toBeVisible();
-    await expect(this.page).toHaveURL(/\/synthetics(\?.*)?$/i);
+    await expect(this.page).toHaveURL(/\/jobs(\?.*)?$/i);
 }
 
-async expectSuccessToastForMonitor(name: string): Promise<void> {
+async expectSuccessToastForJob(name: string): Promise<void> {
     const toast = this.page.getByRole('status').filter({ hasText: name });
     await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
@@ -302,8 +302,8 @@ The action confirms its own result: enabled → response wait armed → click �
 ### Bad
 
 ```typescript
-async submitCreateMonitor(): Promise<void> {
-    await this.createMonitorSubmitButton.click();
+async submitCreateJob(): Promise<void> {
+    await this.createJobSubmitButton.click();
 }
 ```
 
@@ -321,7 +321,7 @@ get refreshButton(): Locator {
 }
 
 getFirstRowActionButton(): Locator {
-    return this.tableRows.first().locator("[data-testid^='monitor-actions-']");
+    return this.tableRows.first().locator("[data-testid^='job-actions-']");
 }
 ```
 
@@ -331,7 +331,7 @@ The name `firstRowActionButton` makes the `.first()` part of the contract, so a 
 
 ```typescript
 get currentRow(): Locator {
-    return this.page.getByTestId(/^monitor-actions-/).first();
+    return this.page.getByTestId(/^job-actions-/).first();
 }
 ```
 
@@ -347,7 +347,7 @@ get pauseOrResumeMenuItem(): Locator {
 }
 
 async verifyActionMenuOptions(): Promise<void> {
-    await expect(this.getActionMenuItem('Edit monitor')).toBeVisible();
+    await expect(this.getActionMenuItem('Edit job')).toBeVisible();
     await expect(this.getActionMenuItem('View details')).toBeVisible();
     await expect(
         this.getActionMenuItem('Pause').or(this.getActionMenuItem('Resume'))
@@ -356,15 +356,15 @@ async verifyActionMenuOptions(): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Two menu items are mutually exclusive (a paused monitor shows "Resume"; a running one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
+From `pages/app/JobsPage.ts`. Two menu items are mutually exclusive (a paused job shows "Resume"; an active one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
 
 `.or()` also fits a legacy-vs-current pair, **but only when the two can never match at the same time**. If both hooks exist on the current page, the union matches twice and strict mode fails. Once the legacy markup is gone, drop the `.or()` and keep the label:
 
 ```typescript
 get searchInput(): Locator {
     return this.page
-        .getByTestId('synthetics-name-search')
-        .or(this.syntheticsListSearchInput);
+        .getByTestId('jobs-name-search')
+        .or(this.jobsListSearchInput);
 }
 ```
 
@@ -387,14 +387,14 @@ async verifyPauseOrResume(): Promise<void> {
 ### Good
 
 ```typescript
-async expectSuccessToastForMonitor(name: string): Promise<void> {
+async expectSuccessToastForJob(name: string): Promise<void> {
     const toast = this.page.getByRole('status').filter({ hasText: name });
     await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
 
-Sonner renders each toast with `role="status"`. Filtering by the monitor name keeps a second toast firing in the same window (create + auto-refresh) from tripping strict mode, so no `.first()` is needed. If your Sonner build doesn't expose the role, fall back to `this.page.locator('[data-sonner-toast]').filter({ hasText: name })`. Never `.or()` the toast with the toaster region (`getByTestId('sonner')`): the region contains the toast, so both match at once and strict mode fails. `pages/app/SyntheticsPage.ts` still has that shape: drift, fix on next touch.
+Sonner renders each toast with `role="status"`. Filtering by the job name keeps a second toast firing in the same window (create + auto-refresh) from tripping strict mode, so no `.first()` is needed. If your Sonner build doesn't expose the role, fall back to `this.page.locator('[data-sonner-toast]').filter({ hasText: name })`. Never `.or()` the toast with the toaster region (`getByTestId('sonner')`): the region contains the toast, so both match at once and strict mode fails. `pages/app/JobsPage.ts` still has that shape: drift, fix on next touch.
 
 ### Bad — hypothetical, do not write this
 
@@ -420,7 +420,7 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
 await expect(this.autoRefreshSwitch).toHaveAttribute('aria-checked', 'true');
 ```
 
-From `pages/app/SyntheticsPage.ts`. Radix exposes its toggle/active state on `data-state` and `aria-checked`; assert against the attribute directly.
+From `pages/app/JobsPage.ts`. Radix exposes its toggle/active state on `data-state` and `aria-checked`; assert against the attribute directly.
 
 ### Bad
 
@@ -441,10 +441,10 @@ expect(isActive).toBe('5m');
 
 ```typescript
 get pageRoot(): Locator {
-    return this.page.getByTestId('page-synthetics');
+    return this.page.getByTestId('page-jobs');
 }
 
-async expectSyntheticsListReady(): Promise<void> {
+async expectJobsListReady(): Promise<void> {
     await expect(this.pageRoot).toBeVisible({
         timeout: appConfig.timeouts.navigation,
     });
@@ -457,13 +457,13 @@ The locator is created on every access; calling `.toBeVisible()` re-resolves it.
 
 ```typescript
 private pageRoot: Locator;
-private createMonitorButton: Locator;
+private createJobButton: Locator;
 private dataTable: Locator;
 
 constructor(page: Page) {
     super(page);
-    this.pageRoot = page.getByTestId('page-synthetics');
-    this.createMonitorButton = page.getByTestId('create-monitor-button');
+    this.pageRoot = page.getByTestId('page-jobs');
+    this.createJobButton = page.getByTestId('create-job-button');
     this.dataTable = page.getByTestId('data-table');
 }
 ```
@@ -475,32 +475,32 @@ Storing every leaf locator in a field is technically valid (Locators are lazy an
 ### Good
 
 ```typescript
-getProbeOptionByName(probeName: string): Locator {
-    return this.probeSelection
+getWorkerOptionByName(workerName: string): Locator {
+    return this.workerSelection
         .locator('label')
-        .filter({ has: this.page.getByText(probeName, { exact: true }) });
+        .filter({ has: this.page.getByText(workerName, { exact: true }) });
 }
 ```
 
-Picks the `<label>` whose subtree contains the given probe name — useful when the row also has a tooltip or description that repeats the name and `hasText` over-matches.
+Picks the `<label>` whose subtree contains the given worker name — useful when the row also has a tooltip or description that repeats the name and `hasText` over-matches.
 
 ### Avoid for dynamic values
 
 ```typescript
-getProbeOptionByName(probeName: string): Locator {
-    return this.probeSelection
+getWorkerOptionByName(workerName: string): Locator {
+    return this.workerSelection
         .locator('label')
-        .filter({ hasText: probeName });
+        .filter({ hasText: workerName });
 }
 ```
 
-`hasText` is a **substring** match: "probe-1" also matches "probe-10". For a value passed in as a parameter, use the exact `has:` form above (§ Critical: `exact: true` in dynamic methods). `hasText` also matches when **any descendant text** of `<label>` contains the string. In the probe-selection block today, only the inner label text shows the probe name, so `hasText` and `filter({ has: <text> })` resolve to the same element. They are NOT equivalent in general — switch to `has: <Locator>` only when text alone over-matches (e.g. a tooltip repeats the name, or a sibling description includes it).
+`hasText` is a **substring** match: "worker-1" also matches "worker-10". For a value passed in as a parameter, use the exact `has:` form above (§ Critical: `exact: true` in dynamic methods). `hasText` also matches when **any descendant text** of `<label>` contains the string. In the worker-selection block today, only the inner label text shows the worker name, so `hasText` and `filter({ has: <text> })` resolve to the same element. They are NOT equivalent in general — switch to `has: <Locator>` only when text alone over-matches (e.g. a tooltip repeats the name, or a sibling description includes it).
 
 ### Bad
 
 ```typescript
-const checkbox = this.probeSelection
-    .locator(`label:has-text("${probeName}") input[type="checkbox"]`);
+const checkbox = this.workerSelection
+    .locator(`label:has-text("${workerName}") input[type="checkbox"]`);
 ```
 
 Single CSS string mixing Playwright's `:has-text` pseudo with attribute selectors. Hard to read; impossible to refactor incrementally.
@@ -510,8 +510,8 @@ Single CSS string mixing Playwright's `:has-text` pseudo with attribute selector
 ### Good
 
 ```typescript
-async expectMonitorListed(name: string): Promise<void> {
-    const search = this.syntheticsListSearchInput;
+async expectJobListed(name: string): Promise<void> {
+    const search = this.jobsListSearchInput;
     await expect(search).toBeVisible({ timeout: appConfig.timeouts.fastFail });
     await search.clear();
     await search.fill(name);
@@ -521,7 +521,7 @@ async expectMonitorListed(name: string): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Action → assertion that the search filtered to the expected row.
+From `pages/app/JobsPage.ts`. Action → assertion that the search filtered to the expected row.
 
 ### Bad
 
@@ -539,19 +539,19 @@ Sleep instead of assertion; no contract that the search worked. `waitForTimeout`
 ### Good — inline arrival / empty-state marker, never interacted with
 
 ```typescript
-// tests/app/functional/monitoring-service/synthetics/icmp-monitor-expanded-view.spec.ts
-await test.step('THEN: Empty state is visible before first probe data', async () => {
-    await expect(page.getByText('No ICMP Metrics Available')).toBeVisible();
+// tests/app/functional/jobs-service/jobs/export-job-expanded-view.spec.ts
+await test.step('THEN: Empty state is visible before the first run stats', async () => {
+    await expect(page.getByText('No Export Run Stats Available')).toBeVisible();
 });
 ```
 
-A single, one-shot assertion confirming the expanded view rendered. No POM getter exists for this string and adding one would inflate `SyntheticsPage` with a member used by nothing else. **The locator is never clicked, filled, or hovered.**
+A single, one-shot assertion confirming the expanded view rendered. No POM getter exists for this string and adding one would inflate `JobsPage` with a member used by nothing else. **The locator is never clicked, filled, or hovered.**
 
 ### Good — repeated success-toast assertion
 
 ```typescript
-// tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts
-await syntheticsPage.expectSuccessToastForMonitor(name);
+// tests/app/e2e/jobs-service/jobs/export-job.spec.ts
+await jobsPage.expectSuccessToastForJob(name);
 ```
 
 This wraps the inline `[data-sonner-toast]` filter in a POM method (P12) once it's used by more than one spec — promote on first duplication.
@@ -560,20 +560,20 @@ This wraps the inline `[data-sonner-toast]` filter in a POM method (P12) once it
 
 ```typescript
 // (hypothetical)
-const activeFilter = page.locator('.health-filter-active .filter-chip');
+const activeFilter = page.locator('.outcome-filter-active .filter-chip');
 ```
 
-CSS in a spec is forbidden. Wrap it in a POM getter (`syntheticsPage.activeHealthFilterChip`) — even as a stopgap — and add a `// TODO: replace with testid` comment.
+CSS in a spec is forbidden. Wrap it in a POM getter (`jobsPage.activeOutcomeFilterChip`) — even as a stopgap — and add a `// TODO: replace with testid` comment.
 
 ### Bad — inline locator that gets clicked
 
 ```typescript
 // (hypothetical)
-await page.getByTestId('create-monitor-button').click();
+await page.getByTestId('create-job-button').click();
 await page.getByPlaceholder('Search by name or target').fill(name);
 ```
 
-The moment you click, fill, or hover, the locator MUST live behind a POM method (`syntheticsPage.openCreateMonitorFlow()`, `syntheticsPage.searchByName(name)`). Reason: action methods carry the post-condition assertion (see [`page-objects`](../page-objects/SKILL.md)); inlining bypasses that contract.
+The moment you click, fill, or hover, the locator MUST live behind a POM method (`jobsPage.openCreateJobFlow()`, `jobsPage.searchByName(name)`). Reason: action methods carry the post-condition assertion (see [`page-objects`](../page-objects/SKILL.md)); inlining bypasses that contract.
 
 See SKILL.md → "Where selectors live" for the full rule and decision tree.
 
@@ -584,9 +584,9 @@ See SKILL.md → "Where selectors live" for the full rule and decision tree.
 ```typescript
 // CORRECT — retries the entire read-then-assert until a consistent snapshot is captured
 await expect(async () => {
-  const counts = await syntheticsPage.getAllHealthCounts();
+  const counts = await jobsPage.getAllJobStatusCounts();
   expect(counts.total).toBe(
-    counts.healthy + counts.warning + counts.critical + counts.unknown,
+    counts.passing + counts.degraded + counts.failing + counts.paused,
   );
 }).toPass({ timeout: appConfig.timeouts.retryBlock });
 ```
@@ -595,13 +595,13 @@ await expect(async () => {
 
 ```typescript
 // BAD — cards can refresh between reads; sum won't match total
-const counts = await syntheticsPage.getAllHealthCounts();
+const counts = await jobsPage.getAllJobStatusCounts();
 expect(counts.total).toBe(
-  counts.healthy + counts.warning + counts.critical + counts.unknown,
+  counts.passing + counts.degraded + counts.failing + counts.paused,
 );
 ```
 
-Use `.toPass()` whenever an assertion compares **two or more dynamic UI values** that are read separately (auto-refreshing health cards, row count vs. card count, totalElements from API vs. card sum). The page can refresh mid-read; the second read-then-assert sequence sees a different snapshot and fails. Wrapping in `.toPass()` retries the **entire** sequence until both reads come from a consistent moment in time.
+Use `.toPass()` whenever an assertion compares **two or more dynamic UI values** that are read separately (auto-refreshing job-status cards, row count vs. card count, totalElements from API vs. card sum). The page can refresh mid-read; the second read-then-assert sequence sees a different snapshot and fails. Wrapping in `.toPass()` retries the **entire** sequence until both reads come from a consistent moment in time.
 
 This is distinct from P9 (action method validates success) — P9 covers verifying a state change after an action; P18 covers cross-counter sums on naturally-changing UI.
 
