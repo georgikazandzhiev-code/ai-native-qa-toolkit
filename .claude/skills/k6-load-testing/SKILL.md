@@ -1,6 +1,6 @@
 ---
 name: k6-load-testing
-version: 1.1.0
+version: 1.1.1
 description: Author and run k6 load, stress, spike, and soak tests in TypeScript against the platform APIs — bundler setup, executors, thresholds, custom metrics, auth, Grafana/InfluxDB output. Use for any performance-testing request. Triggers — "load test", "stress test", "spike", "soak", "k6", "SLO", "performance benchmark". Not for functional API tests (api-testing).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ Write realistic k6 performance tests in TypeScript for the platform APIs. Keep t
 | File | Purpose | Load when |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Rules, test-type decision, SLO workflow, anti-patterns. | **Always** — on any performance-testing task. |
-| **[`reference.md`](reference.md)** | Catalogs: executor choice, threshold and custom-metric syntax, shared helpers, helper scripts. | When configuring a run or reaching for a specific executor or metric. |
+| **[`reference.md`](reference.md)** | Catalogs: executor choice, threshold and custom-metric syntax, shared helpers, helper scripts. | When configuring a test run or reaching for a specific executor or metric. |
 
 **Boundary rule:** decisions and rules here; syntax and catalogs in `reference.md`.
 
@@ -23,9 +23,9 @@ Write realistic k6 performance tests in TypeScript for the platform APIs. Keep t
 
 Non-negotiable. A load test that breaks these produces a number nobody can act on.
 
-- **NEVER run a load test against production without written authorisation naming the window.** A load generator is indistinguishable from an attack. Authorisation, the environment, and the agreed window go in the ticket before the first run.
-- **ALWAYS define thresholds before the first run, derived from the SLO.** A run with no threshold cannot fail, so it cannot tell you anything. Numbers invented after seeing the result are a description, not a test.
-- **NEVER report a percentile from a run whose error rate was non-trivial.** Latency measured while requests are failing is the latency of the failure path. Resolve or explain the errors first, then read the timing.
+- **NEVER run a load test against production without written authorisation naming the window.** A load generator is indistinguishable from an attack. Authorisation, the environment, and the agreed window go in the ticket before the first test run.
+- **ALWAYS define thresholds before the first test run, derived from the SLO.** A test run with no threshold cannot fail, so it cannot tell you anything. Numbers invented after seeing the result are a description, not a test.
+- **NEVER report a percentile from a test run whose error rate was non-trivial.** Latency measured while requests are failing is the latency of the failure path. Resolve or explain the errors first, then read the timing.
 - **ALWAYS warm up before measuring, and state for how long.** Cold caches, JIT and connection setup make the first seconds unrepresentative; including them silently inflates every percentile.
 - **NEVER share one data value across virtual users on a uniqueness-constrained field.** Every VU creating the same row measures the conflict path at scale. Parameterise per VU — see the `data-strategy` skill.
 - **ALWAYS state the shape of the load, not just the total.** "1000 requests" is not reproducible; "100 VUs ramping over 2 minutes, held for 5" is. The executor choice is part of the result.
@@ -59,11 +59,11 @@ tests/perf/
 ├── fixtures/                 # CSV / JSON fixtures (used via SharedArray)
 │   └── postcodes.json
 ├── smoke/
-│   └── monitors-smoke.ts
+│   └── jobs-smoke.ts
 ├── load/
-│   └── monitors-load.ts
+│   └── jobs-load.ts
 ├── stress/
-│   └── monitors-stress.ts
+│   └── jobs-stress.ts
 └── tsconfig.json             # Extends root but targets ES2015 for k6 VM
 ```
 
@@ -78,7 +78,7 @@ k6 runs its own JS VM (Goja) and **does not execute TypeScript natively**. Use e
 ### Bundle command
 
 ```bash
-scripts/bundle.sh tests/perf/load/monitors-load.ts dist/monitors-load.js
+scripts/bundle.sh tests/perf/load/jobs-load.ts dist/jobs-load.js
 ```
 
 The script invokes:
@@ -120,7 +120,7 @@ Every test file must export:
 - `default` — the VU function
 
 ```ts
-// tests/perf/load/monitors-load.ts
+// tests/perf/load/jobs-load.ts
 import { sleep } from "k6";
 import { Options } from "k6/options";
 import { getJson, postJson } from "../lib/http";
@@ -143,21 +143,21 @@ export const options: Options = {
   },
   thresholds: {
     "http_req_failed": ["rate<0.01"],                // <1% errors
-    "http_req_duration{name:list_monitors}": ["p(95)<500", "p(99)<1000"],
-    "http_req_duration{name:get_monitor}":   ["p(95)<300"],
+    "http_req_duration{name:list_jobs}": ["p(95)<500", "p(99)<1000"],
+    "http_req_duration{name:get_job}":   ["p(95)<300"],
     "checks": ["rate>0.99"],
   },
   summaryTrendStats: ["avg", "min", "med", "p(90)", "p(95)", "p(99)", "max"],
-  tags: { testType: "load", service: "monitors-api" },
+  tags: { testType: "load", service: "jobs-api" },
 };
 
 export default function () {
-  const list = getJson(`${BASE_URL}/api/monitors`, { name: "list_monitors" });
+  const list = getJson(`${BASE_URL}/api/v1/jobs`, { name: "list_jobs" });
   if (list.status !== 200) return;
 
-  const first = list.json()?.items?.[0]?.id;
+  const first = list.json()?.jobs?.[0]?.id;
   if (first) {
-    getJson(`${BASE_URL}/api/monitors/${first}`, { name: "get_monitor" });
+    getJson(`${BASE_URL}/api/v1/jobs/${first}`, { name: "get_job" });
   }
 
   sleep(1);
@@ -174,11 +174,11 @@ export default function () {
 
 ```bash
 # Bundle + run
-scripts/run.sh tests/perf/load/monitors-load.ts
+scripts/run.sh tests/perf/load/jobs-load.ts
 
 # Inline env
 BASE_URL=https://staging.example.com TOKEN=$TOKEN \
-  scripts/run.sh tests/perf/smoke/monitors-smoke.ts
+  scripts/run.sh tests/perf/smoke/jobs-smoke.ts
 ```
 
 ### Locally (Docker — no k6 install required)
@@ -187,7 +187,7 @@ BASE_URL=https://staging.example.com TOKEN=$TOKEN \
 docker run --rm -i \
   -v "$PWD:/work" -w /work \
   -e BASE_URL -e TOKEN -e TENANT \
-  grafana/k6:latest run dist/monitors-load.js
+  grafana/k6:latest run dist/jobs-load.js
 ```
 
 ### With Grafana + InfluxDB output
@@ -195,14 +195,14 @@ docker run --rm -i \
 Add `-o influxdb=http://influxdb:8086/k6` to the k6 command. For local dev, use the official [grafana/k6 + Influx + Grafana docker-compose](https://github.com/grafana/k6/tree/master/samples/docker-compose) recipe and import dashboard `2587`.
 
 ```bash
-scripts/run.sh tests/perf/load/monitors-load.ts -o influxdb=http://localhost:8086/k6
+scripts/run.sh tests/perf/load/jobs-load.ts -o influxdb=http://localhost:8086/k6
 ```
 
 Prometheus remote-write (k6 v0.43+):
 
 ```bash
 K6_PROMETHEUS_RW_SERVER_URL=http://prom:9090/api/v1/write \
-  scripts/run.sh tests/perf/load/monitors-load.ts -o experimental-prometheus-rw
+  scripts/run.sh tests/perf/load/jobs-load.ts -o experimental-prometheus-rw
 ```
 
 ---
@@ -226,7 +226,7 @@ Copy this checklist for every new perf test:
 
 ## Integration with this repo
 
-- **Tags (Qase / reporting):** use `tags: { testType: "load", service: "monitors-api" }` in `options` — matches the `@App-*` tagging convention for filterability.
+- **Tags (Qase / reporting):** use `tags: { testType: "load", service: "jobs-api" }` in `options` — matches the `@App-*` tagging convention for filterability.
 - **Env loading:** mirror `env/.env.*` — perf tests read from `__ENV` (set via shell or `--env KEY=VAL`). Do **not** use `dotenv` — k6 runs in Goja and doesn't support Node modules.
 - **Fixtures:** put JSON/CSV under `tests/perf/fixtures/`. Load via `SharedArray` (never `require`/`import` runtime data).
 - **Zod validation:** skip it in perf tests — Zod schemas are heavy and distort measurements. Trust the API contract, verify only with lightweight `check()` calls on status + critical fields.
@@ -276,14 +276,14 @@ Run: `k6 run dist/test.js`
 ## Self-review checklist
 
 - [ ] Authorisation for the target environment exists in writing, with the window named.
-- [ ] Thresholds derived from the SLO and committed **before** the first run.
+- [ ] Thresholds derived from the SLO and committed **before** the first test run.
 - [ ] Executor and load shape stated explicitly: VUs, ramp, hold, iterations.
 - [ ] Warm-up period defined and excluded from the reported percentiles.
 - [ ] Per-VU data parameterised; no shared value on a uniqueness-constrained field.
 - [ ] Error rate reported alongside every latency figure, never latency alone.
-- [ ] Run reproducible from the committed script and config, with no local edits.
-- [ ] Result recorded with date, build, environment and load shape. A number missing any of the four is not comparable to the next run.
-- [ ] Environment left as found; nothing the run seeded survives it.
+- [ ] Test run reproducible from the committed script and config, with no local edits.
+- [ ] Result recorded with date, build, environment and load shape. A number missing any of the four is not comparable to the next test run.
+- [ ] Environment left as found; nothing the test run seeded survives it.
 
 ## Examples
 
@@ -295,7 +295,7 @@ Run: `k6 run dist/test.js`
 
 1. **Find the SLO.** If none exists, that is the first finding — propose one from current behaviour and get it agreed, rather than inventing a number inside the script.
 2. **Pick the shape.** A steady read endpoint under normal traffic is a ramp-and-hold, not a spike. State it: 50 VUs, 1-minute ramp, 5-minute hold.
-3. **Set both thresholds** — the latency percentile and the error rate. Both, or the run cannot distinguish fast-and-broken from slow-and-correct.
+3. **Set both thresholds** — the latency percentile and the error rate. Both, or the test run cannot distinguish fast-and-broken from slow-and-correct.
 4. **Warm up** for 30 seconds and exclude it from the reported figures.
 5. **Run, then read the error rate first.** If it is non-trivial, the latency number is not reportable yet.
 
@@ -316,12 +316,12 @@ The deliverable is a threshold that fails when the SLO is missed, not a graph.
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Latency looks excellent and the error rate is high | The load never reached the intended code path; requests are failing early and cheaply | Resolve the errors first. Read the error rate before any percentile. |
-| Results differ substantially run to run on the same build | No warm-up, too short a hold, or a noisy shared environment | Add warm-up, lengthen the hold, and record which environment produced the number. |
-| The run cannot fail | No thresholds, or thresholds set from the observed result after the fact | Derive thresholds from the SLO and commit them before running. |
+| Results differ substantially from one test run to the next on the same build | No warm-up, too short a hold, or a noisy shared environment | Add warm-up, lengthen the hold, and record which environment produced the number. |
+| The test run cannot fail | No thresholds, or thresholds set from the observed result after the fact | Derive thresholds from the SLO and commit them before running. |
 | The functional suite turns flaky while a load test runs | The load test is writing to a shared environment | Isolate the target, or schedule outside the functional window. |
 | Fine locally, terrible in CI | Different generator resources, or the generator itself is saturated | Check generator CPU and network before concluding anything about the service under test. |
-| The first run after a deploy is much worse | Cold caches and connection setup | Expected; that is what warm-up excludes. Report cold-start separately if it matters. |
-| Cannot compare this run to an earlier one | The earlier result lacks build, environment or load shape | Record all four with every result. Without them a number is not a baseline. |
+| The first test run after a deploy is much worse | Cold caches and connection setup | Expected; that is what warm-up excludes. Report cold-start separately if it matters. |
+| Cannot compare this test run to an earlier one | The earlier result lacks build, environment or load shape | Record all four with every result. Without them a number is not a baseline. |
 
 ## See Also
 
@@ -329,6 +329,6 @@ The deliverable is a threshold that fails when the SLO is missed, not a graph.
 - [`data-strategy`](../data-strategy/SKILL.md) — per-VU parameterisation. Shared fixed data is the most common cause of a meaningless load result.
 - [`config`](../config/SKILL.md) — environment URLs and tokens come from configuration, never from the script.
 - [`defect-prediction`](../defect-prediction/SKILL.md) — which endpoint to load-test first when the budget covers only a few.
-- [`flakiness-triage`](../flakiness-triage/SKILL.md) — when a load run destabilises the functional suite, that skill classifies the fallout.
+- [`flakiness-triage`](../flakiness-triage/SKILL.md) — when a load test run destabilises the functional suite, that skill classifies the fallout.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — a load generator against an unauthorised target is an attack; the authorisation discipline is shared.
 - Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — Sources of Truth applies to thresholds and URLs alike.
