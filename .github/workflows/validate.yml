@@ -56,6 +56,12 @@ jobs:
       - name: Version stamp — a stale stamp must not pass
         run: npm run test:stamp
 
+      # The bump reminder below runs with continue-on-error, so a crash there never fails a
+      # build: it just deletes the warning. This is where a crash does fail. A branch that
+      # deletes a skill must still get its report, with the unbumped edits beside it named.
+      - name: Version bump reminder — a deleted skill must not silence it
+        run: npm run test:bump
+
   plugin:
     name: Lint plugin rules
     runs-on: ubuntu-latest
