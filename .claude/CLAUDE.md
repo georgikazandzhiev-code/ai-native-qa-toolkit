@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 1.3.0 -->
+<!-- toolkit-version: 1.3.1 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -167,7 +167,7 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `skill-creator` | Authoring or refactoring a skill (manual) — owns the SKILL.md structure contract |
 | `test-case-generation` | Requirements + test cases from a user story / AC (manual) |
 
-Personas available as slash commands: `/bug-helper` (triage-first bug reports), `/test-case-helper` (test-case packages from a story/ticket), `/requirement-analyst` (static requirements review), `/acceptance-criteria-writer` (user stories + Gherkin AC).
+Personas available as slash commands: `/bug-helper` (triage-first bug reports), `/test-case-helper` (test-case packages from a story/ticket), `/requirement-analyst` (static requirements review), `/acceptance-criteria-writer` (user stories + Gherkin acceptance criteria from text or screenshots).
 
 When a skill is added, removed, or renamed, **update this table**. When investigating backend/frontend behavior, `git pull` the relevant repo first — stale copies cause wrong assumptions.
 
