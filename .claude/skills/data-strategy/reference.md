@@ -53,7 +53,7 @@ Side credentials: `APP_RESET_EMAIL` / `APP_RESET_PASSWORD` (per-test reset-passw
 | `QASE_API_TOKEN` / `QASE_PROJECT_CODE` | `playwright-qase-reporter` |
 | `QASE_REPORT` | gates whether the reporter is wired up |
 | `ENVIRONMENT` | selects the `.env.<environment>` file to load |
-| `CI` | toggles workers / retries in `playwright.config.ts` |
+| `CI` | toggles Playwright workers / retries in `playwright.config.ts` |
 
 ### 1.6 Aliasing rule (mandatory)
 
@@ -83,11 +83,11 @@ Boundary lists for parametrized negative tests.
 
 | File | Keys |
 |------|------|
-| `test-data/app/httpSyntheticValidation.json` | `invalidNames`, `invalidTargets`, `validMethods`, `methodsWithBody`, `methodsWithoutBody` |
-| `test-data/app/sslSyntheticValidation.json` | SSL boundary cases |
-| `test-data/app/mcpSyntheticValidation.json` | MCP boundary cases |
+| `test-data/app/httpJobValidation.json` | `invalidNames`, `invalidTargets`, `validMethods`, `methodsWithBody`, `methodsWithoutBody` |
+| `test-data/app/backupJobValidation.json` | backup-job boundary cases |
+| `test-data/app/webhookJobValidation.json` | webhook-job boundary cases |
 
-> Gap: no `dnsSyntheticValidation.json` / `tcpSyntheticValidation.json` / `websocketSyntheticValidation.json` / `icmpSyntheticValidation.json` / `probeValidation.json` files yet. Add when a per-type negative matrix grows beyond inline use.
+> Gap: no `emailJobValidation.json` / `sftpJobValidation.json` / `streamJobValidation.json` / `exportJobValidation.json` / `workerValidation.json` files yet. Add when a per-type negative matrix grows beyond inline use.
 
 ### 2.2 Sentinel / lookup files (Pattern 5)
 
@@ -95,19 +95,19 @@ Fixed ids and reference values.
 
 | File | Keys |
 |------|------|
-| `test-data/app/probe.json` | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, `sortFields`, `statuses`, `maxPageSize`, `defaultPageSize`, `defaultSort`, `defaultDirection`, `deploymentTypes`, `schemaNames` |
-| `test-data/app/probes.json` | `statusFilterOptions`, `typeFilterOptions`, `tableColumns`, `sortableColumns`, `statusCardTitles` (UI lookups) |
-| `test-data/app/alerts.json` | `invalidAlertIds`, `nonExistentAlertId`, `severities`, `states`, `activeStates`, `validTimeframes`, `sortableFields`, `sortDirections` |
-| `test-data/app/policy.json` | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, sort/paging defaults, `policyTypes`, `statuses`, `monitorTypes`, `severities`, `operators`, `evaluationWindows`, plus `name` / `description` / `consecutiveCount` / `severityCascade` boundary sub-objects |
-| `test-data/app/i18n.json` | Expected EN/DE UI strings per page area (`sidebar`, `dashboard`, `synthetics`, `alerts`, `policies`, `probes`, `metrics`, `profile`, `common`, `userMenu`, `theme`) for locale tests |
-| `test-data/app/synthetic-common.json` | `checkIntervals`, `timeout` |
-| `test-data/app/metrics.json` | metric query / sentinels |
-| `test-data/app/http-synthetic.json` | HTTP monitor config + sentinels |
-| `test-data/app/dns-synthetic.json` | DNS monitor config + sentinels |
-| `test-data/app/tcp-synthetic.json` | TCP monitor config + sentinels |
-| `test-data/app/ssl-synthetic.json` | SSL monitor config + sentinels |
-| `test-data/app/mcp-synthetic.json` | MCP monitor config + sentinels |
-| `test-data/app/websocket-synthetic.json` | WebSocket monitor config + sentinels |
+| `test-data/app/worker.json` | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, `sortFields`, `statuses`, `maxPageSize`, `defaultPageSize`, `defaultSort`, `defaultDirection`, `deploymentTypes`, `schemaNames` |
+| `test-data/app/workers.json` | `statusFilterOptions`, `typeFilterOptions`, `tableColumns`, `sortableColumns`, `statusCardTitles` (UI lookups) |
+| `test-data/app/notifications.json` | `invalidNotificationIds`, `nonExistentNotificationId`, `severities`, `states`, `activeStates`, `validTimeframes`, `sortableFields`, `sortDirections` |
+| `test-data/app/notification-rule.json` | `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, sort/paging defaults, `notificationRuleTypes`, `statuses`, `jobTypes`, `severities`, `operators`, `evaluationWindows`, plus `name` / `description` / `consecutiveCount` / `severityCascade` boundary sub-objects |
+| `test-data/app/i18n.json` | Expected EN/DE UI strings per page area (`sidebar`, `dashboard`, `jobs`, `notifications`, `notificationRules`, `workers`, `runStats`, `profile`, `common`, `userMenu`, `theme`) for locale tests |
+| `test-data/app/job-common.json` | `runIntervals`, `timeout` |
+| `test-data/app/run-stats.json` | run-stats query / sentinels |
+| `test-data/app/http-job.json` | HTTP job config + sentinels |
+| `test-data/app/email-job.json` | email-job config + sentinels |
+| `test-data/app/sftp-job.json` | SFTP job config + sentinels |
+| `test-data/app/backup-job.json` | backup-job config + sentinels |
+| `test-data/app/webhook-job.json` | webhook-job config + sentinels |
+| `test-data/app/stream-job.json` | stream-job config + sentinels |
 
 ### 2.3 Mock fixtures (Pattern 5 — but treat as TECHNICAL DEBT when introduced)
 
@@ -118,9 +118,9 @@ Frozen pseudo-entities used as mocks in front-end-only paths. Avoid for any test
 **When the first mock-JSON file is introduced**, mark its import at the call site with a `// stub for route.fulfill` comment so it is unmistakably distinguishable from a Pattern-5 real-data import:
 
 ```typescript
-import probeListStub from '../../test-data/app/mocks/probe-list.json'; // stub for route.fulfill
+import workerListStub from '../../test-data/app/mocks/worker-list.json'; // stub for route.fulfill
 // ...
-await page.route('**/api/v1/probes*', (route) => route.fulfill({ json: probeListStub }));
+await page.route('**/api/v1/workers*', (route) => route.fulfill({ json: workerListStub }));
 ```
 
 A real-data JSON import (sentinels, boundary matrices) is consumed by the test logic; a mock stub is only ever fed to `route.fulfill`. The annotation prevents a future reader from mistaking a front-end-only mock for a live-backend fixture (the exact drift Pattern 6 / 7 exist to avoid).
@@ -135,24 +135,24 @@ Some JSON files are consumed via a loader rather than a direct import to compute
 
 | File | Generator | Pattern |
 |------|-----------|---------|
-| `helpers/app/probes.ts` | `buildCreateProbeBody(overrides?)` | 2 — **typed factory missing**; returns `Record<string, unknown>` (see playbook §3) |
-| `helpers/app/probes.ts` | `buildUpdateProbeBody(overrides?)` | 2 |
-| `helpers/app/probes.ts` | `buildListProbesUrl(params?)` | 2 (request shaping) |
-| `helpers/app/synthetics.ts` | `buildCreateSyntheticBody(probeIds, overrides?)` (ICMP — base) | 2 — **typed factory missing** |
-| `helpers/app/synthetics.ts` | `buildCreateHTTPSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
-| `helpers/app/synthetics.ts` | `buildCreateWebSocketSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
-| `helpers/app/synthetics.ts` | `buildCreateTCPSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
-| `helpers/app/synthetics.ts` | `buildCreateDNSSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
-| `helpers/app/synthetics.ts` | `buildCreateSSLSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
-| `helpers/app/synthetics.ts` | `buildCreateMCPSyntheticBody(probeIds, overrides?)` | 2 — **centralize** |
-| `helpers/app/synthetics.ts` | `buildUpdateSyntheticBody(overrides?)` | 2 |
-| `helpers/app/synthetics.ts` | `buildListSyntheticsUrl(params?)` | 2 (request shaping) |
+| `helpers/app/workers.ts` | `buildCreateWorkerBody(overrides?)` | 2 — **typed factory missing**; returns `Record<string, unknown>` (see playbook §3) |
+| `helpers/app/workers.ts` | `buildUpdateWorkerBody(overrides?)` | 2 |
+| `helpers/app/workers.ts` | `buildListWorkersUrl(params?)` | 2 (request shaping) |
+| `helpers/app/jobs.ts` | `buildCreateJobBody(workerIds, overrides?)` (defaults to type `export`) | 2 — **typed factory missing** |
+| `helpers/app/jobs.ts` | `buildCreateHTTPJobBody(workerIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/jobs.ts` | `buildCreateStreamJobBody(workerIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/jobs.ts` | `buildCreateSFTPJobBody(workerIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/jobs.ts` | `buildCreateEmailJobBody(workerIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/jobs.ts` | `buildCreateBackupJobBody(workerIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/jobs.ts` | `buildCreateWebhookJobBody(workerIds, overrides?)` | 2 — **centralize** |
+| `helpers/app/jobs.ts` | `buildUpdateJobBody(overrides?)` | 2 |
+| `helpers/app/jobs.ts` | `buildListJobsUrl(params?)` | 2 (request shaping) |
 | `helpers/app/adminUsers.ts` | `generateUserPayload()` | 2 — **lacks `Partial<T>` overrides** |
 | `helpers/app/users.ts` | `buildCreateUserBody(overrides?)` | 2 |
 | `helpers/app/users.ts` | `buildUpdateUserBody(overrides?)` | 2 |
 | `helpers/app/users.ts` | `buildListUsersUrl(params?)` | 2 (request shaping) |
 | `helpers/app/adminRealms.ts` | `buildRealmSettings()` | 2 — **lacks `Partial<T>` overrides** |
-| `helpers/app/data.ts` | `buildDataQueryUrl(params)` | 2 (request shaping) |
+| `helpers/app/run-stats.ts` | `buildRunStatsQueryUrl(params)` | 2 (request shaping) |
 | `helpers/util/dataGenerator.ts` | `generateRandomAmount(min?, max?)` | 1/2 — **prefer faker; see playbook §6** |
 
 When `rg buildCreate<Entity>Body|create<Entity>Data helpers/` returns a hit for your entity, consume it. If the existing factory does not accept overrides, add `overrides?: Partial<T>` rather than forking.
@@ -161,18 +161,18 @@ When `rg buildCreate<Entity>Body|create<Entity>Data helpers/` returns a hit for 
 
 Always paired: `createX` + `deleteX` (or equivalent cleanup). Body comes from a Pattern-2 factory.
 
-### Synthetics
+### Jobs
 
-- `helpers/app/synthetics.ts`:
-  - **CRUD**: `createSyntheticMonitor` / `getSyntheticMonitor` / `updateSyntheticMonitor` / `deleteSyntheticMonitor` / `listSynthetics`
-  - **Cleanup**: `cleanupUiCreatedSyntheticMonitors(apiRequest, token, refs)` — UI-friendly delete-by-name with retry; `cleanupProbesAndSynthetics(apiRequest, probeIds, syntheticIds, headers)` — orchestrated cleanup respecting probe→synthetic dependency
+- `helpers/app/jobs.ts`:
+  - **CRUD**: `createJob` / `getJob` / `updateJob` / `deleteJob` / `listJobs`
+  - **Cleanup**: `cleanupUiCreatedJobs(apiRequest, token, refs)` — UI-friendly delete-by-name with retry; `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` — orchestrated cleanup respecting worker→job dependency
 
-### Probes
+### Workers
 
-- `helpers/app/probes.ts`:
-  - **CRUD**: `createProbe` / `listProbes` / `getProbe` / `updateProbe` / `deleteProbe`
-  - **Read**: `getProbesByIds(apiRequest, ids, headers)`, `getProbeConfig(apiRequest, id, type, headers)`, `getProbeSchema(apiRequest, name, headers)`
-  - **Cleanup**: `cleanupProbes(apiRequest, probeIds, headers)`
+- `helpers/app/workers.ts`:
+  - **CRUD**: `createWorker` / `listWorkers` / `getWorker` / `updateWorker` / `deleteWorker`
+  - **Read**: `getWorkersByIds(apiRequest, ids, headers)`, `getWorkerConfig(apiRequest, id, type, headers)`, `getWorkerSchema(apiRequest, name, headers)`
+  - **Cleanup**: `cleanupWorkers(apiRequest, workerIds, headers)`
 
 ### Admin tenants
 
@@ -197,9 +197,9 @@ Always paired: `createX` + `deleteX` (or equivalent cleanup). Body comes from a 
 
 - `helpers/app/tenant-schema.ts` — `getTenantSchema(apiRequest, name?, token?)`
 
-### Data / metrics
+### Run stats
 
-- `helpers/app/data.ts` — `getSyntheticMetrics` / `queryData` / `queryMetrics` / `buildDataQueryUrl`
+- `helpers/app/run-stats.ts` — `getJobRunStats` / `queryRunStats` / `aggregateRunStats` / `buildRunStatsQueryUrl`
 
 ### User lifecycle (Pattern 7 backbone — Keycloak side)
 
@@ -313,13 +313,13 @@ For GET endpoints that need an existing entity, the convention is:
 let seededId: string;
 
 test.beforeAll(async ({ apiRequest }) => {
-    const { body } = await apiRequest<ListSyntheticsResponse>({
+    const { body } = await apiRequest<ListJobsResponse>({
         method: 'GET',
-        url: appConfig.api.SYNTHETICS,
+        url: appConfig.api.JOBS,
         baseUrl: appConfig.apiUrl,
         headers: process.env.USER_ACCESS_TOKEN_FULL,
     });
-    seededId = ListSyntheticsResponseSchema.parse(body).synthetics[0].id;
+    seededId = ListJobsResponseSchema.parse(body).jobs[0].id;
 });
 ```
 

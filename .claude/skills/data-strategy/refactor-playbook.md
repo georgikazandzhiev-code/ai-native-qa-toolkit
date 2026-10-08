@@ -6,31 +6,31 @@ Six numbered cleanups for the duplication and inconsistency hot spots already in
 
 > Sections § 2 and § 4 are **ported verbatim from the upstream `the upstream reference framework` data-strategy playbook** with no changes to body, paths, or examples. They are preserved as faithful copies for two reasons: (1) so this skill matches the upstream playbook 1:1 in section count and structure, and (2) so the rules become immediately actionable if the corresponding patterns are introduced into this project later. Each verbatim section is flagged with a "Not applicable to this project today" annotation at the top.
 
-## 1. Stop inlining synthetic / probe payloads — consume the existing builder
+## 1. Stop inlining job / worker payloads — consume the existing builder
 
 ### Symptoms
 
-- `helpers/app/probes.ts` defines `buildCreateProbeBody`, `buildUpdateProbeBody`, `buildListProbesUrl` with override support.
-- `helpers/app/synthetics.ts` defines `buildCreateSyntheticBody` (ICMP — base) plus six sibling per-type builders (`buildCreateHTTPSyntheticBody`, `buildCreateWebSocketSyntheticBody`, `buildCreateTCPSyntheticBody`, `buildCreateDNSSyntheticBody`, `buildCreateSSLSyntheticBody`, `buildCreateMCPSyntheticBody`) and `buildUpdateSyntheticBody` / `buildListSyntheticsUrl`.
-- Specs that nevertheless hand-roll the same shape with `faker.*` inline are drift. Every business-rule change to a synthetic or probe shape requires touching ≥4 places.
+- `helpers/app/workers.ts` defines `buildCreateWorkerBody`, `buildUpdateWorkerBody`, `buildListWorkersUrl` with override support.
+- `helpers/app/jobs.ts` defines `buildCreateJobBody` (defaults to type `export`) plus six sibling per-type builders (`buildCreateHTTPJobBody`, `buildCreateStreamJobBody`, `buildCreateSFTPJobBody`, `buildCreateEmailJobBody`, `buildCreateBackupJobBody`, `buildCreateWebhookJobBody`) and `buildUpdateJobBody` / `buildListJobsUrl`.
+- Specs that nevertheless hand-roll the same shape with `faker.*` inline are drift. Every business-rule change to a job or worker shape requires touching ≥4 places.
 
 ### Migration steps
 
 1. `rg "faker\." tests/app/api/<resource>.spec.ts tests/app/e2e/<resource>.spec.ts tests/app/functional/<resource>.spec.ts` to enumerate offending blocks for each resource.
-2. For each inline block, replace with `buildCreateProbeBody({ /* only fields the test cares about */ })` or the matching synthetic-type builder. Drop `faker` import if it becomes unused.
+2. For each inline block, replace with `buildCreateWorkerBody({ /* only fields the test cares about */ })` or the matching job-type builder. Drop `faker` import if it becomes unused.
 3. For pairing tests, prefer an Object Mother that delegates to the base builder (planned).
-4. If a test needs a field the builder doesn't randomize (e.g., a specific check interval or region), pass it via overrides — do NOT add a new builder.
+4. If a test needs a field the builder doesn't randomize (e.g., a specific run interval or region), pass it via overrides — do NOT add a new builder.
 5. If a test exercises a *boundary* on a single field, the override goes in the test:
    ```typescript
-   const { name: _ignored, ...rest } = buildCreateProbeBody();
+   const { name: _ignored, ...rest } = buildCreateWorkerBody();
    const body = { ...rest, name: tooLongString };
    ```
 6. Update [`api-testing/SKILL.md`](../api-testing/SKILL.md) Anti-patterns to add a "no inline faker for entities with a builder" line if missing.
 
 ### Verification
 
-- `rg "name:\s*\`qa-(probe|icmp|http|tcp|dns|ssl|mcp|ws)-" tests/app/` → only inside helper files (`helpers/app/probes.ts`, `helpers/app/synthetics.ts`).
-- Each touched spec imports from `helpers/app/probes` or `helpers/app/synthetics` and has **no** literal `faker.helpers.arrayElement([60, 300, 600]` (those live only inside the builder).
+- `rg "name:\s*\`qa-(worker|export|http|sftp|email|backup|webhook|stream)-" tests/app/` → only inside helper files (`helpers/app/workers.ts`, `helpers/app/jobs.ts`).
+- Each touched spec imports from `helpers/app/workers` or `helpers/app/jobs` and has **no** literal `faker.helpers.arrayElement([60, 300, 600]` (those live only inside the builder).
 - Suite passes locally and in CI.
 
 ## 2. Collapse asset-pair near-duplicate
@@ -95,22 +95,22 @@ export function createAssetPairDataForUI(): AssetPairData {
 - Both functions are exported from a single file.
 - `rg "blockChainIdBase|blockChainIdQuoting" helpers/` returns 0 (those constants now appear only inside the factory's defaults).
 
-## 3. Move synthetic / probe / tenant / user seeders to assertion-style setup helpers
+## 3. Move job / worker / tenant / user seeders to assertion-style setup helpers
 
 ### Symptoms
 
 Every Pattern-6 seeder in `helpers/app/` is currently **passthrough** — it forwards `body` and `headers` to `apiRequest` and returns `{ status, body }` raw, leaving the spec to assert status and Zod-parse the response:
 
 ```typescript
-// helpers/app/probes.ts (today)
-export async function createProbe<T = CreateProbeResponse>(
+// helpers/app/workers.ts (today)
+export async function createWorker<T = CreateWorkerResponse>(
     apiRequest: ApiRequestFn,
     body: Record<string, unknown>,
     headers?: string,
 ): Promise<ApiRequestResponse<T>> {
     return apiRequest<T>({
         method: 'POST',
-        url: appConfig.api.PROBES,
+        url: appConfig.api.WORKERS,
         baseUrl: appConfig.apiUrl,
         headers,
         body,
@@ -119,10 +119,10 @@ export async function createProbe<T = CreateProbeResponse>(
 ```
 
 Consequences:
-- The seeder is doing one job (HTTP only). Factory + seeder are NOT yet integrated.
+- The seeder does one thing (HTTP only). Factory + seeder are NOT yet integrated.
 - No `expect(status).toBe(201)` inside the helper → every spec must re-assert.
 - No Zod parse → every spec must re-parse.
-- No exported typed factory (`ProbeData` / `SyntheticData` / `TenantData` / `UserData`) — `buildCreate<X>Body` returns `Record<string, unknown>`.
+- No exported typed factory (`WorkerData` / `JobData` / `TenantData` / `UserData`) — `buildCreate<X>Body` returns `Record<string, unknown>`.
 - Same shape is duplicated for negative cases inside individual specs.
 
 ### Target
@@ -131,15 +131,15 @@ Introduce paired typed factories + assertion-style setup helpers in `helpers/app
 
 ```typescript
 // helpers/app/testDataGenerators.ts (factory — Pattern 2)
-export type ProbeData = {
+export type WorkerData = {
     name: string;
     location: string;
     region: string;
 };
 
-export function createProbeData(overrides: Partial<ProbeData> = {}): ProbeData {
+export function createWorkerData(overrides: Partial<WorkerData> = {}): WorkerData {
     return {
-        name: `qa-probe-${faker.string.alphanumeric(8).toLowerCase()}`,
+        name: `qa-worker-${faker.string.alphanumeric(8).toLowerCase()}`,
         location: faker.location.city(),
         region: faker.location.country(),
         ...overrides,
@@ -150,29 +150,29 @@ export function createProbeData(overrides: Partial<ProbeData> = {}): ProbeData {
 Update each resource helper to expose an assertion-style setup that consumes the factory:
 
 ```typescript
-// helpers/app/probes.ts
-export async function setupProbe(
+// helpers/app/workers.ts
+export async function setupTestWorker(
     apiRequest: ApiRequestFn,
-    overrides?: Partial<ProbeData>,
-): Promise<CreateProbeResponse> {
-    const { status, body } = await apiRequest<CreateProbeResponse>({
+    overrides?: Partial<WorkerData>,
+): Promise<CreateWorkerResponse> {
+    const { status, body } = await apiRequest<CreateWorkerResponse>({
         method: 'POST',
-        url: appConfig.api.PROBES,
+        url: appConfig.api.WORKERS,
         baseUrl: appConfig.apiUrl,
         headers: process.env.USER_ACCESS_TOKEN_FULL,
-        body: createProbeData(overrides),
+        body: createWorkerData(overrides),
     });
     expect(status).toBe(201);
-    return CreateProbeResponseSchema.parse(body);
+    return CreateWorkerResponseSchema.parse(body);
 }
 
-export async function teardownProbe(
+export async function teardownTestWorker(
     apiRequest: ApiRequestFn,
     id: string,
 ): Promise<void> {
     const { status } = await apiRequest<null>({
         method: 'DELETE',
-        url: `${appConfig.api.PROBES}/${id}`,
+        url: `${appConfig.api.WORKERS}/${id}`,
         baseUrl: appConfig.apiUrl,
         headers: process.env.USER_ACCESS_TOKEN_FULL,
     });
@@ -180,11 +180,11 @@ export async function teardownProbe(
 }
 ```
 
-Apply the same shape to `setupSynthetic` (and per-type Object Mothers `setupHttpSynthetic`, `setupTcpSynthetic`, …), `setupTenant`, and `setupUser`.
+Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, `setupSftpJob`, …), `setupTenant`, and `setupUser`.
 
 ### Migration steps
 
-1. Add typed factories (`ProbeData`, `SyntheticData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to `helpers/app/testDataGenerators.ts` (create the file).
+1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to `helpers/app/testDataGenerators.ts` (create the file).
 2. Replace each `buildCreate<X>Body` body with a delegation to the new factory; keep the existing function as a thin wrapper for backward compatibility, marked `@deprecated`.
 3. Add assertion-style `setup<X>` / `teardown<X>` to each resource helper file. The existing passthrough `create<X>` / `delete<X>` stays for advanced specs that need to assert non-2xx outcomes (negative tests).
 4. Migrate specs one resource at a time: every `beforeAll`/`beforeEach` that does `await create<X>(...)` followed by status + parse becomes `await setup<X>(...)`. Every `afterAll`/`afterEach` cleanup becomes `await teardown<X>(...)`.
@@ -193,10 +193,10 @@ Apply the same shape to `setupSynthetic` (and per-type Object Mothers `setupHttp
 
 ### Verification
 
-- `rg "create(Probe|Synthetic|Tenant|User)Data" helpers/` returns hits only in `helpers/app/testDataGenerators.ts`.
+- `rg "create(Worker|Job|Tenant|User)Data" helpers/` returns hits only in `helpers/app/testDataGenerators.ts`.
 - `rg "expect\(status\)\.toBe\(201\)" tests/app/api/` count drops as setup helpers absorb the assertion.
 - `rg "Schema\.parse\(body\)" tests/app/api/` count drops as setup helpers absorb the parse.
-- Probe / synthetic / tenant / user CRUD specs still pass.
+- Worker / job / tenant / user CRUD specs still pass.
 
 ## 4. Replace `mockedCustomer.json` usage with real seeding
 
@@ -238,7 +238,7 @@ Apply the same shape to `setupSynthetic` (and per-type Object Mothers `setupHttp
 ### Symptoms
 
 ```typescript
-// tests/app/api/monitoring-service/metrics/synthetic-metrics.spec.ts
+// tests/app/api/jobs-service/run-stats/job-run-stats.spec.ts
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
@@ -250,7 +250,7 @@ const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
 
 ```typescript
-// tests/app/api/monitoring-service/probes/probes.spec.ts
+// tests/app/api/jobs-service/workers/workers.spec.ts
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
@@ -315,8 +315,8 @@ Open one PR per playbook §. Each PR scope ≤300 LOC. Run the following before 
 
 ```bash
 # Drift audit — applicable sections (§§ 1, 3, 5, 6)
-rg "name:\s*\`qa-(probe|icmp|http|tcp|dns|ssl|mcp|ws)-" tests/app/
-rg "create(Probe|Synthetic|Tenant|User)Data" helpers/
+rg "name:\s*\`qa-(worker|export|http|sftp|email|backup|webhook|stream)-" tests/app/
+rg "create(Worker|Job|Tenant|User)Data" helpers/
 
 # Aliasing audit (§ 5)
 rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/app/
