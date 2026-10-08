@@ -64,6 +64,24 @@ A `major` bump with no history entry is the failure this table exists to prevent
 
 **Agents suggest, they don't block.** When planning, they name the PR boundaries before starting (`ai-native-workflow`, Plan phase). When a shippable unit is done, they propose opening its PR. Before pushing, `pr-review` flags a mixed diff and proposes a split. If the author decides to keep the scope, the agent carries on with the work and the review, and the PR description says why.
 
+## Example domain
+
+Every example in the skills uses one invented product: a **scheduled-jobs platform**. A real product's domain in the examples is a map of that product: its services, its endpoints, its failure modes. The invented domain keeps the structure the lessons need, such as typed configurations, agents, slow-arriving data, rules and statuses. It doesn't describe anyone's system.
+
+| Concept | Example domain | Identifiers |
+|---|---|---|
+| Main resource, with a type that decides its config | **job**, typed `http` / `email` / `export` / `webhook` | `Job`, `jobs`, `JobSchema`, `jobsPage`, `createJobPage`, `listJobs`, `createJob`, `deleteJob` |
+| Agent that executes the resource, in a location | **worker**, in a **region** | `Worker`, `workers`, `WorkerSchema`, `workersPage`, `createWorker`, `deleteWorker` |
+| Data that arrives minutes after creation | **run stats**, and a run's **steps** | `RunStats`, `runStats`, `RunStep` |
+| Event raised by a rule | **notification**, raised by a **notification rule** | `Notification`, `NotificationRule`, `notificationRulesPage` |
+| Resource state | **status**: `passing` / `failing` / `degraded` / `paused` | `JobStatus` |
+| Service folders and routes | `jobs-service/` (sub-folders `jobs/`, `workers/`, `run-stats/`), `notification-service/`, `tenant-service/`, `shared/`; `/api/v1/jobs`, `/api/v1/workers` | — |
+| Internals for distributed-failure cases | a **message queue**, **executors**, a **scheduler** | — |
+
+These are generic and stay as they are: **tenant**, **user**, roles, and named public tools (Keycloak, Mailpit, Radix, Qase, k6).
+
+When a lesson depends on a detail the table doesn't cover, invent it inside this domain and add a row here in the same PR. Don't borrow it from a real product. The rewrite lands one skill per PR. Until every skill is done, an identifier can appear in both its old and its new form.
+
 ## What CI refuses, and what it cannot
 
 Three jobs run on every push and every pull request (`.github/workflows/validate.yml`).
