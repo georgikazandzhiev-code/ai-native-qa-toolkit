@@ -77,6 +77,11 @@ Every example in the skills uses one invented product: a **scheduled-jobs platfo
 | Resource state | **status**: `passing` / `failing` / `degraded` / `paused` | `JobStatus` |
 | Service folders and routes | `jobs-service/` (sub-folders `jobs/`, `workers/`, `run-stats/`), `notification-service/`, `tenant-service/`, `shared/`; `/api/v1/jobs`, `/api/v1/workers` | — |
 | Internals for distributed-failure cases | a **message queue**, **executors**, a **scheduler** | — |
+| More job types, where a lesson needs more than four | `sftp` (host-only target, port in config), `backup` (port and retention days), `stream` (a `wss://` target) | `buildCreateSFTPJobBody`, `buildCreateBackupJobBody`, `buildCreateStreamJobBody` |
+| Type-specific config | `export` `{ recordRunSteps }`, `http` and `stream` `{ verifySsl }`, `sftp` `{ port }`, `email` `{ bodyFormat }`, `backup` `{ port, retentionDays }`, `webhook` `{ description }` | `buildCreateJobBody` (defaults to type `export`) |
+| Scheduling and assignment | how often a job runs; the workers assigned to it (nullable) | `runInterval`, `VALID_RUN_INTERVALS`, `workerIds`, `assignments`, `JobAssignmentSchema` |
+| Run-stats endpoints and the store behind them | per-job run-stat definitions, a catalog, an expression query and an aggregate query; the store's responses may carry extra fields | `/api/v1/jobs/:id/run-stats`, `/run-stats`, `/run-stats/aggregate`, `RunStatSchema`, `StatsStoreResponseSchema`, `getJobRunStats` |
+| Pausing, and a long-lived fixture | pause and resume a job (409 when already paused); a shared fixture that provisions worker → jobs → notification rule → firing notifications | `/api/v1/jobs/:id/pause`, `PauseJobResponseSchema`, `setupFiringNotificationsFixture` |
 
 These are generic and stay as they are: **tenant**, **user**, roles, and named public tools (Keycloak, Mailpit, Radix, Qase, k6).
 

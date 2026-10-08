@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 1.2.1
+version: 1.2.2
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -17,13 +17,13 @@ This skill is the **single source of truth** for API-test invariants and workflo
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, workflow, decisions, anti-patterns.** Teaches the model how to think about API tests. | **Always** — on any API-testing task. |
-| **`reference.md`** | **Catalog of facts.** Helper inventory by resource, token catalog, URL catalog, response shape catalog, error envelope schemas, schema patterns by data type, decision tree, Mailpit recipe, cross-tenant patterns, form-encoded recipe, common request recipes. | **Load During Phase 2** (Coverage Plan) and on lookups — "What helpers exist for synthetics?" / "What's the shape of a list response?" / "Which token for 403?" |
-| **`templates.md`** | **Copy-paste skeletons.** Full CRUD spec, schema file, helper file, body builder, test-data JSON, E2E flow, cross-tenant isolation spec, per-monitor-type body shapes. | **Load During Phase 4** (Scaffold) — scaffolding a new spec, schema, helper, or test-data file. |
+| **`reference.md`** | **Catalog of facts.** Helper inventory by resource, token catalog, URL catalog, response shape catalog, error envelope schemas, schema patterns by data type, decision tree, Mailpit recipe, cross-tenant patterns, form-encoded recipe, common request recipes. | **Load During Phase 2** (Coverage Plan) and on lookups — "What helpers exist for jobs?" / "What's the shape of a list response?" / "Which token for 403?" |
+| **`templates.md`** | **Copy-paste skeletons.** Full CRUD spec, schema file, helper file, body builder, test-data JSON, E2E flow, cross-tenant isolation spec, per-job-type body shapes. | **Load During Phase 4** (Scaffold) — scaffolding a new spec, schema, helper, or test-data file. |
 | **`http-method-coverage.md`** | **Per-verb coverage methodology.** GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS/405 playbook with what-to-test, what-not-to-test, anti-patterns, and self-review checklists per verb. Includes resource × method matrix. | **Load During Phase 3** (Negative Matrix) — "What do I owe for this verb on this resource?" — open after the workflow tells you to author tests for a specific endpoint × method. |
 
 **Boundary rule:** decisions, rules, and anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Skeletons live in `templates.md`. Per-verb playbooks live in `http-method-coverage.md`. If you find rule content in a catalog file (or vice versa), it's drift — fix it.
 
-> **Source-of-truth philosophy.** The patterns described here are based on the reliable, battle-tested patterns of the upstream framework (`the upstream reference framework`), adapted to this project's domain (single `app/` area, multi-tenant network monitoring, no response envelope, Mailpit instead of Mailhog). When the current codebase deviates from a upstream pattern, this skill encodes the **upstream-correct pattern** (e.g. shared error/pagination schemas in `util/common.ts`, `z.string().uuid()` by default, full barrel re-exports, assertion-style helpers for setup) and flags the local deviation as drift to converge. Do **not** treat the current state of the codebase as canonical; treat it as the starting point for the next consolidation pass.
+> **Source-of-truth philosophy.** The patterns described here are based on the reliable, battle-tested patterns of the upstream framework (`the upstream reference framework`), adapted to this project's domain (single `app/` area, multi-tenant scheduled-jobs platform, no response envelope, Mailpit instead of Mailhog). When the current codebase deviates from a upstream pattern, this skill encodes the **upstream-correct pattern** (e.g. shared error/pagination schemas in `util/common.ts`, `z.string().uuid()` by default, full barrel re-exports, assertion-style helpers for setup) and flags the local deviation as drift to converge. Do **not** treat the current state of the codebase as canonical; treat it as the starting point for the next consolidation pass.
 
 
 ## Critical
@@ -59,12 +59,12 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
 - [ ] 6. Add static fixtures (`invalidId`, `nonExistentId`, …) to test-data/app/<resource>.json if needed.
 - [ ] 7. Author the spec from templates.md. Test name format:
         `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used in 100% of
-        specs today (e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`).
+        specs today (e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`).
         Keep `<reason>` short and behavior-focused; omit it when the status alone is unambiguous (e.g.
-        `Verify DELETE /synthetics/{id} returns 200`).
+        `Verify DELETE /jobs/{id} returns 200`).
 - [ ] 8. Cover the negative matrix (see § The negative test matrix).
-- [ ] 9. Wire cleanup (afterEach/afterAll DELETE through the helper). For synthetics-with-probes use
-        `cleanupProbesAndSynthetics` — synthetics MUST be deleted before probes (409 otherwise).
+- [ ] 9. Wire cleanup (afterEach/afterAll DELETE through the helper). For jobs-with-workers use
+        `cleanupWorkersAndJobs` — jobs MUST be deleted before workers (409 otherwise).
 - [ ] 10. Run: `npx playwright test <spec> --grep-invert "@App-E2E"` (or `--grep "@App-API"`) and read lints.
 ```
 
@@ -83,21 +83,21 @@ Full TypeScript signature, parameter usage table, and `headers` overload semanti
 
 This API does **not** use a global response envelope. Responses are direct or resource-keyed.
 
-1. **One file per resource** under `fixtures/api/schemas/app/<resource>.ts`. **There is no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file (`fixtures/api/schemas/app/synthetic.ts`, etc.). A shared-schema barrel does exist at `fixtures/api/schemas/util/index.ts` (re-exports `./common` and `./keycloak`). **Name-collision rule:** never dodge collisions with `as <Alias>` re-exports; pick distinct names at definition. The `UserSchema` collision is **still live today** (`tenant.ts:170` and `user.ts:32` both export a `UserSchema`) — the `UserSchema` → `AdminUserSchema` rename remains unresolved.
-2. **Reusable shared schemas live in `fixtures/api/schemas/util/common.ts` — importing from there is correct and recommended.** It exports `PageInfoSchema` (`z.strictObject`), `APIErrorSchema` (`z.strictObject`), and `JSONSchemaResponseSchema`. `synthetic.ts` and `policy.ts` import/re-export from it; `alert.ts` flows through `policy.ts`; `probe.ts` and `data.ts` flow through `synthetic.ts`. Local copies of `APIErrorSchema` still remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` (the `tenant-schema.ts` copy has a divergent `details` shape); `GatewayErrorSchema` is not yet centralized (local `z.strictObject` copies in `tenant.ts`, `user.ts`, `policy.ts`). When touching any duplicating file, centralize through `util/common.ts` rather than duplicating again — full inventory in `reference.md § Error catalog`.
+1. **One file per resource** under `fixtures/api/schemas/app/<resource>.ts`. **There is no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file (`fixtures/api/schemas/app/job.ts`, etc.). A shared-schema barrel does exist at `fixtures/api/schemas/util/index.ts` (re-exports `./common` and `./keycloak`). **Name-collision rule:** never dodge collisions with `as <Alias>` re-exports; pick distinct names at definition. The `UserSchema` collision is **still live today** (`tenant.ts:170` and `user.ts:32` both export a `UserSchema`) — the `UserSchema` → `AdminUserSchema` rename remains unresolved.
+2. **Reusable shared schemas live in `fixtures/api/schemas/util/common.ts` — importing from there is correct and recommended.** It exports `PageInfoSchema` (`z.strictObject`), `APIErrorSchema` (`z.strictObject`), and `JSONSchemaResponseSchema`. `job.ts` and `notification-rule.ts` import/re-export from it; `notification.ts` flows through `notification-rule.ts`; `worker.ts` and `run-stats.ts` flow through `job.ts`. Local copies of `APIErrorSchema` still remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` (the `tenant-schema.ts` copy has a divergent `details` shape); `GatewayErrorSchema` is not yet centralized (local `z.strictObject` copies in `tenant.ts`, `user.ts`, `notification-rule.ts`). When touching any duplicating file, centralize through `util/common.ts` rather than duplicating again — full inventory in `reference.md § Error catalog`.
 3. Always export both the schema and the inferred type:
 
 ```typescript
-export const SyntheticSchema = z.strictObject({ /* ... */ });
-export type Synthetic = z.infer<typeof SyntheticSchema>;
+export const JobSchema = z.strictObject({ /* ... */ });
+export type Job = z.infer<typeof JobSchema>;
 ```
 
-4. **Use `z.strictObject()` for every new schema** — rejects unexpected fields, catches additive API drift, matches upstream's default. The strict migration is **essentially complete**: ~93 `z.strictObject` definitions across `fixtures/api/schemas/` vs 5 lax ones, all intentional or non-response shapes (2 in `data.ts` `VMResponseSchema` with an inline "intentional" comment — VictoriaMetrics responses may include extra fields; 2 credential-input schemas in `util/keycloak.ts`; 1 deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`, whose extra keys are the point of the endpoint). Do not author new lax `z.object` schemas.
+4. **Use `z.strictObject()` for every new schema** — rejects unexpected fields, catches additive API drift, matches upstream's default. The strict migration is **essentially complete**: ~93 `z.strictObject` definitions across `fixtures/api/schemas/` vs 5 lax ones, all intentional or non-response shapes (2 in `run-stats.ts` `StatsStoreResponseSchema` with an inline "intentional" comment — the third-party run-stats store's responses may include extra fields; 2 credential-input schemas in `util/keycloak.ts`; 1 deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`, whose extra keys are the point of the endpoint). Do not author new lax `z.object` schemas.
 5. Response shape catalog (no envelope):
    - **List** (paginated): `{ pageInfo: PageInfoSchema, <resourcePlural>: z.array(<Resource>Schema) }`.
-   - **Single (GET by id)**: `{ <resource>: <Resource>Schema }` (e.g. `{ tenant }`, `{ synthetic }`, `{ user }`).
-   - **Create / Modify**: `{ <resource>Id: string, status: StatusSchema | string }`. The id field name varies (`tenantId`, `syntheticId`, `userId`, `probeId`). `status` is `StatusSchema = z.enum(["created", "updated", "deleted", "logged out"])` for tenant/user/realm endpoints; some endpoints (probes, synthetics) return plain `z.string()` — match the actual API.
-   - **Update / Delete**: `{ status: StatusSchema }` only, OR `{ <resource>Id, status, <resource>?: <Resource>Schema }` when the API echoes the updated entity (see `UpdateSyntheticResponseSchema`).
+   - **Single (GET by id)**: `{ <resource>: <Resource>Schema }` (e.g. `{ tenant }`, `{ job }`, `{ user }`).
+   - **Create / Modify**: `{ <resource>Id: string, status: StatusSchema | string }`. The id field name varies (`tenantId`, `jobId`, `userId`, `workerId`). `status` is `StatusSchema = z.enum(["created", "updated", "deleted", "logged out"])` for tenant/user/realm endpoints; some endpoints (workers, jobs) return plain `z.string()` — match the actual API.
+   - **Update / Delete**: `{ status: StatusSchema }` only, OR `{ <resource>Id, status, <resource>?: <Resource>Schema }` when the API echoes the updated entity (see `UpdateJobResponseSchema`).
 6. Reuse error schemas before inventing new ones (see § Error envelopes).
 7. Datetime: use `z.string().datetime()` for `Z` style, `z.string().datetime({ offset: true })` for `+00:00`.
 8. **UUIDs — default to `z.string().uuid()`.** Only loosen to `z.string()` when you have empirically verified the API returns a non-UUID id (rare; document the case inline). Several existing `id: z.string()` fields in the codebase should be tightened on the next pass — encode the right pattern here, not the lax one.
@@ -108,8 +108,8 @@ export type Synthetic = z.infer<typeof SyntheticSchema>;
    | Level | When | Pattern | Required follow-up |
    |-------|------|---------|--------------------|
    | Strict (default) | Field is always present and always has a value | `z.string()` / `z.number().int()` | None |
-   | Nullable | Field is always present but value may be `null` (e.g. `lastLoginAt` before first login, `updatedAt` before first edit, `tests: null` when no tests configured for the synthetic) | `z.string().nullable()` | Add a test that exercises the null branch so the tolerance is verified — not assumed |
-   | Optional | Field is conditionally absent (e.g. traceroute metrics only when `config.enableTraceroute: true`; `parentId` only on child tenants) | `z.string().optional()` | Comment the condition in the schema AND add tests for both branches (present + absent) |
+   | Nullable | Field is always present but value may be `null` (e.g. `lastLoginAt` before first login, `updatedAt` before first edit, `assignments: null` when no worker assignments are configured for the job) | `z.string().nullable()` | Add a test that exercises the null branch so the tolerance is verified — not assumed |
+   | Optional | Field is conditionally absent (e.g. run-step stats only when `config.recordRunSteps: true`; `parentId` only on child tenants) | `z.string().optional()` | Comment the condition in the schema AND add tests for both branches (present + absent) |
    | Both (rare smell) | Both states are independently valid and meaningful | `z.string().optional().nullable()` | One-line comment justifying why absence and `null` are distinct states; otherwise tighten one |
 
    **Before adding `.optional()` / `.nullable()` ask:**
@@ -125,9 +125,9 @@ export type Synthetic = z.infer<typeof SyntheticSchema>;
    - ❌ Combining `.optional().nullable()` without a one-line comment justifying both states.
    - ❌ Marking `id`, `createdAt`, or any audit field optional/nullable. These are contract invariants.
 
-   **Project examples (currently in `SyntheticSchema`):**
-   - `tests: z.array(SyntheticTestSchema).nullable()` — ✅ justified: `null` when no tests are configured for the synthetic. A test asserts both list items with populated tests and items with `null`.
-   - `healthStatus: z.string().optional()` — ⚠ revisit: is the field really sometimes absent, or always present (perhaps with an `"unknown"` / `"pending"` sentinel during initial probe)? If always present, tighten to `z.string()` (or `z.enum([...])`) so the next contract drift fails loudly.
+   **Project examples (currently in `JobSchema`):**
+   - `assignments: z.array(JobAssignmentSchema).nullable()` — ✅ justified: `null` when no worker assignments are configured for the job. A test asserts both list items with populated assignments and items with `null`.
+   - `jobStatus: z.string().optional()` — ⚠ revisit: is the field really sometimes absent, or always present (perhaps with a sentinel value outside the four job statuses `passing` / `failing` / `degraded` / `paused`, e.g. `"unknown"` / `"pending"`, before the first run)? If always present, tighten to `z.string()` (or `z.enum([...])`) so the next contract drift fails loudly.
    - `updatedAt: z.string()` — ✅ strict; even on a fresh resource the API echoes a timestamp (verified). Resist the temptation to add `.nullable()` "just in case".
 
 For deeper schema patterns, the response/error catalog, and helper inventory, see [reference.md](reference.md).
@@ -138,8 +138,8 @@ This API does **not** use ASP.NET ProblemDetails. Use these three patterns:
 
 | Status | Pattern | Schema | Where it lives |
 |--------|---------|--------|----------------|
-| 400, 404, 409, 500 | `{ message: string, details?: string }` | `APIErrorSchema` | canonical: `fixtures/api/schemas/util/common.ts` (re-exported by `synthetic.ts` and `policy.ts`). Legacy local copies remain in `tenant.ts`, `user.ts`, `tenant-schema.ts` — centralize when next touched |
-| 401 | `{ error: string }` | `GatewayErrorSchema` | duplicated `z.strictObject` copies in `tenant.ts`, `user.ts`, `policy.ts` — not yet in `util/common.ts` (request hits the API gateway before reaching the app). Exception: the policy service returns the `APIErrorSchema` shape for 401 — see the comment in `policy.ts` |
+| 400, 404, 409, 500 | `{ message: string, details?: string }` | `APIErrorSchema` | canonical: `fixtures/api/schemas/util/common.ts` (re-exported by `job.ts` and `notification-rule.ts`). Legacy local copies remain in `tenant.ts`, `user.ts`, `tenant-schema.ts` — centralize when next touched |
+| 401 | `{ error: string }` | `GatewayErrorSchema` | duplicated `z.strictObject` copies in `tenant.ts`, `user.ts`, `notification-rule.ts` — not yet in `util/common.ts` (request hits the API gateway before reaching the app). Exception: the notification service returns the `APIErrorSchema` shape for 401 — see the comment in `notification-rule.ts` |
 | 403 | empty body | `expect(body).toBeNull()` | n/a — body is `null` |
 | 405 | empty body | `expect(body).toBeNull()` | n/a |
 
@@ -150,7 +150,7 @@ Centralization status of `util/common.ts` is covered in § Zod schema convention
 Add a helper when, and only when, one of the following holds:
 - The same call is used in **2+ specs**, OR
 - It involves multiple chained requests, OR
-- It sets up preconditions unrelated to the test under inspection (e.g. seed a probe before testing a synthetic).
+- It sets up preconditions unrelated to the test under inspection (e.g. seed a worker before testing a job).
 
 Otherwise, call `apiRequest({...})` directly inside the spec. Wrapping a single one-shot request in a helper adds a layer that obscures the assertion.
 
@@ -158,8 +158,8 @@ Otherwise, call `apiRequest({...})` directly inside the spec. Wrapping a single 
 
 | Approach | When | Example | Lifecycle |
 |----------|------|---------|-----------|
-| **`apiRequest` directly in the spec** (default) | Single one-shot calls in tests, `beforeEach`/`afterEach` setup that runs once per test, anything not yet reused | `apiRequest({ method: "GET", url: appConfig.api.SYNTHETICS, baseUrl: appConfig.apiUrl, headers: process.env.USER_ACCESS_TOKEN_FULL! })` inside `test()` | Manual — caller controls everything |
-| **Helper function** (passthrough or assertion-style) | Reused across **2+ specs**, multi-step flows, or precondition seeding | `createSyntheticMonitor(apiRequest, body, headers)`, `setupTestUser(apiRequest, mailpit, tenantId, password, lastName)` | Manual — caller decides when to call cleanup |
+| **`apiRequest` directly in the spec** (default) | Single one-shot calls in tests, `beforeEach`/`afterEach` setup that runs once per test, anything not yet reused | `apiRequest({ method: "GET", url: appConfig.api.JOBS, baseUrl: appConfig.apiUrl, headers: process.env.USER_ACCESS_TOKEN_FULL! })` inside `test()` | Manual — caller controls everything |
+| **Helper function** (passthrough or assertion-style) | Reused across **2+ specs**, multi-step flows, or precondition seeding | `createJob(apiRequest, body, headers)`, `setupTestUser(apiRequest, mailpit, tenantId, password, lastName)` | Manual — caller decides when to call cleanup |
 | **Helper fixture** (Playwright fixture wrapping helpers) | Critical setup/teardown reused across **3+ files** that needs guaranteed lifecycle (auto-cleanup on test failure) | `mailpit` fixture, `loginUser` fixture in `fixtures/pom/test-options.ts` | Automatic — Playwright invokes setup before `use()` and teardown after, even on failure |
 
 **Rule of thumb:** start with `apiRequest` directly. Promote to a helper function on the second use (or when chaining ≥ 2 calls). Promote to a helper fixture only when 3+ specs need the same setup with guaranteed teardown — fixtures pay a complexity tax that's only worth it for cross-spec reuse with lifecycle guarantees.
@@ -170,27 +170,27 @@ The codebase uses both. Both are valid; the choice depends on whether the helper
 
 > **Principle (upstream-aligned):** a helper that creates an entity and is used for setup MUST `Schema.parse` the response body before returning the typed payload. This is the assertion-style contract — every caller gets a validated entity, no caller redoes the validate-then-cast dance, and a missing field surfaces at the schema boundary instead of as `undefined` deep in a downstream assertion. Passthrough helpers (`{ status, body }`) are still allowed for negative-test reuse.
 
-**Style A — assertion-style** (parse internally, return typed payload). Use when the helper exists to seed a precondition and the caller only cares about the parsed entity. The helper asserts `status` and runs `Schema.parse(body)` once; the caller gets a typed value back. **Skeleton:** [templates.md § 18](templates.md) (Helper styles). **Existing examples:** `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`. **Planned:** `setupSynthetic`, `setupProbe`, `setupUser`, `setupTenant`.
+**Style A — assertion-style** (parse internally, return typed payload). Use when the helper exists to seed a precondition and the caller only cares about the parsed entity. The helper asserts `status` and runs `Schema.parse(body)` once; the caller gets a typed value back. **Skeleton:** [templates.md § 18](templates.md) (Helper styles). **Existing examples:** `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`. **Planned:** `setupJob`, `setupTestWorker`, `setupUser`, `setupTenant`.
 
 > Note: `appConfig.api.ADMIN_TENANT` is **singular** (`/admin/tenants`) — the constant name does not pluralize even though the path does. Always grep `config/app.ts` before guessing.
 
-**Style B — passthrough** (return `{ status, body }`; caller asserts). Use when the same helper is exercised across multiple status codes (201, 400, 401, 403, 404, 409). Status-asserting inside would crash the negative tests. **Skeleton:** [templates.md § 18](templates.md). **Existing examples:** every CRUD function in `helpers/app/synthetics.ts`, `probes.ts`, `adminTenants.ts`, `users.ts`.
+**Style B — passthrough** (return `{ status, body }`; caller asserts). Use when the same helper is exercised across multiple status codes (201, 400, 401, 403, 404, 409). Status-asserting inside would crash the negative tests. **Skeleton:** [templates.md § 18](templates.md). **Existing examples:** every CRUD function in `helpers/app/jobs.ts`, `workers.ts`, `adminTenants.ts`, `users.ts`.
 
 ### Helper signature rules (project-wide)
 
 - First arg is always `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`).
 - Last optional arg is always `headers?: string` (the token). Pass `undefined`/omit for anonymous-call testing.
-- For URL building with query strings, expose a sibling `buildList<X>Url(params)` that takes a typed param object (see `helpers/app/synthetics.ts:buildListSyntheticsUrl`).
-- Cleanup helpers (e.g. `cleanupProbes`, `cleanupProbesAndSynthetics`) use `Promise.allSettled` and tolerate 404.
+- For URL building with query strings, expose a sibling `buildList<X>Url(params)` that takes a typed param object (see `helpers/app/jobs.ts:buildListJobsUrl`).
+- Cleanup helpers (e.g. `cleanupWorkers`, `cleanupWorkersAndJobs`) use `Promise.allSettled` and tolerate 404.
 - **Never declare a Zod schema inside a helper.** Schemas live only under `fixtures/api/schemas/app/`.
 
-Before writing a new helper, check the full inventory in [reference.md § Helper catalog](reference.md#helper-catalog-already-exists--reuse-before-writing-new). Canonical examples: `helpers/app/synthetics.ts` (passthrough CRUD + builders + cleanup), `helpers/app/adminUsers.ts` (both styles, incl. assertion-style `setupTestUser`).
+Before writing a new helper, check the full inventory in [reference.md § Helper catalog](reference.md#helper-catalog-already-exists--reuse-before-writing-new). Canonical examples: `helpers/app/jobs.ts` (passthrough CRUD + builders + cleanup), `helpers/app/adminUsers.ts` (both styles, incl. assertion-style `setupTestUser`).
 
 ## Test data
 
-- **Static** (deterministic ids, strings, numbers): `test-data/app/<resource>.json`. Import and destructure: `import probeData from "../../../test-data/app/probe.json"; const { invalidId, nonExistentId } = probeData;` (the `invalidId` / `nonExistentId` keys live in resource-specific files like `probe.json`; cross-cutting numeric tables live in `synthetic-common.json`).
-- **Filename convention: hyphen-case** — `mcp-synthetic.json`, `dns-synthetic.json`, `synthetic-common.json`. Three legacy camelCase files (`httpSyntheticValidation.json`, `mcpSyntheticValidation.json`, `sslSyntheticValidation.json`) are drift; do not add new camelCase JSON files. New validation tables go in `<type>-synthetic-validation.json`.
-- **Dynamic** (random per-run): `faker` inside body builders (`buildCreateSyntheticBody`, `buildCreateProbeBody`, …). Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-icmp-${faker.string.alphanumeric(8).toLowerCase()}`).
+- **Static** (deterministic ids, strings, numbers): `test-data/app/<resource>.json`. Import and destructure: `import workerData from "../../../test-data/app/worker.json"; const { invalidId, nonExistentId } = workerData;` (the `invalidId` / `nonExistentId` keys live in resource-specific files like `worker.json`; cross-cutting numeric tables live in `job-common.json`).
+- **Filename convention: hyphen-case** — `webhook-job.json`, `email-job.json`, `job-common.json`. Three legacy camelCase files (`httpJobValidation.json`, `webhookJobValidation.json`, `backupJobValidation.json`) are drift; do not add new camelCase JSON files. New validation tables go in `<type>-job-validation.json`.
+- **Dynamic** (random per test run): `faker` inside body builders (`buildCreateJobBody`, `buildCreateWorkerBody`, …). Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`).
 - Never invent new uuid/tokens — read from JSON or `faker.string.uuid()`.
 
 ### Invalid-value arrays — three-tier rule
@@ -200,8 +200,8 @@ Where invalid values live drives whether the next reviewer can find them. Pick t
 | Tier | What | Where | Example |
 |------|------|-------|---------|
 | **1. Universal type-mismatch** | Values that are wrong for any field of a given primitive type (any required string field, any integer field, …) | `fixtures/api/invalid-types.ts` (the constants below) | `invalidString` for any required string field |
-| **2. Domain-specific curated** | Project-specific invalid sets (invalid email formats, password-policy violations, monitor-type-specific bad configs) | `test-data/app/<resource>.json` (e.g. `httpSyntheticValidation.json`) | `invalidEmails`, `invalidIcmpConfigs` |
-| **3. Field-specific boundary / range** | Out-of-range numerics that are wrong for exactly one field (e.g. `checkInterval` outside `15..3600`) | Inline `const` in the spec, only when the set is meaningful to one field and used in one place | `const outOfRangeIntervals = [-1, 0, 14, 3601, 999999];` |
+| **2. Domain-specific curated** | Project-specific invalid sets (invalid email formats, password-policy violations, job-type-specific bad configs) | `test-data/app/<resource>.json` (e.g. `httpJobValidation.json`) | `invalidEmails`, `invalidExportConfigs` |
+| **3. Field-specific boundary / range** | Out-of-range numerics that are wrong for exactly one field (e.g. `runInterval` outside `15..3600`) | Inline `const` in the spec, only when the set is meaningful to one field and used in one place | `const outOfRangeIntervals = [-1, 0, 14, 3601, 999999];` |
 
 If a tier-3 inline set appears in 2+ specs, promote it to tier 2.
 
@@ -227,7 +227,7 @@ To prove each required field independently triggers a 400 when missing, omit one
 
 ### Path parameter fuzzing
 
-Every endpoint with a path parameter (`/synthetics/:id`, `/admin/tenants/:id`, `/probes/:id`) requires invalid-format coverage — regardless of whether the OpenAPI spec mentions it. Use labeled cases (`{ description, value }`) so each `test.step` reads cleanly. **Loop inside the test**, `expect.soft` for assertions. Wrap `value` in `encodeURIComponent` to keep the URL well-formed. **Skeleton:** [templates.md § 12](templates.md).
+Every endpoint with a path parameter (`/jobs/:id`, `/admin/tenants/:id`, `/workers/:id`) requires invalid-format coverage — regardless of whether the OpenAPI spec mentions it. Use labeled cases (`{ description, value }`) so each `test.step` reads cleanly. **Loop inside the test**, `expect.soft` for assertions. Wrap `value` in `encodeURIComponent` to keep the URL well-formed. **Skeleton:** [templates.md § 12](templates.md).
 
 For the **non-existent-but-well-formed-uuid** case (the 404 path), use `nonExistentId` from `test-data/app/<resource>.json` — it's a separate test, not part of this loop.
 
@@ -237,17 +237,17 @@ Every CRUD spec covers these scenarios. Use the matrix as a checklist when autho
 
 | Status | Trigger | Schema / Body assertion | Notes |
 |--------|---------|-------------------------|-------|
-| `200/201` | Happy path with full body | `expect(<Resource>Schema.parse(body)).toBeTruthy()` + field assertions | Synthetics `POST` returns **201**, admin tenants/users `POST` returns **200** — match the actual endpoint |
+| `200/201` | Happy path with full body | `expect(<Resource>Schema.parse(body)).toBeTruthy()` + field assertions | Jobs `POST` returns **201**, admin tenants/users `POST` returns **200** — match the actual endpoint |
 | `400` | Invalid payload, invalid path id, missing required field, empty body `{}` | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | One `test()` per validation concern; loop over `invalidString`/`invalidIntegerTypes`/etc. **inside** the test with `expect.soft`. See § Per-field invalid-type loop |
 | `401` | Omit `headers` entirely | `expect(GatewayErrorSchema.parse(body)).toBeTruthy()` | Do NOT pass an empty string token; **omit the property** |
 | `401` | Wrong-realm / wrong-issuer token | `expect(GatewayErrorSchema.parse(body)).toBeTruthy()` | Distinct from "no token" — both return 401 with the gateway shape |
 | `403` | Valid token without required scope (`USER_ACCESS_TOKEN_ZERO`) | `expect(body).toBeNull()` | Only when ZERO env var is provisioned for the test environment |
 | `404` | Non-existent uuid (`test-data/app/<resource>.json` `nonExistentId`) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Distinct from 400 invalid-format id |
 | `405` | Wrong verb on a real path (loop **inside** a single test, not outside) | `expect(body).toBeNull()` | See `tests/app/api/tenant-service/admin-realms.spec.ts` for the canonical loop |
-| `409` | Duplicate name / conflicting state (e.g. probe still bound to synthetic) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Synthetics-then-probes cleanup ordering exists because of this |
+| `409` | Duplicate name / conflicting state (e.g. worker still assigned to a job) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Jobs-then-workers cleanup ordering exists because of this |
 
 Project-specific quirks:
-- `PATCH /synthetics/:id`: an invalid body fails validation **before** the resource lookup (400), while a valid body with a non-existent uuid returns 404 — both branches are covered by an active test in `icmp-synthetic-monitor.spec.ts`.
+- `PATCH /jobs/:id`: an invalid body fails validation **before** the resource lookup (400), while a valid body with a non-existent uuid returns 404 — both branches are covered by an active test in `export-job.spec.ts`.
 - Sort tests: assert the endpoint accepts the params and returns valid results — **do NOT assert exact ordering** (DB collation differs from JS).
 
 ### Skipping a test for a real backend bug
@@ -263,7 +263,7 @@ Write the test the way the contract says it should work, then **comment out** th
 ```typescript
 // TODO: FIXME: PROJ-1234 — backend returns 200 instead of 400 for empty name
 // test(
-//   "Verify POST /synthetics returns 400 with empty name",
+//   "Verify POST /jobs returns 400 with empty name",
 //   ...
 // );
 ```
@@ -276,20 +276,20 @@ Write the test the way the contract says it should work, then **comment out** th
 
 ## Cleanup patterns
 
-Track ids in a describe-scoped array, push after create, drain in `afterAll`. **Cleanup is the one place where the dedicated helper (`cleanupProbesAndSynthetics`, `cleanupProbes`) is preferred over raw `apiRequest`** — the helper tolerates 404, runs deletions in parallel via `Promise.allSettled`, and enforces the synthetics-before-probes ordering. **Skeleton:** [templates.md § 14](templates.md).
+Track ids in a describe-scoped array, push after create, drain in `afterAll`. **Cleanup is the one place where the dedicated helper (`cleanupWorkersAndJobs`, `cleanupWorkers`) is preferred over raw `apiRequest`** — the helper tolerates 404, runs deletions in parallel via `Promise.allSettled`, and enforces the jobs-before-workers ordering. **Skeleton:** [templates.md § 14](templates.md).
 
 **When to use which hook:**
 - PATCH-style suites that mutate a single resource per test → `beforeEach` (create) + `afterEach` (delete)
 - Seeded GET-by-id suites that share one resource → `beforeAll` (create once) + `afterAll` (delete)
 - POST suites that create N resources → push ids in each test, drain in `afterAll`
 
-See `tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts` for both patterns.
+See `tests/app/api/jobs-service/jobs/export-job.spec.ts` for both patterns.
 
 **Defensive guards:**
 - If a 400/422 negative test unexpectedly returns 201, capture the id into the cleanup array anyway — the test asserts the failure but cleanup must succeed.
-- For UI-driven cleanup (synthetic created from a Page Object), use `cleanupUiCreatedSyntheticMonitors` — it resolves id-by-name with retry and tolerates 404.
+- For UI-driven cleanup (job created from a Page Object), use `cleanupUiCreatedJobs` — it resolves id-by-name with retry and tolerates 404.
 
-**Seed completeness:** every assertion in the test body must have its data precondition satisfied by the `beforeAll` seed. A list-ordering test that asserts `length > 1` needs at least 2 seeded entities — not ambient data from other tests or prior runs. Audit each assertion against the seed: if the assertion would fail in an empty environment, the seed is incomplete.
+**Seed completeness:** every assertion in the test body must have its data precondition satisfied by the `beforeAll` seed. A list-ordering test that asserts `length > 1` needs at least 2 seeded entities — not ambient data from other tests or prior test runs. Audit each assertion against the seed: if the assertion would fail in an empty environment, the seed is incomplete.
 
 ### Setup-restore pattern (non-destructive tests on shared state)
 
@@ -311,11 +311,11 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 **Single-call exception:** if a test contains exactly one API call, `test.step` is optional but encouraged for consistency with multi-call peers.
 
-**Skeleton (correct vs forbidden):** [templates.md § 16](templates.md). See also `http-method-coverage.md` § PATCH and `tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts`.
+**Skeleton (correct vs forbidden):** [templates.md § 16](templates.md). See also `http-method-coverage.md` § PATCH and `tests/app/api/jobs-service/jobs/export-job.spec.ts`.
 
 ## Qase tagging
 
-- `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tSynthetics"`).
+- `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
 - For tests without a mapped Qase id yet, **leave `qase.suite(...)` and comment out `qase.id(...)`** — do not delete them.
 - Tags drive runtime selection (one tag per test, never combined):
   - `@App-API` — single-endpoint API specs (default for `tests/app/api/**`)
@@ -351,8 +351,8 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 - ❌ Aliasing schemas in re-exports with `as <Alias>` to dodge name collisions. Pick distinct names at definition (e.g. `UserSchema` vs `AdminUserSchema` — the `UserSchema` collision between `tenant.ts` and `user.ts` is still live).
 - ❌ Mailpit recipient outside `@<your-test-domain>` (the test infra only catches that domain). `@automation.test` and `@<alt-test-domain>` are silently dropped — the helpers that emit them (`generateUserPayload`, `buildCreateUserBody`) are known bugs.
 - ❌ New test-data JSON files in camelCase (`fooBarValidation.json`). Use hyphen-case (`foo-bar-validation.json`).
-- ❌ Empty `config: {}` body for synthetics — synthetic POST requires the per-monitor-type config keys (icmp, http, tcp, dns, ssl, websocket, mcp); empty `config` returns 400.
-- ❌ Deleting probes before synthetics — returns 409 because the synthetic still references the probe. Always cleanup synthetics first (use `cleanupProbesAndSynthetics`).
+- ❌ Empty `config: {}` body for jobs — job POST requires the per-job-type config keys (`export`, `http`, `sftp`, `email`, `backup`, `stream`, `webhook`); empty `config` returns 400.
+- ❌ Deleting workers before jobs — returns 409 because the job still references the worker. Always cleanup jobs first (use `cleanupWorkersAndJobs`).
 - ❌ Asserting exact ordering on sort tests — DB collation differs from JavaScript string sort. Assert that the endpoint accepts the sort param and returns valid items.
 - ❌ Wrapping a single one-shot request in a helper "for tidiness" — reach for a helper only on reuse / multi-step / preconditions.
 - ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`, with `{id}` for path parameters; the per-verb variants (create-and-GET-back, PATCH per-field, the 405 catch-all, cross-tenant) are listed once, in [http-method-coverage.md § 14](http-method-coverage.md#14-test-name-templates-per-verb).
@@ -370,9 +370,9 @@ Before declaring a spec done, verify:
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
 - [ ] `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test (or commented if pending mapping).
 - [ ] Each test carries `{ tag: "@App-API" }` (or `@App-E2E` for multi-endpoint flows).
-- [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
+- [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
-- [ ] Synthetics-with-probes specs use `cleanupProbesAndSynthetics` (synthetics first, probes second).
+- [ ] Jobs-with-workers specs use `cleanupWorkersAndJobs` (jobs first, workers second).
 - [ ] No hardcoded uuids, tokens, base URLs, or paths — everything from `process.env` / `appConfig.api.X` / `test-data/app/*.json`.
 - [ ] Negative matrix (400/401/403/404/405) covered for every CRUD endpoint; PATCH covers per-field isolation; PUT covers full-replace.
 - [ ] All invalid-value / per-field-omission / path-parameter loops run **inside** `test()` with `test.step` per iteration and `expect.soft` for inner assertions. No `for...of` outside `test()` generating per-value tests.
@@ -380,8 +380,8 @@ Before declaring a spec done, verify:
 - [ ] Helpers that exist only to seed a precondition are assertion-style (parse internally, return typed payload). Helpers used across positive and negative tests are passthrough.
 - [ ] New schemas use `z.strictObject({...})` (not `z.object`) and `z.string().uuid()` for ids unless the API has been verified to return non-UUIDs.
 - [ ] Every `.optional()` / `.nullable()` modifier is justified inline (named condition + branch test) per the strictness ladder.
-- [ ] No new duplicate copies of `APIErrorSchema` / `GatewayErrorSchema` / `PageInfoSchema` — import `APIErrorSchema` / `PageInfoSchema` from `fixtures/api/schemas/util/common.ts` (or re-export through an existing resource file like `synthetic.ts` / `policy.ts`); re-export `GatewayErrorSchema` from an existing strict copy.
-- [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-synthetic-validation.json`), never camelCase.
+- [ ] No new duplicate copies of `APIErrorSchema` / `GatewayErrorSchema` / `PageInfoSchema` — import `APIErrorSchema` / `PageInfoSchema` from `fixtures/api/schemas/util/common.ts` (or re-export through an existing resource file like `job.ts` / `notification-rule.ts`); re-export `GatewayErrorSchema` from an existing strict copy.
+- [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-job-validation.json`), never camelCase.
 - [ ] Mailpit recipients use `@<your-test-domain>` — never `@automation.test`, `@<alt-test-domain>`, or any other domain (the test infra catches only `@<your-test-domain>`).
 - [ ] Specs that exercise 403 from a no-permission token: if `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`.
 - [ ] No `test.fixme()` / `test.skip()`. A disabled test is commented out under `// TODO: FIXME: <TICKET>`.
@@ -389,40 +389,40 @@ Before declaring a spec done, verify:
 
 ## Examples
 
-### Example 1 — Adding a brand-new endpoint (synthetic-monitor extension)
+### Example 1 — Adding a brand-new endpoint (job extension)
 
-User says: _"Add API tests for `POST /api/v1/synthetics/{id}/pause`."_
+User says: _"Add API tests for `POST /api/v1/jobs/{id}/pause`."_
 
 Walk the workflow:
 
-1. **Confirm route in `config/app.ts`** — add `SYNTHETICS_PAUSE: "/api/v1/synthetics/:id/pause"` if missing.
-2. **Schema** — open `fixtures/api/schemas/app/synthetic.ts`. Add `PauseSyntheticResponseSchema = z.strictObject({ syntheticId: z.string().uuid(), status: StatusSchema })`. Specs deep-import from the resource file (there is no `app/` schema barrel).
+1. **Confirm route in `config/app.ts`** — add `JOBS_PAUSE: "/api/v1/jobs/:id/pause"` if missing.
+2. **Schema** — open `fixtures/api/schemas/app/job.ts`. Add `PauseJobResponseSchema = z.strictObject({ jobId: z.string().uuid(), status: StatusSchema })`. Specs deep-import from the resource file (there is no `app/` schema barrel).
 3. **Helper** — only if ≥ 2 specs need it. Likely not yet, so call `apiRequest` directly.
 4. **Coverage Plan** (§ Critical) — comment block at the top of the spec listing every status code: 200 happy path, 400 invalid id format, 401 (no token, and the admin token on this tenant endpoint — wrong realm), 403 (`USER_ACCESS_TOKEN_ZERO`), 404 (non-existent uuid), 405 (wrong verbs), 409 (already paused).
-5. **Spec** — author `tests/app/api/monitoring-service/synthetics/synthetic-pause.spec.ts` from `templates.md § 1`. Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]`.
+5. **Spec** — author `tests/app/api/jobs-service/jobs/job-pause.spec.ts` from `templates.md § 1`. Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]`.
 6. **Negative matrix** — apply: per-field validation isn't needed (no request body), but path-parameter fuzzing is mandatory (§ Path parameter fuzzing). 405 catch-all loop. 401/403 auth coverage.
-7. **Cleanup** — pause is reversible via unpause; restore in `afterAll`.
-8. **Run** — `npx playwright test tests/app/api/monitoring-service/synthetics/synthetic-pause.spec.ts --grep "@App-API"`. Verify lints clean.
+7. **Cleanup** — pause is reversible via resume; restore in `afterAll`.
+8. **Run** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@App-API"`. Verify lints clean.
 
 ### Example 2 — Verifying a multi-step PATCH-then-GET flow
 
-User says: _"Verify that PATCH /synthetics/:id with only `name` preserves all other fields."_
+User says: _"Verify that PATCH /jobs/:id with only `name` preserves all other fields."_
 
 1. **`test.step` mandatory** (§ Critical) — three steps: GET-before, PATCH, GET-after.
 2. **Style** — single test, three `test.step`s, parsed schema in each step.
-3. **Assertion shape** — capture `before` from GET-before, then in GET-after assert `after.name === newName` and every other field equals `before[<field>]`. Example pattern is in `tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts` (§ PATCH per-field isolation in `templates.md`).
+3. **Assertion shape** — capture `before` from GET-before, then in GET-after assert `after.name === newName` and every other field equals `before[<field>]`. Example pattern is in `tests/app/api/jobs-service/jobs/export-job.spec.ts` (§ PATCH per-field isolation in `templates.md`).
 4. **Loop required fields** — if you're proving the pattern for *every* updatable field, write one `test()` per field with the same three-step pattern. Don't collapse into a `for...of` of steps inside a single test — that hides which field broke.
 
 ### Example 3 — Locking down validation for a request body
 
-User says: _"We only have `{}` → 400 for `POST /probes`. Add full per-field validation."_
+User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field validation."_
 
-1. **Open the spec** — `tests/app/api/monitoring-service/probes/probes.spec.ts`. Find the empty-body test; keep it (it's part of coverage, not a substitute).
-2. **Build `validBody`** — call `buildCreateProbeBody()` once at describe scope.
-3. **Per-field invalid-type loops** (loop INSIDE `test()` per § convention) — one `test()` per field, iterating the matching universal array inside the body with `expect.soft` (`invalidString` for `name`/`location`, `invalidStringTypes` for any optional string, `invalidIntegerTypes` for any integer field). Test name: `Verify POST /probes returns 400 for invalid <field> values`.
-4. **Per-field omission loop** — one `test()`, loop required-field names inside the body using the destructure-and-omit pattern (§ Per-field omission). Test name: `Verify POST /probes returns 400 when required fields are missing`.
-5. **Path-parameter fuzz** — N/A on POST without a path param. Add it on `GET /probes/:id` and `DELETE /probes/:id` if not already present.
-6. **Run** — `npx playwright test tests/app/api/monitoring-service/probes/probes.spec.ts --grep "@App-API"`. Coverage goes from 1 test (empty body) to N tests (one per validation concern), each running a soft loop across multiple invalid values internally.
+1. **Open the spec** — `tests/app/api/jobs-service/workers/workers.spec.ts`. Find the empty-body test; keep it (it's part of coverage, not a substitute).
+2. **Build `validBody`** — call `buildCreateWorkerBody()` once at describe scope.
+3. **Per-field invalid-type loops** (loop INSIDE `test()` per § convention) — one `test()` per field, iterating the matching universal array inside the body with `expect.soft` (`invalidString` for `name`/`location`, `invalidStringTypes` for any optional string, `invalidIntegerTypes` for any integer field). Test name: `Verify POST /workers returns 400 for invalid <field> values`.
+4. **Per-field omission loop** — one `test()`, loop required-field names inside the body using the destructure-and-omit pattern (§ Per-field omission). Test name: `Verify POST /workers returns 400 when required fields are missing`.
+5. **Path-parameter fuzz** — N/A on POST without a path param. Add it on `GET /workers/:id` and `DELETE /workers/:id` if not already present.
+6. **Run** — `npx playwright test tests/app/api/jobs-service/workers/workers.spec.ts --grep "@App-API"`. Coverage goes from 1 test (empty body) to N tests (one per validation concern), each running a soft loop across multiple invalid values internally.
 
 ## Troubleshooting
 
@@ -432,7 +432,7 @@ User says: _"We only have `{}` → 400 for `POST /probes`. Add full per-field va
 | `Schema.parse(body)` throws `ZodError` on a 401 or 403 test | These responses have empty bodies (`null`); calling `.parse()` on `null` against an object schema fails | For 401: use `GatewayErrorSchema` (the gateway DOES return a body for 401). For 403/405: assert `expect(body).toBeNull()`, no schema needed. See § Error envelopes. |
 | `playwright/no-skipped-test` ESLint failure on a `test.skip` | The rule catches skips; `test.skip` also corrupts Qase IDs | **Comment out** the test instead and add `// TODO: FIXME: <TICKET>` above. No eslint-disable needed because the test is commented out, not skipped. |
 | 401 returns `{ error: "..." }` but `APIErrorSchema` was used | Wrong schema for 401 — the API gateway returns a different shape than app errors | Use `GatewayErrorSchema` (`{ error: string }`) for 401. Use `APIErrorSchema` (`{ message, details? }`) for 400/404/409. See the table in § Error envelopes. |
-| Cleanup fails with 409 Conflict deleting a probe | The probe is still bound to a synthetic | Delete synthetics first, probes second. Use `cleanupProbesAndSynthetics(apiRequest, probeIds, syntheticIds, token)` which enforces the order automatically. |
+| Cleanup fails with 409 Conflict deleting a worker | The worker is still assigned to a job | Delete jobs first, workers second. Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, token)` which enforces the order automatically. |
 | Mailpit `getLastEmail` returns `null` | Wrong recipient domain (`@automation.test`, `@example.com`) — Mailpit on the test infra catches only `@<your-test-domain>` | Switch the recipient to `@<your-test-domain>`. For e2e onboarding, use `setupTestUser` which generates the correct domain. |
 | 403 test fails because the env var is undefined | `USER_ACCESS_TOKEN_ZERO` is not yet provisioned in this environment | Comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`. Do not silently drop the 403 row from the matrix. |
 | A test fails locally but passes elsewhere — or vice versa | Flake, isolation issue, environment drift | Stop iterating blindly. Load the `debugging` skill — it covers UI Mode (`npx playwright test --ui`), Trace Viewer, Inspector, the failure-mode taxonomy. Do not raise timeouts, wrap in `try/catch`, or weaken assertions to make it green. |

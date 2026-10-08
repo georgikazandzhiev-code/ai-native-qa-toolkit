@@ -2,7 +2,7 @@
 
 Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase), `<RESOURCE>` (UPPER_SNAKE matching `appConfig.api.X`), `<SUITE>` (matches `SUITES.API_*`), the field list, and the body builder name.
 
-> Anchored on the synthetics resource because it is the most complete CRUD example and exercises every pattern (list-with-paging, single-keyed-by-resource, create-with-status-string, update-with-echoed-entity, probe dependency, per-field PATCH isolation).
+> Anchored on the jobs resource because it is the most complete CRUD example and exercises every pattern (list-with-paging, single-keyed-by-resource, create-with-status-string, update-with-echoed-entity, worker dependency, per-field PATCH isolation).
 
 > These skeletons encode the **target state**: `z.strictObject()` schemas, `z.string().uuid()` ids, hyphen-case test-data filenames, `Verify METHOD /path returns <status>` test names, assertion-style setup helpers paired with passthrough CRUD, and shared schemas centralized in `fixtures/api/schemas/util/common.ts`. Copying any template should produce code that already matches the target state; do not regress to current-state shortcuts.
 
@@ -12,7 +12,7 @@ Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase
 
 Drop into `tests/app/api/<resource>.spec.ts`.
 
-> **Helper vs direct `apiRequest` — pick per test.** The template below uses helpers because most CRUD specs are large and helpers de-duplicate the URL/headers boilerplate. **For single-spec one-shot calls, prefer direct `apiRequest({...})` inline** — it surfaces the request shape next to the assertion (upstream-style; see `tests/app/api/tenant-service/admin-realms.spec.ts` and `tests/app/api/shared/cross-tenant-isolation.spec.ts`). Mix freely within one file: helpers for repeated CRUD, inline `apiRequest` for one-off probes.
+> **Helper vs direct `apiRequest` — pick per test.** The template below uses helpers because most CRUD specs are large and helpers de-duplicate the URL/headers boilerplate. **For single-spec one-shot calls, prefer direct `apiRequest({...})` inline** — it surfaces the request shape next to the assertion (upstream-style; see `tests/app/api/tenant-service/admin-realms.spec.ts` and `tests/app/api/shared/cross-tenant-isolation.spec.ts`). Mix freely within one file: helpers for repeated CRUD, inline `apiRequest` for one-off calls.
 
 ```typescript
 import { expect, test } from "../../../fixtures/pom/test-options";
@@ -295,7 +295,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
 test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
     // `!` (definite assignment) is required because the variable is set inside test.beforeEach,
     // which TypeScript's flow analysis does not see when strict mode is on. Same pattern as
-    // `let probeId: string;` in tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts.
+    // `let workerId: string;` in tests/app/api/jobs-service/jobs/export-job.spec.ts.
     let resource!: <Resource>;
     const createdIds: string[] = [];
 
@@ -346,14 +346,14 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
                 expect(body.<resource>.name).toBe(newName);
                 // Assert every other field matches `before` — repeat per project field list:
                 expect(body.<resource>.target).toBe(before.target);
-                expect(body.<resource>.checkInterval).toBe(before.checkInterval);
+                expect(body.<resource>.runInterval).toBe(before.runInterval);
                 expect(body.<resource>.timeout).toBe(before.timeout);
                 // ...
             });
         },
     );
 
-    // Repeat the test above for: target, checkInterval, timeout, status, config (one per updatable field).
+    // Repeat the test above for: target, runInterval, timeout, status, config (one per updatable field).
 
     test.afterEach(async ({ apiRequest }) => {
         await cleanup<Resource>s(apiRequest, createdIds, process.env.USER_ACCESS_TOKEN_FULL!);
@@ -388,7 +388,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
     const fieldMatrix = {
         name: invalidString,
         target: invalidString,
-        checkInterval: invalidIntegerTypes,
+        runInterval: invalidIntegerTypes,
         timeout: invalidIntegerTypes,
     } as const;
 
@@ -516,47 +516,47 @@ test(
 );
 ```
 
-## 2. Synthetic-with-probe spec (probe dependency)
+## 2. Job-with-worker spec (worker dependency)
 
-When the spec under test depends on a probe, seed the probe in `beforeAll` and use `cleanupProbesAndSynthetics` (synthetics first, probes second).
+When the spec under test depends on a worker, seed the worker in `beforeAll` and use `cleanupWorkersAndJobs` (jobs first, workers second).
 
-The example below imports the **ICMP** body builder. For other monitor types, swap to the matching helper from `helpers/app/synthetics.ts` — `buildCreateHTTPSyntheticBody` / `buildCreateTCPSyntheticBody` / `buildCreateDNSSyntheticBody` / `buildCreateSSLSyntheticBody` / `buildCreateWebSocketSyntheticBody` / `buildCreateMCPSyntheticBody`. See the per-type `target` and `config` cheat sheet at the end of this file.
+The example below imports `buildCreateJobBody` (defaults to type `export`). For other job types, swap to the matching helper from `helpers/app/jobs.ts` — `buildCreateHTTPJobBody` / `buildCreateSFTPJobBody` / `buildCreateEmailJobBody` / `buildCreateBackupJobBody` / `buildCreateStreamJobBody` / `buildCreateWebhookJobBody`. See the per-type `target` and `config` cheat sheet at the end of this file.
 
 ```typescript
 import {
-    cleanupProbesAndSynthetics,
-    buildCreateSyntheticBody, // swap to buildCreate<Type>SyntheticBody for HTTP/TCP/DNS/SSL/WebSocket/MCP
-    createSyntheticMonitor,
-    deleteSyntheticMonitor,
-} from "../../../helpers/app/synthetics";
-import { buildCreateProbeBody, createProbe } from "../../../helpers/app/probes";
+    cleanupWorkersAndJobs,
+    buildCreateJobBody, // swap to buildCreate<Type>JobBody for HTTP/SFTP/email/backup/stream/webhook
+    createJob,
+    deleteJob,
+} from "../../../helpers/app/jobs";
+import { buildCreateWorkerBody, createWorker } from "../../../helpers/app/workers";
 
-// `!` (definite assignment): set in test.beforeAll. Mirrors tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts.
-let probeId!: string;
-const createdProbeIds: string[] = [];
-const createdSyntheticIds: string[] = [];
+// `!` (definite assignment): set in test.beforeAll. Mirrors tests/app/api/jobs-service/jobs/export-job.spec.ts.
+let workerId!: string;
+const createdWorkerIds: string[] = [];
+const createdJobIds: string[] = [];
 
 test.beforeAll(async ({ apiRequest }) => {
     if (!process.env.USER_ACCESS_TOKEN_FULL) {
-        throw new Error("USER_ACCESS_TOKEN_FULL is required for synthetic API tests.");
+        throw new Error("USER_ACCESS_TOKEN_FULL is required for job API tests.");
     }
-    const probeBody = buildCreateProbeBody();
-    const { status, body } = await createProbe(apiRequest, probeBody, process.env.USER_ACCESS_TOKEN_FULL!);
+    const workerBody = buildCreateWorkerBody();
+    const { status, body } = await createWorker(apiRequest, workerBody, process.env.USER_ACCESS_TOKEN_FULL!);
     if (status !== 201) {
-        throw new Error(`Shared probe POST /probes expected 201, got ${status}: ${JSON.stringify(body)}`);
+        throw new Error(`Seeded worker POST /workers expected 201, got ${status}: ${JSON.stringify(body)}`);
     }
-    probeId = body.probeId;
-    createdProbeIds.push(probeId);
+    workerId = body.workerId;
+    createdWorkerIds.push(workerId);
 });
 
-// Tests use `probeId` in synthetic creation bodies and push synthetic ids into createdSyntheticIds.
+// Tests use `workerId` in job creation bodies and push job ids into createdJobIds.
 
-// Synthetics MUST be deleted before probes (409 Conflict otherwise).
+// Jobs MUST be deleted before workers (409 Conflict otherwise).
 test.afterAll(async ({ apiRequest }) => {
-    await cleanupProbesAndSynthetics(
+    await cleanupWorkersAndJobs(
         apiRequest,
-        createdProbeIds,
-        createdSyntheticIds,
+        createdWorkerIds,
+        createdJobIds,
         process.env.USER_ACCESS_TOKEN_FULL!,
     );
 });
@@ -581,10 +581,10 @@ import { z } from "zod";
 // fixtures/api/schemas/util/common.ts is the canonical home for shared
 // schemas: PageInfoSchema, APIErrorSchema (both z.strictObject), and
 // JSONSchemaResponseSchema. Import (and re-export for your consumers)
-// rather than declaring local copies — synthetic.ts and policy.ts show
+// rather than declaring local copies — job.ts and notification-rule.ts show
 // the pattern.
 // GatewayErrorSchema (401 shape) is not yet centralized — re-export it
-// from an existing strict copy (tenant.ts / user.ts / policy.ts) instead
+// from an existing strict copy (tenant.ts / user.ts / notification-rule.ts) instead
 // of adding a new one.
 
 export { APIErrorSchema, type APIError } from "../util/common";
@@ -606,12 +606,13 @@ export const <Resource>Schema = z.strictObject({
     type: z.string(),
     // Closed value set — strict enum, never z.string().
     status: z.enum(["enabled", "disabled"]),
-    // ⚠ STRICTNESS DECISION: is `healthStatus` really sometimes absent?
-    //   - If always present (perhaps with a "pending"/"unknown" sentinel right after create), tighten to `z.string()` or `z.enum([...])`.
+    // `status` is the enabled/disabled toggle; `jobStatus` is the run outcome, set to `paused` by POST /jobs/:id/pause.
+    // ⚠ STRICTNESS DECISION: is `jobStatus` really sometimes absent?
+    //   - If always present (perhaps with a sentinel value outside the four job statuses `passing` / `failing` / `degraded` / `paused`, e.g. "unknown" / "pending", before the first run), tighten to `z.string()` or `z.enum([...])`.
     //   - If conditionally absent, replace `<condition>` below with the actual trigger and add a test for both branches.
     // Until verified, prefer strict and remove `.optional()`.
-    healthStatus: z.string(), // .optional() — only if absence is verified under <condition>
-    checkInterval: z.number().int(),
+    jobStatus: z.string(), // .optional() — only if absence is verified under <condition>
+    runInterval: z.number().int(),
     timeout: z.number().int(),
     // Free-form per `type`. Once shapes stabilize, replace with z.discriminatedUnion("type", [...]).
     config: z.record(z.unknown()),
@@ -704,8 +705,8 @@ import { faker } from "@faker-js/faker";
 
 // TARGET SHAPE (preferred for new builders): a `Create<Resource>Body` type +
 // `overrides?: Partial<Create<Resource>Body>`. The typed override gives compile-time
-// safety — `buildCreate<Resource>Body({ chekInterval: 300 })` (typo) or
-// `{ checkInterval: "300" }` (wrong type) fails to compile instead of silently
+// safety — `buildCreate<Resource>Body({ runIntrval: 300 })` (typo) or
+// `{ runInterval: "300" }` (wrong type) fails to compile instead of silently
 // producing a body the server rejects at runtime. It also makes the builder self-
 // documenting: the field set is the type, not a `Record` free-for-all.
 //
@@ -713,7 +714,7 @@ import { faker } from "@faker-js/faker";
 //       name: string;
 //       target: string;
 //       type: string;
-//       checkInterval: number;
+//       runInterval: number;
 //       timeout: number;
 //       config: Record<string, unknown>;
 //   };
@@ -736,7 +737,7 @@ export function buildCreate<Resource>Body(
         name: `qa-<resource>-${faker.string.alphanumeric(8).toLowerCase()}`,
         target: faker.internet.url(),
         type: "<defaultType>",
-        checkInterval: 300,
+        runInterval: 300,
         timeout: 30,
         config: {},
         ...overrides,
@@ -1013,9 +1014,9 @@ test(
 
 The contract: cross-tenant access returns **404, not 403**. There are two shapes — pick the one that matches the resource.
 
-### Tenant-scoped resource (synthetic, probe) — token enforces isolation
+### Tenant-scoped resource (job, worker) — token enforces isolation
 
-The tenantA / tenantB tokens must be minted in `test.beforeAll` (see `tests/app/api/shared/cross-tenant-metrics-isolation.spec.ts` for a real-world example that obtains tokens via Keycloak per-tenant). The variables below are placeholders for that beforeAll.
+The tenantA / tenantB tokens must be minted in `test.beforeAll` (see `tests/app/api/shared/cross-tenant-run-stats-isolation.spec.ts` for a real-world example that obtains tokens via Keycloak per-tenant). The variables below are placeholders for that beforeAll.
 
 ```typescript
 // Module-scope state populated in test.beforeAll:
@@ -1073,55 +1074,55 @@ test(
 );
 ```
 
-See `tests/app/api/shared/cross-tenant-isolation.spec.ts` (admin/users) and `tests/app/api/shared/cross-tenant-metrics-isolation.spec.ts` (synthetics/data) for the canonical specs.
+See `tests/app/api/shared/cross-tenant-isolation.spec.ts` (admin/users) and `tests/app/api/shared/cross-tenant-run-stats-isolation.spec.ts` (jobs/run stats) for the canonical specs.
 
-## 8. Faker-driven body builder shapes (per monitor type)
+## 8. Faker-driven body builder shapes (per job type)
 
-The synthetics module exports one `buildCreate<Type>SyntheticBody(probeIds, overrides?)` per monitor type. When adding a new type, mirror this shape:
+The jobs module exports one `buildCreate<Type>JobBody(workerIds, overrides?)` per job type. When adding a new type, mirror this shape:
 
 ```typescript
-export function buildCreate<NewType>SyntheticBody(
-    probeIds: string[],
+export function buildCreate<NewType>JobBody(
+    workerIds: string[],
     overrides?: Record<string, unknown>,
 ): Record<string, unknown> & { config?: Record<string, unknown> } {
     return {
         name: `qa-<newtype>-${faker.string.alphanumeric(8).toLowerCase()}`,
-        // Replace with a faker call appropriate to the monitor type — examples below.
+        // Replace with a faker call appropriate to the job type — examples below.
         target: faker.internet.url(),
         type: "<newtype>",
-        checkInterval: DEFAULT_CHECK_INTERVAL,
+        runInterval: DEFAULT_RUN_INTERVAL,
         timeout: DEFAULT_TIMEOUT,
         // Replace with type-specific defaults — see the table below.
         config: {},
-        probeIds,
+        workerIds,
         ...overrides,
     };
 }
 ```
 
-Existing per-type `target` shapes (from `helpers/app/synthetics.ts`):
+Existing per-type `target` shapes (from `helpers/app/jobs.ts`):
 
 | Type | `target` builder |
 |------|-----------------|
-| `icmp` | `faker.internet.ipv4()` |
+| `export` | `faker.system.directoryPath()` |
 | `http` | `` `https://${faker.internet.domainName()}` `` |
-| `websocket` | `` `wss://${faker.internet.domainName()}` `` |
-| `tcp` | `faker.internet.ipv4()` (host only — port lives in `config.port`) |
-| `dns` | `faker.internet.domainName()` |
-| `ssl` | `faker.internet.domainName()` |
-| `mcp` | `faker.internet.url()` |
+| `stream` | `` `wss://${faker.internet.domainName()}` `` |
+| `sftp` | `faker.internet.ipv4()` (host only — port lives in `config.port`) |
+| `email` | `faker.internet.email({ provider: "<your-test-domain>" })` |
+| `backup` | `faker.internet.domainName()` |
+| `webhook` | `faker.internet.url()` |
 
-Monitor-type config shapes already in use:
+Job-type config shapes already in use:
 
 | Type | `config` shape |
 |------|----------------|
-| `icmp` | `{ enableTraceroute: false }` |
+| `export` | `{ recordRunSteps: false }` |
 | `http` | `{ verifySsl: true }` |
-| `websocket` | `{ verifySsl: true }` |
-| `tcp` | `{ port: 80 }` |
-| `dns` | `{ recordType: "A" }` |
-| `ssl` | `{ port: 443, warnDaysBeforeExpiry: 30 }` |
-| `mcp` | `{ description: "" }` |
+| `stream` | `{ verifySsl: true }` |
+| `sftp` | `{ port: 22 }` |
+| `email` | `{ bodyFormat: "html" }` |
+| `backup` | `{ port: 5432, retentionDays: 30 }` |
+| `webhook` | `{ description: "" }` |
 
 ---
 
@@ -1132,31 +1133,31 @@ One `test()` per field. The loop runs **inside** the test, iterating the univers
 ```typescript
 import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invalid-types";
 
-test.describe("POST /synthetics — field validation", () => {
-    test.beforeEach(async ({ apiRequest }) => { /* seed probe */ });
+test.describe("POST /jobs — field validation", () => {
+    test.beforeEach(async ({ apiRequest }) => { /* seed worker */ });
 
-    test("Verify POST /synthetics returns 400 for invalid name values", { tag: "@App-API" }, async ({ apiRequest }) => {
-        qase.suite(SUITES.API_SYNTHETICS);
+    test("Verify POST /jobs returns 400 for invalid name values", { tag: "@App-API" }, async ({ apiRequest }) => {
+        qase.suite(SUITES.API_JOBS);
         // qase.id(N);
         for (const value of invalidString) {
             await test.step(`name = ${JSON.stringify(value)}`, async () => {
-                const body = { ...buildCreateSyntheticBody(probeIds), name: value };
-                const { status, body: err } = await createSyntheticMonitor(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
+                const body = { ...buildCreateJobBody(workerIds), name: value };
+                const { status, body: err } = await createJob(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
                 expect.soft(status, `name = ${JSON.stringify(value)}`).toBe(400);
                 expect.soft(APIErrorSchema.safeParse(err).success, `name = ${JSON.stringify(value)}`).toBe(true);
             });
         }
     });
 
-    test("Verify POST /synthetics returns 400 for invalid checkInterval values", { tag: "@App-API" }, async ({ apiRequest }) => {
-        qase.suite(SUITES.API_SYNTHETICS);
+    test("Verify POST /jobs returns 400 for invalid runInterval values", { tag: "@App-API" }, async ({ apiRequest }) => {
+        qase.suite(SUITES.API_JOBS);
         // qase.id(N);
         for (const value of invalidIntegerTypes) {
-            await test.step(`checkInterval = ${JSON.stringify(value)}`, async () => {
-                const body = { ...buildCreateSyntheticBody(probeIds), checkInterval: value };
-                const { status, body: err } = await createSyntheticMonitor(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
-                expect.soft(status, `checkInterval = ${JSON.stringify(value)}`).toBe(400);
-                expect.soft(APIErrorSchema.safeParse(err).success, `checkInterval = ${JSON.stringify(value)}`).toBe(true);
+            await test.step(`runInterval = ${JSON.stringify(value)}`, async () => {
+                const body = { ...buildCreateJobBody(workerIds), runInterval: value };
+                const { status, body: err } = await createJob(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
+                expect.soft(status, `runInterval = ${JSON.stringify(value)}`).toBe(400);
+                expect.soft(APIErrorSchema.safeParse(err).success, `runInterval = ${JSON.stringify(value)}`).toBe(true);
             });
         }
     });
@@ -1172,22 +1173,22 @@ Same coverage as § 9, denser source. One `test()` covers every (field × invali
 ```typescript
 import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invalid-types";
 
-test("Verify POST /synthetics returns 400 for invalid field values", { tag: "@App-API" }, async ({ apiRequest }) => {
-    qase.suite(SUITES.API_SYNTHETICS);
+test("Verify POST /jobs returns 400 for invalid field values", { tag: "@App-API" }, async ({ apiRequest }) => {
+    qase.suite(SUITES.API_JOBS);
     // qase.id(N);
-    const validBody = buildCreateSyntheticBody([probeId]);
+    const validBody = buildCreateJobBody([workerId]);
 
     const fields: Record<string, readonly unknown[]> = {
         name: invalidString,
         target: invalidString,
-        checkInterval: invalidIntegerTypes,
+        runInterval: invalidIntegerTypes,
         timeout: invalidIntegerTypes,
     };
 
     for (const [field, invalidValues] of Object.entries(fields)) {
         for (const invalid of invalidValues) {
             await test.step(`${field} = ${JSON.stringify(invalid)}`, async () => {
-                const { status, body } = await createSyntheticMonitor(
+                const { status, body } = await createJob(
                     apiRequest,
                     { ...validBody, [field]: invalid },
                     process.env.USER_ACCESS_TOKEN_FULL!,
@@ -1207,16 +1208,16 @@ The single test reports as one entry in Qase / the HTML report; failed iteration
 One `test()` covers every required field. The loop runs **inside** the test; each iteration is a `test.step` and uses `expect.soft` so all missing-field cases are exercised in a single run.
 
 ```typescript
-test("Verify POST /synthetics returns 400 when required fields are missing", { tag: "@App-API" }, async ({ apiRequest }) => {
-    qase.suite(SUITES.API_SYNTHETICS);
+test("Verify POST /jobs returns 400 when required fields are missing", { tag: "@App-API" }, async ({ apiRequest }) => {
+    qase.suite(SUITES.API_JOBS);
     // qase.id(N);
-    const validBody = buildCreateSyntheticBody(probeIds);
-    const requiredFields = ["name", "target", "type", "timeout", "probeIds"] as const;
+    const validBody = buildCreateJobBody(workerIds);
+    const requiredFields = ["name", "target", "type", "timeout", "workerIds"] as const;
 
     for (const field of requiredFields) {
         await test.step(`omit ${field}`, async () => {
             const { [field]: _, ...payloadWithoutField } = validBody;
-            const { status, body } = await createSyntheticMonitor(apiRequest, payloadWithoutField, process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await createJob(apiRequest, payloadWithoutField, process.env.USER_ACCESS_TOKEN_FULL!);
             expect.soft(status, `omit ${field}`).toBe(400);
             expect.soft(APIErrorSchema.safeParse(body).success, `omit ${field}`).toBe(true);
         });
@@ -1229,8 +1230,8 @@ test("Verify POST /synthetics returns 400 when required fields are missing", { t
 One `test()` covers every invalid-id case. Labeled cases (`{ description, value }`) so each `test.step` reads cleanly. Loop is **inside** the test; `expect.soft` keeps every iteration running. `encodeURIComponent` keeps the URL well-formed.
 
 ```typescript
-test("Verify GET /synthetics/{id} returns 400 for invalid id formats", { tag: "@App-API" }, async ({ apiRequest }) => {
-    qase.suite(SUITES.API_SYNTHETICS);
+test("Verify GET /jobs/{id} returns 400 for invalid id formats", { tag: "@App-API" }, async ({ apiRequest }) => {
+    qase.suite(SUITES.API_JOBS);
     // qase.id(N);
 
     const invalidIds = [
@@ -1243,7 +1244,7 @@ test("Verify GET /synthetics/{id} returns 400 for invalid id formats", { tag: "@
 
     for (const { description, value } of invalidIds) {
         await test.step(`id = ${description}`, async () => {
-            const { status, body } = await getSyntheticMonitor(apiRequest, encodeURIComponent(value), process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await getJob(apiRequest, encodeURIComponent(value), process.env.USER_ACCESS_TOKEN_FULL!);
             expect.soft(status, `id = ${description}`).toBe(400);
             expect.soft(APIErrorSchema.safeParse(body).success, `id = ${description}`).toBe(true);
         });
@@ -1260,12 +1261,12 @@ When API behavior diverges from the documented contract, write the test as the c
 ```typescript
 // TODO: FIXME: PROJ-1234 — backend returns 200 instead of 400 for empty name
 // test(
-//     "Verify POST /synthetics returns 400 with empty name",
+//     "Verify POST /jobs returns 400 with empty name",
 //     { tag: "@App-API" },
 //     async ({ apiRequest }) => {
-//         qase.suite(SUITES.API_SYNTHETICS);
+//         qase.suite(SUITES.API_JOBS);
 //         // qase.id(N);
-//         const { status, body } = await createSyntheticMonitor(apiRequest, buildCreateSyntheticBody([probeId], { name: "" }), process.env.USER_ACCESS_TOKEN_FULL!);
+//         const { status, body } = await createJob(apiRequest, buildCreateJobBody([workerId], { name: "" }), process.env.USER_ACCESS_TOKEN_FULL!);
 //         expect(status).toBe(400);
 //         expect(APIErrorSchema.parse(body)).toBeTruthy();
 //     },
@@ -1274,22 +1275,22 @@ When API behavior diverges from the documented contract, write the test as the c
 
 ## 14. Cleanup pattern (track-then-drain)
 
-Track ids in a describe-scoped array; drain in `afterAll` via the dedicated cleanup helper (which tolerates 404 and parallelizes via `Promise.allSettled`). Synthetics-with-probes specs **must** delete synthetics before probes.
+Track ids in a describe-scoped array; drain in `afterAll` via the dedicated cleanup helper (which tolerates 404 and parallelizes via `Promise.allSettled`). Jobs-with-workers specs **must** delete jobs before workers.
 
 ```typescript
-test.describe("POST /synthetics", () => {
-    const createdProbeIds: string[] = [];
-    const createdSyntheticIds: string[] = [];
+test.describe("POST /jobs", () => {
+    const createdWorkerIds: string[] = [];
+    const createdJobIds: string[] = [];
 
-    test("Verify POST /synthetics returns 201", { tag: "@App-API" }, async ({ apiRequest }) => {
-        // ... POST probe, POST synthetic, push ids ...
+    test("Verify POST /jobs returns 201", { tag: "@App-API" }, async ({ apiRequest }) => {
+        // ... POST worker, POST job, push ids ...
     });
 
     test.afterAll(async ({ apiRequest }) => {
-        await cleanupProbesAndSynthetics(
+        await cleanupWorkersAndJobs(
             apiRequest,
-            createdProbeIds,
-            createdSyntheticIds,
+            createdWorkerIds,
+            createdJobIds,
             process.env.USER_ACCESS_TOKEN_FULL!,
         );
     });
@@ -1370,10 +1371,10 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
 
 ```typescript
 test(
-    "Verify GET /synthetics returns 200",
+    "Verify GET /jobs returns 200",
     { tag: "@App-API" },
     async ({ apiRequest }) => {
-        qase.suite(SUITES.API_SYNTHETICS);
+        qase.suite(SUITES.API_JOBS);
         // qase.id(123);
         // ...
     },
@@ -1387,14 +1388,14 @@ The decision rule and full prose live in [SKILL.md § Helpers](SKILL.md). These 
 **Passthrough (Style B)** — used across positive AND negative tests, returns `{ status, body }`:
 
 ```typescript
-export async function createSyntheticMonitor<T = CreateSyntheticResponse>(
+export async function createJob<T = CreateJobResponse>(
     apiRequest: ApiRequestFn,
     body: Record<string, unknown>,
     headers?: string,
 ): Promise<ApiRequestResponse<T>> {
     return apiRequest<T>({
         method: "POST",
-        url: appConfig.api.SYNTHETICS,
+        url: appConfig.api.JOBS,
         baseUrl: appConfig.apiUrl,
         body,
         headers,
@@ -1405,20 +1406,20 @@ export async function createSyntheticMonitor<T = CreateSyntheticResponse>(
 **Assertion-style (Style A)** — used to seed a precondition, asserts internally, returns parsed entity:
 
 ```typescript
-export async function setupSynthetic(
+export async function setupJob(
     apiRequest: ApiRequestFn,
-    probeIds: string[],
+    workerIds: string[],
     headers: string,
     overrides?: Record<string, unknown>,
-): Promise<Synthetic> {
-    const { status, body } = await createSyntheticMonitor(
+): Promise<Job> {
+    const { status, body } = await createJob(
         apiRequest,
-        buildCreateSyntheticBody(probeIds, overrides),
+        buildCreateJobBody(workerIds, overrides),
         headers,
     );
     expect(status).toBe(201);
-    const fetched = await getSyntheticMonitor(apiRequest, body.syntheticId, headers);
+    const fetched = await getJob(apiRequest, body.jobId, headers);
     expect(fetched.status).toBe(200);
-    return SyntheticSchema.parse(fetched.body.synthetic);
+    return JobSchema.parse(fetched.body.job);
 }
 ```
