@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.3
+version: 2.0.4
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -8,12 +8,12 @@ metadata:
 
 # Page Objects
 
-Page Object classes are the seam between specs and the UI: they own every locator the framework interacts with, encapsulate every wait, and expose **business actions** (`syntheticsPage.openRowActionMenu`, `createMonitorPage.fillHttpMonitorForm`) instead of raw clicks. Authoring drift in this layer leaks into every spec that consumes the page object — so the rules below are tighter than they look. This skill is the **single source of truth** for POM class structure, action-method standards, and fixture registration. Pair with [`selectors`](../selectors/SKILL.md) for locator strategy and [`test-standards`](../test-standards/SKILL.md) for spec-side rules. Always-on framework invariants live in [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md).
+Page Object classes are the seam between specs and the UI: they own every locator the framework interacts with, encapsulate every wait, and expose **business actions** (`jobsPage.openRowActionMenu`, `createJobPage.fillHttpJobForm`) instead of raw clicks. Authoring drift in this layer leaks into every spec that consumes the page object — so the rules below are tighter than they look. This skill is the **single source of truth** for POM class structure, action-method standards, and fixture registration. Pair with [`selectors`](../selectors/SKILL.md) for locator strategy and [`test-standards`](../test-standards/SKILL.md) for spec-side rules. Always-on framework invariants live in [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md).
 
 ## Critical
 
 - **ALWAYS** put page-object classes in `pages/app/<Name>.ts` (PascalCase, no `.page.ts` suffix). `LoginPage` is the only exception — it lives at `pages/util/LoginPage.ts` because it targets the Keycloak login theme, not the app shell. Why: all 15 existing POMs (14 classes in `pages/app/` plus `LoginPage` in `pages/util/`) use this convention; deviating breaks the fixture-registration import paths and the orchestrator's mental model.
-- **ALWAYS** extend the correct base class. Pages **with a data table** (Synthetics, Inventory, Probes, Policies, and any new table-bearing page) extend `DataTableBase` from `pages/baseClasses/DataTableBase.ts` — it provides `dataTable`, `tableRows`, `noResultsMessage`, `cellForRow`, `getColumnTexts`, sorting helpers, pagination controls, `selectPageSize`, `goToNextPage`, `goToPreviousPage`, and `waitForTableSettled`. Pages **without a table** extend `BasePage` from `pages/baseClasses/BasePage.ts` — it provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `refresh`. Why: bypassing the right base duplicates logic per page and produces drift. Classes that legitimately skip a base class — shell and sheet components such as `SideNavigation` and the `CreateMonitorPage` sheet — are listed in one place: `selectors/reference.md` § 7.2 Class shape. `AlertsPage` uses `BasePage` because its table root differs (`pageRoot` instead of `dataTable`).
+- **ALWAYS** extend the correct base class. Pages **with a data table** (Jobs, Inventory, Workers, Notification Rules, and any new table-bearing page) extend `DataTableBase` from `pages/baseClasses/DataTableBase.ts` — it provides `dataTable`, `tableRows`, `noResultsMessage`, `cellForRow`, `getColumnTexts`, sorting helpers, pagination controls, `selectPageSize`, `goToNextPage`, `goToPreviousPage`, and `waitForTableSettled`. Pages **without a table** extend `BasePage` from `pages/baseClasses/BasePage.ts` — it provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `refresh`. Why: bypassing the right base duplicates logic per page and produces drift. Classes that legitimately skip a base class — shell and sheet components such as `SideNavigation` and the `CreateJobPage` sheet — are listed in one place: `selectors/reference.md` § 7.2 Class shape. `NotificationsPage` uses `BasePage` because its table root differs (`pageRoot` instead of `dataTable`).
 - **ALWAYS** define locators as `get` accessors returning `Locator`. Never `async`, never `Promise<Locator>`. A `readonly` field set in the constructor is allowed for exactly two things: a composed component object (§ Extract a component), and a single anchor locator that every getter in the class chains off (`selectors` patterns P4). Why: Playwright's `Locator` is lazy — it re-queries on every action. The `get` form is terser, groups locators in the class body, and matches every existing POM in `pages/app/`.
 - **NEVER** put a locator that the framework interacts with (`click`, `fill`, `hover`, `press`, `setInputFiles`) inline in a spec. Locators interacted with live in a page object. Inline `page.getBy*` in specs is reserved for one-off arrival markers and Sonner toast assertions only. See the `selectors` skill § Where selectors live — POM vs spec.
 - **NEVER** use `page.waitForTimeout(...)` inside a page object. Replace with a web-first assertion (`await expect(locator).toBeVisible()`), `page.waitForResponse(...)` for known XHRs, or `expect(async () => { … }).toPass({ timeout })` for reads of a value that legitimately keeps changing. Why: hard waits are flake amplifiers and mask real timing bugs.
@@ -31,7 +31,7 @@ Page Object classes are the seam between specs and the UI: they own every locato
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Rules, decisions, anti-patterns, workflow for authoring page objects. | **Always** — on any task that creates / extends / refactors a class under `pages/**`. |
-| **[`reference.md`](reference.md)** | Catalog of every existing POM, its fixture name, file path, and key methods. | **Load on lookup** — "What's already on `SyntheticsPage`?" / "Is there a method for X?" |
+| **[`reference.md`](reference.md)** | Catalog of every existing POM, its fixture name, file path, and key methods. | **Load on lookup** — "What's already on `JobsPage`?" / "Is there a method for X?" |
 
 **Boundary rule:** decisions, rules, and anti-patterns live in this `SKILL.md`. Catalog facts (POM inventory, fixture-method mapping) belong in `reference.md` if/when it grows past inline. Locator priority, the Radix exception, and selector taxonomy belong in the [`selectors`](../selectors/SKILL.md) skill — **do not duplicate them here**. Spec-side rules (`test.step`, tags, imports from `test-options`) belong in [`test-standards`](../test-standards/SKILL.md). If you find rule content in a sibling skill (or vice versa), it's drift — fix it before adding more.
 
@@ -39,10 +39,10 @@ Page Object classes are the seam between specs and the UI: they own every locato
 
 | Layer | Path | Responsibility | Examples |
 |-------|------|----------------|----------|
-| App POMs | `pages/app/<Name>.ts` | One class per app screen / shared-shell component. PascalCase filename, no suffix. | `DashboardPage.ts`, `SyntheticsPage.ts`, `CreateMonitorPage.ts`, `ProbesPage.ts`, `MetricsPage.ts`, `SideNavigation.ts`, `AlertsPage.ts`, `InventoryPage.ts`, `PoliciesPage.ts`, `ReportsPage.ts` |
+| App POMs | `pages/app/<Name>.ts` | One class per app screen / shared-shell component. PascalCase filename, no suffix. | `DashboardPage.ts`, `JobsPage.ts`, `CreateJobPage.ts`, `WorkersPage.ts`, `RunStatsPage.ts`, `SideNavigation.ts`, `NotificationsPage.ts`, `InventoryPage.ts`, `NotificationRulesPage.ts`, `ReportsPage.ts` |
 | Util POMs | `pages/util/<Name>.ts` | Auth & cross-area pages that aren't part of the main app shell. | `LoginPage.ts` (Keycloak login) |
 | Base / shared | `pages/baseClasses/<Name>.ts` | Abstract base class (`BasePage`) and the table-bearing base (`DataTableBase extends BasePage`). These are the **only two** files in the directory. | `BasePage.ts`, `DataTableBase.ts` |
-| Fixture wiring | `fixtures/pom/page-object-fixture.ts` | Registers every POM as a `FrameworkFixtures` property — 15 fixtures today. Merged into `test-options.ts`. | `dashboardPage`, `syntheticsPage`, `createMonitorPage`, `probesPage`, `metricsPage`, `sideNavigation`, `loginPage`, `alertsPage`, `inventoryPage`, `policiesPage`, `createPolicyPage`, `syntheticMetricsViewPage`, `settingsProfilePage`, `profileSettingsPage`, `reportsPage` |
+| Fixture wiring | `fixtures/pom/page-object-fixture.ts` | Registers every POM as a `FrameworkFixtures` property — 15 fixtures today. Merged into `test-options.ts`. | `dashboardPage`, `jobsPage`, `createJobPage`, `workersPage`, `runStatsPage`, `sideNavigation`, `loginPage`, `notificationsPage`, `inventoryPage`, `notificationRulesPage`, `createNotificationRulePage`, `jobRunStatsViewPage`, `settingsProfilePage`, `profileSettingsPage`, `reportsPage` |
 | Consumed in specs | `tests/app/{api,e2e,functional}/**` | Specs destructure POMs from the test context. | `async ({ dashboardPage, sideNavigation }) => { ... }` |
 
 ### POM inventory (current state)
@@ -50,17 +50,17 @@ Page Object classes are the seam between specs and the UI: they own every locato
 | Fixture name | Class | File | Covers |
 |--------------|-------|------|--------|
 | `loginPage` | `LoginPage` | `pages/util/LoginPage.ts` | Keycloak login form, error/success alerts, forgot-password / register links |
-| `sideNavigation` | `SideNavigation` | `pages/app/SideNavigation.ts` | Sidebar logo + nav links, `navigateToApp()` / `navigateToSynthetics()` etc. |
-| `alertsPage` | `AlertsPage` | `pages/app/AlertsPage.ts` | Alerts pages (`/alerts` + `/alerts/history`) — tabs, severity cards, search, filters, row/bulk actions, details sheet, history timeline chart |
-| `dashboardPage` | `DashboardPage` | `pages/app/DashboardPage.ts` | Landing page (`/`) — Alerts / Synthetics / Probes / Monitors-by-Type / Quick-Actions sections |
-| `syntheticsPage` | `SyntheticsPage` | `pages/app/SyntheticsPage.ts` | Monitor list table, search, row actions, expanded views, health filter |
-| `inventoryPage` | `InventoryPage` | `pages/app/InventoryPage.ts` | Inventory ("Assets") list (`/inventory`) — health overview cards, Source/Type filters, row actions |
-| `policiesPage` | `PoliciesPage` | `pages/app/PoliciesPage.ts` | Policies list — filter cards, search, severity/type/status filters, table, row actions, delete dialog, edit/details sheets |
-| `createMonitorPage` | `CreateMonitorPage` | `pages/app/CreateMonitorPage.ts` | Create/edit monitor sheet (HTTP, ICMP, WebSocket, TCP, DNS, SSL, MCP) |
-| `createPolicyPage` | `CreatePolicyPage` | `pages/app/CreatePolicyPage.ts` | Create-policy sheet — step-1 type cards, schema form, severity, operators, evaluation windows |
-| `probesPage` | `ProbesPage` | `pages/app/ProbesPage.ts` | Probes management — status cards, filters, register/edit/details sheets |
-| `metricsPage` | `MetricsPage` | `pages/app/MetricsPage.ts` | Metrics page — host picker, metric selection, chart toolbar, expanded dialog |
-| `syntheticMetricsViewPage` | `SyntheticMetricsViewPage` | `pages/app/SyntheticMetricsViewPage.ts` | Per-monitor metrics view (`/synthetics/$syntheticId`) — metric sections, timeframes, aggregation, Grid/Combined modes, refresh |
+| `sideNavigation` | `SideNavigation` | `pages/app/SideNavigation.ts` | Sidebar logo + nav links, `navigateToApp()` / `navigateToJobs()` etc. |
+| `notificationsPage` | `NotificationsPage` | `pages/app/NotificationsPage.ts` | Notifications pages (`/notifications` + `/notifications/history`) — tabs, severity cards, search, filters, row/bulk actions, details sheet, history timeline chart |
+| `dashboardPage` | `DashboardPage` | `pages/app/DashboardPage.ts` | Landing page (`/`) — Notifications / Jobs / Workers / Type-Breakdown / Quick-Actions sections |
+| `jobsPage` | `JobsPage` | `pages/app/JobsPage.ts` | Job list table, search, row actions, expanded views, outcome filter |
+| `inventoryPage` | `InventoryPage` | `pages/app/InventoryPage.ts` | Inventory ("Assets") list (`/inventory`) — job-status overview cards, Source/Type filters, row actions |
+| `notificationRulesPage` | `NotificationRulesPage` | `pages/app/NotificationRulesPage.ts` | Notification-rules list — filter cards, search, severity/type/status filters, table, row actions, delete dialog, edit/details sheets |
+| `createJobPage` | `CreateJobPage` | `pages/app/CreateJobPage.ts` | Create/edit job sheet (HTTP, `export`, stream, SFTP, email, backup, webhook) |
+| `createNotificationRulePage` | `CreateNotificationRulePage` | `pages/app/CreateNotificationRulePage.ts` | Create-notification-rule sheet — step-1 type cards, schema form, severity, operators, evaluation windows |
+| `workersPage` | `WorkersPage` | `pages/app/WorkersPage.ts` | Workers management — status cards, filters, register/edit/details sheets |
+| `runStatsPage` | `RunStatsPage` | `pages/app/RunStatsPage.ts` | Run-stats page — job picker, run-stat selection, chart toolbar, expanded dialog |
+| `jobRunStatsViewPage` | `JobRunStatsViewPage` | `pages/app/JobRunStatsViewPage.ts` | Per-job run-stats view (`/jobs/$jobId`) — run-stat sections, timeframes, aggregation, Grid/Combined modes, refresh |
 | `settingsProfilePage` | `SettingsProfilePage` | `pages/app/SettingsProfilePage.ts` | Settings > Profile tab — profile card, invite banner, invite-member sheet |
 | `profileSettingsPage` | `ProfileSettingsPage` | `pages/app/ProfileSettingsPage.ts` | Profile settings form — editable first/last name, read-only email/role, save button, toasts |
 | `reportsPage` | `ReportsPage` | `pages/app/ReportsPage.ts` | Reports page (`/reports`) — client-side widget canvas, Add Widget, Download PDF, delete-widget dialog |
@@ -84,7 +84,7 @@ A new POM that isn't on this table needs a new row added in the same edit batch 
 
 - **New page** for a new app screen → all eight steps below.
 - **Extend an existing page** with a locator or action → Steps 2 → 4 → 5 → 6 → 8 (skip Step 7 — registration already exists).
-- **Extract a component** that's repeated across 3+ pages → create `pages/baseClasses/<Name>.ts`, then compose into each consuming POM as `readonly <name>: <Name>;` set in the constructor. For table-specific shared logic, extend `DataTableBase` instead of `BasePage` — it's the existing worked example of extraction (search, pagination, sorting, `waitForTableSettled` shared by Synthetics / Inventory / Probes / Policies).
+- **Extract a component** that's repeated across 3+ pages → create `pages/baseClasses/<Name>.ts`, then compose into each consuming POM as `readonly <name>: <Name>;` set in the constructor. For table-specific shared logic, extend `DataTableBase` instead of `BasePage` — it's the existing worked example of extraction (search, pagination, sorting, `waitForTableSettled` shared by Jobs / Inventory / Workers / Notification Rules).
 
 ### Step 2 — explore the live app (mandatory)
 
@@ -173,9 +173,9 @@ export class SettingsPage extends BasePage {
 }
 ```
 
-The shape is fixed: imports → class header → `open()` → page structure → interactive locators → feedback locators → actions. The visual headers (`═════`) are the existing convention across `DashboardPage`, `SyntheticsPage`, `CreateMonitorPage`. Don't substitute.
+The shape is fixed: imports → class header → `open()` → page structure → interactive locators → feedback locators → actions. The visual headers (`═════`) are the existing convention across `DashboardPage`, `JobsPage`, `CreateJobPage`. Don't substitute.
 
-**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the schema-form helpers for the test-id fallback** — use `getByLabel(...)` and `getByRole('alert')` first, and these only where the label or error is not associated. They wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateMonitorPage`) / `fieldWrapper()` (`CreatePolicyPage`). When the fallback is needed, use these helpers instead of inline testid strings.
+**`fieldInput(fieldPath)` and `fieldError(fieldName)` are the schema-form helpers for the test-id fallback** — use `getByLabel(...)` and `getByRole('alert')` first, and these only where the label or error is not associated. They wrap the `field-field-${fieldPath}` (input) and `error-${fieldName}` (validation message) testids emitted by `frontend/src/components/schema-form/schema-form.tsx`. The schema-form also emits a `schema-field-${fieldName}` testid on the **field wrapper** — covered by `schemaField()` (`CreateJobPage`) / `fieldWrapper()` (`CreateNotificationRulePage`). When the fallback is needed, use these helpers instead of inline testid strings.
 
 ### Step 5 — pick locator strategies
 
@@ -200,18 +200,18 @@ Every public method must:
 ```typescript
 // CORRECT — wait armed BEFORE the click, then a visible-state assertion
 /**
- * Submits the create-monitor sheet and waits for the success toast.
+ * Submits the create-job sheet and waits for the success toast.
  * @returns Promise<void>
  */
-async submitCreateMonitor(): Promise<void> {
-  const created = this.page.waitForResponse((r) => r.url().includes("/api/synthetics") && r.request().method() === "POST");
+async submitCreateJob(): Promise<void> {
+  const created = this.page.waitForResponse((r) => r.url().includes("/api/jobs") && r.request().method() === "POST");
   await this.submitButton.click();
   await created;
   await expect(this.successToast).toBeVisible();
 }
 
 // WRONG — thin click, no wait, no assertion
-async submitCreateMonitor(): Promise<void> {
+async submitCreateJob(): Promise<void> {
   await this.submitButton.click();
 }
 ```
@@ -274,7 +274,7 @@ For tag rules (lowercase `@App-regression` for functional specs — this exact c
 
 - ❌ **Filename uses `dashboard.page.ts` or `dashboard-page.ts`.** Doesn't match the 15 existing POMs. Fix: rename to PascalCase + no suffix (`DashboardPage.ts`).
 - ❌ **`readonly` locator fields set in the constructor instead of `get` accessors.** Both work at runtime, but the `readonly` form is verbose and breaks consistency. The two exceptions are a composed component object and a single anchor every getter chains off (`selectors` patterns P4). Fix: convert to `get`.
-- ❌ **`page.waitForTimeout(1000)` inside a POM action.** Hard wait — masks timing bugs and produces parallel-run flake. Fix: replace with `await expect(locator).toBeVisible()` for state, `page.waitForResponse(...)` for known XHRs.
+- ❌ **`page.waitForTimeout(1000)` inside a POM action.** Hard wait — masks timing bugs and produces flake under parallel test runs. Fix: replace with `await expect(locator).toBeVisible()` for state, `page.waitForResponse(...)` for known XHRs.
 - ❌ **Locator-getter has JSDoc.** Names are self-documenting. Fix: delete the JSDoc; keep JSDoc only on action / verification methods.
 - ❌ **Action method calls `click()` and returns.** No wait, no assertion — flake amplifier. Fix: add `await expect(toast).toBeVisible()` or `page.waitForResponse(...)` before returning.
 - ❌ **POM imports `test` / `expect` from `fixtures/pom/test-options`.** That import is reserved for spec files. POMs import directly from `@playwright/test`. Fix: `import { expect, type Locator, type Page } from "@playwright/test";`.
@@ -283,8 +283,8 @@ For tag rules (lowercase `@App-regression` for functional specs — this exact c
 - ❌ **POM file > 600 lines covering multiple flows.** Class is doing too much. Fix: split by surface (`SettingsProfilePage`, `SettingsBillingPage`) or extract repeated fragments into `pages/baseClasses/<Component>.ts` (mirror `DataTableBase`).
 - ❌ **Inline `page.locator('css selector').click()` in a spec.** Locator that's interacted with belongs in a POM. Fix: move the locator + action into the matching POM and call it from the spec.
 - ❌ **Locator getter in a POM that is never consumed by any spec or action method.** Dead locators add noise, mask naming conflicts, and rot when the UI changes without anyone noticing. Fix: grep for the getter name across `tests/` before declaring a POM change done; remove unused getters in the same edit.
-- ❌ **Duplicate getter name in a large POM.** TypeScript silently shadows duplicate `get` accessors in the same class — the second overrides the first with no error. Fix: search for `get <newGetterName>` in the file before adding. Especially dangerous in POMs past 500 lines (e.g., `SyntheticsPage.ts`).
-- ❌ **Same constant (export format list, column names, filter options) declared in 3+ page objects.** Extract to `enums/app/<name>.ts` or export from one canonical POM and import into others. Duplication of UI constants across POMs diverges silently when one copy is updated and the others are not.
+- ❌ **Duplicate getter name in a large POM.** TypeScript silently shadows duplicate `get` accessors in the same class — the second overrides the first with no error. Fix: search for `get <newGetterName>` in the file before adding. Especially dangerous in POMs past 500 lines (e.g., `JobsPage.ts`).
+- ❌ **Same constant (chart-export format list, column names, filter options) declared in 3+ page objects.** Extract to `enums/app/<name>.ts` or export from one canonical POM and import into others. Duplication of UI constants across POMs diverges silently when one copy is updated and the others are not.
 - ❌ **Same action method logic (click trigger → assert menu → interact) copy-pasted across 3+ POMs.** Extract to a shared base class or component. For table concerns (pagination, sorting, column reads), extend `DataTableBase`. For UI components, compose via `readonly <name>: <Component>` in consuming POMs. Example: `DataTableBase`.
 
 ## Self-review checklist
@@ -317,7 +317,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 4. **Step 4 — author.** `extends BasePage`. Section headers Interactive / Feedback / Actions. Use `fieldInput(fieldPath)` / `fieldError(fieldName)` for the schema-form fields.
 5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
 6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PUT /api/profile` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
-7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `metricsPage`.
+7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `runStatsPage`.
 8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
 
 ### Example 2 — add `forgotPasswordLink` and `clickForgotPassword()` to `LoginPage`
@@ -342,27 +342,27 @@ User says: *"Add a `forgotPasswordLink` locator and a `clickForgotPassword()` me
 4. **Step 7 — fixture.** No change — `loginPage` already registered.
 5. **Step 8 — spec.** Consume from `tests/app/e2e/tenant-service/forgot-password.spec.ts` (file already exists; add the new test inside its describe).
 
-### Example 3 — extract a `Notification` component used on 3 pages
+### Example 3 — extract a `Toast` component used on 3 pages
 
-User says: *"`DashboardPage`, `SyntheticsPage`, and `ProbesPage` all duplicate the success-toast locator. Extract it."*
+User says: *"`DashboardPage`, `JobsPage`, and `WorkersPage` all duplicate the success-toast locator. Extract it."*
 
 1. **Step 1 — workflow.** Component extraction → create in `pages/baseClasses/`.
 2. **Step 2 — exploration.** Confirm the toast is the Sonner toast (`[data-sonner-toast]`) on all 3 pages — same DOM contract.
-3. **Step 3 — location.** Create a new `pages/baseClasses/Notification.ts` — no such file exists today (`ls pages/baseClasses/` shows only `BasePage.ts` and `DataTableBase.ts`). Anchor its locators on the live Sonner DOM (`[data-sonner-toast]`), never on invented testids.
+3. **Step 3 — location.** Create a new `pages/baseClasses/Toast.ts` — no such file exists today (`ls pages/baseClasses/` shows only `BasePage.ts` and `DataTableBase.ts`). Anchor its locators on the live Sonner DOM (`[data-sonner-toast]`), never on invented testids.
 4. **Step 4 — compose into each consuming POM.**
    ```typescript
-   import { Notification } from "../baseClasses/Notification";
+   import { Toast } from "../baseClasses/Toast";
 
    export class DashboardPage extends BasePage {
-     readonly notification: Notification;
+     readonly toast: Toast;
 
      constructor(page: Page) {
        super(page);
-       this.notification = new Notification(page);
+       this.toast = new Toast(page);
      }
    }
    ```
-5. **Step 6 — replace duplicated locators.** In each consuming POM, swap the duplicated `successToast` getter for `this.notification.successNotification` (or the equivalent).
+5. **Step 6 — replace duplicated locators.** In each consuming POM, swap the duplicated `successToast` getter for `this.toast.successNotification` (or the equivalent).
 6. **Step 7 — fixture.** No change — components are consumed through the parent POM, not registered separately.
 
 ## Troubleshooting

@@ -9,17 +9,17 @@ Companion file to [`SKILL.md`](SKILL.md). This catalogs **what already exists** 
 ## Contents
 
 - [Class inventory (fixture → class → file)](#class-inventory-fixture--class--file)
-- [`SyntheticsPage` — key methods](#syntheticspage--key-methods)
-- [`CreateMonitorPage` — key methods](#createmonitorpage--key-methods)
+- [`JobsPage` — key methods](#jobspage--key-methods)
+- [`CreateJobPage` — key methods](#createjobpage--key-methods)
 - [`SideNavigation` — key methods](#sidenavigation--key-methods)
-- [`ProbesPage` — key methods](#probespage--key-methods)
-- [`MetricsPage` — key methods](#metricspage--key-methods)
+- [`WorkersPage` — key methods](#workerspage--key-methods)
+- [`RunStatsPage` — key methods](#runstatspage--key-methods)
 - [`DashboardPage` — key methods](#dashboardpage--key-methods)
-- [`AlertsPage` — key methods](#alertspage--key-methods)
+- [`NotificationsPage` — key methods](#notificationspage--key-methods)
 - [`InventoryPage` — key methods](#inventorypage--key-methods)
-- [`PoliciesPage` — key methods](#policiespage--key-methods)
-- [`CreatePolicyPage` — key methods](#createpolicypage--key-methods)
-- [`SyntheticMetricsViewPage` — key methods](#syntheticmetricsviewpage--key-methods)
+- [`NotificationRulesPage` — key methods](#notificationrulespage--key-methods)
+- [`CreateNotificationRulePage` — key methods](#createnotificationrulepage--key-methods)
+- [`JobRunStatsViewPage` — key methods](#jobrunstatsviewpage--key-methods)
 - [`SettingsProfilePage` — key methods](#settingsprofilepage--key-methods)
 - [`ReportsPage` — key methods](#reportspage--key-methods)
 - [`LoginPage` — key methods](#loginpage--key-methods)
@@ -34,16 +34,16 @@ Companion file to [`SKILL.md`](SKILL.md). This catalogs **what already exists** 
 |---|---|---|
 | `loginPage` | `LoginPage` | `pages/util/LoginPage.ts` |
 | `sideNavigation` | `SideNavigation` | `pages/app/SideNavigation.ts` |
-| `alertsPage` | `AlertsPage` | `pages/app/AlertsPage.ts` |
+| `notificationsPage` | `NotificationsPage` | `pages/app/NotificationsPage.ts` |
 | `dashboardPage` | `DashboardPage` | `pages/app/DashboardPage.ts` |
-| `syntheticsPage` | `SyntheticsPage` | `pages/app/SyntheticsPage.ts` |
+| `jobsPage` | `JobsPage` | `pages/app/JobsPage.ts` |
 | `inventoryPage` | `InventoryPage` | `pages/app/InventoryPage.ts` |
-| `policiesPage` | `PoliciesPage` | `pages/app/PoliciesPage.ts` |
-| `createMonitorPage` | `CreateMonitorPage` | `pages/app/CreateMonitorPage.ts` |
-| `createPolicyPage` | `CreatePolicyPage` | `pages/app/CreatePolicyPage.ts` |
-| `probesPage` | `ProbesPage` | `pages/app/ProbesPage.ts` |
-| `metricsPage` | `MetricsPage` | `pages/app/MetricsPage.ts` |
-| `syntheticMetricsViewPage` | `SyntheticMetricsViewPage` | `pages/app/SyntheticMetricsViewPage.ts` |
+| `notificationRulesPage` | `NotificationRulesPage` | `pages/app/NotificationRulesPage.ts` |
+| `createJobPage` | `CreateJobPage` | `pages/app/CreateJobPage.ts` |
+| `createNotificationRulePage` | `CreateNotificationRulePage` | `pages/app/CreateNotificationRulePage.ts` |
+| `workersPage` | `WorkersPage` | `pages/app/WorkersPage.ts` |
+| `runStatsPage` | `RunStatsPage` | `pages/app/RunStatsPage.ts` |
+| `jobRunStatsViewPage` | `JobRunStatsViewPage` | `pages/app/JobRunStatsViewPage.ts` |
 | `settingsProfilePage` | `SettingsProfilePage` | `pages/app/SettingsProfilePage.ts` |
 | `profileSettingsPage` | `ProfileSettingsPage` | `pages/app/ProfileSettingsPage.ts` |
 | `reportsPage` | `ReportsPage` | `pages/app/ReportsPage.ts` |
@@ -52,19 +52,19 @@ Companion file to [`SKILL.md`](SKILL.md). This catalogs **what already exists** 
 
 ---
 
-## `SyntheticsPage` — key methods
+## `JobsPage` — key methods
 
-Lives at `pages/app/SyntheticsPage.ts`.
+Lives at `pages/app/JobsPage.ts`.
 
-- `open()` — navigate to `/synthetics` and wait for list-ready signal.
-- `verifyPageLoaded()` — assert `page-synthetics` root + table chrome.
+- `open()` — navigate to `/jobs` and wait for list-ready signal.
+- `verifyPageLoaded()` — assert `page-jobs` root + table chrome.
 - `getRowByName(name)` → `Locator` — filter table rows by visible text. Excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded.
-- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit monitor`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: appConfig.timeouts.retryBlock })` because the menu trigger occasionally needs a re-click on slow CI.
-- `searchByName(name)` / `clearSearch()` — **inherited from `DataTableBase`** (debounced fill with re-fill retry + `waitForTableSettled`); `SyntheticsPage` only overrides `get searchInput()`.
+- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit job`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: appConfig.timeouts.retryBlock })` because the menu trigger occasionally needs a re-click on slow CI.
+- `searchByName(name)` / `clearSearch()` — **inherited from `DataTableBase`** (debounced fill with re-fill retry + `waitForTableSettled`); `JobsPage` only overrides `get searchInput()`.
 - `expandRow(row)` / `collapseRow(row)` — toggle the expanded-row UI.
-- `getAllHealthCounts()` → `{ total, healthy, warning, critical, unknown }` — read all 5 health stat cards. **Always wrap in `expect(async () => { … }).toPass(...)` when comparing across counters** (see `selectors/patterns.md` P18).
-- `expectSyntheticsListReady()` — composite ready-state assertion (page root + table or empty state).
-- Generic timing helpers (parameterized; reused across HTTP / TCP / WebSocket detail-view specs):
+- `getAllJobStatusCounts()` → `{ total, passing, degraded, failing, paused }` — read all 5 job-status stat cards. **Always wrap in `expect(async () => { … }).toPass(...)` when comparing across counters** (see `selectors/patterns.md` P18).
+- `expectJobsListReady()` — composite ready-state assertion (page root + table or empty state).
+- Generic timing helpers (parameterized; reused across HTTP / SFTP / stream detail-view specs):
   - `timingLegendItemIn(card, label)`, `timingLegendItemsIn(card)`, `timingLegendColorDot(card, label)`
   - `timingStackedBarIn(card)`, `timingStackedBarSegmentsIn(card)`, `timingScaleTotalMsIn(card)`
   - `getTimingSegmentMsIn(card, label)`
@@ -72,17 +72,17 @@ Lives at `pages/app/SyntheticsPage.ts`.
 
 ---
 
-## `CreateMonitorPage` — key methods
+## `CreateJobPage` — key methods
 
-Lives at `pages/app/CreateMonitorPage.ts`. Shared across HTTP, ICMP, WebSocket, TCP, DNS, SSL, MCP create/edit flows.
+Lives at `pages/app/CreateJobPage.ts`. Shared across HTTP, `export`, stream, SFTP, email, backup, webhook create/edit flows.
 
-- `fillHttpMonitorForm(data)`, `fillIcmpMonitorForm(data)`, `fillWebSocketMonitorForm(data)`, … — per-type form fillers. Use the matching `buildCreate<TYPE>SyntheticBody` from `helpers/app/synthetics.ts` to build `data`.
-- `monitorTypeCard(type)` → `Locator` — step-1 type chooser card (cards share `monitor-type-card` testid; scope by title text).
+- `fillHttpJobForm(data)`, `fillExportJobForm(data)`, `fillStreamJobForm(data)`, … — per-type form fillers. Use the matching `buildCreate<TYPE>JobBody` from `helpers/app/jobs.ts` to build `data`.
+- `jobTypeCard(type)` → `Locator` — step-1 type chooser card (cards share `job-type-card` testid; scope by title text).
 - `waitForTypeSelection()` — wait for the step-1 grid to render.
 - `waitForConfigureForm()` — wait for the step-2 form to render after a type is picked.
 - `selectDropdownOption(field, label)` — pick an option in a Radix select inside the form.
-- `expandIcmpSettings()` — open the ICMP-specific collapsible section.
-- `enableTraceroute()` — toggle the traceroute switch (ICMP only).
+- `expandExportSettings()` — open the `export`-specific collapsible section.
+- `enableRunStepRecording()` — toggle the record-run-steps switch (`export` only).
 - `submit()` — submit the create form, wait for the API response, assert success toast.
 - `fieldInput(fieldPath)` / `fieldError(fieldName)` — generic schema-form helpers (matches the `field-field-${path}` / `error-${name}` testid contract); `schemaField(fieldName)` targets the `schema-field-${name}` field wrapper.
 
@@ -93,37 +93,37 @@ Lives at `pages/app/CreateMonitorPage.ts`. Shared across HTTP, ICMP, WebSocket, 
 Lives at `pages/app/SideNavigation.ts`. Does **not** extend `BasePage` — sidebar is a shell component, not a page.
 
 - `navigateToApp()` — navigate to `/` and wait for the sidebar to render.
-- `navigateToSynthetics()`, `navigateToMetrics()`, `navigateToDashboard()`, `navigateToReports()`, `navigateToInventory()`, `navigateToPolicies()`, `navigateToSettings()` — click the matching nav link (`nav-link-<feature>` testid) and wait for the destination page root.
-- `navigateToAlerts()` — click the header alerts bell (`header-alerts-bell`) and wait for `page-alerts`.
-- `navigateToProbes()`, `navigateToProfile()` / `navigateToSettingsProfile()` — Settings sub-nav flows: click Settings, then the `settings-nav-item-probes` / `settings-nav-item-profile` item, wait for the destination page root.
+- `navigateToJobs()`, `navigateToRunStats()`, `navigateToDashboard()`, `navigateToReports()`, `navigateToInventory()`, `navigateToNotificationRules()`, `navigateToSettings()` — click the matching nav link (`nav-link-<feature>` testid) and wait for the destination page root.
+- `navigateToNotifications()` — click the header notifications bell (`header-notifications-bell`) and wait for `page-notifications`.
+- `navigateToWorkers()`, `navigateToProfile()` / `navigateToSettingsProfile()` — Settings sub-nav flows: click Settings, then the `settings-nav-item-workers` / `settings-nav-item-profile` item, wait for the destination page root.
 
-Locator getters: `sidebar`, `logo`, `dashboard`, `metrics`, `synthetics`, `inventory`, `reports`, `policies`, `alertsBell`, `settings`.
+Locator getters: `sidebar`, `logo`, `dashboard`, `runStats`, `jobs`, `inventory`, `reports`, `notificationRules`, `notificationsBell`, `settings`.
 
 ---
 
-## `ProbesPage` — key methods
+## `WorkersPage` — key methods
 
-Lives at `pages/app/ProbesPage.ts`. Extends `DataTableBase`. Status cards + filters + table + register / edit / details / download-config sheets.
+Lives at `pages/app/WorkersPage.ts`. Extends `DataTableBase`. Status cards + filters + table + register / edit / details / download-config sheets.
 
-- `open()` / `verifyPageLoaded()` — navigate to `/settings/probes` and assert the page root.
-- Status cards: `totalProbesCard`, `onlineCard`, `offlineCard`, `provisioningCard` (scope `status-card` by title text); `getAllStatusCounts()`, `verifyStatusCards()`, `verifyStatusCardCounts()`.
+- `open()` / `verifyPageLoaded()` — navigate to `/settings/workers` and assert the page root.
+- Status cards: `totalWorkersCard`, `onlineCard`, `offlineCard`, `provisioningCard` (scope `status-card` by title text); `getAllStatusCounts()`, `verifyStatusCards()`, `verifyStatusCardCounts()`.
 - Search: `searchByName(query)` / `clearSearch()` — **overridden** with a plain `fill`/`clear` (frontend debounces client-side), unlike the retrying `DataTableBase` version.
 - Filters: `statusFilter`, `typeFilter`, `selectStatusOption(label)`, `selectTypeOption(label)`, `selectFilterOption(filter, label)`, `verifyFilterDropdownOptions(...)`.
-- Toolbar: `registerProbeButton`, `refreshButton`, `autoRefreshToggle`, `verifyToolbarControls()`.
+- Toolbar: `registerWorkerButton`, `refreshButton`, `autoRefreshToggle`, `verifyToolbarControls()`.
 - Table: `verifyTableHasRows()`, `verifyNoResults()`, `verifyTableColumns()`, `verifyAllRowsContainText(regex)`, `getTotalRowCount()`, `getExpectedVisibleRows()`, `verifyPaginationControls()`. Sorting and pagination actions (`clickSortHeader`, `selectPageSize`, `goToNextPage`, `goToPreviousPage`) are inherited from `DataTableBase`.
 - Row actions: `openRowActionMenu(row, menuItem)`, `openFirstRowActionMenu()`, `verifyActionMenuOptions()`.
-- Sheets: `registerProbeSheet` (chrome: close/cancel/continue/back/submit/done buttons, `registerStepIndicator`, name/location/region fields + errors, `openRegisterProbeSheet()`), `editProbeSheet` (close/cancel/submit + read-only `editProbeIdField`), `detailsSheet` (+ `detailsCloseButton`), `downloadConfigSheet` (+ close/cancel/submit buttons).
+- Sheets: `registerWorkerSheet` (chrome: close/cancel/continue/back/submit/done buttons, `registerStepIndicator`, name/location/region fields + errors, `openRegisterWorkerSheet()`), `editWorkerSheet` (close/cancel/submit + read-only `editWorkerIdField`), `detailsSheet` (+ `detailsCloseButton`), `downloadConfigSheet` (+ close/cancel/submit buttons).
 - Delete dialog: `deleteDialog`, `deleteConfirmButton`, `deleteCancelButton`.
 
 ---
 
-## `MetricsPage` — key methods
+## `RunStatsPage` — key methods
 
-Lives at `pages/app/MetricsPage.ts`. Host picker, metric selection, chart toolbar, expanded dialog.
+Lives at `pages/app/RunStatsPage.ts`. Job picker, run-stat selection, chart toolbar, expanded dialog.
 
-- `open()` / `verifyPageLoaded()` — navigate to `/metrics` and assert the page root.
-- Host selection: `selectHost(name)`, `clearHostSelection()`.
-- Metric selection: `selectMetric(name)`, `selectedMetrics` getter (returns the set of currently-selected metric chips).
+- `open()` / `verifyPageLoaded()` — navigate to `/run-stats` and assert the page root.
+- Job selection: `selectJob(name)`, `clearJobSelection()`.
+- Run-stat selection: `selectRunStat(name)`, `selectedRunStats` getter (returns the set of currently-selected run-stat chips).
 - Chart toolbar: `selectTimeframe(label)`, `toggleAutoRefresh()`, `manualRefresh()`.
 - Expanded dialog: `openExpandedDialog()`, `closeExpandedDialog()`.
 
@@ -131,97 +131,97 @@ Lives at `pages/app/MetricsPage.ts`. Host picker, metric selection, chart toolba
 
 ## `DashboardPage` — key methods
 
-Lives at `pages/app/DashboardPage.ts`. Read-only landing page (route `/`) — Active alerts / Synthetics / Probes / Monitors-by-Type / Quick Actions sections.
+Lives at `pages/app/DashboardPage.ts`. Read-only landing page (route `/`) — Active notifications / Jobs / Workers / Type Breakdown / Quick Actions sections.
 
 - `open()` — navigate to `/` and wait for `page-dashboard` root.
 - `verifyPageLoaded()` — minimal ready-state assertion (page root + page title visible).
 - `verifyAllSectionsVisible()` — assert each of the 5 section wrappers + matching `<h2>` headings.
-- `verifyActiveAlertsSectionBeforeSynthetics()` — assert Alerts renders above Synthetics in DOM order.
-- Section getters: `pageRoot`, `pageTitle`, `alertsSection`, `syntheticsSection`, `probesSection`, `monitorTypesSection`, `quickActionsSection`.
+- `verifyActiveNotificationsSectionBeforeJobs()` — assert Notifications renders above Jobs in DOM order.
+- Section getters: `pageRoot`, `pageTitle`, `notificationsSection`, `jobsSection`, `workersSection`, `jobTypesSection`, `quickActionsSection`.
 - Section heading: `sectionHeading(name)` — `getByRole("heading", { level: 2, name })`.
-- Alerts stat cards: `alertsCard(key)` for `key ∈ { total, critical, error, warning, info }`; `getAllAlertsCounts()`, `verifyAlertsCards()`, `clickAlertsCard(key)`.
-- Synthetics stat cards: `syntheticsCard(key)` for `key ∈ { total, healthy, warning, critical, unknown }`.
-- Probes stat cards: `probesCard(key)` for `key ∈ { total, online, offline, provisioning }`.
-- Monitor-type bars: `monitorTypeBar(type)` (only rendered when `count > 0`).
-- Quick-action cards: `quickAction(key)` for `key ∈ { view-alerts, add-monitor, manage-probes, view-metrics }`; `verifyQuickActions()`, `clickQuickAction(key)`.
+- Notifications stat cards: `notificationsCard(key)` for `key ∈ { total, critical, error, warning, info }`; `getAllNotificationsCounts()`, `verifyNotificationsCards()`, `clickNotificationsCard(key)`.
+- Jobs stat cards: `jobsCard(key)` for `key ∈ { total, passing, degraded, failing, paused }`.
+- Workers stat cards: `workersCard(key)` for `key ∈ { total, online, offline, provisioning }`.
+- Job-type bars: `jobTypeBar(type)` (only rendered when `count > 0`).
+- Quick-action cards: `quickAction(key)` for `key ∈ { view-notifications, add-job, manage-workers, view-run-stats }`; `verifyQuickActions()`, `clickQuickAction(key)`.
 
 Public constants exported from the same file (used by the dashboard spec):
-- `ALERTS_CARD_TITLES` — visible card titles per `AlertsCardKey`.
-- `SYNTHETICS_CARD_TITLES` — visible card titles per `SyntheticsCardKey`.
-- `PROBES_CARD_TITLES` — visible card titles per `ProbesCardKey`.
+- `NOTIFICATIONS_CARD_TITLES` — visible card titles per `NotificationsCardKey`.
+- `JOBS_CARD_TITLES` — visible card titles per `JobsCardKey`.
+- `WORKERS_CARD_TITLES` — visible card titles per `WorkersCardKey`.
 - `QUICK_ACTIONS` — card title + description + destination path per `QuickActionKey`.
-- `ALERTS_SEVERITY_FILTER_LABELS` — Alerts-page severity-filter trigger label per `?severity=<value>`.
-- `HEALTH_FILTER_LABELS` — Synthetics list-page filter trigger label per `?health=<value>`.
-- `PROBES_STATUS_FILTER_LABELS` — Probes-page status-filter trigger label per `?status=<value>`.
-- `MONITOR_TYPE_TITLES` — title per `SyntheticType` (`http` → `"HTTP/HTTPS"`, etc.).
+- `NOTIFICATIONS_SEVERITY_FILTER_LABELS` — Notifications-page severity-filter trigger label per `?severity=<value>`.
+- `OUTCOME_FILTER_LABELS` — Jobs list-page outcome-filter trigger label per `?jobStatus=<value>`.
+- `WORKERS_STATUS_FILTER_LABELS` — Workers-page status-filter trigger label per `?status=<value>`.
+- `JOB_TYPE_TITLES` — title per `JobType` (`http` → `"HTTP/HTTPS"`, etc.).
 
 ---
 
-## `AlertsPage` — key methods
+## `NotificationsPage` — key methods
 
-Lives at `pages/app/AlertsPage.ts`. Extends `BasePage` (its table root differs from the standard `data-table`, so it does not extend `DataTableBase`). Covers `/alerts` (Active list) and `/alerts/history`.
+Lives at `pages/app/NotificationsPage.ts`. Extends `BasePage` (its table root differs from the standard `data-table`, so it does not extend `DataTableBase`). Covers `/notifications` (Active list) and `/notifications/history`.
 
-- Page roots: `pageRoot` (`page-alerts`), `historyPageRoot` (`page-alerts-history`); tabs: `alertsTabs`, `activeTab`, `historyTab`.
+- Page roots: `pageRoot` (`page-notifications`), `historyPageRoot` (`page-notifications-history`); tabs: `notificationsTabs`, `activeTab`, `historyTab`.
 - Severity cards: `severityCard(severity)` for `critical | error | warning | info`, plus `totalCard`.
-- Search + filters: `searchInput`, `historySearchInput`, `severityFilter`, `stateFilter`, `historySeverityFilter`, monitor filter (`monitorFilter`, `monitorFilterClear`, popover getters).
-- Per-row (parameterized by alert id): `alertTitle`, `alertMonitor`, `alertTarget`, `alertState`, `alertTriggered`, actions (`alertActions`, `alertViewAction`, `alertAcknowledgeAction`, `alertResolveAction`).
-- Bulk actions: `selectAll`, `alertSelect(id)`, `bulkResolveButton`, `bulkBar`, `bulkCount`, `bulkClear`.
-- Details sheet: `detailsSheet` + close/acknowledge/resolve buttons, severity/state badges, policy/monitor links; `verifyTriggerConditionDetails(condition)`, `verifyAcknowledgedByActor(...)`, `verifyResolvedByActor(...)`.
-- History view: `timeframeSelector`, metric cards, Alert Timeline chart + chart export.
+- Search + filters: `searchInput`, `historySearchInput`, `severityFilter`, `stateFilter`, `historySeverityFilter`, job filter (`jobFilter`, `jobFilterClear`, popover getters).
+- Per-row (parameterized by notification id): `notificationTitle`, `notificationJob`, `notificationTarget`, `notificationState`, `notificationTriggered`, actions (`notificationActions`, `notificationViewAction`, `notificationAcknowledgeAction`, `notificationResolveAction`).
+- Bulk actions: `selectAll`, `notificationSelect(id)`, `bulkResolveButton`, `bulkBar`, `bulkCount`, `bulkClear`.
+- Details sheet: `detailsSheet` + close/acknowledge/resolve buttons, severity/state badges, notification-rule/job links; `verifyTriggerConditionDetails(condition)`, `verifyAcknowledgedByActor(...)`, `verifyResolvedByActor(...)`.
+- History view: `timeframeSelector`, count cards, Notification Timeline chart + chart export.
 
 ---
 
 ## `InventoryPage` — key methods
 
-Lives at `pages/app/InventoryPage.ts`. Extends `DataTableBase`. Inventory ("Assets") flat list at `/inventory`, backed by the `/synthetics` endpoints.
+Lives at `pages/app/InventoryPage.ts`. Extends `DataTableBase`. Inventory ("Assets") flat list at `/inventory`, backed by the `/jobs` endpoints.
 
 - `open()` / `verifyPageLoaded()` / `expectInventoryListReady()` — navigate to `/inventory` and assert list-ready.
-- Overview cards (double as health filters): `totalAssetsCard`, `healthyCard`, `warningCard`, `criticalCard`, `unknownCard`, `healthCard(state)`, `getAllHealthCounts()`, `verifyOverviewCards()`.
-- Toolbar: `inventoryToolbar`, `searchInput`, `refreshButton`, `sourceFilter`, `typeFilter`, `sourcePills` / `sourcePill('synthetic' | 'snmp')`, `selectSourceOption(label)`.
-- Rows: `getRowByName(name)`, cell getters (`getStatusBadge`, `getSourceCell`, `getLastCheckCell`, `getTargetCell`).
+- Overview cards (double as job-status filters): `totalAssetsCard`, `passingCard`, `degradedCard`, `failingCard`, `pausedCard`, `jobStatusCard(jobStatus)`, `getAllJobStatusCounts()`, `verifyOverviewCards()`.
+- Toolbar: `inventoryToolbar`, `searchInput`, `refreshButton`, `sourceFilter`, `typeFilter`, `sourcePills` / `sourcePill('job' | 'manual')`, `selectSourceOption(label)`.
+- Rows: `getRowByName(name)`, cell getters (`getStatusBadge`, `getSourceCell`, `getLastRunCell`, `getTargetCell`).
 - Row actions (View Details, Edit, Delete): `openActionMenu(row)`, `openRowActionMenu(row, menuItem)`, `verifyActionMenuOptions()`.
-- Sheets / dialog: `detailsSheet`, `editMonitorSheet` (+ `editMonitorNameInput`, `editMonitorSubmitButton` — reuses the synthetics sheets), `deleteDialog` + `deleteConfirmButton` / `deleteCancelButton` (inventory-specific `delete-asset-*` testids), `toastForAsset(name)`.
+- Sheets / dialog: `detailsSheet`, `editJobSheet` (+ `editJobNameInput`, `editJobSubmitButton` — reuses the jobs sheets), `deleteDialog` + `deleteConfirmButton` / `deleteCancelButton` (inventory-specific `delete-asset-*` testids), `toastForAsset(name)`.
 
 ---
 
-## `PoliciesPage` — key methods
+## `NotificationRulesPage` — key methods
 
-Lives at `pages/app/PoliciesPage.ts`. Extends `DataTableBase`. Policies list — filter cards, toolbar filters, table, row actions, delete dialog, edit/details sheets.
+Lives at `pages/app/NotificationRulesPage.ts`. Extends `DataTableBase`. Notification-rules list — filter cards, toolbar filters, table, row actions, delete dialog, edit/details sheets.
 
-- `open()` / `verifyPageLoaded()` — navigate to `/policies` and assert page root + table.
-- Filter cards: `totalPoliciesCard`, `enabledCard`, `criticalCard`, `errorCard`, `warningCard`, `infoCard`, `severityCard(state)`, `getAllCardCounts()`, `verifyFilterCards()`, `verifyCardActive/Inactive(card)`.
-- Toolbar: `searchInput` (+ `searchByText`, `clearSearch` override), `severityFilter`, `statusFilter`, type filter (searchable popover: `typeFilter`, `typeFilterSearch`, `selectTypeOption`, `selectTypeAll`, `clearTypeFilter`), `refreshButton`, `autoRefreshToggle`, `createPolicyButton`.
-- Rows: `getRowByName(name)`, `typeCellForRow(row)`, `monitorTypeBadgesForRow(row)`, `openRowActionMenu(...)`, `verifyActionMenuOptions()` (View Details, Enable/Disable, Edit, Delete).
+- `open()` / `verifyPageLoaded()` — navigate to `/notification-rules` and assert page root + table.
+- Filter cards: `totalNotificationRulesCard`, `enabledCard`, `criticalCard`, `errorCard`, `warningCard`, `infoCard`, `severityCard(state)`, `getAllCardCounts()`, `verifyFilterCards()`, `verifyCardActive/Inactive(card)`.
+- Toolbar: `searchInput` (+ `searchByText`, `clearSearch` override), `severityFilter`, `statusFilter`, type filter (searchable popover: `typeFilter`, `typeFilterSearch`, `selectTypeOption`, `selectTypeAll`, `clearTypeFilter`), `refreshButton`, `autoRefreshToggle`, `createNotificationRuleButton`.
+- Rows: `getRowByName(name)`, `typeCellForRow(row)`, `jobTypeBadgesForRow(row)`, `openRowActionMenu(...)`, `verifyActionMenuOptions()` (View Details, Enable/Disable, Edit, Delete).
 - Delete dialog: `deleteDialog`, `deleteConfirmButton`, `deleteCancelButton`; cascade tooltip: `cascadeTriggerForRow(row)`, `openCascadeTooltip(row)`.
 - Sheets: `editSheet` (+ chrome), details sheet.
-- Exported constants: `POLICY_SEVERITY_LABELS`, `POLICY_STATUS_LABELS`.
+- Exported constants: `NOTIFICATION_RULE_SEVERITY_LABELS`, `NOTIFICATION_RULE_STATUS_LABELS`.
 
 ---
 
-## `CreatePolicyPage` — key methods
+## `CreateNotificationRulePage` — key methods
 
-Lives at `pages/app/CreatePolicyPage.ts`. Extends `BasePage`. Two-step create-policy sheet (step-1 type cards → step-2 schema form).
+Lives at `pages/app/CreateNotificationRulePage.ts`. Extends `BasePage`. Two-step create-notification-rule sheet (step-1 type cards → step-2 schema form).
 
-- Sheet chrome: `sheet`, `sheetHeading`, `closeButton`, `cancelButton`, `backButton`, `submitButton`; `openWizard()`, `selectPolicyType(id)`, `goBackToTypeSelection()`, `cancelWizard()`, `closeWizard()`.
-- Step 1: `policyTypeGrid`, `typeCards`, `typeCardByTitle(title)`, `typeCardForId(id)`.
+- Sheet chrome: `sheet`, `sheetHeading`, `closeButton`, `cancelButton`, `backButton`, `submitButton`; `openWizard()`, `selectNotificationRuleType(id)`, `goBackToTypeSelection()`, `cancelWizard()`, `closeWizard()`.
+- Step 1: `notificationRuleTypeGrid`, `typeCards`, `typeCardByTitle(title)`, `typeCardForId(id)`.
 - Step 2 schema form: `schemaForm`, section getters (`basicInfoSection`, `triggerConditionSection`, `clearConditionSection`, `severityConfigurationSection`), generic helpers `fieldWrapper(name)` (wrapper testid `schema-field-<name>`) and `fieldError(name)`.
-- Basic info: `nameInput`, `descriptionInput`, monitor selector (searchable popover).
-- Trigger / clear conditions: metric dropdowns, `triggerOperatorSelect`, `triggerThresholdInput`, `triggerEvaluationWindowSelect`, `triggerConsecutiveCountInput`, `autoClearToggle` + clear-condition equivalents.
+- Basic info: `nameInput`, `descriptionInput`, job selector (searchable popover).
+- Trigger / clear conditions: run-stat dropdowns, `triggerOperatorSelect`, `triggerThresholdInput`, `triggerEvaluationWindowSelect`, `triggerConsecutiveCountInput`, `autoClearToggle` + clear-condition equivalents.
 - Severity: `severityPicker`, `severityButton(level)`, cascade toggles/thresholds + `cascadeValidationError`, `cascadePreview`; `enabledSwitch`.
-- Feedback: `successToast(policyName)`, `errorToast(policyName)`.
-- Exported constants: `POLICY_TYPE_CARD_TITLES`, `POLICY_TYPE_CARD_TITLES_ORDERED`, `POLICY_EVALUATION_WINDOW_LABELS` (re-exported).
+- Feedback: `successToast(notificationRuleName)`, `errorToast(notificationRuleName)`.
+- Exported constants: `NOTIFICATION_RULE_TYPE_CARD_TITLES`, `NOTIFICATION_RULE_TYPE_CARD_TITLES_ORDERED`, `NOTIFICATION_RULE_EVALUATION_WINDOW_LABELS` (re-exported).
 
 ---
 
-## `SyntheticMetricsViewPage` — key methods
+## `JobRunStatsViewPage` — key methods
 
-Lives at `pages/app/SyntheticMetricsViewPage.ts`. Extends `BasePage`. Per-monitor metrics view at `/synthetics/$syntheticId` (opened from row-action "View Metrics" or a monitor name link).
+Lives at `pages/app/JobRunStatsViewPage.ts`. Extends `BasePage`. Per-job run-stats view at `/jobs/$jobId` (opened from row-action "View Run Stats" or a job name link).
 
-- `open(syntheticId?)` / `verifyPageLoaded()`; states: `errorState`, `dataErrorState`, `emptyState`, `loadingSkeleton`.
-- Header: `header`, `backButton`, `monitorNameHeading`, `protocolBadge`, `subtitleWithTarget(target)`.
-- Toolbar: `probeSelectorTrigger`, `timeframeSelect`, `aggregationSelect`, `displayModeToggle` (`gridViewRadio` / `combinedViewRadio`), `refreshButton`, `autoRefreshToggle`; `openSelect(trigger)` / `selectOption(name)` helpers.
-- Charts: `metricSection(groupId)`, `metricChart(metricName)`, `combinedContainer`, summary table getters, chart export (`combinedExportTrigger`, `gridCardExportTrigger(metric)`, `exportMenuItem(format)`, `openExportMenu(...)`); `waitForChartsLoaded()`.
-- Exported constants: `SYNTHETIC_METRICS_AGGREGATIONS`, `METRIC_SECTION_TITLES` (per monitor type), `SYNTHETIC_METRICS_TIMEFRAMES`.
+- `open(jobId?)` / `verifyPageLoaded()`; states: `errorState`, `dataErrorState`, `emptyState`, `loadingSkeleton`.
+- Header: `header`, `backButton`, `jobNameHeading`, `jobTypeBadge`, `subtitleWithTarget(target)`.
+- Toolbar: `workerSelectorTrigger`, `timeframeSelect`, `aggregationSelect`, `displayModeToggle` (`gridViewRadio` / `combinedViewRadio`), `refreshButton`, `autoRefreshToggle`; `openSelect(trigger)` / `selectOption(name)` helpers.
+- Charts: `runStatSection(groupId)`, `runStatChart(runStatName)`, `combinedContainer`, summary table getters, chart export (`combinedExportTrigger`, `gridCardExportTrigger(runStat)`, `exportMenuItem(format)`, `openExportMenu(...)`); `waitForChartsLoaded()`.
+- Exported constants: `JOB_RUN_STATS_AGGREGATIONS`, `RUN_STAT_SECTION_TITLES` (per job type), `JOB_RUN_STATS_TIMEFRAMES`.
 
 ---
 
@@ -265,7 +265,7 @@ The directory contains exactly **two** files: `BasePage.ts` and `DataTableBase.t
 | Class | File | Used by |
 |---|---|---|
 | `BasePage` | `BasePage.ts` | Every app POM extends this (directly or via `DataTableBase`) — provides `loadingSpinner`, `toastNotification`, `waitForPageLoad`, `waitForApiResponse`, `verifySuccessToast`, `getCurrentUrl`, `getPageTitle`, `refresh`. |
-| `DataTableBase` | `DataTableBase.ts` | Abstract base (extends `BasePage`) for pages built around the standard `data-table` component — extended by `SyntheticsPage`, `InventoryPage`, `ProbesPage`, `PoliciesPage`. Subclasses must override `get searchInput()`. |
+| `DataTableBase` | `DataTableBase.ts` | Abstract base (extends `BasePage`) for pages built around the standard `data-table` component — extended by `JobsPage`, `InventoryPage`, `WorkersPage`, `NotificationRulesPage`. Subclasses must override `get searchInput()`. |
 
 ### `DataTableBase` — API
 
@@ -285,7 +285,7 @@ When adding or extending a POM, update this file in the same edit batch:
 
 1. New POM → add a row to § Class inventory + a new section listing key methods.
 2. New action method on an existing POM → add a bullet under the matching section.
-3. New constant exported from a POM file → add to the constants list (e.g., `MONITOR_TYPE_TITLES` for `DashboardPage`).
+3. New constant exported from a POM file → add to the constants list (e.g., `JOB_TYPE_TITLES` for `DashboardPage`).
 4. New `pages/baseClasses/` component → add a row to § Base classes.
 
 Catalog drift between this file and the actual code is the leading cause of duplicate POM methods being authored. Verify with `grep -r "<methodName>" pages/` before adding a "new" method.
