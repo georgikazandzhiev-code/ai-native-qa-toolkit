@@ -76,7 +76,7 @@ Every example in the skills uses one invented product: a **scheduled-jobs platfo
 | Event raised by a rule | **notification**, raised by a **notification rule** | `Notification`, `NotificationRule`, `notificationRulesPage` |
 | Resource state | **status**: `passing` / `failing` / `degraded` / `paused` | `JobStatus` |
 | Service folders and routes | `jobs-service/` (sub-folders `jobs/`, `workers/`, `run-stats/`), `notification-service/`, `tenant-service/`, `shared/`; `/api/v1/jobs`, `/api/v1/workers` | — |
-| Internals for distributed-failure cases | a **message queue**, **executors**, a **scheduler** | — |
+| Internals for distributed-failure cases | a **message queue** with queue streams and a key-value state store, an **event bus**, **executors**, a **scheduler**. The scheduler's work items are *schedule entries*, never *jobs*, and a queue stream is never a bare *stream*, which is a job type. A worker has a `WORKER_ID` that must not be spoofable. Name no real queue or streaming product | `schedules` queue stream, `schedules.dispatch`, `{jobType}` topics, `WORKER_ID` |
 | More job types, where a lesson needs more than four | `sftp` (host-only target, port in config), `backup` (port and retention days), `stream` (a `wss://` target) | `buildCreateSFTPJobBody`, `buildCreateBackupJobBody`, `buildCreateStreamJobBody` |
 | Type-specific config | `export` `{ recordRunSteps }`, `http` and `stream` `{ verifySsl }`, `sftp` `{ port }`, `email` `{ bodyFormat }`, `backup` `{ port, retentionDays }`, `webhook` `{ description }` | `buildCreateJobBody` (defaults to type `export`) |
 | Scheduling and assignment | how often a job runs; the workers assigned to it (nullable) | `runInterval`, `VALID_RUN_INTERVALS`, `workerIds`, `assignments`, `JobAssignmentSchema` |
