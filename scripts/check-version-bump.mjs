@@ -13,7 +13,9 @@ import { execSync } from 'node:child_process';
 const base = process.argv[2] ?? 'origin/main';
 let changed;
 try {
-  changed = execSync(`git diff --name-only ${base}...HEAD -- ".claude/skills/*/SKILL.md"`, { encoding: 'utf8' })
+  // --diff-filter=d leaves out deleted skills: there is no version left to bump, and
+  // `git show HEAD:` on a deleted path throws, which used to take the whole report with it.
+  changed = execSync(`git diff --name-only --diff-filter=d ${base}...HEAD -- ".claude/skills/*/SKILL.md"`, { encoding: 'utf8' })
     .split('\n').map((s) => s.trim()).filter(Boolean);
 } catch {
   console.log(`  could not diff against ${base} — skipped (shallow clone or missing ref)`);
