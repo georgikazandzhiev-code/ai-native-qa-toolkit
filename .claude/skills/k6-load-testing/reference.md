@@ -34,19 +34,19 @@ Catalogs moved out of `SKILL.md` so the rules fit inside the boundary the skill 
 // tests/perf/lib/metrics.ts
 import { Trend, Counter, Rate } from "k6/metrics";
 
-export const createLatency = new Trend("create_monitor_latency", true);
-export const createFailures = new Rate("create_monitor_failures");
-export const createdMonitors = new Counter("created_monitors_total");
+export const createLatency = new Trend("create_job_latency", true);
+export const createFailures = new Rate("create_job_failures");
+export const createdJobs = new Counter("created_jobs_total");
 ```
 
-Use them to threshold business-level SLOs that HTTP latency alone doesn't capture (e.g., end-to-end "monitor created & visible in listing" time).
+Use them to threshold business-level SLOs that HTTP latency alone doesn't capture (e.g., end-to-end "job created & visible in listing" time).
 
 ### Threshold tagging pattern
 
 Tag each request with `name` (endpoint identity) **and** `operation` (business action):
 
 ```ts
-http.get(url, { tags: { name: "list_monitors", operation: "read" } });
+http.get(url, { tags: { name: "list_jobs", operation: "read" } });
 ```
 
 Then threshold by both:
