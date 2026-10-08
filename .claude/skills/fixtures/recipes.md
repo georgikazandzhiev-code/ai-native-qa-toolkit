@@ -18,24 +18,24 @@ Steps:
 
 ```typescript
 // 1. import
-import { AlertsPage } from '../../pages/app/AlertsPage';
+import { NotificationsPage } from '../../pages/app/NotificationsPage';
 
 // 2. type entry
 export type FrameworkFixtures = {
     /* ...existing... */
-    alertsPage: AlertsPage;
+    notificationsPage: NotificationsPage;
 };
 
 // 3. extend body entry
 export const test = base.extend<FrameworkFixtures>({
     /* ...existing... */
-    alertsPage: async ({ page }, use) => {
-        await use(new AlertsPage(page));
+    notificationsPage: async ({ page }, use) => {
+        await use(new NotificationsPage(page));
     },
 });
 ```
 
-No change to `test-options.ts` — the whole `pageObjectFixture` module is already merged. If TypeScript complains about an unknown property on the test args, you forgot the `FrameworkFixtures` entry. Consume it as `test('...', async ({ alertsPage }) => { ... })` — never `new AlertsPage(page)` in a spec.
+No change to `test-options.ts` — the whole `pageObjectFixture` module is already merged. If TypeScript complains about an unknown property on the test args, you forgot the `FrameworkFixtures` entry. Consume it as `test('...', async ({ notificationsPage }) => { ... })` — never `new NotificationsPage(page)` in a spec.
 
 ---
 
@@ -47,49 +47,49 @@ The most common UI-spec shape: seed a resource over the API, drive the UI agains
 import { expect, test } from '../../../fixtures/pom/test-options';
 import { appConfig } from '../../../config/app';
 import {
-    buildCreateSSLSyntheticBody,
-    createSyntheticMonitor,
-    cleanupProbesAndSynthetics,
-} from '../../../helpers/app/synthetics';
-import { buildCreateProbeBody, createProbe } from '../../../helpers/app/probes';
+    buildCreateBackupJobBody,
+    createJob,
+    cleanupWorkersAndJobs,
+} from '../../../helpers/app/jobs';
+import { buildCreateWorkerBody, createWorker } from '../../../helpers/app/workers';
 import { faker } from '@faker-js/faker';
 
 // No token aliases — use process.env.USER_ACCESS_TOKEN_* directly (see data-strategy §1.6).
 
-test.describe('SSL monitor detail view', () => {
-    const createdSyntheticIds: string[] = [];
-    let probeId: string;
+test.describe('Backup job detail view', () => {
+    const createdJobIds: string[] = [];
+    let workerId: string;
 
     test.beforeAll(async ({ apiRequest }) => {
-        const probe = await createProbe(
+        const worker = await createWorker(
             apiRequest,
-            buildCreateProbeBody(),
+            buildCreateWorkerBody(),
             process.env.USER_ACCESS_TOKEN_FULL!
         );
-        expect(probe.status).toBe(201);
-        probeId = probe.body.probeId;
+        expect(worker.status).toBe(201);
+        workerId = worker.body.workerId;
 
-        const name = `qa-ssl-view-${faker.string.alphanumeric(8).toLowerCase()}`;
-        const { status, body } = await createSyntheticMonitor(
+        const name = `qa-backup-view-${faker.string.alphanumeric(8).toLowerCase()}`;
+        const { status, body } = await createJob(
             apiRequest,
-            buildCreateSSLSyntheticBody([probeId], { name }),
+            buildCreateBackupJobBody([workerId], { name }),
             process.env.USER_ACCESS_TOKEN_FULL!
         );
         expect(status).toBe(201);
-        createdSyntheticIds.push(body.syntheticId);
+        createdJobIds.push(body.jobId);
     });
 
     test.afterAll(async ({ apiRequest }) => {
         test.setTimeout(appConfig.timeouts.asyncFlow);
-        await cleanupProbesAndSynthetics(
+        await cleanupWorkersAndJobs(
             apiRequest,
-            [probeId],
-            createdSyntheticIds,
+            [workerId],
+            createdJobIds,
             process.env.USER_ACCESS_TOKEN_FULL!
         );
     });
 
-    test('detail view renders the seeded monitor', async ({ syntheticsPage }) => {
+    test('detail view renders the seeded job', async ({ jobsPage }) => {
         /* drive the UI via the POM */
     });
 });
@@ -97,7 +97,7 @@ test.describe('SSL monitor detail view', () => {
 
 Why this shape:
 - `apiRequest` is destructured in the hook signature, exactly as in test signatures — UI POM fixtures and `apiRequest` co-exist on the same surface.
-- Cleanup collects ids into an array and deletes unconditionally (no `if (id)` guard). `cleanupProbesAndSynthetics` tolerates 404 and deletes synthetics-before-probes to avoid 409.
+- Cleanup collects ids into an array and deletes unconditionally (no `if (id)` guard). `cleanupWorkersAndJobs` tolerates 404 and deletes jobs-before-workers to avoid 409.
 - Token is always `process.env.USER_ACCESS_TOKEN_FULL!` at the call site — no aliasing (see `data-strategy` §1.6).
 
 ---
@@ -128,7 +128,7 @@ test.describe('Invite email loop', () => {
 Notes:
 - `mailpit` is a fixture — destructure it in every hook/test that uses it; do not store it past the test boundary (its context is disposed on teardown).
 - `getLastEmail(email, retries, interval)` already polls (default 5×1s). For invite links use the `getInviteLinkFromEmail(mailpit, email)` plain helper (`helpers/util/mailpit.ts`), which polls 10×2s and extracts the `action-token` URL.
-- Use an `@<your-test-domain>` recipient. Clean the mailbox in `afterEach` so parallel runs stay isolated.
+- Use an `@<your-test-domain>` recipient. Clean the mailbox in `afterEach` so parallel test runs stay isolated.
 
 ---
 
@@ -282,16 +282,16 @@ Fixture names are **global** on the merged surface. If two modules declare the s
 When the same "create X, delete X" appears across specs but does not clear the fixture bar, use a helper that returns its own cleanup — no fixture, no copy-pasted teardown.
 
 ```typescript
-// helpers/app/seed-synthetic.ts
+// helpers/app/seed-job.ts
 import type { ApiRequestFn } from '../../fixtures/api/api-types';
 
-export async function seedSynthetic(
+export async function seedJob(
     apiRequest: ApiRequestFn,
     token: string
-): Promise<{ syntheticId: string; cleanup: () => Promise<void> }> {
+): Promise<{ jobId: string; cleanup: () => Promise<void> }> {
     /* create via apiRequest, capture id */
     return {
-        syntheticId,
+        jobId,
         cleanup: async () => {
             /* delete via apiRequest, tolerate 404 */
         },
@@ -300,8 +300,8 @@ export async function seedSynthetic(
 ```
 
 ```typescript
-let seeded: Awaited<ReturnType<typeof seedSynthetic>>;
-test.beforeEach(async ({ apiRequest }) => { seeded = await seedSynthetic(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!); });
+let seeded: Awaited<ReturnType<typeof seedJob>>;
+test.beforeEach(async ({ apiRequest }) => { seeded = await seedJob(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!); });
 test.afterEach(async () => { await seeded.cleanup(); });
 ```
 
