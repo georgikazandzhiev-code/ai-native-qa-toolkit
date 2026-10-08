@@ -10,7 +10,7 @@
       "score": 15,
       "baseline": 15,
       "verdict": "parity",
-      "note": "both arms broke the same rule \u2014 conditional logic in a test body"
+      "note": "both arms broke the same rule — conditional logic in a test body"
     },
     {
       "version": "1.1.0",
@@ -22,6 +22,17 @@
       "baseline": 15,
       "verdict": "improved",
       "note": "machine-graded. Cases 1 and 3 of the lint gate. Baseline invented a tag absent from the whitelist and used try/catch in a test body; the skill arm produced 537 lines with zero constitution violations"
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-10-07",
+      "metric": "lint-gate-violations",
+      "cases": 1,
+      "max": null,
+      "score": 0,
+      "baseline": 12,
+      "verdict": "held",
+      "note": "machine-graded, skill arm only. Case 1 of the lint gate (POST /api/v1/projects) re-run after #5 PR 3 aligned the templates and http-method-coverage with SKILL.md: 360 lines, zero violations, and the output uses the new forms (expect.soft(safeParse(...).success) in negative loops, the coverage-plan block, the // qase.id(N) placeholder, the dedicated 405 block). Baseline 12 is the 2026-08-11 run, not re-run. Case 3's prompt was not recorded, so it could not be repeated identically. Limits: one case, one run, today's model, subagent generator."
     }
   ]
 }

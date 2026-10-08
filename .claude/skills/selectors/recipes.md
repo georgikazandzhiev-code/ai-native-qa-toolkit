@@ -297,7 +297,7 @@ Rules:
 
 ## 5. Toasts / Sonner notifications
 
-This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message.
+This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message. Confirm the role on your build before switching an existing toast locator (`npx playwright open`, inspect the toast) — if it isn't there, use the `[data-sonner-toast]` fallback.
 
 ```typescript
 async expectSuccessToastForMonitor(name: string): Promise<void> {
@@ -737,8 +737,8 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         syntheticsPage,
         createMonitorPage,
     }) => {
-        qase.id(656);
         qase.suite(SUITES.APP_SYNTHETICS);
+        qase.id(656);
 
         const monitorName = `e2e-icmp-${faker.string.alphanumeric(6).toLowerCase()}`;
         const target = faker.internet.ipv4();
@@ -751,7 +751,7 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         });
 
         // POM action — every field locator (role-based textboxes, field-field-* select triggers) lives in pages/app/CreateMonitorPage.ts.
-        await test.step('Create ICMP monitor through the sheet', async () => {
+        await test.step('WHEN: User creates an ICMP monitor through the sheet', async () => {
             await syntheticsPage.createMonitorButton.click();
             await expect(createMonitorPage.sheet).toBeVisible();
             await createMonitorPage.waitForTypeSelection();
@@ -768,13 +768,13 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         });
 
         // INLINE — TOLERATED: one-shot success-toast assertion, never interacted with, no reuse.
-        await test.step('Verify create success toast', async () => {
+        await test.step('THEN: Create success toast is visible', async () => {
             const toast = page.getByText(new RegExp(`"${monitorName}" created successfully`));
             await expect(toast).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
         });
 
         // POM dynamic locator — exposed publicly so specs can assert against any row.
-        await test.step('Verify ICMP monitor in grid', async () => {
+        await test.step('AND: ICMP monitor appears in the grid', async () => {
             await syntheticsPage.searchByName(monitorName);
             const row = syntheticsPage.getRowByName(monitorName);
             await expect(row).toHaveCount(1, { timeout: appConfig.timeouts.persist });
@@ -784,7 +784,7 @@ test('Create, verify in grid, view details, edit, and delete ICMP monitor',
         });
 
         // POM action — openRowActionMenu encapsulates the click + retry + menu-item click.
-        await test.step('Open View Details and verify', async () => {
+        await test.step('AND: View Details shows the monitor', async () => {
             const row = syntheticsPage.getRowByName(monitorName);
             await syntheticsPage.openRowActionMenu(row, 'View details');
             await expect(syntheticsPage.detailsSheet).toBeVisible();
@@ -867,7 +867,7 @@ Use the parameterized `verifyInlineMsLabels` helper on `SyntheticsPage` — work
 
 ### Pre-seeded monitor exception (WebSocket)
 
-Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the `websocket-monitor-detail-view.spec.ts` targets a **pre-seeded monitor** named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If the named monitor is missing, the spec **skips with a clear message** in `beforeAll` (via `listSynthetics`) rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
+Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the `websocket-monitor-detail-view.spec.ts` targets a **pre-seeded monitor** named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If the named monitor is missing, the spec should **fail fast with a clear message** in `beforeAll` (via `listSynthetics`) — never skip, because a skipped spec reads as green; the current self-skip is drift rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
 
 ---
 

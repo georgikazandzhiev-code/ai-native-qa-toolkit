@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 1.2.0
+version: 1.3.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -84,6 +84,15 @@ import { faker } from "@faker-js/faker";
 // Import helpers from helpers/app/<resource>
 // Import invalid-type arrays from fixtures/api/invalid-types
 
+// Coverage plan — <METHOD> <path>, every status code in the OpenAPI contract:
+// 200 — happy path, schema + business values
+// 400 — per-field omission loop, per-field invalid-type loop, invalid id format
+// 401 — no token; admin token on a tenant-scoped path (wrong realm)
+// 403 — USER_ACCESS_TOKEN_ZERO (commented out under // TODO: FIXME: <TICKET> while unprovisioned)
+// 404 — non-existent id
+// 405 — unsupported verbs (dedicated 405 block)
+// SKIP: 500 — cannot be produced on purpose
+
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 // OR for tenant-scoped endpoints:
 // const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
@@ -93,16 +102,16 @@ const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 // ═══════════════════════════════════════════════════════════════
 
 test.describe("METHOD /path - Description", () => {
-  const createdIds: string[] = [];
+  const createdIds: Array<string | undefined> = [];
 
   test.afterAll(async ({ apiRequest }) => {
-    for (const id of createdIds) {
-      // cleanup via DELETE helper
+    for (const id of createdIds.filter((x): x is string => x !== undefined)) {
+      // cleanup via the DELETE helper, tolerating 404 (already gone)
     }
   });
 
   test(
-    "Verify METHOD /path returns expected result",
+    "Verify <METHOD> <path> returns <status> [with <reason>]",
     { tag: "@App-API" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
@@ -142,17 +151,20 @@ test.describe("E2E — <Feature> CRUD", () => {
     { tag: "@App-E2E" },
     async ({ page, sideNavigation, syntheticsPage, createMonitorPage, apiRequest }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
+      // qase.id(N);
+      const name = `qa-${faker.string.alphanumeric(8).toLowerCase()}`;
+      createdNames.push(name);
 
       await test.step("GIVEN: User navigates to page", async () => {
-        // navigation
+        // navigation via page-object actions
       });
 
       await test.step("WHEN: User creates resource", async () => {
-        // creation
+        // creation via page-object actions, using `name`
       });
 
       await test.step("THEN: Resource appears in grid", async () => {
-        // verification
+        await expect(syntheticsPage.getRowByName(name)).toBeVisible({ timeout: appConfig.timeouts.persist });
       });
     },
   );
@@ -184,6 +196,7 @@ test.describe("<Feature> — Form Validation", () => {
     { tag: "@App-regression" },
     async ({ createMonitorPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
+      // qase.id(N);
       // validation test body
       // close sheet at end to leave clean state
     },
@@ -220,7 +233,7 @@ After creating the spec, update the matching router in the repository's repo-con
 - [ ] `qase.suite()` is the first line in every test
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
-- [ ] Test names start with "Verify ..." (API) or describe the flow (E2E)
+- [ ] API test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (variants: `api-testing/http-method-coverage.md` § 14); E2E names describe the flow
 - [ ] No `any` types — explicit generics on `apiRequest<T>()`
 - [ ] `test.step` used for multi-phase tests with GIVEN/WHEN/THEN
 
@@ -269,12 +282,18 @@ test("Create resource", async ({ apiRequest }) => {
   expect(ResourceSchema.parse(body)).toBeTruthy();
 });
 
-// ACCEPTABLE — try/catch only when you must capture state for cleanup
+// ACCEPTABLE — the one sanctioned try/catch: capturing the id of a resource a bug created, for teardown.
+// No `if` in the body (the constitution forbids it); the marker comment is what the lint accepts.
 test("Verify invalid payload returns 400", async ({ apiRequest }) => {
   const { status, body } = await createResource(apiRequest, TOKEN, invalidData);
-  if (status === 201 && body?.id) {
-    createdIds.push(body.id); // defensive capture — bug created a resource
+  let createdId: string | undefined;
+  // eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
+  try {
+    createdId = ResourceSchema.parse(body).id;
+  } catch {
+    createdId = undefined; // the expected error body: nothing was created
   }
+  createdIds.push(createdId);
   expect(status).toBe(400);
 });
 ```
@@ -380,23 +399,46 @@ test("Verify GET returns 404 for non-existent resource", async ({ apiRequest }) 
 ### Wrong: 405 loop outside the test block
 
 ```typescript
-// BAD — creates a separate test per method, pollutes test count
+// BAD — one test per method: the report and Qase fill up with near-identical tests
 const UNSUPPORTED = ["PUT", "PATCH", "DELETE"] as const;
 for (const method of UNSUPPORTED) {
-  test(`Verify ${method} returns 405`, async ({ apiRequest }) => {
-    const { status } = await apiRequest[method.toLowerCase()](url, { token });
+  test(`Verify ${method} /<resource>s returns 405`, { tag: "@App-API" }, async ({ apiRequest }) => {
+    qase.suite(SUITES.API_<RESOURCE>);
+    // qase.id(N);
+    const { status } = await apiRequest({
+      method,
+      url: appConfig.api.<RESOURCE>,
+      baseUrl: appConfig.apiUrl,
+      headers: process.env.USER_ACCESS_TOKEN_FULL!,
+    });
     expect(status).toBe(405);
   });
 }
 ```
 
 ```typescript
-// CORRECT — one test, loop inside
-test("Verify unsupported methods return 405", { tag: "@App-API" }, async ({ apiRequest }) => {
-  const UNSUPPORTED = ["PUT", "PATCH", "DELETE"] as const;
-  for (const method of UNSUPPORTED) {
-    const { status } = await apiRequest[method.toLowerCase()](url, { token });
-    expect(status, `${method} should return 405`).toBe(405);
+// CORRECT — one test, loop inside, a step and soft assertions per verb.
+// Full skeleton (collection + {id} paths, request bodies): api-testing/http-method-coverage.md § 11.
+test("Verify unsupported methods on /<resource>s return 405", { tag: "@App-API" }, async ({ apiRequest }) => {
+  qase.suite(SUITES.API_<RESOURCE>);
+  // qase.id(N);
+  const UNSUPPORTED = [
+    { method: "PUT", requestBody: {} },
+    { method: "PATCH", requestBody: {} },
+    { method: "DELETE", requestBody: undefined },
+  ] as const;
+  for (const { method, requestBody } of UNSUPPORTED) {
+    await test.step(`${method} /<resource>s`, async () => {
+      const { status, body } = await apiRequest({
+        method,
+        url: appConfig.api.<RESOURCE>,
+        baseUrl: appConfig.apiUrl,
+        headers: process.env.USER_ACCESS_TOKEN_FULL!,
+        body: requestBody,
+      });
+      expect.soft(status, `${method} /<resource>s`).toBe(405);
+      expect.soft(body, `${method} /<resource>s body`).toBeNull();
+    });
   }
 });
 ```
@@ -426,13 +468,18 @@ When testing invalid input, the API might accept it due to a bug. If you don't c
 
 ```typescript
 const { status, body } = await createResource(apiRequest, TOKEN, invalidData);
-if (status === 201 && body?.id) {
-  createdIds.push(body.id); // defensive capture
+let createdId: string | undefined;
+// eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
+try {
+  createdId = ResourceSchema.parse(body).id;
+} catch {
+  createdId = undefined; // the expected error body: nothing was created
 }
+createdIds.push(createdId);
 expect(status).toBe(400);
 ```
 
-Always add this defensive capture in validation tests for POST endpoints.
+Add this capture to validation tests for POST endpoints. It is the constitution's one `try/catch` exception, marked with `eslint-allow-cleanup-capture` so the lint accepts it, and it needs no `if` in the test body: `createdIds` holds `undefined` when nothing was created, and the teardown hook skips those.
 
 ### Shared fixtures across `test.describe` blocks
 

@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 2.0.1
+version: 2.1.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -18,10 +18,10 @@ These rules apply to **every** generated artifact in the framework — page obje
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
 - **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps — every tag is Title-case except lowercase `@App-regression`. **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
-- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Add `qase.id(N);` if a Qase case ID exists. Why: the run is orphaned in Qase reporting otherwise.
+- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull URLs / credentials / env-driven values from `process.env.X!` (no defaults at call sites; defaults belong in `config/util/<service>.ts`). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`Messages.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
-- **ALWAYS** use `z.strictObject()` for new schemas (rejects extra keys — catches API drift). **ALWAYS** validate every API response with `expect(SchemaName.parse(body)).toBeTruthy();`. **NEVER** stop at `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper. **NEVER** use `z.any()` to silence a `ZodError`. See the `api-testing` and `type-safety` skills.
+- **ALWAYS** use `z.strictObject()` for new schemas (rejects extra keys — catches API drift). **ALWAYS** validate every API response with `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). **NEVER** stop at `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper. **NEVER** use `z.any()` to silence a `ZodError`. See the `api-testing` and `type-safety` skills.
 - **ALWAYS** explore the live UI with `npx playwright open` before writing any locator (the `playwright-cli` skill). **ALWAYS** read OpenAPI / Swagger before writing any API test (the `api-testing` skill, Phase 1). **NEVER** guess from wireframes or screenshots. Verify stable facts against the frontend source (the `frontend-cross-check` skill) and behaviour on the live app.
 - **ALWAYS** consume page objects via fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** `new <Page>(page)` inside a spec. See the `page-objects` skill.
 - **NEVER** use XPath or top-level CSS class / id selectors. **NEVER** `page.waitForTimeout(...)`. Use the `selectors` skill's priority order (default + Radix exception) and web-first assertions.
@@ -202,10 +202,10 @@ For **every** generated artifact, regardless of category:
 - [ ] No JSDoc on locator getters. JSDoc with `@param` / `@returns` on every public action method.
 - [ ] Tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => {})` for every distinct phase (capitalized prefix, colon, single space).
 - [ ] Each test has exactly **one** tag from the `test-standards` whitelist, cased exactly as listed there. Tag on the test, not on `describe`.
-- [ ] Every test starts with `qase.suite(SUITES.<RESOURCE>);` as the first body line. `qase.id(N);` follows if applicable.
+- [ ] Every test starts with `qase.suite(SUITES.<RESOURCE>);` as the first body line. `qase.id(N);` follows — commented out until mapped.
 - [ ] Page objects consumed via fixture destructuring — no `new <Page>(page)`.
 - [ ] New POMs registered in `fixtures/pom/page-object-fixture.ts` in the same edit batch.
-- [ ] New schemas use `z.strictObject()`. Every API response asserted with `expect(SchemaName.parse(body)).toBeTruthy();`.
+- [ ] New schemas use `z.strictObject()`. Every API response asserted with `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out).
 - [ ] API specs include the negative matrix when applicable (empty body, per-field omission, per-field invalid-type loops via `fixtures/api/invalid-types.ts`, 401/403/405 where relevant). See the `api-testing` skill.
 - [ ] E2E specs have `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
 - [ ] No `.only`. No `test.skip` — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.

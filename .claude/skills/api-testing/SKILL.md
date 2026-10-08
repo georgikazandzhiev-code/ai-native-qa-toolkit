@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 1.1.4
+version: 1.2.0
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -61,7 +61,7 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
         `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used in 100% of
         specs today (e.g. `Verify GET /synthetics returns 200 with valid schema and default pagination`).
         Keep `<reason>` short and behavior-focused; omit it when the status alone is unambiguous (e.g.
-        `Verify DELETE /synthetics/:id returns 200`).
+        `Verify DELETE /synthetics/{id} returns 200`).
 - [ ] 8. Cover the negative matrix (see § The negative test matrix).
 - [ ] 9. Wire cleanup (afterEach/afterAll DELETE through the helper). For synthetics-with-probes use
         `cleanupProbesAndSynthetics` — synthetics MUST be deleted before probes (409 otherwise).
@@ -213,7 +213,7 @@ Import and iterate. **Never redefine inline.** Each array is curated for what th
 
 Use a valid payload as the base and override one field at a time. This isolates the field under test.
 
-**Convention: loop INSIDE `test()`, never outside.** One `test()` per validation concern; the loop iterates invalid values inside the test body. Wrap each iteration in `test.step()` so the trace shows which value broke. Use `expect.soft()` for inner-loop assertions so the loop continues past failures and the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
+**Convention: loop INSIDE `test()`, never outside, and check the schema with `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`** (the constitution's carve-out — `parse` would throw and stop the loop). One `test()` per validation concern; the loop iterates invalid values inside the test body. Wrap each iteration in `test.step()` so the trace shows which value broke. Use `expect.soft()` for inner-loop assertions so the loop continues past failures and the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
 
 This matches the project's 405 catch-all pattern (see `http-method-coverage.md` for the full per-verb playbook) and avoids the per-value test explosion that the loop-outside form produces.
 
@@ -355,9 +355,10 @@ Avoid these — they correspond to common reviewer findings and the upstream ant
 - ❌ Deleting probes before synthetics — returns 409 because the synthetic still references the probe. Always cleanup synthetics first (use `cleanupProbesAndSynthetics`).
 - ❌ Asserting exact ordering on sort tests — DB collation differs from JavaScript string sort. Assert that the endpoint accepts the sort param and returns valid items.
 - ❌ Wrapping a single one-shot request in a helper "for tidiness" — reach for a helper only on reuse / multi-step / preconditions.
-- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`.
+- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`, with `{id}` for path parameters; the per-verb variants (create-and-GET-back, PATCH per-field, the 405 catch-all, cross-tenant) are listed once, in [http-method-coverage.md § 14](http-method-coverage.md#14-test-name-templates-per-verb).
 - ❌ `for...of` loop **outside** `test()` for invalid-value validation (one-test-per-value pattern). Loop INSIDE `test()` with `test.step` + `expect.soft` per § Per-field invalid-type loop. The loop-outside form generates dozens of nearly-identical tests, hammers the API with extra auth cycles, and clutters Qase reporting.
 - ❌ Hard `expect()` inside an in-test validation loop. Use `expect.soft()` so all iterations report — a failing first iteration must not silence the rest.
+- ❌ `expect.soft(Schema.parse(body))` inside a loop. `parse` throws before `expect.soft` sees anything, so the loop still stops at the first bad response. Use `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`.
 - ❌ Asserting on **exact error message text** (`expect(body.error).toBe("Resource not found")`) unless the message is part of the documented API contract. Assert on status code + envelope schema shape; brittle copy comparisons fail every time the backend tweaks wording.
 - ❌ Inline `setTimeout` / `await new Promise((r) => setTimeout(r, 1000))` polling inside a spec. Use Playwright's built-in retry mechanisms (`expect(async () => { … }).toPass({ timeout })`, `expect.poll`) or a helper that polls with explicit timeout + interval (mirror `Mailpit.getLastEmail(email, 10, 2000)`).
 
@@ -383,7 +384,7 @@ Before declaring a spec done, verify:
 - [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-synthetic-validation.json`), never camelCase.
 - [ ] Mailpit recipients use `@<your-test-domain>` — never `@automation.test`, `@<alt-test-domain>`, or any other domain (the test infra catches only `@<your-test-domain>`).
 - [ ] Specs that exercise 403 from a no-permission token: if `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`.
-- [ ] No `test.fixme()` without a linked `// BUG:` annotation.
+- [ ] No `test.fixme()` / `test.skip()`. A disabled test is commented out under `// TODO: FIXME: <TICKET>`.
 - [ ] Linter passes for the spec, schema, helper, and test-data files.
 
 ## Examples
@@ -397,7 +398,7 @@ Walk the workflow:
 1. **Confirm route in `config/app.ts`** — add `SYNTHETICS_PAUSE: "/api/v1/synthetics/:id/pause"` if missing.
 2. **Schema** — open `fixtures/api/schemas/app/synthetic.ts`. Add `PauseSyntheticResponseSchema = z.strictObject({ syntheticId: z.string().uuid(), status: StatusSchema })`. Specs deep-import from the resource file (there is no `app/` schema barrel).
 3. **Helper** — only if ≥ 2 specs need it. Likely not yet, so call `apiRequest` directly.
-4. **Coverage Plan** (§ Critical) — comment block at the top of the spec listing every status code: 200 happy path, 400 invalid id format, 401 (no token), 403 (admin token on tenant endpoint), 404 (non-existent uuid), 405 (wrong verbs), 409 (already paused).
+4. **Coverage Plan** (§ Critical) — comment block at the top of the spec listing every status code: 200 happy path, 400 invalid id format, 401 (no token, and the admin token on this tenant endpoint — wrong realm), 403 (`USER_ACCESS_TOKEN_ZERO`), 404 (non-existent uuid), 405 (wrong verbs), 409 (already paused).
 5. **Spec** — author `tests/app/api/monitoring-service/synthetics/synthetic-pause.spec.ts` from `templates.md § 1`. Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]`.
 6. **Negative matrix** — apply: per-field validation isn't needed (no request body), but path-parameter fuzzing is mandatory (§ Path parameter fuzzing). 405 catch-all loop. 401/403 auth coverage.
 7. **Cleanup** — pause is reversible via unpause; restore in `afterAll`.

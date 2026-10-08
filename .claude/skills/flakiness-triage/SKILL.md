@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 1.1.2
+version: 1.1.3
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -18,7 +18,7 @@ Sister skill to `debugging`. `debugging` covers "this test just failed — what'
 - **ALWAYS reproduce N times before declaring a test "fixed".** Single green run after a flake fix means nothing — aim for **3–5 consecutive green runs** of the affected spec at the same parallelism level (always `--workers=1` for this framework per the memory note on shared-tenant interference).
 - **ALWAYS isolate the test before debugging.** Run the spec alone (`npx playwright test <spec> --workers=1`). If it passes alone but fails in the suite, the cause is **cross-test interference** (shared tenant state, leaked fixture, cleanup ordering). If it fails alone too, it's a **per-test bug** (race, missing wait, stale storage state).
 - **ALWAYS check the storage-state age for `401` flakes.** This framework's `login.setup.ts` writes storage-state files; long-running local sessions may use expired tokens. Re-run setup before assuming a code bug.
-- **NEVER skip a flaky test with `test.skip`.** Per the orchestrator, `test.skip` corrupts Qase ID mappings. Comment out with `// FIXME: <TICKET> flaky — investigating` and report the ticket.
+- **NEVER skip a flaky test with `test.skip`.** Per the orchestrator, `test.skip` corrupts Qase ID mappings. Comment out under `// TODO: FIXME: <TICKET> flaky — investigating` and report the ticket.
 - **ALWAYS repeat-run a new or modified spec before merging it.** 5 consecutive green runs at `--workers=1` is the merge bar. A spec that has only ever run once is unverified, not stable — and the cheapest flake to fix is the one that never reached main.
 - **NEVER quarantine without a ticket and an expiry date.** A quarantine with no expiry is silent coverage loss that nobody ever revisits. See § Quarantine policy.
 
@@ -194,7 +194,7 @@ The failure mode this catches: a suite where everyone knows "those three always 
 
 Quarantine is a last resort — the constitution prefers fixing over isolating, and forbids `test.skip` outright. When a flake is blocking a release and the fix is not same-day, all four of these are required together:
 
-1. **Comment out the whole `test(...)` block** with `// FIXME: <TICKET> flaky — quarantined <YYYY-MM-DD>, expires <YYYY-MM-DD>`. Never `test.skip` — it corrupts Qase ID mapping.
+1. **Comment out the whole `test(...)` block** under `// TODO: FIXME: <TICKET> flaky — quarantined <YYYY-MM-DD>, expires <YYYY-MM-DD>`. Never `test.skip` — it corrupts Qase ID mapping.
 2. **A ticket exists** and names the suspected cause, not just "flaky".
 3. **An expiry date**, default 14 days. On expiry the test is fixed or the ticket is escalated — it does not lapse quietly.
 4. **The coverage loss is reported** in the release notes or gate decision. A quarantined test is a documented gap, not an invisible one — this is the same discipline as a `CONCERNS` gate.
@@ -209,7 +209,7 @@ The most common per-test flake causes in this framework, in rough frequency orde
 2. **Strict-mode violation under load** (~20%). Skeleton/placeholder + real content briefly co-exist. Fix: scope to the container that stabilizes.
 3. **Cleanup ordering** (~15%). FK-constrained resource (synthetic → probe) deleted in wrong order, leaving an orphan that a later test trips on. Fix: per the `helpers` skill cleanup-order rules.
 4. **Storage-state expiry** (~10%). Long sessions, `KEYCLOAK_*` tokens have TTL. Fix: rerun setup.
-5. **Network jitter / API non-determinism** (~10%). Real bug on the BE side. Fix: file ticket, comment out test with `// FIXME: <TICKET>`.
+5. **Network jitter / API non-determinism** (~10%). Real bug on the BE side. Fix: file ticket, comment out the test under `// TODO: FIXME: <TICKET>`.
 6. **Genuine race in app code** (~5%). The flake is a real bug — the app has a race condition (e.g. two competing updates). Fix: file ticket, the FE must fix.
 
 ## Anti-patterns
@@ -231,7 +231,7 @@ The most common per-test flake causes in this framework, in rough frequency orde
 - [ ] If per-test flake: matched the symptom to a row in § Step 4's table.
 - [ ] Fix is applied and verified with 5 consecutive isolated runs + 1 full-tag run, all green.
 - [ ] No `waitForTimeout`, no try/catch around `expect`, no raised global timeout, no `test.describe.configure({ retries })`.
-- [ ] If file-a-ticket path: ticket exists and test is commented out with `// FIXME: <TICKET>`, not `test.skip`-ed.
+- [ ] If file-a-ticket path: ticket exists and the test is commented out under `// TODO: FIXME: <TICKET>`, not `test.skip`-ed.
 - [ ] **Pre-merge (hunting mode):** static flake-risk grep run over the changed specs; two-or-more hits were read properly.
 - [ ] **Pre-merge (hunting mode):** changed spec repeat-run 5× isolated, 5/5 green, plus one in-tag run.
 - [ ] If quarantined: comment-out (not `test.skip`), ticket with suspected cause, expiry date set, coverage loss reported in the gate decision.
@@ -283,7 +283,7 @@ await expect(alertsPage.firstAlertRow).toBeVisible();
 | "Test passed locally 5× but still fails in CI" | CI is slower; absolute-timing assumptions fail. | Replay the CI trace (`show-trace`), look for the action that's slow in CI. Often the fix is the same as a per-test race (use `waitForResponse`). |
 | "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check `tests/app/login.setup.ts`. Restart workers between tags (CI does, local may not). |
 | "Spec is `@App-Critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to `@App-regression` if the run-time budget is the issue; don't retry it under Critical. |
-| "Flake only happens when ICMP probe is unhealthy" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out with `// FIXME: <ENV-TICKET>`. |
+| "Flake only happens when ICMP probe is unhealthy" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out under `// TODO: FIXME: <ENV-TICKET>`. |
 
 ## See Also
 

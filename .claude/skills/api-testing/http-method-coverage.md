@@ -109,7 +109,7 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 9. **Auth coverage**:
    - 401 without token (omit `headers` entirely — never empty string).
    - 401 with admin token on a tenant-scoped list (synthetics rejects `USER_ACCESS_TOKEN_ADMIN` because admin has no tenant scope).
-   - 403 with `USER_ACCESS_TOKEN_ZERO` if provisioned (skip-guarded otherwise).
+   - 403 with `USER_ACCESS_TOKEN_ZERO`. If the token isn't provisioned, write the test and comment it out under `// TODO: FIXME: <TICKET>`.
 10. **405** — at minimum, one wrong-verb on this collection path (covered by the spec's dedicated 405 block per § 11; do not duplicate inline).
 
 ### Don't test
@@ -125,6 +125,7 @@ test(
   { tag: "@App-API" },
   async ({ apiRequest }) => {
     qase.suite(SUITES.API_<RESOURCE>);
+    // qase.id(N);
     const { status, body } = await list<Resource>s(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!);
     expect(status).toBe(200);
     expect(List<Resource>sResponseSchema.parse(body)).toBeTruthy();
@@ -150,7 +151,7 @@ test(
 3. **Invalid id format** — loop over `["!@#$%", "null", "<script>"]` (or use `invalidString` from `fixtures/api/invalid-types`). Each must return **400** with `expect(APIErrorSchema.parse(body)).toBeTruthy()`.
 4. **Non-existent id** — use `nonExistentId` from `test-data/app/<resource>.json` (or a fresh `faker.string.uuid()`). Returns **404** with `expect(APIErrorSchema.parse(body)).toBeTruthy()`.
 5. **Cross-tenant access** — Tenant A's token on Tenant B's resource → **404, not 403**. See `tests/app/api/shared/cross-tenant-isolation.spec.ts` and `tests/app/api/shared/cross-tenant-metrics-isolation.spec.ts` for both shapes (tenant-scoped via token, admin-scoped via tenantId-in-path).
-6. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped resource), 403 (ZERO if provisioned).
+6. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped resource), 403 (ZERO — commented out under `// TODO: FIXME: <TICKET>` while the token is unprovisioned).
 7. **GET-after-DELETE** — covered by the DELETE spec (see § 9), not duplicated here.
 
 ### Don't test
@@ -177,7 +178,7 @@ test(
 6. **Missing each required field** — write one test per required field, deleting it from a valid payload. (Synthetics: `name`, `target`, `type`, `probeIds`, `config`, `checkInterval`, `timeout`. Admin user: `email`, `firstName`, `lastName`. Admin tenant: `name`.)
 7. **Invalid type per field** — loop over `invalidString` / `invalidIntegerTypes` / `specialChars` / `boundaryString` from `fixtures/api/invalid-types` for each field. Each invalid value → 400 + `APIErrorSchema`.
 8. **Duplicate / conflict** → 409 + `APIErrorSchema`. Examples: tenant with existing name; probe with existing name; user invite with existing email.
-9. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped POST), 403 (ZERO if provisioned).
+9. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped POST), 403 (ZERO — commented out under `// TODO: FIXME: <TICKET>` while the token is unprovisioned).
 10. **405** — covered by the dedicated 405 block per § 11.
 
 ### Side effects
@@ -349,27 +350,36 @@ In every spec, HEAD and OPTIONS are still exercised by the **405 catch-all** (se
 
 ### Pattern — single test, loop INSIDE
 
-The non-negotiable shape: **one** test that loops over the unsupported methods, with the loop **inside** `test()`. Do **not** loop outside `test()` — that creates one separate test per method and inflates the report without adding signal.
+The non-negotiable shape: **one** test that loops over the unsupported methods, with the loop **inside** `test()`, a `test.step` per verb and `expect.soft` assertions, so one run reports every verb that slipped through. Do **not** loop outside `test()` — that creates one separate test per method and inflates the report without adding signal.
 
 ```typescript
 test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
-  const UNSUPPORTED_COLLECTION = ["PUT", "PATCH", "DELETE"] as const;
-  const UNSUPPORTED_RESOURCE = ["POST"] as const;
+  // Each case carries its own request body — `{}` on every verb but DELETE (see Coverage rules) — so the test needs no ternary.
+  const UNSUPPORTED_COLLECTION = [
+    { method: "PUT", requestBody: {} },
+    { method: "PATCH", requestBody: {} },
+    { method: "DELETE", requestBody: undefined },
+  ] as const;
+  const UNSUPPORTED_RESOURCE = [{ method: "POST", requestBody: {} }] as const;
 
   test(
     "Verify unsupported methods on /<resource>s return 405",
     { tag: "@App-API" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
-      for (const method of UNSUPPORTED_COLLECTION) {
-        const { status } = await apiRequest({
-          method,
-          url: appConfig.api.<RESOURCE>,
-          baseUrl: appConfig.apiUrl,
-          headers: process.env.USER_ACCESS_TOKEN_FULL!,
-          body: method !== "DELETE" ? {} : undefined,
+      // qase.id(N);
+      for (const { method, requestBody } of UNSUPPORTED_COLLECTION) {
+        await test.step(`${method} /<resource>s`, async () => {
+          const { status, body } = await apiRequest({
+            method,
+            url: appConfig.api.<RESOURCE>,
+            baseUrl: appConfig.apiUrl,
+            headers: process.env.USER_ACCESS_TOKEN_FULL!,
+            body: requestBody,
+          });
+          expect.soft(status, `${method} /<resource>s`).toBe(405);
+          expect.soft(body, `${method} /<resource>s body`).toBeNull();
         });
-        expect(status, `${method} /<resource>s`).toBe(405);
       }
     },
   );
@@ -379,15 +389,19 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
     { tag: "@App-API" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
-      for (const method of UNSUPPORTED_RESOURCE) {
-        const { status } = await apiRequest({
-          method,
-          url: `${appConfig.api.<RESOURCE>}/${faker.string.uuid()}`,
-          baseUrl: appConfig.apiUrl,
-          headers: process.env.USER_ACCESS_TOKEN_FULL!,
-          body: {},
+      // qase.id(N);
+      for (const { method, requestBody } of UNSUPPORTED_RESOURCE) {
+        await test.step(`${method} /<resource>s/{id}`, async () => {
+          const { status, body } = await apiRequest({
+            method,
+            url: `${appConfig.api.<RESOURCE>}/${faker.string.uuid()}`,
+            baseUrl: appConfig.apiUrl,
+            headers: process.env.USER_ACCESS_TOKEN_FULL!,
+            body: requestBody,
+          });
+          expect.soft(status, `${method} /<resource>s/{id}`).toBe(405);
+          expect.soft(body, `${method} /<resource>s/{id} body`).toBeNull();
         });
-        expect(status, `${method} /<resource>s/{id}`).toBe(405);
       }
     },
   );
@@ -399,8 +413,8 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
 - **Always two tests:** one for the **collection** path (no `:id`) and one for the **resource** path (with `:id`). The supported methods differ between them — list collection rejects PUT/PATCH/DELETE; resource path rejects POST.
 - **Resource-path id can be a real id or `faker.string.uuid()`.** Both work; the verb gate is hit before the lookup. Synthetics uses `faker.string.uuid()` (`icmp:1953`); probes uses a real `sharedProbeId` (`probes:1420`). Either is fine — pick whichever simplifies setup in your spec.
 - **Pass `body: {}` for non-DELETE verbs (defensive).** Probes does not (`probes:1418`) and works; synthetics does (`icmp:1935`) and works. New code should pass `body: {}` to make the 405 deterministic across gateway implementations and avoid a class of "silent 400 instead of 405" bug.
-- **`expect(status, "<method> /<path>")`** — pass the descriptive message so the failure log says `"PATCH /synthetics: expected 405, received 200"` instead of an anonymous status mismatch.
-- **`body === null`** — don't bother asserting; 405 responses don't carry a structured body. The status alone is the contract.
+- **`expect.soft(status, "<method> /<path>")`** — soft, so the loop reaches every verb; pass the descriptive message so the failure log says `"PATCH /synthetics: expected 405, received 200"` instead of an anonymous status mismatch.
+- **`body` is `null`** — assert it with `expect.soft(body, label).toBeNull()`, as [SKILL.md § Error envelopes](SKILL.md) does for 403/405. A 405 has no structured body, so there is no schema to parse; a 405 that suddenly carries one is a gateway change worth seeing.
 - **Run on the canonical token** (`USER_ACCESS_TOKEN_FULL` for tenant-scoped, `USER_ACCESS_TOKEN_ADMIN` for admin-scoped) — the request must reach the method-allowance check, not be rejected at auth.
 
 ### Per-resource scope (today)
@@ -449,7 +463,7 @@ The contract distinguishes **wrong realm** (401, gateway rejects) from **wrong s
 - **Wrong-realm 401 (admin → tenant path)** — every method on every tenant-scoped spec. Use the `... returns 401 with admin token (tenant-scoped endpoint)` test-name shape.
 - **Wrong-scope 403 (tenant → admin path)** — every method on every admin-scoped spec. Use the `... returns 403 for tenant-scoped user` test-name shape.
 - **403 ZERO** — every method, every spec. Until the token is provisioned, keep the test written and commented out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` ([reference.md § Token catalog](reference.md#token-catalog)).
-- **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs (`cross-tenant-isolation.spec.ts`, `cross-tenant-metrics-isolation.spec.ts`). Skip with a drift note if no canned wrong-realm token exists.
+- **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs (`cross-tenant-isolation.spec.ts`, `cross-tenant-metrics-isolation.spec.ts`). If no wrong-realm token exists, write the test and comment it out under `// TODO: FIXME: <TICKET>`, naming the missing token.
 
 ### 12.3 Cascade & dependency rules
 
@@ -585,7 +599,7 @@ Verify <METHOD> <path> returns <status> [with <reason>]
 
 - ❌ Looping outside `test()` — creates one test per method and bloats the report.
 - ❌ Sending the wrong-verb call without a body — some servers reject before the method check, returning a misleading 400. Pass `body: {}` for non-DELETE.
-- ❌ Asserting a structured error body for 405 — there is none; 405 carries `body === null` (don't bother; the status is the contract).
+- ❌ Parsing a 405 body against an error schema — there is none. Assert `expect.soft(body, label).toBeNull()`.
 
 ---
 
@@ -619,7 +633,7 @@ Before declaring a CRUD spec done, walk this list. Tick boxes only when the test
 - [ ] Push `createdId` onto cleanup array **before** the GET-after step.
 - [ ] One happy path per body shape (per monitor type, per probe kind, etc.).
 - [ ] Empty body → 400.
-- [ ] Each required field missing → 400 (one test per field).
+- [ ] Each required field missing → 400 (one test, loop inside: a `test.step` per omitted field — [templates.md § 11](templates.md#11-per-field-omission-destructure--rest)).
 - [ ] Each field with invalid type → 400 (loop `invalidString` / `invalidIntegerTypes`).
 - [ ] 409 duplicate / conflict where applicable.
 - [ ] Mailpit purge-before + assertion-after when email is part of the contract; recipient is `@<your-test-domain>`.
@@ -677,7 +691,8 @@ Before declaring a CRUD spec done, walk this list. Tick boxes only when the test
 - [ ] One test for the **resource** path (with `:id`) looping unsupported verbs.
 - [ ] Loop is **inside** `test()`, not outside.
 - [ ] `body: {}` passed for non-DELETE verbs.
-- [ ] `expect(status, "<METHOD> <path>")` carries the method-and-path label.
+- [ ] Each verb runs in its own `test.step`, asserted with `expect.soft(status, "<METHOD> <path>").toBe(405)` and `expect.soft(body, …).toBeNull()`.
+- [ ] No ternary for the request body — each case carries its own `requestBody`.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 1.0.1
+version: 2.0.0
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -14,7 +14,7 @@ This skill turns the two OWASP Top 10 lists into **QA-automatable test targets**
 
 Non-negotiable. Each rule below is what separates a real security test from security theatre.
 
-- **ALWAYS test authorization from a second principal's point of view.** The single highest-value API test is: seed an object as principal A, request it as principal B (different tenant / lower role / `USER_ACCESS_TOKEN_ZERO`), and assert `403` or `404` — never `200`. Broken Object/Function Level Authorization (BOLA/BFLA) tops the API list precisely because functional suites only ever call as the owner.
+- **ALWAYS test authorization from a second principal's point of view.** The single highest-value API test is: seed an object as principal A, request it as principal B (different tenant / lower role / `USER_ACCESS_TOKEN_ZERO`), and assert the deny status the contract documents — typically `404` across tenants (it hides that the object exists) and `403` for a lower role in the same tenant — never `200`, and never "either". Broken Object/Function Level Authorization (BOLA/BFLA) tops the API list precisely because functional suites only ever call as the owner.
 - **NEVER loosen a test, schema, or assertion to make a security check pass.** A security finding is a **bug to report**, not a test to fix. Write the test as the contract demands, comment out the `test(...)` block with `// TODO: FIXME: <TICKET>`, and file the finding (`bug-helper`). Mirrors `api-testing` § Skipping a test for a real backend bug.
 - **NEVER run destructive, DoS, mass-enumeration, or unauthorized attacks.** QA security tests run only against an **authorized test environment** with **seeded** data. No credential stuffing against real accounts, no volumetric floods (that is `k6-load-testing` with explicit thresholds), no testing systems you were not asked to test.
 - **ALWAYS seed both a privileged and an under-privileged principal in setup.** Access-control tests need a real "should-not" identity — a second tenant's token, a lower-role token, or the no-scope `USER_ACCESS_TOKEN_ZERO`. If that identity is not provisioned, comment the test out with `// TODO: FIXME:` — do not fake the assertion or drop the row.
@@ -58,7 +58,7 @@ Follow in order. Reuse the `api-testing` mechanics at every step; this skill onl
 - [ ] 1. Identify principals — who SHOULD access (owner / admin / tenant A) and who SHOULD NOT (other tenant / lower role / no-scope). Confirm both tokens are provisioned.
 - [ ] 2. Map the objects & functions — object ids the endpoint exposes (BOLA), privileged operations (BFLA), and which response properties are sensitive (BOPLA).
 - [ ] 3. Pick the risks that apply — scan api-top10.md (API endpoint) and/or web-top10.md (UI feature); most CRUD endpoints owe API1/API2/API3/API5 at minimum.
-- [ ] 4. Author the negative tests — reuse the api-testing matrix: seed as A, act as B, assert 403/404 + schema. Payload loops for injection reuse the invalid-value loop-inside-test pattern.
+- [ ] 4. Author the negative tests — reuse the api-testing matrix: seed as A, act as B, assert the documented deny status (403 or 404 — one, per the contract) + schema. Payload loops for injection reuse the invalid-value loop-inside-test pattern.
 - [ ] 5. Run — `npx playwright test <spec> --grep "@App-API"` (or the feature's tag). Read lints.
 - [ ] 6. Report findings — any 200-where-403-expected, reflected payload, or leaked field is a bug: comment out the test with // TODO: FIXME: <TICKET> and file it. Never adjust the assertion to green.
 ```
@@ -68,7 +68,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 ## Anti-patterns
 
 - ❌ **Testing only as the owner/admin.** Every existing spec already does this. Without a second, under-privileged principal there is no access-control test — add the "should-not" identity in setup.
-- ❌ **Asserting the attack "does not throw".** `await expect(...).not.toThrow()` proves nothing. Assert the concrete deny: status `403/404`, empty/typed error body, and (for BOPLA) that the sensitive field is **absent**.
+- ❌ **Asserting the attack "does not throw".** `await expect(...).not.toThrow()` proves nothing. Assert the concrete deny: the documented status (`403` or `404`), empty/typed error body, and (for BOPLA) that the sensitive field is **absent**.
 - ❌ **Turning a finding green.** Changing an expected `403` to `200` because "that's what the API returns" hides the vulnerability. Report it (§ Critical), comment the test out with a ticket.
 - ❌ **A parallel security suite with its own fixtures/tag.** Security tests are negative tests; they belong beside the CRUD specs with the same fixtures and the project's existing tag. New tag only after `test-standards` whitelist update.
 - ❌ **Injection tests that only check for a 400.** A stored-XSS test must assert the payload is neutralised where it is *rendered/returned*, not just rejected on input. Cover both the reject path and the safe-render path (`web-top10.md` A03).
@@ -79,7 +79,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 
 ## Self-review checklist
 
-- [ ] Every access-controlled endpoint has a BOLA test (owner-seeded object requested by a different principal → `403/404`).
+- [ ] Every access-controlled endpoint has a BOLA test (owner-seeded object requested by a different principal → the documented `403` or `404`).
 - [ ] Every privileged operation has a BFLA test (lower-role principal → `403`).
 - [ ] Responses are checked for over-exposed properties (BOPLA) — sensitive fields absent from the schema for the wrong principal.
 - [ ] The "should-not" principal is real (second tenant / lower role / `USER_ACCESS_TOKEN_ZERO`), provisioned, and seeded in `beforeAll`/`beforeEach`.

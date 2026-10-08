@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 1.1.0
+version: 2.0.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -14,13 +14,13 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
 - **ALWAYS** tag every test with **exactly one** value from the framework whitelist: `@App-Critical | @App-Smoke | @App-Sanity | @App-regression | @App-API | @App-Integration | @App-E2E`. Casing must match the `package.json` `--grep` patterns **exactly**: every tag is Title-case **except `@App-regression`, which is lowercase `regression`** (the `app-regression` and `app-all` scripts grep the lowercase form). **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
-- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);` and add `qase.id(N);` if a Qase case ID exists. Why: without `qase.suite`, the run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
+- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
 - **ALWAYS** consume page objects through fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** instantiate via `new DashboardPage(page)` inside a spec. Why: bypasses every other merged fixture (api-request, login, mailpit) and produces specs that pass alone but fail in CI.
 - **ALWAYS** clean up created resources via the matching helper in `helpers/app/<resource>.ts` inside `test.afterEach` or `test.afterAll`. UI tests delete via the API, not via the UI — the helper layer owns the canonical delete. Why: UI delete adds 5–10 seconds per test and amplifies flake when CI is busy.
 - **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway probes, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
-- **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **Convention:** `// FIXME: <ticket>` marks a **broken** thing that needs a code fix (bug, API drift, FE regression). `// TODO: <description>` marks **planned work** that's not yet implemented (feature pending, test deferred). Use the one that matches the situation.
+- **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
 - **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test`, so it fails the lint gate rather than depending on review.
 - **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-regression` / `npm run app-api` etc. for whole tag groups. A test that fails locally is not complete.
 
@@ -76,10 +76,10 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 - [ ] 2. Load the matching deep skill — `api-testing` for API specs, `page-objects` + `selectors` for UI specs.
 - [ ] 3. For UI: explore the live app via `npx playwright open` (the `playwright-cli` skill). For API: read OpenAPI / Swagger first (the `api-testing` skill, Phase 1).
 - [ ] 4. Author the imports + describe + beforeEach skeleton; pull `SUITES.<RESOURCE>` from `enums/app/qase-suites.ts` (extend it if missing).
-- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing — lowercase `@App-regression`, Title-case for the rest). Add `qase.suite(SUITES.X)` as the first body line; add `qase.id(N)` if a Qase case ID exists.
+- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing — lowercase `@App-regression`, Title-case for the rest). Add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
 - [ ] 6. Structure the body with `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only.
 - [ ] 7. For E2E: track created resource names in a `createdNames: string[]` array; add `test.afterAll` that deletes via the matching `helpers/app/<resource>.ts` helper.
-- [ ] 8. For data-driven tests: loop OUTSIDE the test block, generating individual `test(...)` calls with descriptive names.
+- [ ] 8. For data-driven tests: UI cases loop OUTSIDE the test block (one `test(...)` per case, descriptive names); API negative matrices loop INSIDE one test (`test.step` + `expect.soft` + `safeParse`, the `api-testing` skill).
 - [ ] 9. Run the spec — `npx playwright test <spec>` — and confirm zero failures. For tag groups, use the matching `npm run app-<tag>` script.
 ```
 
@@ -157,6 +157,7 @@ test(
   { tag: "@App-E2E" },
   async ({ syntheticsPage, createMonitorPage }) => {
     qase.suite(SUITES.APP_SYNTHETICS);
+    // qase.id(N);
 
     await test.step("GIVEN: User is on the Synthetics page", async () => {
       await syntheticsPage.open();
@@ -176,7 +177,7 @@ test(
 );
 ```
 
-Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized prefix, colon, single space, then the description. The capitalized `GIVEN`/`WHEN`/`THEN`/`AND` is the existing convention across every spec in the repo (see `dashboard-page.spec.ts`, `login-smoke.spec.ts`, `http-synthetic-monitor-crud.spec.ts`).
+Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized prefix, colon, single space, then the description. The capitalized `GIVEN`/`WHEN`/`THEN`/`AND` is the existing convention across every spec in the repo (see `dashboard-page.spec.ts`, `login-smoke.spec.ts`, `http-synthetic-monitor-crud.spec.ts`). The one exception: inside a negative-matrix loop each step is one case, labelled with the case itself (`` `omit ${field}` ``, `` `PATCH /synthetics` ``) — a GIVEN/WHEN/THEN prefix repeated on every iteration would say nothing.
 
 ### Step 7 — E2E cleanup
 
@@ -184,7 +185,7 @@ E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take ever
 
 ### Step 8 — data-driven tests
 
-Loop **outside** the `test()` block so each iteration produces a separately selectable test (see Example 2). The static-data tier rule (universal invalid-type arrays vs domain-specific curated sets vs inline boundaries) lives in the [`data-strategy`](../data-strategy/SKILL.md) skill — read it before adding a new file under `test-data/`.
+**UI cases** loop **outside** the `test()` block, so each case is its own selectable test (see Example 2). **API negative matrices** — invalid values, omitted fields, unsupported verbs — loop **inside** one `test()`, a `test.step` per value and `expect.soft` with `safeParse` ([`api-testing`](../api-testing/SKILL.md) § Per-field invalid-type loop): one test per validation concern, not one per value. The static-data tier rule (universal invalid-type arrays vs domain-specific curated sets vs inline boundaries) lives in the [`data-strategy`](../data-strategy/SKILL.md) skill — read it before adding a new file under `test-data/`.
 
 > **Drift to converge — test data.** Today, `test-data/` holds only `test-data/app/*.json` files (no factories, no tiered static). The planned three-tier shape — `test-data/factories/<area>/`, `test-data/static/util/`, `test-data/static/<area>/` — is the canonical pattern that the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. New tests authored through this skill should:
 > - Use `faker.<...>` directly inline for happy-path values until factories exist (mirrors `http-synthetic-monitor-crud.spec.ts`'s `faker.string.alphanumeric(6)`).
@@ -236,7 +237,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - [ ] Imports `test` / `expect` from `fixtures/pom/test-options.ts` (never `@playwright/test`).
 - [ ] File in the right directory for the type; filename is kebab-case `.spec.ts`.
 - [ ] Exactly ONE tag from the whitelist with exact casing (lowercase `@App-regression`, Title-case otherwise), on the test (not on `describe`).
-- [ ] `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows if applicable. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`.
+- [ ] `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows — commented out until mapped. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`.
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.
 - [ ] E2E specs: `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
@@ -276,6 +277,7 @@ test.describe("Dashboard Page — Page Structure & Navigation", () => {
     { tag: "@App-regression" },
     async ({ dashboardPage }) => {
       qase.suite(SUITES.APP_DASHBOARD);
+      // qase.id(N);
       await test.step("THEN: Synthetics, Probes, Monitors-by-Type, and Quick-Actions sections are visible", async () => {
         await dashboardPage.verifyAllSectionsVisible();
       });
@@ -297,6 +299,7 @@ for (const method of HTTP_METHODS) {
     { tag: "@App-regression" },
     async ({ createMonitorPage }) => {
       qase.suite(SUITES.APP_SYNTHETICS);
+      // qase.id(N);
       await test.step(`WHEN: User selects HTTP method ${method}`, async () => {
         await createMonitorPage.selectDropdownOption("config.method", method);
       });
@@ -345,6 +348,7 @@ test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
     { tag: "@App-E2E" },
     async ({ sideNavigation, syntheticsPage, createMonitorPage }) => {
       qase.suite(SUITES.APP_SYNTHETICS);
+      // qase.id(N);
       const monitorName = `e2e-http-${faker.string.alphanumeric(6).toLowerCase()}`;
       createdMonitorNames.push(monitorName);
 

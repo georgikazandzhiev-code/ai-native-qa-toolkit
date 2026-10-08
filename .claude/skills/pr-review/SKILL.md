@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 2.1.1
+version: 2.2.0
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -65,12 +65,12 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 - [ ] State-mutating tests have `afterEach`/`afterAll` cleanup via the matching `helpers/app/<resource>.ts` helper. **No UI deletes** — API only.
 - [ ] **No `test.only(...)`** anywhere. **No `test.skip`** — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] **No `console.log`/`console.debug`** in committed code.
-- [ ] **No commented-out scratch code** — only `// TODO:`, `// FIXME:`, `// BUG:` with context.
+- [ ] **No commented-out scratch code** — only `// TODO:`, `// FIXME:`, `// BUG:` with context. A disabled `test(...)` block under `// TODO: FIXME: <TICKET>` is the one sanctioned commented-out test.
 
 API specs additionally — routed skill: [`api-testing`](../api-testing/SKILL.md):
 
 - [ ] Coverage plan comment at the top of the spec enumerates every status code from the OpenAPI spec.
-- [ ] Every API response asserted with the exact idiom: `expect(SchemaName.parse(body)).toBeTruthy();` — not bare `Schema.parse(body)`.
+- [ ] Every API response asserted with the exact idiom: `expect(SchemaName.parse(body)).toBeTruthy();` — not bare `Schema.parse(body)` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out).
 - [ ] **No redundant field assertions after `Schema.parse`** (`expect(body.id).toBeTruthy()`, `expect(typeof body.id).toBe("string")` — these are noise; the schema proved it).
 - [ ] Per-field omission tests and per-field invalid-type loop tests are present for required fields. Empty-body-only 400 test is insufficient.
 - [ ] If a status code can't be tested (e.g. 403 token not provisioned), test is commented-out with `// TODO: FIXME: <TICKET>` — not silently dropped.
@@ -113,7 +113,7 @@ Routed skills: [`api-testing`](../api-testing/SKILL.md), [`type-safety`](../type
 
 - [ ] New schemas use `z.strictObject()` (rejects extra keys — catches API drift).
 - [ ] String formats use the chained validators: `z.string().uuid()`, `.email()`, `.url()` — not regex.
-- [ ] **No `z.any()`** to silence a `ZodError`. If the API is non-deterministic, file a ticket and either `.optional()` correctly or block the test with `// FIXME: <TICKET>`.
+- [ ] **No `z.any()`** to silence a `ZodError`. If the API is non-deterministic, file a ticket and comment the test out under `// TODO: FIXME: <TICKET>`. Only the contract may make a field `.optional()`.
 - [ ] **No `unknown` past the call site.** Use `z.infer<typeof Schema>` for the type.
 
 #### Fixtures (`fixtures/**`)

@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 1.0.1
+version: 1.1.0
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and the process.env.X! access rule. Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ This skill teaches the going-forward TypeScript and Zod conventions for the fram
 - **NEVER** use `any`, `: any` parameters, `as any`, or `@ts-ignore` / `@ts-expect-error` to silence the type checker. `tsconfig.json` has `"strict": true` and `"noImplicitAny": true` for a reason — that surface is the contract.
 - **NEVER** use `as T` or `as unknown as T` to cross a type boundary. If the value's shape is unknown, type it as `unknown` and narrow via `Schema.parse(...)` or a type guard.
 - **ALWAYS** define new API schemas with `z.strictObject({...})`. `z.object()` silently strips unknown keys and hides contract drift; the strict migration is essentially complete (the few remaining lax schemas are intentional — see § Zod schema patterns), so a new lax `z.object` schema is a regression (per `api-testing` § Zod schema conventions).
-- **ALWAYS** assert API responses with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();`. Type generics on `apiRequest<T>()` alone are insufficient (no runtime check). A bare `Schema.parse(body)` with no `expect(...).toBeTruthy()` wrapper is also insufficient.
+- **ALWAYS** assert API responses with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). Type generics on `apiRequest<T>()` alone are insufficient (no runtime check). A bare `Schema.parse(body)` with no `expect(...).toBeTruthy()` wrapper is also insufficient.
 - **ALWAYS** specify explicit return types on exported and public functions (`Promise<void>`, `Promise<UserResponse>`, `Locator`, `string`). Parameter types are mandatory — `noImplicitAny` enforces it; never silence it.
 - **`process.env.X` access — canonical pattern is `!` at every access point.** Matches the upstream reference framework (162 occurrences, zero `??` defaulting). `??` and `||` defaulting at call sites are **forbidden**; defaults belong in `config/util/<service>.ts`, not at call sites. `as string` is **forbidden**. Bare `string | undefined` past the call site is **forbidden**. See § process.env access patterns.
 - **NEVER** use `z.any()` to make a parse error go away — that's hiding contract drift. Investigate the divergence, write the test as the contract says, and comment it out with `// TODO: FIXME: <TICKET>` per the `api-testing` skill — never `test.skip`.
@@ -185,7 +185,7 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 - [ ] Every parameter has an explicit type.
 - [ ] New Zod schemas use `z.strictObject({...})`. Touched legacy `z.object({...})` files were converted in the same edit.
 - [ ] `id` fields default to `z.string().uuid()` unless the API has been verified to return non-UUIDs (documented inline).
-- [ ] API responses on the happy path are asserted with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` plus a `status` assertion. No bare `Schema.parse(body)`.
+- [ ] API responses on the happy path are asserted with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` plus a `status` assertion (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). No bare `Schema.parse(body)`.
 - [ ] Empty-body 204/403/405 responses use `expect(body).toBeNull()` instead of calling `.parse()` on `null`.
 - [ ] Every `process.env.X` access uses `!`. No `??` / `||` defaulting at the call site (defaults belong in `config/util/<service>.ts`). No `as string`. No bare `string | undefined` past the call site.
 - [ ] If the file already had `as string` or bare propagation that I did not touch, I left it alone (legacy drift; migrates on next touch).

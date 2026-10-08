@@ -1,6 +1,6 @@
 ---
 name: accessibility-testing
-version: 1.0.0
+version: 1.0.1
 description: Automate accessibility checks in Playwright with @axe-core/playwright — WCAG-tagged axe scans per meaningful page state, keyboard and focus checks, ARIA structure snapshots, and a known-violations policy that never turns a scan green by disabling rules. Use when adding accessibility coverage to a page or feature, when a story or acceptance criterion mentions WCAG, screen readers or keyboard use, when a role-based locator fails because the markup has no accessible name, or when setting up an a11y gate in CI. Trigger phrases — "accessibility test", "a11y", "axe", "WCAG", "screen reader", "keyboard navigation", "color contrast". Do NOT use for picking locators (use the `selectors` skill). Do NOT use for the markup rules the frontend must follow (that is `constitutions/web-testability.md`, for the product repo). Do NOT use for filing the defect a scan finds (use the `bug-helper` command).
 metadata:
   category: domain
