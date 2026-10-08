@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 2.0.1
+version: 2.0.2
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -8,20 +8,20 @@ metadata:
 
 # Test Standards
 
-Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
+Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
 
 ## Critical
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
 - **ALWAYS** tag every test with **exactly one** value from the framework whitelist: `@App-Critical | @App-Smoke | @App-Sanity | @App-regression | @App-API | @App-Integration | @App-E2E`. Casing must match the `package.json` `--grep` patterns **exactly**: every tag is Title-case **except `@App-regression`, which is lowercase `regression`** (the `app-regression` and `app-all` scripts grep the lowercase form). **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
-- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
+- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
 - **ALWAYS** consume page objects through fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** instantiate via `new DashboardPage(page)` inside a spec. Why: bypasses every other merged fixture (api-request, login, mailpit) and produces specs that pass alone but fail in CI.
 - **ALWAYS** clean up created resources via the matching helper in `helpers/app/<resource>.ts` inside `test.afterEach` or `test.afterAll`. UI tests delete via the API, not via the UI — the helper layer owns the canonical delete. Why: UI delete adds 5–10 seconds per test and amplifies flake when CI is busy.
-- **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway probes, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
+- **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway checks, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
 - **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
-- **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test`, so it fails the lint gate rather than depending on review.
+- **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the test run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test`, so it fails the lint gate rather than depending on review.
 - **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-regression` / `npm run app-api` etc. for whole tag groups. A test that fails locally is not complete.
 
 ## What's in each file (read this before reaching for another file)
@@ -29,7 +29,7 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Rules, tag whitelist, structural workflow, anti-patterns, examples for spec authoring across all four test types. | **Always** — on any task that creates / extends / refactors a spec under `tests/app/**`. |
-| **[`reference.md`](reference.md)** *(TBD — inline catalog below for now)* | Catalog: tag → npm-script mapping, `SUITES.X` enum keys, env var → token catalog, the `appConfig.timeouts` budgets used in E2E specs, list of canonical example specs per type. | **Load on lookup** — "Which `SUITES.X` for probes?" / "What's the npm command for the smoke tag?" |
+| **[`reference.md`](reference.md)** *(TBD — inline catalog below for now)* | Catalog: tag → npm-script mapping, `SUITES.X` enum keys, env var → token catalog, the `appConfig.timeouts` budgets used in E2E specs, list of canonical example specs per type. | **Load on lookup** — "Which `SUITES.X` for workers?" / "What's the npm command for the smoke tag?" |
 
 **Boundary rule:** rules, decisions, and anti-patterns live in this `SKILL.md`. POM class structure is the [`page-objects`](../page-objects/SKILL.md) skill. Locator priority is the [`selectors`](../selectors/SKILL.md) skill. The deep API negative-test matrix and per-verb coverage live in [`api-testing`](../api-testing/SKILL.md) — **do not duplicate them here**. Spec scaffolding (templates) lives in [`scaffold-spec`](../scaffold-spec/SKILL.md). If you find rule content in a sibling skill (or vice versa), it's drift — fix it before adding more.
 
@@ -44,7 +44,7 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 | `@App-API` | `app-api` | API contract + schema validation. Lives in `tests/app/api/`. |
 | `@App-Integration` | `app-integration` | Cross-component integration that's neither pure API nor end-to-end UI. |
 | `@App-E2E` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
-| (union) | `app-all` | Full nightly / pre-merge, single worker. |
+| (union) | `app-all` | Full nightly / pre-merge, single Playwright worker. |
 
 **Tag-casing matters.** `package.json` greps are case-sensitive and mixed-case: `app-regression` greps **lowercase** `@App-regression`, and `app-all` greps `@App-(Smoke|Sanity|Integration|E2E|API|regression)` — Title-case for everything except `regression`. Lowercase `@App-regression` **is the standard** that runs in CI; a Title-case `@App-Regression` tag would match neither script and would **never run**. In fact zero tests use `@App-Regression` — the codebase uniformly uses lowercase `@App-regression` (~398 occurrences across ~34 spec files). Match the existing casing exactly; never "fix" it to Title-case.
 
@@ -52,9 +52,9 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 
 | Type | Directory | Tag | Covers | Canonical example |
 |------|-----------|-----|--------|-------------------|
-| **API** | `tests/app/api/` | `@App-API` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/monitoring-service/probes/probes.spec.ts` |
-| **E2E** | `tests/app/e2e/` | `@App-E2E` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts` |
-| **Functional** | `tests/app/functional/` | `@App-regression` (+ rare `@App-Smoke` for landing pages) | One feature or behaviour in isolation — form validation, dropdown behavior, navigation, page-structure assertions | `tests/app/functional/monitoring-service/dashboard-page.spec.ts` |
+| **API** | `tests/app/api/` | `@App-API` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/jobs-service/workers/workers.spec.ts` |
+| **E2E** | `tests/app/e2e/` | `@App-E2E` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
+| **Functional** | `tests/app/functional/` | `@App-regression` (+ rare `@App-Smoke` for landing pages) | One feature or behaviour in isolation — form validation, dropdown behavior, navigation, page-structure assertions | `tests/app/functional/jobs-service/dashboard-page.spec.ts` |
 | **Smoke (UI)** | `tests/app/e2e/` | `@App-Smoke` | Critical-path login + landing-page sanity | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
 | **Setup** | `tests/app/` | (no tag) | Storage-state generation, token bootstrap | `tests/app/login.setup.ts` |
 
@@ -63,11 +63,11 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 - A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@App-regression`.**
 - An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@App-E2E`. Set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level.**
 
-**E2E `beforeAll` boundary.** `beforeAll` seeds **background infrastructure** that the journey needs but that isn't the story being tested (e.g., a probe or monitor that a policy-crud E2E needs). The **lifecycle actions under test** must be visible `test.step()`s inside the test body. If the most interesting action is hidden in `beforeAll`, the test shape is wrong. Example: a policy-crud E2E seeds a probe + monitor via API in `beforeAll` (infrastructure), then the test walks create → view → disable → enable → edit → delete (the journey). An alerts E2E should seed monitors + policy in `beforeAll` (infrastructure), then the first visible step is "wait for alert to fire" — that's where the journey starts.
+**E2E `beforeAll` boundary.** `beforeAll` seeds **background infrastructure** that the journey needs but that isn't the story being tested (e.g., a worker or job that a notification-rule-crud E2E needs). The **lifecycle actions under test** must be visible `test.step()`s inside the test body. If the most interesting action is hidden in `beforeAll`, the test shape is wrong. Example: a notification-rule-crud E2E seeds a worker + job via API in `beforeAll` (infrastructure), then the test walks create → view → disable → enable → edit → delete (the journey). A notifications E2E should seed jobs + notification rule in `beforeAll` (infrastructure), then the first visible step is "wait for notification to fire" — that's where the journey starts.
 
-**Hybrid strategy for data-dependent UI tests.** When a UI feature requires collected data that takes minutes to materialize (traceroute paths, metric graphs, historical timelines), split tests into two groups: **structural tests** (tab visibility, not-enabled states, empty-state messages, toggle defaults) use a **freshly created monitor** — no data needed. **Data-dependent tests** (graph rendering, hop details, diagnostic hints, historical views) use a **pre-existing, data-rich fixture** named in configuration guaranteed to have historical data. The decider: does the test need *collected data* to assert something meaningful? If yes → existing monitor. If no → fresh monitor. Never add a multi-minute polling loop in `beforeAll` to wait for data collection — that is a signal to use the hybrid strategy instead.
+**Hybrid strategy for data-dependent UI tests.** When a UI feature requires data from the job's runs that takes minutes to materialize (run-step views, run-stat graphs, historical timelines), split tests into two groups: **structural tests** (tab visibility, not-enabled states, empty-state messages, toggle defaults) use a **freshly created job** — no data needed. **Data-dependent tests** (graph rendering, run-step details, diagnostic hints, historical views) use a **pre-existing, data-rich fixture** named in configuration guaranteed to have historical data. The decider: does the test need *run stats or run steps from the job's completed runs* to assert something meaningful? If yes → existing job. If no → fresh job. Never add a multi-minute polling loop in `beforeAll` to wait for the job's first run to complete — that is a signal to use the hybrid strategy instead.
 
-**Functional page-spec coverage baseline.** When authoring a functional spec for a list/table page, use the live app and POM locators to ensure coverage of every interactive element. At minimum: (1) page structure — all sections, cards, toolbar visible; (2) sorting — each sortable column toggles order; (3) pagination — next/previous, page count, rows-per-page; (4) search — type, verify filtered results, clear; (5) each filter dropdown — select, verify URL/table update, clear; (6) empty state — non-existent search term shows empty message; (7) row actions — each menu item opens its target; (8) combined filters — stacking search + filter narrows correctly. Reference: `policies-page.spec.ts` is the canonical example.
+**Functional page-spec coverage baseline.** When authoring a functional spec for a list/table page, use the live app and POM locators to ensure coverage of every interactive element. At minimum: (1) page structure — all sections, cards, toolbar visible; (2) sorting — each sortable column toggles order; (3) pagination — next/previous, page count, rows-per-page; (4) search — type, verify filtered results, clear; (5) each filter dropdown — select, verify URL/table update, clear; (6) empty state — non-existent search term shows empty message; (7) row actions — each menu item opens its target; (8) combined filters — stacking search + filter narrows correctly. Reference: `notification-rules-page.spec.ts` is the canonical example.
 
 ## Workflow — author or extend a spec
 
@@ -153,43 +153,43 @@ test(
 
 ```typescript
 test(
-  "Verify create-monitor flow shows success toast",
+  "Verify create-job flow shows success toast",
   { tag: "@App-E2E" },
-  async ({ syntheticsPage, createMonitorPage }) => {
-    qase.suite(SUITES.APP_SYNTHETICS);
+  async ({ jobsPage, createJobPage }) => {
+    qase.suite(SUITES.APP_JOBS);
     // qase.id(N);
 
-    await test.step("GIVEN: User is on the Synthetics page", async () => {
-      await syntheticsPage.open();
-      await syntheticsPage.verifyPageLoaded();
+    await test.step("GIVEN: User is on the Jobs page", async () => {
+      await jobsPage.open();
+      await jobsPage.verifyPageLoaded();
     });
 
-    await test.step("WHEN: User submits a valid HTTP monitor", async () => {
-      await syntheticsPage.openCreateMonitor();
-      await createMonitorPage.fillHttpMonitorForm({ name: monitorName, url: TARGET });
-      await createMonitorPage.submit();
+    await test.step("WHEN: User submits a valid HTTP job", async () => {
+      await jobsPage.openCreateJob();
+      await createJobPage.fillHttpJobForm({ name: jobName, url: TARGET });
+      await createJobPage.submit();
     });
 
     await test.step("THEN: Success toast is visible", async () => {
-      await expect(createMonitorPage.successToast).toBeVisible();
+      await expect(createJobPage.successToast).toBeVisible();
     });
   },
 );
 ```
 
-Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized prefix, colon, single space, then the description. The capitalized `GIVEN`/`WHEN`/`THEN`/`AND` is the existing convention across every spec in the repo (see `dashboard-page.spec.ts`, `login-smoke.spec.ts`, `http-synthetic-monitor-crud.spec.ts`). The one exception: inside a negative-matrix loop each step is one case, labelled with the case itself (`` `omit ${field}` ``, `` `PATCH /synthetics` ``) — a GIVEN/WHEN/THEN prefix repeated on every iteration would say nothing.
+Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized prefix, colon, single space, then the description. The capitalized `GIVEN`/`WHEN`/`THEN`/`AND` is the existing convention across every spec in the repo (see `dashboard-page.spec.ts`, `login-smoke.spec.ts`, `http-job-crud.spec.ts`). The one exception: inside a negative-matrix loop each step is one case, labelled with the case itself (`` `omit ${field}` ``, `` `PATCH /jobs` ``) — a GIVEN/WHEN/THEN prefix repeated on every iteration would say nothing.
 
 ### Step 7 — E2E cleanup
 
-E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take every explicit wait from `appConfig.timeouts` (the `config` skill § Timeout budgets) — no timeout constants or numbers in the spec, track names in `const createdMonitorNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror `http-synthetic-monitor-crud.spec.ts` verbatim. Don't invent timeout constants per file.
+E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take every explicit wait from `appConfig.timeouts` (the `config` skill § Timeout budgets) — no timeout constants or numbers in the spec, track names in `const createdJobNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror `http-job-crud.spec.ts` verbatim. Don't invent timeout constants per file.
 
 ### Step 8 — data-driven tests
 
 **UI cases** loop **outside** the `test()` block, so each case is its own selectable test (see Example 2). **API negative matrices** — invalid values, omitted fields, unsupported verbs — loop **inside** one `test()`, a `test.step` per value and `expect.soft` with `safeParse` ([`api-testing`](../api-testing/SKILL.md) § Per-field invalid-type loop): one test per validation concern, not one per value. The static-data tier rule (universal invalid-type arrays vs domain-specific curated sets vs inline boundaries) lives in the [`data-strategy`](../data-strategy/SKILL.md) skill — read it before adding a new file under `test-data/`.
 
 > **Drift to converge — test data.** Today, `test-data/` holds only `test-data/app/*.json` files (no factories, no tiered static). The planned three-tier shape — `test-data/factories/<area>/`, `test-data/static/util/`, `test-data/static/<area>/` — is the canonical pattern that the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. New tests authored through this skill should:
-> - Use `faker.<...>` directly inline for happy-path values until factories exist (mirrors `http-synthetic-monitor-crud.spec.ts`'s `faker.string.alphanumeric(6)`).
-> - Import existing JSON via `import probeData from "../../../test-data/app/probe.json";` (mirrors current api-spec usage).
+> - Use `faker.<...>` directly inline for happy-path values until factories exist (mirrors `http-job-crud.spec.ts`'s `faker.string.alphanumeric(6)`).
+> - Import existing JSON via `import workerData from "../../../test-data/app/worker.json";` (mirrors current api-spec usage).
 > - Avoid creating *new* JSON files — open an issue to add the matching tiered TS file when the planned migration lands.
 
 ### Locale / i18n tests
@@ -208,7 +208,7 @@ npm run app-smoke
 npm run app-api
 npm run app-e2e
 
-# Full union (single worker, mirrors CI)
+# Full union (single Playwright worker, mirrors CI)
 npm run app-all
 ```
 
@@ -220,7 +220,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - ❌ **Title-case `@App-Regression` tag.** Doesn't match `--grep @App-regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: lowercase `@App-regression`.
 - ❌ **Combined tags (`["@App-regression", "@App-E2E"]`) or non-whitelisted (`@functional`, `@destructive`, `@regression`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
-- ❌ **Missing `qase.suite(...)`.** Run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
+- ❌ **Missing `qase.suite(...)`.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
 - ❌ **`page.waitForTimeout(1000)`.** Flake amplifier. Fix: web-first assertion / `waitForResponse` / `expect.toPass`.
 - ❌ **`new DashboardPage(page)` inside a spec.** Bypasses merged fixtures. Fix: destructure from test context.
 - ❌ **E2E test deletes via the UI.** Slow + flaky. Fix: API-driven `test.afterAll` via `helpers/app/<resource>.ts`.
@@ -229,7 +229,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - ❌ **Hardcoded URL / token / endpoint / UI string.** Fix: `process.env.*`, `appConfig.*`, `enums/app/*`, `test-data/app/*`.
 - ❌ **Committed `.only` / explore spec / `console.log(...)`.** Fix: delete before committing.
 - ❌ **Single-assertion test with full navigation overhead.** If a test contains one assertion and shares the same `beforeEach` navigation as its neighbors, merge it as an `AND:` step into the nearest structural test. A standalone `test()` is justified only when it has a distinct GIVEN/WHEN/THEN flow or tests an interaction (click, type, select).
-- ❌ **Back-to-back navigation calls where the second supersedes the first.** E.g., `await sideNavigation.navigateToApp(); await page.goto(alertsUrl);` — the first navigation is wasted. Fix: remove the redundant navigation; keep only the one that lands on the target page.
+- ❌ **Back-to-back navigation calls where the second supersedes the first.** E.g., `await sideNavigation.navigateToApp(); await page.goto(notificationsUrl);` — the first navigation is wasted. Fix: remove the redundant navigation; keep only the one that lands on the target page.
 - ❌ **Disabling a whole describe when only some of its tests are blocked — and `test.describe.skip` at all.** If only 2 of 4 describes need Mailpit, disable those 2, not all 4, by commenting out their tests with `// TODO: FIXME: <TICKET> requires MAILPIT_URL`. Over-scoped disabling hides passing tests from CI; `test.describe.skip` also corrupts Qase mappings like any other skip.
 
 ## Self-review checklist
@@ -250,7 +250,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 ### Example 1 — Functional smoke for the Dashboard landing page
 
-User says: *"Verify the Dashboard renders all four sections (Synthetics, Probes, Monitors-by-Type, Quick Actions) when the user lands on `/`."*
+User says: *"Verify the Dashboard renders all four sections (Jobs, Workers, Type Breakdown, Quick Actions) when the user lands on `/`."*
 
 1. **Step 1.** Single behaviour, single phase → **Functional** (`tests/app/functional/`, `@App-regression`).
 2. **Step 2.** Confirm imports, tag, `qase.suite` requirement against the Critical block above.
@@ -278,7 +278,7 @@ test.describe("Dashboard Page — Page Structure & Navigation", () => {
     async ({ dashboardPage }) => {
       qase.suite(SUITES.APP_DASHBOARD);
       // qase.id(N);
-      await test.step("THEN: Synthetics, Probes, Monitors-by-Type, and Quick-Actions sections are visible", async () => {
+      await test.step("THEN: Jobs, Workers, Type-Breakdown, and Quick-Actions sections are visible", async () => {
         await dashboardPage.verifyAllSectionsVisible();
       });
     },
@@ -297,14 +297,14 @@ for (const method of HTTP_METHODS) {
   test(
     `Verify HTTP method dropdown supports ${method}`,
     { tag: "@App-regression" },
-    async ({ createMonitorPage }) => {
-      qase.suite(SUITES.APP_SYNTHETICS);
+    async ({ createJobPage }) => {
+      qase.suite(SUITES.APP_JOBS);
       // qase.id(N);
       await test.step(`WHEN: User selects HTTP method ${method}`, async () => {
-        await createMonitorPage.selectDropdownOption("config.method", method);
+        await createJobPage.selectDropdownOption("config.method", method);
       });
       await test.step(`THEN: ${method} is the selected value`, async () => {
-        await expect(createMonitorPage.fieldInput("config.method")).toHaveText(method);
+        await expect(createJobPage.fieldInput("config.method")).toHaveText(method);
       });
     },
   );
@@ -315,10 +315,10 @@ For larger or domain-specific data sets, see the [`data-strategy`](../data-strat
 
 ### Example 3 — E2E CRUD with API cleanup
 
-User says: *"E2E test for HTTP monitor: create via UI → verify in grid → edit → delete via UI."*
+User says: *"E2E test for HTTP job: create via UI → verify in grid → edit → delete via UI."*
 
 1. **Step 1.** Multi-phase journey → **E2E** (`tests/app/e2e/`, `@App-E2E`).
-2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdMonitorNames` array, `test.afterAll` cleanup via `listSynthetics` + `deleteSyntheticMonitor`. Mirror `http-synthetic-monitor-crud.spec.ts` verbatim.
+2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdJobNames` array, `test.afterAll` cleanup via `listJobs` + `deleteJob`. Mirror `http-job-crud.spec.ts` verbatim.
 
 ```typescript
 import { expect, test } from "../../../fixtures/pom/test-options";
@@ -326,43 +326,43 @@ import { appConfig } from "../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
 import { SUITES } from "../../../enums/app/qase-suites";
-import { deleteSyntheticMonitor, listSynthetics } from "../../../helpers/app/synthetics";
+import { deleteJob, listJobs } from "../../../helpers/app/jobs";
 
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
 
-test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
+test.describe("E2E — HTTP Job CRUD (single method)", () => {
   test.setTimeout(appConfig.timeouts.e2eJourney);
-  const createdMonitorNames: string[] = [];
+  const createdJobNames: string[] = [];
 
   test.afterAll(async ({ apiRequest }) => {
-    for (const name of createdMonitorNames) {
-      const { body } = await listSynthetics(apiRequest, TENANT_TOKEN, { name });
-      for (const s of body.synthetics) {
-        await deleteSyntheticMonitor(apiRequest, s.id, TENANT_TOKEN);
+    for (const name of createdJobNames) {
+      const { body } = await listJobs(apiRequest, TENANT_TOKEN, { name });
+      for (const job of body.jobs) {
+        await deleteJob(apiRequest, job.id, TENANT_TOKEN);
       }
     }
   });
 
   test(
-    "Create, verify, edit, delete an HTTP monitor",
+    "Create, verify, edit, delete an HTTP job",
     { tag: "@App-E2E" },
-    async ({ sideNavigation, syntheticsPage, createMonitorPage }) => {
-      qase.suite(SUITES.APP_SYNTHETICS);
+    async ({ sideNavigation, jobsPage, createJobPage }) => {
+      qase.suite(SUITES.APP_JOBS);
       // qase.id(N);
-      const monitorName = `e2e-http-${faker.string.alphanumeric(6).toLowerCase()}`;
-      createdMonitorNames.push(monitorName);
+      const jobName = `e2e-http-${faker.string.alphanumeric(6).toLowerCase()}`;
+      createdJobNames.push(jobName);
 
-      await test.step("GIVEN: User is on the Synthetics page", async () => {
-        await sideNavigation.navigateToSynthetics();
-        await syntheticsPage.verifyPageLoaded();
+      await test.step("GIVEN: User is on the Jobs page", async () => {
+        await sideNavigation.navigateToJobs();
+        await jobsPage.verifyPageLoaded();
       });
-      await test.step("WHEN: User creates an HTTP monitor", async () => {
-        await syntheticsPage.openCreateMonitor();
-        await createMonitorPage.fillHttpMonitorForm({ name: monitorName, url: "https://example.com/health" });
-        await createMonitorPage.submit();
+      await test.step("WHEN: User creates an HTTP job", async () => {
+        await jobsPage.openCreateJob();
+        await createJobPage.fillHttpJobForm({ name: jobName, url: "https://example.com/api/report" });
+        await createJobPage.submit();
       });
-      await test.step("THEN: Monitor appears in the grid", async () => {
-        await expect(syntheticsPage.getRowByName(monitorName)).toBeVisible({ timeout: appConfig.timeouts.persist });
+      await test.step("THEN: Job appears in the grid", async () => {
+        await expect(jobsPage.getRowByName(jobName)).toBeVisible({ timeout: appConfig.timeouts.persist });
       });
       // ... edit phase, delete phase
     },
@@ -372,7 +372,7 @@ test.describe("E2E — HTTP Synthetic Monitor CRUD (single method)", () => {
 
 ### Example 4 — API + Smoke routing
 
-For an API spec (`POST /probes` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_PROBES)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror `tests/app/api/monitoring-service/probes/probes.spec.ts` for the canonical shape.
+For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror `tests/app/api/jobs-service/workers/workers.spec.ts` for the canonical shape.
 
 For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror `tests/app/e2e/tenant-service/login-smoke.spec.ts`.
 
@@ -382,15 +382,15 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES
 |---------|-------|-----|
 | Test runs locally, doesn't run in CI under `npm run app-regression`. | Tag is mis-cased (e.g. Title-case `@App-Regression`) but `package.json` greps lowercase `@App-regression`. | Flip to lowercase `@App-regression`. |
 | `Cannot find name 'apiRequest'` (or `dashboardPage`, `loginUser`, etc.) on the test context. | Spec imported `test` from `@playwright/test` instead of `fixtures/pom/test-options.ts`. | Change the import to `from "../../../fixtures/pom/test-options"`. |
-| Qase shows the run as orphaned / "Uncategorized". | Missing `qase.suite(SUITES.X);` as the first body line. | Add it immediately after `async (...) => {`. Extend `enums/app/qase-suites.ts` if `SUITES.X` doesn't exist. |
+| Qase shows the test run as orphaned / "Uncategorized". | Missing `qase.suite(SUITES.X);` as the first body line. | Add it immediately after `async (...) => {`. Extend `enums/app/qase-suites.ts` if `SUITES.X` doesn't exist. |
 | `test.describe` tag not picked up by the npm script. | Tag belongs on the test, not on the describe. | Move the `{ tag: "..." }` argument onto each individual `test(...)`. |
 | Spec passes alone, fails in parallel under `npm run app-all`. | Spec mutates shared state without cleanup, or uses hardcoded names that collide. | Track names with `faker.string.alphanumeric(6)` for uniqueness, and delete via API in `test.afterAll`. |
 | `TypeError: Cannot read property 'X' of undefined` mid-test. | Page-object method returned without waiting; the next assertion ran before the UI settled. | Open the POM and confirm the offending action method has a built-in wait (`page.waitForResponse(...)` / `expect(locator).toBeVisible()`). See the `page-objects` skill § Step 6. |
 | `expect(locator).toHaveText('...')` fails with the locator showing a partial / streamed value. | Missing `.toHaveText()` is an exact match by default; the value is loading. | Either await visibility first, then `.toHaveText`, or switch to `.toContainText('...')`. Don't add `waitForTimeout`. |
 | Need to disable a test for a known bug. | `test.skip` corrupts Qase ID mappings; ESLint also blocks bare `.skip`. | **Comment out** the entire `test(...)` block. Add `// TODO: FIXME: <TICKET> <description>` directly above the commented-out code. Do not use `test.skip`. |
-| Spec creates 50 monitors / probes per run, never deletes. | No `test.afterAll` cleanup. | Track names in a `createdNames: string[]` and call the matching `helpers/app/<resource>.ts` `cleanup<X>` / `delete<X>` inside `test.afterAll`. |
+| Spec creates 50 jobs / workers per test run, never deletes. | No `test.afterAll` cleanup. | Track names in a `createdNames: string[]` and call the matching `helpers/app/<resource>.ts` `cleanup<X>` / `delete<X>` inside `test.afterAll`. |
 | Test fails with `Test timeout of 30000ms exceeded`. | An E2E journey without its test-level budget — or a real slowdown. | E2E journeys set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level. If the budget is already set, investigate with the `debugging` skill first: never raise a budget to turn a failure green. |
-| Functional test with many interactions times out at 30s on CI. | Specs with 6+ UI navigation steps (e.g. a policy wizard with 8 type cards) can exceed the default. | Set a test-level budget (`appConfig.timeouts.asyncFlow`) **on the individual test**, not the describe, only where needed — the default is right for most single-behaviour tests. Investigate first if the test used to pass within the default. |
+| Functional test with many interactions times out at 30s on CI. | Specs with 6+ UI navigation steps (e.g. a notification-rule wizard with 8 type cards) can exceed the default. | Set a test-level budget (`appConfig.timeouts.asyncFlow`) **on the individual test**, not the describe, only where needed — the default is right for most single-behaviour tests. Investigate first if the test used to pass within the default. |
 | `ZodError` thrown on `Schema.parse(body)`. | API contract has drifted, OR the schema is wrong. | Read the Zod error path. If the API is wrong, file a bug → comment out the test with `// TODO: FIXME: <TICKET>`. If the schema is wrong, fix it. **Never** loosen the schema with `.passthrough()` or `z.any()` to silence the error — that masks real drift. See the `api-testing` skill § Skipping. |
 
 ## See Also
