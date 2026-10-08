@@ -86,29 +86,29 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 
 | Role | When the UI uses it | Common `name` examples |
 |------|---------------------|------------------------|
-| `heading` | Page titles, section titles | "Synthetics", "Create Monitor", "Edit Monitor" |
+| `heading` | Page titles, section titles | "Jobs", "Create Job", "Edit Job" |
 | `button` | Buttons with stable labels | "Cancel", "Save", "Refresh", "Previous", "Next" |
-| `link` | Anchors with stable text | "Forgot Password", "Synthetics" (sidebar) |
-| `tab` | Tab strips inside expanded views (e.g. ICMP: Metrics, Traceroute, Path) | "Metrics", "Traceroute", "Path" |
-| `textbox` | Search inputs and labelled fields (`pages/app/SyntheticsPage.ts`, `pages/util/LoginPage.ts`) | "Search by name or target", "Email", "Password" |
-| `menuitem` | Items inside a Radix dropdown menu (row-action menu) | "Edit monitor", "View details", "Delete", "Pause", "Resume" |
-| `option` | Items inside a Radix select listbox / `<option>` (`pages/app/SyntheticsPage.ts` `selectFilterOption`) | filter labels (`"Online"`, `"Offline"`, page sizes) |
-| `combobox` | Radix `SelectTrigger` (probe location selector, page-size selector) | use within an anchor (`expandedRowHeader.getByRole('combobox')`) |
-| `checkbox` | Native checkboxes / Radix checkbox primitives | scoped under a row/section (`probe-location-checkbox`) |
+| `link` | Anchors with stable text | "Forgot Password", "Jobs" (sidebar) |
+| `tab` | Tab strips inside expanded views (e.g. `export`: Run Stats, Run Steps, Timeline) | "Run Stats", "Run Steps", "Timeline" |
+| `textbox` | Search inputs and labelled fields (`pages/app/JobsPage.ts`, `pages/util/LoginPage.ts`) | "Search by name or target", "Email", "Password" |
+| `menuitem` | Items inside a Radix dropdown menu (row-action menu) | "Edit job", "View details", "Delete", "Pause", "Resume" |
+| `option` | Items inside a Radix select listbox / `<option>` (`pages/app/JobsPage.ts` `selectFilterOption`) | filter labels (`"Online"`, `"Offline"`, page sizes) |
+| `combobox` | Radix `SelectTrigger` (worker location selector, page-size selector) | use within an anchor (`expandedRowHeader.getByRole('combobox')`) |
+| `checkbox` | Native checkboxes / Radix checkbox primitives | scoped under a row/section (`worker-location-checkbox`) |
 | `switch` | Radix `Switch` (auto-refresh toggle) | "Auto-refresh" — toggled via `aria-checked` / `data-state` |
-| `radio` | Chart timeframe selector (`pages/app/SyntheticsPage.ts` `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
-| `dialog` | Confirmation / delete dialogs (Radix dialogs expose the role) | `getByRole('dialog', { name })` first; the testids (`delete-monitor-dialog`, `delete-probe-dialog`) are the fallback, and testid-first page objects are drift to fix on next touch |
+| `radio` | Chart timeframe selector (`pages/app/JobsPage.ts` `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
+| `dialog` | Confirmation / delete dialogs (Radix dialogs expose the role) | `getByRole('dialog', { name })` first; the testids (`delete-job-dialog`, `delete-worker-dialog`) are the fallback, and testid-first page objects are drift to fix on next touch |
 | `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | `getByRole('table')` first (with `{ name }` if there are several); `getByTestId('data-table')` is the anchor fallback — `DataTableBase` uses the testid today, drift to fix on next touch |
 | `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | `getByRole('row').filter({ has: getByRole('cell', { name: id, exact: true }) })` first; the `table-row-<id>` testid is the fallback when the business id isn't rendered in a cell |
 | `cell` | Native `<td>` (used in `pages/baseClasses/DataTableBase.ts` `noResultsMessage`) | `getByRole('cell', { name: /no results/i })` |
-| `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of `pages/app/SyntheticsPage.ts`, `ProbesPage`, `PoliciesPage`, `InventoryPage` | column name (`"Health"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`) |
+| `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of `pages/app/JobsPage.ts`, `WorkersPage`, `NotificationRulesPage`, `InventoryPage` | column name (`"Outcome"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`). The "Outcome" column renders the `job-status-<jobStatus>` badge and `outcome-filter` filters by `JobStatus`; the "Status" column, `status-filter` and `sort-header-status` are the enabled/disabled toggle. |
 | `listbox` | Radix select content / page-size dropdown content | usually closed-state assertion (`toBeHidden`) after option pick |
 | `img` | Images with `alt` — no current callers in `pages/`; prefer a testid when the first one ships | — |
 | `alert` / `status` | Validation errors announce as `alert`; Sonner toasts render as `status` | `getByRole('alert')` / `getByRole('status')` filtered by text; the `[data-sonner-toast]` attribute filter is the fallback (Recipe 5) |
 
 Roles **not** used in this framework today (don't claim them in new code without checking the markup):
 
-- `tabpanel`, `banner`, `tablist` — tabs are present in the ICMP expanded view but the panel/list roles are not consistently emitted by the Radix `Tabs` primitive. If you're tempted to write `getByRole('tabpanel')`, look for a stable `data-testid` first (e.g. `icmp-expanded-view`).
+- `tabpanel`, `banner`, `tablist` — tabs are present in the `export` expanded view but the panel/list roles are not consistently emitted by the Radix `Tabs` primitive. If you're tempted to write `getByRole('tabpanel')`, look for a stable `data-testid` first (e.g. `export-expanded-view`).
 
 `name` accepts a string OR `RegExp`. Use `{ exact: true }` for short strings.
 
@@ -165,7 +165,7 @@ All return `Promise<void>`, all auto-retry until the configured timeout. Negate 
 | `await page.waitForLoadState('networkidle')` | Avoid. The Playwright team discourages this — long-polling/analytics traffic can keep the network busy forever. Rely on `expect(loc).toBe…` to auto-wait, including on a newly opened popup. |
 | `await page.waitForLoadState('domcontentloaded')` | OK on a freshly-opened popup before the first assertion; redundant on the main page in most flows. |
 
-`waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — see `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh`.
+`waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — see `pages/app/JobsPage.ts` `clickManualRefreshAndWaitForRefresh`.
 
 ### 3.6 Assertion options
 
@@ -174,12 +174,12 @@ All assertions accept `{ timeout?: number }`. The default is project-wide (`play
 | Budget | Where it's used | Purpose |
 |-------|-----------------|---------|
 | (default) | The vast majority of assertions | Trust the project default; do not override |
-| `fastFail` | Inner clicks and assertions inside an `expect(async () => { … }).toPass()` retry block — e.g. in `pages/app/SyntheticsPage.ts` `openRowActionMenu`; Radix select content visible after a trigger click | Fail fast inside a polling loop; the outer `retryBlock` owns the real budget |
-| `uiResponse` | Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/SyntheticsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
-| `persist` | Sheet "save enabled" / sheet-hidden after submit; new-row and toast visibility after create — see `pages/app/SyntheticsPage.ts` `expectMonitorListed`, `expectSuccessToastForMonitor` | Backend creates that include validation + persistence + table refresh |
+| `fastFail` | Inner clicks and assertions inside an `expect(async () => { … }).toPass()` retry block — e.g. in `pages/app/JobsPage.ts` `openRowActionMenu`; Radix select content visible after a trigger click | Fail fast inside a polling loop; the outer `retryBlock` owns the real budget |
+| `uiResponse` | Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/JobsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
+| `persist` | Sheet "save enabled" / sheet-hidden after submit; new-row and toast visibility after create — see `pages/app/JobsPage.ts` `expectJobListed`, `expectSuccessToastForJob` | Backend creates that include validation + persistence + table refresh |
 | `retryBlock` | Outer budget on `expect(async () => { … }).toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
-| `longPoll` | **Reserved for `waitForResponse(...)` and long-poll metric assertions** — `pages/app/SyntheticsPage.ts` `clickManualRefreshAndWaitForRefresh` | A slow endpoint, not a slow locator |
-| `firstData` | The very first probe-data wait in functional detail-view specs (see [`recipes.md` § 18](recipes.md)) | An asynchronous pipeline producing its first result |
+| `longPoll` | **Reserved for `waitForResponse(...)` and long-poll run-stat assertions** — `pages/app/JobsPage.ts` `clickManualRefreshAndWaitForRefresh` | A slow endpoint, not a slow locator |
+| `firstData` | The very first run-stats wait in functional detail-view specs (see [`recipes.md` § 18](recipes.md)) | An asynchronous pipeline producing its first result |
 
 Rules of thumb:
 - Don't override the timeout unless you can point at an existing assertion in `pages/**` or `tests/**` doing the same thing for the same reason.
@@ -195,14 +195,14 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Prefix / pattern | Meaning | Example |
 |------------------|---------|---------|
 | `create-button`, `cancel-button`, `back-button`, `close-button` | Generic CRUD chrome on the create / edit sheet | `getByTestId('create-button')` |
-| `create-monitor-button` | Page-toolbar "Create Monitor" CTA | scoped to `pages/app/SyntheticsPage.ts` |
-| `schema-field-<fieldName>` | Schema-form **field wrapper** (emitted by `src/components/schema-form/schema-form.tsx` in the frontend); drill to `input` / `textarea` or fall back to `getByLabel` via `.or()` — POM helpers: `CreateMonitorPage.schemaField()`, `CreatePolicyPage.fieldWrapper()` | `schema-field-monitorName` → `.locator('input')`, `schema-field-target` |
-| `field-field-<fieldPath>` | Schema-form **input** testid — the canonical hook for filling fields; POM helper: `fieldInput(fieldPath)` on `CreateMonitorPage` | `field-field-name`, `field-field-checkInterval`, `field-field-config.method`, `field-field-firstName` |
-| `error-<fieldName>` | Schema-form error message for the matching field (emitted by `src/components/schema-form/schema-form.tsx`) | `error-monitorName`, `error-target`, `error-timeout` |
-| `monitor-type-grid`, `monitor-type-card` | Step-1 monitor-type chooser (cards share the testid; scope by title text) | see `pages/app/SyntheticsPage.ts` `icmpTypeCard()` |
-| `schema-form`, `schema-section-<name>`, `schema-section-<name>-trigger` | Schema-form root + collapsible section wrappers | `schema-section-icmp-settings` |
-| `delete-monitor-dialog`, `delete-monitor-confirm` | Synthetics delete dialog — the per-feature delete-dialog pattern (`delete-probe-dialog`, `delete-asset-*` follow the same shape) | scoped in `pages/app/SyntheticsPage.ts` |
-| `create-monitor-sheet`, `edit-monitor-sheet`, `monitor-details-sheet` | Right-side sheet containers (anchor for everything inside) | scope all child getters under these |
+| `create-job-button` | Page-toolbar "Create Job" CTA | scoped to `pages/app/JobsPage.ts` |
+| `schema-field-<fieldName>` | Schema-form **field wrapper** (emitted by `src/components/schema-form/schema-form.tsx` in the frontend); drill to `input` / `textarea` or fall back to `getByLabel` via `.or()` — POM helpers: `CreateJobPage.schemaField()`, `CreateNotificationRulePage.fieldWrapper()` | `schema-field-jobName` → `.locator('input')`, `schema-field-target` |
+| `field-field-<fieldPath>` | Schema-form **input** testid — the canonical hook for filling fields; POM helper: `fieldInput(fieldPath)` on `CreateJobPage` | `field-field-name`, `field-field-runInterval`, `field-field-config.method`, `field-field-firstName` |
+| `error-<fieldName>` | Schema-form error message for the matching field (emitted by `src/components/schema-form/schema-form.tsx`) | `error-jobName`, `error-target`, `error-timeout` |
+| `job-type-grid`, `job-type-card` | Step-1 job-type chooser (cards share the testid; scope by title text) | see `pages/app/JobsPage.ts` `exportTypeCard()` |
+| `schema-form`, `schema-section-<name>`, `schema-section-<name>-trigger` | Schema-form root + collapsible section wrappers | `schema-section-export-settings` |
+| `delete-job-dialog`, `delete-job-confirm` | Jobs delete dialog — the per-feature delete-dialog pattern (`delete-worker-dialog`, `delete-asset-*` follow the same shape) | scoped in `pages/app/JobsPage.ts` |
+| `create-job-sheet`, `edit-job-sheet`, `job-details-sheet` | Right-side sheet containers (anchor for everything inside) | scope all child getters under these |
 
 ### 4.2 Tables
 
@@ -212,8 +212,8 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | `table-row-<id>` | Per-row root — a **prefix** testid, matched via `[data-testid^='table-row-']` under `dataTable` (`pages/baseClasses/DataTableBase.ts`:29). There is no bare `table-row` testid. |
 | `table-cell-<columnId>` | Per-cell testid — `cellForRow(row, columnId)` / `getColumnTexts(columnId)` in `DataTableBase` |
 | `expanded-row` | Per-row sibling rendered when a row is expanded — exclude with `:not([data-testid="expanded-row"])` when filtering by `hasText` |
-| `monitor-actions-<id>` | Per-row "…" action button — selected with prefix CSS: `[data-testid^='monitor-actions-']` |
-| `health-status-<state>` | Per-row health badge — selected with prefix CSS: `[data-testid^='health-status-']` |
+| `job-actions-<id>` | Per-row "…" action button — selected with prefix CSS: `[data-testid^='job-actions-']` |
+| `job-status-<jobStatus>` | Per-row job-status badge — selected with prefix CSS: `[data-testid^='job-status-']` |
 | `sort-header-<columnId>` | Sortable column header (e.g. `sort-header-name`, `sort-header-status`) — `getSortHeader(columnId)` in `DataTableBase` |
 | `skeleton-row` | Loading-state placeholder row — assert `toHaveCount(0)` before interacting with real rows (`pages/baseClasses/DataTableBase.ts` `waitForTableSettled`) |
 
@@ -221,69 +221,69 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 
 | Pattern | Meaning |
 |---------|---------|
-| `nav-link-synthetics`, `nav-link-dashboard`, `nav-link-<feature>` | Sidebar nav links — always `nav-link-<feature>` (`pages/app/SideNavigation.ts`); the header alerts bell is `header-alerts-bell` |
-| `page-synthetics`, `page-probes`, `page-dashboard`, `page-<feature>` | Per-page shell roots (use as page-arrival anchors) |
-| `dashboard-section-<feature>` | Dashboard-page section wrappers (`-alerts`, `-synthetics`, `-probes`, `-monitor-types`, `-quick-actions`) |
-| `dashboard-stat-<feature>-<state>` | Dashboard stat cards (e.g. `dashboard-stat-alerts-critical`, `dashboard-stat-synthetics-healthy`, `dashboard-stat-probes-online`) — each renders an `<a>` with a query-param URL |
-| `dashboard-monitor-type-<type>` | Monitors-by-Type bar — only rendered when the type has `count > 0`; aria-label format `"<Title>: <count> monitors"` |
-| `dashboard-quick-action-<id>` | Quick-action card link (`view-alerts`, `add-monitor`, `manage-probes`, `view-metrics`) |
+| `nav-link-jobs`, `nav-link-dashboard`, `nav-link-<feature>` | Sidebar nav links — always `nav-link-<feature>` (`pages/app/SideNavigation.ts`); the header notifications bell is `header-notifications-bell` |
+| `page-jobs`, `page-workers`, `page-dashboard`, `page-<feature>` | Per-page shell roots (use as page-arrival anchors) |
+| `dashboard-section-<feature>` | Dashboard-page section wrappers (`-notifications`, `-jobs`, `-workers`, `-job-types`, `-quick-actions`) |
+| `dashboard-stat-<feature>-<state>` | Dashboard stat cards (e.g. `dashboard-stat-notifications-critical`, `dashboard-stat-jobs-passing`, `dashboard-stat-workers-online`) — each renders an `<a>` with a query-param URL |
+| `dashboard-job-type-<type>` | Type-breakdown bar — only rendered when the type has `count > 0`; aria-label format `"<Title>: <count> configured"` |
+| `dashboard-quick-action-<id>` | Quick-action card link (`view-notifications`, `add-job`, `manage-workers`, `view-run-stats`) |
 
-### 4.4 Health & status (filter cards)
+### 4.4 Job status & worker status (filter cards)
 
 | Pattern | Meaning |
 |---------|---------|
-| `filter-total`, `filter-healthy`, `filter-warning`, `filter-critical`, `filter-unknown` | Synthetics health filter cards (top of the synthetics list) |
-| `filter-active`, `filter-inactive` | **Deprecated** — replaced by health-state cards above; existing getters in `pages/app/SyntheticsPage.ts` carry `@deprecated` JSDoc |
-| `status-card` | Probes-page status cards (×4, scoped by title text: "Total Probes", "Online", "Offline", "Provisioning") |
-| `status-filter`, `type-filter`, `health-filter` | Toolbar filter triggers (Radix select trigger; click to open; pick option via `getByRole('option')`) |
+| `filter-total`, `filter-passing`, `filter-degraded`, `filter-failing`, `filter-paused` | Job-status filter cards (top of the jobs list). `filter-total` counts the jobs shown in the four job-status cards. |
+| `filter-active`, `filter-inactive` | **Deprecated** — replaced by job-status cards above; existing getters in `pages/app/JobsPage.ts` carry `@deprecated` JSDoc |
+| `status-card` | Workers-page status cards (×4, scoped by title text: "Total Workers", "Online", "Offline", "Provisioning") |
+| `status-filter`, `type-filter`, `outcome-filter` | Toolbar filter triggers (Radix select trigger; click to open; pick option via `getByRole('option')`). The "Outcome" column renders the `job-status-<jobStatus>` badge and `outcome-filter` filters by `JobStatus`; the "Status" column, `status-filter` and `sort-header-status` are the enabled/disabled toggle. |
 
 ### 4.5 Sheets / sheet chrome
 
 | Pattern | Meaning |
 |---------|---------|
-| `create-monitor-sheet`, `create-button`, `back-button`, `close-button`, `cancel-button` | Step-2 form chrome inside the create sheet |
-| `edit-monitor-sheet`, `edit-monitor-close-button`, `edit-monitor-cancel`, `edit-monitor-submit` | Edit sheet chrome (close + cancel + submit are sheet-specific to disambiguate from create) |
-| `monitor-details-sheet`, `monitor-details-close-button` | Read-only details sheet |
+| `create-job-sheet`, `create-button`, `back-button`, `close-button`, `cancel-button` | Step-2 form chrome inside the create sheet |
+| `edit-job-sheet`, `edit-job-close-button`, `edit-job-cancel`, `edit-job-submit` | Edit sheet chrome (close + cancel + submit are sheet-specific to disambiguate from create) |
+| `job-details-sheet`, `job-details-close-button` | Read-only details sheet |
 
-### 4.6 Probes
+### 4.6 Workers
 
 | Pattern | Meaning |
 |---------|---------|
-| `page-probes`, `probes-title` | Probes page shell |
-| `probe-selection`, `probe-location-checkbox` | Probe-selection block inside the Create Monitor form (one checkbox per available probe) |
-| `probe-name-search`, `register-probe-button`, `refresh-button`, `auto-refresh-toggle` | Probes-page toolbar |
-| `probe-location-select` | Expanded-row per-row probe selector (Radix combobox; scope to `expanded-row-header`) |
-| `no-probes` | Empty-state shown when the tenant has no probes |
-| `probe-actions-{id}`, `probe-view-{id}`, `probe-edit-{id}`, `probe-download-config-{id}`, `probe-delete-{id}` | Per-row action triggers (parameterized by probe id) |
-| `register-probe-sheet`, `register-probe-close-button`, `register-step-indicator`, `register-cancel-button`, `register-continue-button`, `register-back-button`, `register-submit-button`, `register-done-button` | Register Probe sheet (multi-step wizard — uses `register-step-indicator` to track step) |
-| Register fields | `field-field-name`, `field-field-location`, `field-field-region` and their errors (`error-name`, `error-location`, `error-region`) — see `pages/app/ProbesPage.ts` |
-| `edit-probe-sheet`, `edit-probe-close-button`, `edit-probe-id`, `edit-probe-cancel`, `edit-probe-submit` | Edit probe sheet (`edit-probe-id` is read-only) |
-| `probe-details-sheet`, `probe-details-close-button` | Read-only details sheet |
-| `delete-probe-dialog`, `delete-probe-cancel`, `delete-probe-confirm` | Delete confirmation dialog |
+| `page-workers`, `workers-title` | Workers page shell |
+| `worker-selection`, `worker-location-checkbox` | Worker-selection block inside the Create Job form (one checkbox per available worker) |
+| `worker-name-search`, `register-worker-button`, `refresh-button`, `auto-refresh-toggle` | Workers-page toolbar |
+| `worker-location-select` | Expanded-row per-row worker selector (Radix combobox; scope to `expanded-row-header`) |
+| `no-workers` | Empty-state shown when the tenant has no workers |
+| `worker-actions-{id}`, `worker-view-{id}`, `worker-edit-{id}`, `worker-download-config-{id}`, `worker-delete-{id}` | Per-row action triggers (parameterized by worker id) |
+| `register-worker-sheet`, `register-worker-close-button`, `register-step-indicator`, `register-cancel-button`, `register-continue-button`, `register-back-button`, `register-submit-button`, `register-done-button` | Register Worker sheet (multi-step wizard — uses `register-step-indicator` to track step) |
+| Register fields | `field-field-name`, `field-field-location`, `field-field-region` and their errors (`error-name`, `error-location`, `error-region`) — see `pages/app/WorkersPage.ts` |
+| `edit-worker-sheet`, `edit-worker-close-button`, `edit-worker-id`, `edit-worker-cancel`, `edit-worker-submit` | Edit worker sheet (`edit-worker-id` is read-only) |
+| `worker-details-sheet`, `worker-details-close-button` | Read-only details sheet |
+| `delete-worker-dialog`, `delete-worker-cancel`, `delete-worker-confirm` | Delete confirmation dialog |
 | `download-config-sheet`, `download-config-close-button`, `download-config-cancel-button`, `download-config-submit-button` | Download Config sheet |
-| `settings-nav`, `settings-nav-item-profile`, `settings-nav-item-probes` | Settings sidebar nav (Probes is reached via `/settings/probes`) |
+| `settings-nav`, `settings-nav-item-profile`, `settings-nav-item-workers` | Settings sidebar nav (Workers is reached via `/settings/workers`) |
 
-### 4.7 Expanded views (per monitor type)
+### 4.7 Expanded views (per job type)
 
 | Pattern | Meaning |
 |---------|---------|
-| `monitor-expanded-row`, `expanded-row-header` | Anchor wrappers for the expanded-row UI — every inner element must scope under one of these |
+| `job-expanded-row`, `expanded-row-header` | Anchor wrappers for the expanded-row UI — every inner element must scope under one of these |
 | `expanded-row` | Table-wrapper version of the expanded row (`<tr data-testid="expanded-row">`) |
-| `auto-refresh-toggle` | Auto-refresh toggle wrapper — **shared** with the page toolbar, probes page, and chart toolbar; **always scope to `expanded-row-header`** when used in the expanded-view spec |
-| `refresh-button` | Manual refresh — **shared** with page toolbar; **scope to `monitor-expanded-row`** when used in expanded-view spec |
-| `probe-location-select` | Per-row probe selector (Radix combobox; **scope to `expanded-row-header`**) |
-| `metric-card`, `metric-card-label`, `metric-card-value` | Per-protocol metric cards (shared testids; scope by `filter({ hasText: label })`) |
-| `tcp-expanded-view`, `tcp-timing-breakdown-card` | TCP-specific expanded view + connection-timing card |
-| `websocket-expanded-view`, `ws-timing-breakdown-card`, `ws-message-stats-card`, `ws-throughput-card` | WebSocket expanded view sections |
+| `auto-refresh-toggle` | Auto-refresh toggle wrapper — **shared** with the page toolbar, workers page, and chart toolbar; **always scope to `expanded-row-header`** when used in the expanded-view spec |
+| `refresh-button` | Manual refresh — **shared** with page toolbar; **scope to `job-expanded-row`** when used in expanded-view spec |
+| `worker-location-select` | Per-row worker selector (Radix combobox; **scope to `expanded-row-header`**) |
+| `run-stat-card`, `run-stat-card-label`, `run-stat-card-value` | Per-job-type run-stat cards (shared testids; scope by `filter({ hasText: label })`) |
+| `sftp-expanded-view`, `sftp-timing-breakdown-card` | SFTP-specific expanded view + transfer-timing card |
+| `stream-expanded-view`, `stream-timing-breakdown-card`, `stream-message-stats-card`, `stream-throughput-card` | stream-job expanded view sections |
 | `http-expanded-view`, `timing-breakdown-card`, `response-time-history-card`, `chart-timeframe-selector`, `response-time-legend`, `chart` | HTTP expanded view sections + the FusionCharts wrapper |
-| `dns-expanded-view`, `dns-response-card` | DNS expanded view |
-| `ssl-expanded-view`, `ssl-validation-card`, `ssl-revocation-card`, `ssl-timing-card`, `ssl-validity-card`, `ssl-insights-card` | SSL expanded view sections |
-| `icmp-expanded-view`, `icmp-metrics-cards`, `packet-statistics-card` | ICMP expanded view (Tabs root + metric container + packet stats) |
-| ICMP tabs | Tabs inside `icmp-expanded-view` — **Metrics** (active), **Traceroute** (disabled), **Path** (disabled) |
-| ICMP metric cards | 5× `metric-card` inside `icmp-metrics-cards` — scope by label text: **Packet loss**, **RTT Min**, **RTT Avg**, **RTT Max**, **Jitter (Std Dev)** |
-| ICMP packet stats sub-labels | Inside `packet-statistics-card`: **Sent**, **Received**, **Lost** (no individual testids — assert by text) |
-| ICMP empty state | Text: `"No ICMP Metrics Available"`, `"Metrics will appear once the monitor has collected data."` |
-| `monitor-details-health-status` | Health indicator inside the details sheet |
+| `email-expanded-view`, `email-delivery-card` | email-job expanded view |
+| `backup-expanded-view`, `backup-integrity-card`, `backup-retention-card`, `backup-timing-card`, `backup-size-card`, `backup-insights-card` | backup-job expanded view sections |
+| `export-expanded-view`, `export-run-stats-cards`, `record-statistics-card` | `export` expanded view (Tabs root + run-stat container + record stats) |
+| `export` tabs | Tabs inside `export-expanded-view` — **Run Stats** (active), **Run Steps** (disabled), **Timeline** (disabled) |
+| `export` run-stat cards | 5× `run-stat-card` inside `export-run-stats-cards` — scope by label text: **Rows Exported**, **Duration Min**, **Duration Avg**, **Duration Max**, **Spread (Std Dev)** |
+| `export` record stats sub-labels | Inside `record-statistics-card`: **Scanned**, **Written**, **Skipped** (no individual testids — assert by text) |
+| `export` empty state | Text: `"No Export Run Stats Available"`, `"Run stats will appear once the job has completed its first run."` |
+| `job-details-job-status` | Job-status indicator inside the details sheet |
 | Timing segment dots | **No individual testid yet** — assertions fall back to `span.rounded-full` (brittle). FE improvement request: add `data-testid="timing-segment-{slug(label)}"` on each legend item. |
 
 ### 4.8 Login / auth
@@ -298,7 +298,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Pattern | Meaning |
 |---------|---------|
 | `[data-sonner-toast]` | Per-toast container (multiple toasts can stack) — filter by text to pick one |
-| `data-testid="sonner"` | Toast region wrapper — used as a fallback in `expectSuccessToastForMonitor` (`pages/app/SyntheticsPage.ts`) |
+| `data-testid="sonner"` | Toast region wrapper — used as a fallback in `expectSuccessToastForJob` (`pages/app/JobsPage.ts`) |
 
 ### 4.10 Regex / prefix testids
 
@@ -316,11 +316,11 @@ Prefix CSS is acceptable when the design system has no `getByTestId(/regex/)` an
 
 ```typescript
 getFirstRowActionButton(): Locator {
-    return this.tableRows.first().locator("[data-testid^='monitor-actions-']");
+    return this.tableRows.first().locator("[data-testid^='job-actions-']");
 }
 
-getHealthBadge(row: Locator): Locator {
-    return row.locator("[data-testid^='health-status-']");
+getJobStatusBadge(row: Locator): Locator {
+    return row.locator("[data-testid^='job-status-']");
 }
 ```
 
@@ -338,11 +338,11 @@ When you cannot find an element via role/label/placeholder/text/testid:
 
 | Selector | Provided by | Use |
 |----------|-------------|-----|
-| `[role="combobox"]` | Radix `SelectTrigger` | Probe-location selector inside `expanded-row-header`; page-size selector |
+| `[role="combobox"]` | Radix `SelectTrigger` | Worker-location selector inside `expanded-row-header`; page-size selector |
 | `[role="switch"]` | Radix `Switch` | Auto-refresh toggle (assert via `aria-checked`) |
 | `[data-state="checked"]` / `[data-state="open"]` / `[data-state="on"]` | Radix state attribute on checkboxes, selects, dialogs, toggle groups | Active-state assertion (chart timeframe `data-state="on"`); checkbox state |
 | `[data-sonner-toast]` | Sonner toast container | Toast targeting (Recipe 5) — multiple toasts stack |
-| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Radix select content / option (emitted via `<SelectContent>`) | Drill into an open Radix select dropdown — see `pages/app/SyntheticsPage.ts` `selectCheckIntervalOption` |
+| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Radix select content / option (emitted via `<SelectContent>`) | Drill into an open Radix select dropdown — see `pages/app/JobsPage.ts` `selectRunIntervalOption` |
 | `[data-testid^='table-row-']` | Per-row anchor (prefix — rows carry `table-row-<id>`) | Row collection — `tableRows` getter in `pages/baseClasses/DataTableBase.ts`:29 |
 
 These are tolerated because the design system / Radix primitives treat them as a public API. Treat any other CSS class as private.
@@ -360,12 +360,12 @@ These are tolerated because the design system / Radix primitives treat them as a
 
 ```typescript
 // Acceptable: design team owns the per-row prefix
-getHealthBadge(row: Locator): Locator {
-    return row.locator("[data-testid^='health-status-']");
+getJobStatusBadge(row: Locator): Locator {
+    return row.locator("[data-testid^='job-status-']");
 }
 
 getFirstRowActionButton(): Locator {
-    return this.tableRows.first().locator("[data-testid^='monitor-actions-']");
+    return this.tableRows.first().locator("[data-testid^='job-actions-']");
 }
 ```
 
@@ -403,7 +403,7 @@ After `frameLocator` is captured, every selector inside the frame uses the same 
 
 | Path | Use |
 |------|-----|
-| `pages/app/<Page>.ts` | Top-level page (one URL) — 14 classes today: `SyntheticsPage`, `ProbesPage`, `MetricsPage`, `DashboardPage`, `CreateMonitorPage`, `SideNavigation`, plus the newer `AlertsPage`, `InventoryPage`, `PoliciesPage`, `CreatePolicyPage`, `SyntheticMetricsViewPage`, `SettingsProfilePage`, `ProfileSettingsPage`, `ReportsPage` |
+| `pages/app/<Page>.ts` | Top-level page (one URL) — 14 classes today: `JobsPage`, `WorkersPage`, `RunStatsPage`, `DashboardPage`, `CreateJobPage`, `SideNavigation`, plus the newer `NotificationsPage`, `InventoryPage`, `NotificationRulesPage`, `CreateNotificationRulePage`, `JobRunStatsViewPage`, `SettingsProfilePage`, `ProfileSettingsPage`, `ReportsPage` |
 | `pages/baseClasses/<x>.ts` | Shared base for multiple page classes — only `BasePage` and `DataTableBase` exist |
 | `pages/util/<x>.ts` | Cross-area utilities (`LoginPage` lives here because Keycloak login is shared across product surfaces) |
 | `pages/<area>/<feature>.iframe.ts` | iframe wrapper (none today; reserve this path for the first one) |
@@ -443,9 +443,9 @@ Constructor shape — observed conventions across `pages/**`:
 
 | Shape | When to use | Examples |
 |-------|-------------|----------|
-| `class XPage extends BasePage` (or `extends DataTableBase` for table-bearing pages) with `constructor(page: Page) { super(page); }` | **The default for any `pages/app/**` class.** `BasePage` provides `this.page` (typed as `protected`), spinner waits, toast assertions, and shared navigation helpers; `DataTableBase extends BasePage` adds table getters, search, sorting, and pagination. | `pages/app/MetricsPage.ts`, `pages/app/DashboardPage.ts` (BasePage); `pages/app/SyntheticsPage.ts`, `pages/app/ProbesPage.ts` (DataTableBase) |
+| `class XPage extends BasePage` (or `extends DataTableBase` for table-bearing pages) with `constructor(page: Page) { super(page); }` | **The default for any `pages/app/**` class.** `BasePage` provides `this.page` (typed as `protected`), spinner waits, toast assertions, and shared navigation helpers; `DataTableBase extends BasePage` adds table getters, search, sorting, and pagination. | `pages/app/RunStatsPage.ts`, `pages/app/DashboardPage.ts` (BasePage); `pages/app/JobsPage.ts`, `pages/app/WorkersPage.ts` (DataTableBase) |
 | `constructor(protected page: Page) {}` | Base classes at the root of the hierarchy — `BasePage` itself. The `protected` keeps `this.page` available to subclasses (`DataTableBase` inherits it without declaring its own constructor). | `pages/baseClasses/BasePage.ts` |
-| `constructor(private page: Page) {}` | Sheet / drawer / shell-component page objects that own their own `Page` reference and don't need `BasePage` plumbing — the `CreateMonitorPage` sheet wrapper, `SideNavigation`, `ProfileSettingsPage`. | `pages/app/CreateMonitorPage.ts`, `pages/app/SideNavigation.ts` |
+| `constructor(private page: Page) {}` | Sheet / drawer / shell-component page objects that own their own `Page` reference and don't need `BasePage` plumbing — the `CreateJobPage` sheet wrapper, `SideNavigation`, `ProfileSettingsPage`. | `pages/app/CreateJobPage.ts`, `pages/app/SideNavigation.ts` |
 | `constructor(readonly page: Page) {}` | Wrappers that must **hand their `Page` back** to a caller or sub-component (e.g. an iframe wrapper that exposes `page` so a spec can build a `frameLocator`, or a composite that passes `page` to a child component). `readonly` keeps the reference public-but-immutable. | [selectors patterns.md § P6](../selectors/patterns.md) (iframe wrapper) |
 
 Default rule: **new top-level page → extend `BasePage`** (**table-bearing page → extend `DataTableBase`**). **New shared component / mixin → `protected page: Page`**. Add `private` only when the page object is a self-contained drawer/sheet that genuinely shouldn't expose `Page` to consumers. Use `readonly page: Page` only when a caller/sub-component legitimately needs the `Page` reference exposed.

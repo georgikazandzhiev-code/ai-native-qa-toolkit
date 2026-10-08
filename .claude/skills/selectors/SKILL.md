@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 2.0.4
+version: 2.0.5
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -20,7 +20,7 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, decisions, anti-patterns.** Teaches the model how to think about selectors and where they live. | **Always** — on any selector / page-object / locator task. |
-| **`reference.md`** | **Catalog of facts.** Locator API, ARIA role catalog, web-first assertion catalog, framework testid taxonomy, attribute filters / CSS hooks, FrameLocator API, POM file conventions. | **Load on lookup** — "What's the right `getByRole` for a Radix select?" / "Which testid prefix is used for monitor row actions?" / "What assertions auto-wait?" |
+| **`reference.md`** | **Catalog of facts.** Locator API, ARIA role catalog, web-first assertion catalog, framework testid taxonomy, attribute filters / CSS hooks, FrameLocator API, POM file conventions. | **Load on lookup** — "What's the right `getByRole` for a Radix select?" / "Which testid prefix is used for job row actions?" / "What assertions auto-wait?" |
 | **`patterns.md`** | **Side-by-side good vs bad examples.** P1–P17, drawn from real page objects. | **Load During Review** — "Show me the right shape for anchor-and-drill" / "Is this `.first()` justified?" / "What does a good toast assertion look like?" |
 | **`recipes.md`** | **End-to-end recipes for full UI patterns.** Tables, sheets, Radix dropdowns, confirmation modals, Sonner toasts, iframes, navigation, pagination, downloads, tabs, OTP, hovers, network-confirmed actions, popups, search, async row creation. | **Load During Authoring** — building a new page object for a recurring UI shape; start in the matching recipe. |
 
@@ -43,8 +43,8 @@ Non-negotiable. Violating any of these breaks the framework's contract.
 - **Locators are `get` accessors returning `Locator`.** Not async. Not `Promise<Locator>`. Playwright's `Locator` is lazy — it re-queries on every action. See § The nine blessed patterns.
 - **Locators interacted with (`click`, `fill`, `hover`, `press`, `setInputFiles`) live in a page object, never inline in a spec.** Inline `page.getBy*` in specs is reserved for one-off arrival markers and toast assertions only. See § Where selectors live — POM vs spec.
 - **No `waitForTimeout`, ever.** Use a web-first assertion, `waitForResponse` for known XHRs, or `expect(async () => { … }).toPass({ timeout })` for reads of a value that legitimately keeps changing. See § Web-first assertions.
-- **ALWAYS use `exact: true` in dynamic locator methods.** When a method parameter flows into `filter({ hasText: value })` or `getByText(value)`, always use `filter({ has: this.page.getByText(value, { exact: true }) })` or `getByText(value, { exact: true })`. Without it, "Item9" matches "Item90" — a silent false positive that passes locally and breaks in production data. This applies to `getRowByName`, `probeLocationCard`, and any method that selects by user-supplied text.
-- **Assert a schema-validated submit/confirm button is `toBeEnabled` BEFORE clicking it.** Schema-form validation only enables the button once every required field passes; clicking a still-disabled button silently no-ops and the test races. `await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout }); await this.createMonitorSubmitButton.click();`
+- **ALWAYS use `exact: true` in dynamic locator methods.** When a method parameter flows into `filter({ hasText: value })` or `getByText(value)`, always use `filter({ has: this.page.getByText(value, { exact: true }) })` or `getByText(value, { exact: true })`. Without it, "Item9" matches "Item90" — a silent false positive that passes locally and breaks in production data. This applies to `getRowByName`, `workerLocationCard`, and any method that selects by user-supplied text.
+- **Assert a schema-validated submit/confirm button is `toBeEnabled` BEFORE clicking it.** Schema-form validation only enables the button once every required field passes; clicking a still-disabled button silently no-ops and the test races. `await expect(this.createJobSubmitButton).toBeEnabled({ timeout }); await this.createJobSubmitButton.click();`
 - **After every `fill()` on a Radix-wrapped / component-library input, assert `toHaveValue(value)`.** Component libraries occasionally drop characters under fast programmatic input; the assertion catches the drop before the form is submitted. `await input.fill(value); await expect(input).toHaveValue(value);`
 
 ## Core principle
@@ -70,10 +70,10 @@ flowchart TD
 
 | Place | Rule | Example |
 |-------|------|---------|
-| **Page object getter (default)** | Any locator that is **interacted with**, or **referenced by 2+ tests/steps**, MUST live in a POM file under `pages/**`. | `syntheticsPage.createMonitorButton`, `loginPage.emailInput`, `sideNavigation.navSyntheticsLink` |
-| **Page object dynamic method** | Locators parameterized by data (`getRowByName(name)`, `getMetricCardByLabel(label)`) live as POM methods returning `Locator` synchronously. | `syntheticsPage.getRowByName(name)` |
-| **Page object assertion method** | A short assertion expressed against a one-off element should be a **method on the POM**, not an inline locator. The framework convention is `verifyXxx()`. | `SyntheticsPage.verifyNoResults()`, `PoliciesPage.verifyNoResults()` |
-| **Inline in spec — TOLERATED** | A locator used by a single test, only as an assertion target (not for interaction), where wrapping it in a POM method would inflate the POM with one-off members. | Sonner toast arrival (`page.getByText('Monitor "<name>" created successfully')`), empty-state markers (`expect(page.getByText('No ICMP Metrics Available')).toBeVisible()`) |
+| **Page object getter (default)** | Any locator that is **interacted with**, or **referenced by 2+ tests/steps**, MUST live in a POM file under `pages/**`. | `jobsPage.createJobButton`, `loginPage.emailInput`, `sideNavigation.navJobsLink` |
+| **Page object dynamic method** | Locators parameterized by data (`getRowByName(name)`, `getRunStatCardByLabel(label)`) live as POM methods returning `Locator` synchronously. | `jobsPage.getRowByName(name)` |
+| **Page object assertion method** | A short assertion expressed against a one-off element should be a **method on the POM**, not an inline locator. The framework convention is `verifyXxx()`. | `JobsPage.verifyNoResults()`, `NotificationRulesPage.verifyNoResults()` |
+| **Inline in spec — TOLERATED** | A locator used by a single test, only as an assertion target (not for interaction), where wrapping it in a POM method would inflate the POM with one-off members. | Sonner toast arrival (`page.getByText('Job "<name>" created successfully')`), empty-state markers (`expect(page.getByText('No Export Run Stats Available')).toBeVisible()`) |
 | **Inline in spec — FORBIDDEN** | Inline `page.locator('css-class')` in a spec. Inline locator that is **clicked / filled / hovered / typed into**. Inline locator reused across more than one `test()` block. | All current violations should be refactored into POM getters. |
 
 ### When inline is OK (the only two cases)
@@ -81,14 +81,14 @@ flowchart TD
 1. **Page-arrival / empty-state markers**: a single string asserted once after navigation or expansion to confirm we're in the expected UI state, when no POM getter exists yet.
 
    ```typescript
-   // tests/app/functional/monitoring-service/synthetics/icmp-monitor-expanded-view.spec.ts
-   await expect(page.getByText('No ICMP Metrics Available')).toBeVisible();
+   // tests/app/functional/jobs-service/jobs/export-job-expanded-view.spec.ts
+   await expect(page.getByText('No Export Run Stats Available')).toBeVisible();
    ```
 
 2. **Toast / alert visibility checks**: when the same Sonner toast text is asserted across many tests, and is never interacted with.
 
    ```typescript
-   // tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts
+   // tests/app/e2e/jobs-service/jobs/export-job.spec.ts
    await expect(
        page.locator('[data-sonner-toast]').filter({ hasText: name })
    ).toBeVisible();
@@ -121,7 +121,7 @@ The default order is Playwright's recommendation: **semantic-first, testid-last*
 |----------|---------|-------------|
 | 1 | `getByRole(role, { name })` | Native semantic elements: `heading`, `button` (with stable text), `link`, `tab`, `checkbox`, `menuitem`, `dialog`, `row`, `columnheader`, `cell`. Also Radix-mapped roles when reliable: `combobox` (Radix select trigger), `switch`, `option` (when the popover is open) |
 | 2 | `getByLabel(label)` | Form inputs with a visible `<label>` association |
-| 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (used in `pages/app/SyntheticsPage.ts` search controls) |
+| 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (used in `pages/app/JobsPage.ts` search controls) |
 | 4 | `getByText(text, { exact })` | Static UI strings: page titles, success messages, dropdown options, empty-state messages — **only when the text is stable across states and not reused elsewhere on the page** |
 | 5 | `getByAltText(text)` | Images with meaningful `alt` text |
 | 6 | `getByTitle(text)` | Elements with a stable `title` attribute |
@@ -181,11 +181,11 @@ Use ONLY when the element is a real native or ARIA-mapped role AND the accessibl
 
 ### 2. `getByTestId` — the planned fallback
 
-Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-monitor-button`, `delete-monitor-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-checkInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^monitor-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row health badges). Need a new testid? **Ask the front-end team to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
+Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-job-button`, `delete-job-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-runInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^job-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row job-status badges). Need a new testid? **Ask the front-end team to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
 
 ### 3. Anchor + drill (composition over deep CSS) — the most important pattern
 
-**The single most important pattern in this framework.** Use whenever a `data-testid` sits on a wrapper around a native input or a Radix primitive. The top of the chain MUST be a higher-priority locator (testid, role, label). The CSS or role step at the bottom MUST be a generic native element (`input`, `textarea`, `button`, `svg`) or a documented Radix attribute (`[role="combobox"]`, `[data-state="checked"]`, `[role="switch"]`). **Never start the chain with CSS** — `page.locator('.x').getByRole(...)` is forbidden. `.or()` is allowed at the *anchor* level for legacy/current duals that can never match at the same time — never at a downstream step, and never to combine two hooks for the same element. A second legitimate `.or()` use case is **conditional rendering states** — where the UI shows one of two mutually exclusive elements depending on data presence (e.g., `traceroutePathView.or(tracerouteNoDataTitle)` for a monitor that may or may not have collected data yet). This is appropriate only when the test's assertion explicitly handles both branches; do not use `.or()` to paper over flaky locators — each branch must be a real, expected UI state. **Code (good vs bad):** [patterns.md § P1](patterns.md).
+**The single most important pattern in this framework.** Use whenever a `data-testid` sits on a wrapper around a native input or a Radix primitive. The top of the chain MUST be a higher-priority locator (testid, role, label). The CSS or role step at the bottom MUST be a generic native element (`input`, `textarea`, `button`, `svg`) or a documented Radix attribute (`[role="combobox"]`, `[data-state="checked"]`, `[role="switch"]`). **Never start the chain with CSS** — `page.locator('.x').getByRole(...)` is forbidden. `.or()` is allowed at the *anchor* level for legacy/current duals that can never match at the same time — never at a downstream step, and never to combine two hooks for the same element. A second legitimate `.or()` use case is **conditional rendering states** — where the UI shows one of two mutually exclusive elements depending on data presence (e.g., `runStepsTimelineView.or(runStepsNoDataTitle)` for a job that may or may not have completed its first run yet). This is appropriate only when the test's assertion explicitly handles both branches; do not use `.or()` to paper over flaky locators — each branch must be a real, expected UI state. **Code (good vs bad):** [patterns.md § P1](patterns.md).
 
 ### 4. Filter by text (rows, list items, panels)
 
@@ -197,7 +197,7 @@ Always pass `exact: true` for short strings (`"Edit"`, `"Save"`, `"Cancel"`). Su
 
 ### 6. Dynamic / parameterized locators (methods, not getters)
 
-When the locator depends on runtime data (a row name, enum member, metric label), expose it as a **method**, not a getter. Method name starts with `get` and ends with `By<Discriminator>` (`getRowByName`, `getMetricCardByLabel`, `getHealthBadge`); pure dispatchers like `healthCard(state)` are also acceptable. **Returns `Locator` synchronously**, never `Promise<Locator>`. Build chains internally; consumers should not have to drill again. Prefer enum + map lookup over `if/else` cascades for type-checked dispatch. When a dynamic method chains through `getByText(value)` or `.filter({ hasText: value })`, **always pass `{ exact: true }`** to prevent substring collision across rows (e.g., "Item99" matching "Item990"). The substring risk is higher in dynamic methods because the value is unknown at authoring time. **Visibility:** public when specs or sister POMs assert on the locator; private when only this class's own actions invoke it. **Code:** [patterns.md § P5](patterns.md).
+When the locator depends on runtime data (a row name, enum member, run-stat label), expose it as a **method**, not a getter. Method name starts with `get` and ends with `By<Discriminator>` (`getRowByName`, `getRunStatCardByLabel`, `getJobStatusBadge`); pure dispatchers like `jobStatusCard(jobStatus)` are also acceptable. **Returns `Locator` synchronously**, never `Promise<Locator>`. Build chains internally; consumers should not have to drill again. Prefer enum + map lookup over `if/else` cascades for type-checked dispatch. When a dynamic method chains through `getByText(value)` or `.filter({ hasText: value })`, **always pass `{ exact: true }`** to prevent substring collision across rows (e.g., "Item99" matching "Item990"). The substring risk is higher in dynamic methods because the value is unknown at authoring time. **Visibility:** public when specs or sister POMs assert on the locator; private when only this class's own actions invoke it. **Code:** [patterns.md § P5](patterns.md).
 
 ### 7. Sub-component scoping
 
@@ -217,8 +217,8 @@ Playwright runs locators in strict mode by default: an action on a locator that 
 
 | Goal | Tool | Example |
 |------|------|---------|
-| Pick the only match | Nothing — locator must already resolve to one | `getByTestId('create-monitor-button')` |
-| There are several, I want a specific one by content | `.filter({ hasText })` / `.filter({ has })` | Row by name, monitor-type card by `/ICMP\|Ping/i` |
+| Pick the only match | Nothing — locator must already resolve to one | `getByTestId('create-job-button')` |
+| There are several, I want a specific one by content | `.filter({ hasText })` / `.filter({ has })` | Row by name, job-type card by `/Export\|CSV/i` |
 | There are several visually identical, I want the first | `.first()` (with comment why) | Page-toolbar refresh button (the "Refresh" sr-only label is reused by the expanded-row refresh; toolbar is always first in DOM) |
 | I want all and assert their count/content | Use the locator unmodified with `toHaveCount` / `allInnerTexts()` | Column headers |
 
@@ -234,12 +234,12 @@ Every page object that covers a form or CRUD operation **must** include selector
 
 | Feedback type | When it appears | Selector strategy |
 |---------------|-----------------|-------------------|
-| Success toast (Sonner) | After successful create / update / delete | `getByRole('status')` filtered by the unique part of the message (the monitor name) — Sonner toasts render with `role="status"`. Fall back to `[data-sonner-toast]` with the same filter only if the role is missing. Never unfiltered: toasts stack (see [recipes.md § 5](recipes.md)) |
+| Success toast (Sonner) | After successful create / update / delete | `getByRole('status')` filtered by the unique part of the message (the job name) — Sonner toasts render with `role="status"`. Fall back to `[data-sonner-toast]` with the same filter only if the role is missing. Never unfiltered: toasts stack (see [recipes.md § 5](recipes.md)) |
 | Error toast (Sonner) | After failed mutation or server error | Same shape as success toast; assert `toContainText(/error|failed/i)` |
-| Field validation message | On blur or submit with invalid input | Prefer the role: `getByRole('alert')` scoped to the field, or `expect(input).toHaveAccessibleErrorMessage(...)`. The schema-form's `error-<fieldName>` test-id is the fallback when the error has no role or association; helpers `fieldError(name)` / `fieldInput(path)` (see `pages/app/CreateMonitorPage.ts`) |
-| Confirmation modal | Destructive action (delete) | `getByRole('dialog', { name })` — Radix dialogs expose the role. The per-feature delete dialog testids are the fallback (`delete-monitor-dialog` / `delete-monitor-confirm` on `pages/app/SyntheticsPage.ts`, `delete-probe-dialog` on `pages/app/ProbesPage.ts`) — see [recipes.md § 4](recipes.md) |
+| Field validation message | On blur or submit with invalid input | Prefer the role: `getByRole('alert')` scoped to the field, or `expect(input).toHaveAccessibleErrorMessage(...)`. The schema-form's `error-<fieldName>` test-id is the fallback when the error has no role or association; helpers `fieldError(name)` / `fieldInput(path)` (see `pages/app/CreateJobPage.ts`) |
+| Confirmation modal | Destructive action (delete) | `getByRole('dialog', { name })` — Radix dialogs expose the role. The per-feature delete dialog testids are the fallback (`delete-job-dialog` / `delete-job-confirm` on `pages/app/JobsPage.ts`, `delete-worker-dialog` on `pages/app/WorkersPage.ts`) — see [recipes.md § 4](recipes.md) |
 | Loading state | During async operations | Spinner / skeleton testid scoped under the data container — `getByRole('progressbar')` when exposed |
-| Empty state | List or table with no data | `getByText('No <X> Available', { exact: true })` — the exact strings live in `enums/app/*` (e.g. `Messages.NO_ICMP_METRICS`); inline `getByText` in a spec is tolerated only as a one-off arrival marker (see § Where selectors live) |
+| Empty state | List or table with no data | `getByText('No <X> Available', { exact: true })` — the exact strings live in `enums/app/*` (e.g. `Messages.NO_EXPORT_RUN_STATS`); inline `getByText` in a spec is tolerated only as a one-off arrival marker (see § Where selectors live) |
 
 > The `Messages.*` member names above are illustrative. **`enums/app/messages.ts` does not exist yet** — see the `enums` skill for the rule (promote to a centralized constant only when the same string is asserted in 2+ specs; until then, the captured string stays inline at the single assertion). Capture the exact rendered string via live-app exploration (see the `playwright-cli` skill — uses `npx playwright open`); never invent a `Messages.*` name.
 
@@ -257,7 +257,7 @@ Playwright assertions auto-wait. Use them everywhere; do NOT mix with `await loc
 - A web-first assertion.
 - A `waitForResponse` / `waitForRequest` for a known XHR.
 - A re-read of a Locator after the triggering action (Locators are lazy).
-- An `expect(async () => { … }).toPass({ timeout })` retry block when the value being read legitimately keeps changing (see `pages/app/SyntheticsPage.ts` `expandRow`, `openRowActionMenu`).
+- An `expect(async () => { … }).toPass({ timeout })` retry block when the value being read legitimately keeps changing (see `pages/app/JobsPage.ts` `expandRow`, `openRowActionMenu`).
 
 ### Form interaction hygiene (mutation action methods)
 
@@ -270,9 +270,9 @@ When a POM action method mutates data through a form, follow this shape — it r
 ```typescript
 const [response] = await Promise.all([
     this.page.waitForResponse(
-        (r) => r.url().includes('/synthetics') && r.request().method() === 'POST'
+        (r) => r.url().includes('/jobs') && r.request().method() === 'POST'
     ),
-    this.createMonitorSubmitButton.click(),
+    this.createJobSubmitButton.click(),
 ]);
 expect(response.status()).toBe(201);
 ```
@@ -284,16 +284,16 @@ Prefer `waitForResponse` (not `waitForTimeout`) whenever the action triggers a k
 Only when ALL of these hold:
 
 1. The CSS step is **not at the top of the chain** (anchor with role/testid/label first).
-2. The CSS targets either a native element (`input`, `textarea`, `svg`) OR a documented Radix / framework hook (e.g. `[data-state="checked"]`, `[data-state="open"]`, `[data-sonner-toast]`, `[data-testid^='table-row-']`, `[data-testid^='monitor-actions-']`).
+2. The CSS targets either a native element (`input`, `textarea`, `svg`) OR a documented Radix / framework hook (e.g. `[data-state="checked"]`, `[data-state="open"]`, `[data-sonner-toast]`, `[data-testid^='table-row-']`, `[data-testid^='job-actions-']`).
 3. There is no testid available AND adding one is out of scope (note that in the comment).
 
 Forbidden CSS:
 
-- App-level class names tracking layout / styling (`.text-muted-foreground`, `.h-10.w-full.overflow-hidden`) at the **top** of a chain. They can appear deep in a chain only when the design system has no testid for the element — see `pages/app/SyntheticsPage.ts` `timingStackedBarIn` (acknowledged as tech debt; FE improvement requested).
+- App-level class names tracking layout / styling (`.text-muted-foreground`, `.h-10.w-full.overflow-hidden`) at the **top** of a chain. They can appear deep in a chain only when the design system has no testid for the element — see `pages/app/JobsPage.ts` `timingStackedBarIn` (acknowledged as tech debt; FE improvement requested).
 - Tailwind utility classes (`text-3xl`, `font-bold`, `flex`, `gap-2`, etc.) at **any** position in the chain — even when chained off a higher-priority anchor. Tailwind classes are styling concerns that change with design updates. Prefer `getByText(/pattern/)` for text-content matching or request a `data-testid` from FE.
 - Position-based selectors for content (`.locator('td').nth(2)` to grab "the third column").
 - Tag-only selectors with no follow-up filter (`page.locator('header')` standalone). Note: `page.locator('header').filter({ hasText: 'X' })` is tolerated because `.filter()` IS the scope — but when a `data-testid` exists, prefer it.
-- Legacy attribute syntax `page.locator('[data-testid="x"]')`. Use `page.getByTestId('x')`. The exception is **prefix matching** (`[data-testid^='monitor-actions-']`), which has no `getByTestId` analogue and is acceptable.
+- Legacy attribute syntax `page.locator('[data-testid="x"]')`. Use `page.getByTestId('x')`. The exception is **prefix matching** (`[data-testid^='job-actions-']`), which has no `getByTestId` analogue and is acceptable.
 
 ## Anti-patterns catalog
 
@@ -302,7 +302,7 @@ Forbidden CSS:
 | Top-level `page.locator('.text-muted-foreground')` | App class tracks styling, not semantics; multiple instances collide | Add a `data-testid` and use `getByTestId`; or scope under a higher-priority anchor |
 | `.locator('td').nth(N)` for "column X" | Adding/removing a column breaks every row helper | Use a column-name-aware lookup (header testid `sort-header-<columnId>`, or `getByRole('cell')` scoped under a row) |
 | `frameLocator('iframe')` (no attribute) | Picks up the wrong iframe when multiple exist | `frameLocator('iframe[title="..."]')` or `[name=...]` / `[id=...]` |
-| `getByText('Edit')` without `exact: true` | Matches "Edit monitor", "Edit profile", causing strict-mode failures | `getByText('Edit', { exact: true })` |
+| `getByText('Edit')` without `exact: true` | Matches "Edit job", "Edit profile", causing strict-mode failures | `getByText('Edit', { exact: true })` |
 | `await page.waitForTimeout(2000)` | Flake guarantee | Web-first assertion or `waitForResponse` |
 | `if (await loc.isVisible())` followed by `await loc.click()` | Race condition; `isVisible` snapshots, click re-checks | `await expect(loc).toBeVisible(); await loc.click();` |
 | Multiple getters returning the same chain (`createBtn` and `submitBtn` both `getByTestId('create-button')`) | Reader confusion; refactor risk | Define one getter; use comment if the same element has two names by context |
@@ -313,10 +313,10 @@ Forbidden CSS:
 
 ## SOLID checklist for page objects
 
-- **SRP** — One page object per page or component. A "SyntheticsPage" should not also know about Probes. Shared pieces (`BasePage`, `DataTableBase`) live under `pages/baseClasses/` — the directory contains only those two files today.
+- **SRP** — One page object per page or component. A "JobsPage" should not also know about Workers. Shared pieces (`BasePage`, `DataTableBase`) live under `pages/baseClasses/` — the directory contains only those two files today.
 - **OCP** — Add new locators as new getters; don't widen existing getters with options.
 - **LSP** — Sub-classes (extending `BasePage`, `DataTableBase`) MUST keep parent assumptions intact; never override a getter to return a different shape.
-- **ISP** — A consumer that needs only shared table behaviour should not have to instantiate the entire `SyntheticsPage`. Keep shared concerns in a base class (`DataTableBase`) or extract a small component.
+- **ISP** — A consumer that needs only shared table behaviour should not have to instantiate the entire `JobsPage`. Keep shared concerns in a base class (`DataTableBase`) or extract a small component.
 - **DIP** — Methods accept `Locator` parameters when they need to be reused across different anchors (e.g. `openRowActionMenu(row, menuItem)`, `timingLegendItemIn(card, segment)`).
 
 ## Self-review checklist (13 items)
@@ -340,29 +340,29 @@ Before finishing any selector-related change:
 
 ## Examples
 
-### Example 1 — Add a row-action menu locator to `SyntheticsPage`
+### Example 1 — Add a row-action menu locator to `JobsPage`
 
-User says: *"I need to click the per-row 'Edit' menu item on the synthetics list."*
+User says: *"I need to click the per-row 'Edit' menu item on the jobs list."*
 
 Walk the workflow:
 
-1. **Phase 1 (explore)** — `npx playwright open --load-storage <storage-state-path> https://<app-host>/synthetics` (path from `playwright.config.ts`). The human navigates and observes: each row has a kebab button with `data-testid` matching `monitor-actions-<id>` (per-row); clicking it opens a Radix menu of items.
-2. **Pattern 4 (filter by text)** + **Pattern 6 (dynamic method)** — the row anchor depends on the synthetic name; the action button is a per-row testid prefix.
-3. **Add to `pages/app/SyntheticsPage.ts`:**
+1. **Phase 1 (explore)** — `npx playwright open --load-storage <storage-state-path> https://<app-host>/jobs` (path from `playwright.config.ts`). The human navigates and observes: each row has a kebab button with `data-testid` matching `job-actions-<id>` (per-row); clicking it opens a Radix menu of items.
+2. **Pattern 4 (filter by text)** + **Pattern 6 (dynamic method)** — the row anchor depends on the job name; the action button is a per-row testid prefix.
+3. **Add to `pages/app/JobsPage.ts`:**
     - `getRowByName(name: string): Locator` — already present (Pattern 4).
-    - `openRowActionMenu(row: Locator, menuItem: string): Promise<void>` — locates the prefix testid `getByTestId(/^monitor-actions-/)` scoped under `row`, clicks it, then clicks `getByRole('menuitem', { name: menuItem })`.
+    - `openRowActionMenu(row: Locator, menuItem: string): Promise<void>` — locates the prefix testid `getByTestId(/^job-actions-/)` scoped under `row`, clicks it, then clicks `getByRole('menuitem', { name: menuItem })`.
 4. **Validation** — POM method must end in a post-condition. Assert the menu item is hidden (menu closed) before returning, OR verify the next visible UI state (sheet opened, toast shown).
-5. **Spec** — `await syntheticsPage.openRowActionMenu(row, 'Edit')`, then assertions on the next state.
+5. **Spec** — `await jobsPage.openRowActionMenu(row, 'Edit')`, then assertions on the next state.
 
 ### Example 2 — Locate a schema-form field with text fallback
 
-User says: *"The monitor name input has `data-testid='field-field-name'` AND a `<label>Monitor Name</label>`. Which do I use?"*
+User says: *"The job name input has `data-testid='field-field-name'` AND a `<label>Job Name</label>`. Which do I use?"*
 
 **The label.** It's priority 2, above any test-id, and it's what a user (and a screen reader) finds the field by:
 
 ```typescript
-get monitorNameInput(): Locator {
-    return this.page.getByLabel('Monitor Name', { exact: true });
+get jobNameInput(): Locator {
+    return this.page.getByLabel('Job Name', { exact: true });
 }
 ```
 
@@ -370,11 +370,11 @@ The `field-field-name` test-id is the fallback, only if exploration shows the la
 
 ### Example 3 — Confirmation modal for delete
 
-User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
+User says: *"Add a 'delete job' flow with the confirmation dialog."*
 
-1. **Phase 1 (explore)** — open the synthetics list, click the row-action `Delete`. Snapshot reveals a Radix dialog with role `dialog`, title `Delete Monitor`, body text confirming the monitor name, and two buttons: `Cancel` and `Delete`.
+1. **Phase 1 (explore)** — open the jobs list, click the row-action `Delete`. Snapshot reveals a Radix dialog with role `dialog`, title `Delete Job`, body text confirming the job name, and two buttons: `Cancel` and `Delete`.
 2. **Pattern 7 (sub-component scoping)** — define the dialog as an anchor; chain everything inside it.
-3. **Existing infrastructure** — `SyntheticsPage` already exposes the delete-dialog getters (`deleteDialog` → `delete-monitor-dialog`, `deleteConfirmButton` → `delete-monitor-confirm`, `deleteCancelButton` scoped to the dialog). Reuse them rather than re-rolling.
+3. **Existing infrastructure** — `JobsPage` already exposes the delete-dialog getters (`deleteDialog` → `delete-job-dialog`, `deleteConfirmButton` → `delete-job-confirm`, `deleteCancelButton` scoped to the dialog). Reuse them rather than re-rolling.
 4. **Action method** must validate success: after confirming the dialog, assert the dialog is hidden, the row is gone (`expect(getRowByName(name)).toBeHidden()`) AND the success toast appeared (Sonner pattern, [recipes.md § 5](recipes.md)).
 
 ## Troubleshooting
@@ -385,9 +385,9 @@ User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
 | Locator returns "stale" or "element not attached" | Misdiagnosis. `Locator` is lazy; it re-queries the DOM on every action — it never goes stale | Real cause is one of: (a) the element legitimately isn't there yet → `await expect(loc).toBeVisible()` to wait; (b) the selector no longer matches the new DOM → re-snapshot and update; (c) frame/iframe context changed → scope with `frameLocator(...)` |
 | Tempted to write XPath because nothing semantic works | Markup likely lacks accessible naming (`<button><svg/></button>`) | Re-snapshot — `aria-label` or visible icon label may give a semantic hook. If truly nothing exists, file the missing accessible name as an accessibility defect (the `accessibility-testing` skill), and meanwhile use a `data-testid` agreed with engineering; never fall back to XPath. See [reference.md § 4.11 Adding a new test id](reference.md). |
 | `page.locator('.btn-primary')` because the button has no accessible name | App class tracks styling, not semantics; unstable across redesigns | First re-check the snapshot for an `aria-label` or hidden role. If absent, request a `data-testid` from FE; until then, anchor under a higher-priority parent and drill (Pattern 3). Never ship a top-level CSS-class locator. |
-| Sonner toast assertion is flaky / matches the wrong toast | Bare `[data-sonner-toast]` matches every stacked toast on screen (auto-refresh "Loaded N monitors" can fire alongside "created successfully") | Filter by the unique part of the message — usually the monitor name. Pattern in [recipes.md § 5](recipes.md). Invented `notification-success`/`notification-error` testids do **not** exist in Sonner's DOM — always use the `[data-sonner-toast]` attribute filter. |
-| `getByText('Edit')` matches multiple elements | Substring matching catches "Edit monitor", "Edit profile", etc. | Always pass `exact: true` for short strings: `getByText('Edit', { exact: true })`. Or use `getByRole('button', { name: 'Edit', exact: true })` when the role is exposed. |
-| Field validation error locator returns nothing | Wrong shape — schema-form errors render at `data-testid='error-<fieldName>'`, not under the field input | Use the existing `fieldError(name)` helper in `pages/app/CreateMonitorPage.ts` or `getByTestId('error-<fieldName>')` directly. Pair with the input testid `field-field-<fieldPath>` for context. |
+| Sonner toast assertion is flaky / matches the wrong toast | Bare `[data-sonner-toast]` matches every stacked toast on screen (auto-refresh "Loaded N jobs" can fire alongside "created successfully") | Filter by the unique part of the message — usually the job name. Pattern in [recipes.md § 5](recipes.md). Invented `notification-success`/`notification-error` testids do **not** exist in Sonner's DOM — always use the `[data-sonner-toast]` attribute filter. |
+| `getByText('Edit')` matches multiple elements | Substring matching catches "Edit job", "Edit profile", etc. | Always pass `exact: true` for short strings: `getByText('Edit', { exact: true })`. Or use `getByRole('button', { name: 'Edit', exact: true })` when the role is exposed. |
+| Field validation error locator returns nothing | Wrong shape — schema-form errors render at `data-testid='error-<fieldName>'`, not under the field input | Use the existing `fieldError(name)` helper in `pages/app/CreateJobPage.ts` or `getByTestId('error-<fieldName>')` directly. Pair with the input testid `field-field-<fieldPath>` for context. |
 | Auth fails or `npx playwright open` cannot reach the app | Environment / credentials issue | **Stop and notify the human** with the exact issue and what you need (credentials, storage state path, env vars). Do not generate placeholder locators with guessed names. Re-explore once unblocked. |
 | Test calls `await locator.click()` immediately after navigation and races | `Locator.click()` auto-waits but only up to the action timeout; redirects mid-action can race | Use `await expect(locator).toBeVisible()` first to anchor the wait, then click. Or — for actions that trigger a known XHR — combine with `page.waitForResponse(...)` (see [recipes.md § 13](recipes.md)). |
 
@@ -395,7 +395,7 @@ User says: *"Add a 'delete monitor' flow with the confirmation dialog."*
 
 - **`page-objects`** skill — POM class structure (constructor, three locator sections, action methods), JSDoc rules, fixture registration, component composition. **Read alongside this skill** when authoring a new page object.
 - **`playwright-cli`** skill — the live-app exploration workflow (uses `npx playwright open`, built into `@playwright/test`). **Mandatory** before generating any new selectors. Pair with `frontend-cross-check` (source) for stable artifacts; `playwright-cli` covers runtime behavior.
-- **`frontend-cross-check`** skill — verify testid prefixes (`field-field-*`, `schema-field-*`, `error-*`, `monitor-actions-*`), Radix-primitive claims, and accessible names against `<sibling-repos>/frontend` source before authoring selectors. `git pull` first.
+- **`frontend-cross-check`** skill — verify testid prefixes (`field-field-*`, `schema-field-*`, `error-*`, `job-actions-*`), Radix-primitive claims, and accessible names against `<sibling-repos>/frontend` source before authoring selectors. `git pull` first.
 - **`enums`** skill — where suite names, status enums, and (when populated) UI message constants live. Strings inside `getByText(...)` come from here when reused in 2+ specs.
 - **`fixtures`** skill — how to register a new page object in `fixtures/pom/page-object-fixture.ts` so specs receive it via DI.
 - **`accessibility-testing`** skill — role-first locators double as accessibility checks; a `getByRole` that cannot find a control is often an a11y defect to file, not a reason to fall back to a test-id.

@@ -7,7 +7,7 @@ Cross-link from [SKILL.md](SKILL.md). For locator-by-locator API reference, see 
 ## Recipe index
 
 1. [Tables — row by name, cell by column](#1-tables--row-by-name-cell-by-column)
-2. [Right-side sheets (Create / Edit Monitor)](#2-right-side-sheets-create--edit-monitor)
+2. [Right-side sheets (Create / Edit Job)](#2-right-side-sheets-create--edit-job)
 3. [Component-library dropdowns / Radix selects](#3-component-library-dropdowns--radix-selects)
 4. [Confirmation modals & delete dialogs](#4-confirmation-modals--delete-dialogs)
 5. [Toasts / Sonner notifications](#5-toasts--sonner-notifications)
@@ -100,94 +100,94 @@ async verifyEachRowContains(value: string, columnId: string): Promise<void> {
 }
 ```
 
-## 2. Right-side sheets (Create / Edit Monitor)
+## 2. Right-side sheets (Create / Edit Job)
 
-Standard shape: a sheet opens after clicking "Create Monitor" or a per-row "Edit monitor" menu item, contains a step-1 type picker (for create) and a schema-form, ends with `create-button` / `cancel-button` / `back-button` / `close-button`.
+Standard shape: a sheet opens after clicking "Create Job" or a per-row "Edit job" menu item, contains a step-1 type picker (for create) and a schema-form, ends with `create-button` / `cancel-button` / `back-button` / `close-button`.
 
 ```typescript
-get createMonitorButton(): Locator {
-    return this.page.getByTestId('create-monitor-button');
+get createJobButton(): Locator {
+    return this.page.getByTestId('create-job-button');
 }
-get createMonitorSheet(): Locator {
-    return this.page.getByTestId('create-monitor-sheet');
+get createJobSheet(): Locator {
+    return this.page.getByTestId('create-job-sheet');
 }
-get monitorTypeGrid(): Locator {
-    return this.page.getByTestId('monitor-type-grid');
+get jobTypeGrid(): Locator {
+    return this.page.getByTestId('job-type-grid');
 }
-icmpTypeCard(): Locator {
-    return this.monitorTypeGrid
-        .getByTestId('monitor-type-card')
-        .filter({ hasText: /ICMP|Ping/i });
+exportTypeCard(): Locator {
+    return this.jobTypeGrid
+        .getByTestId('job-type-card')
+        .filter({ hasText: /Export|CSV/i });
 }
 get schemaForm(): Locator {
     return this.page.getByTestId('schema-form');
 }
-get monitorNameInput(): Locator {
-    return this.page.getByLabel('Monitor Name', { exact: true });
+get jobNameInput(): Locator {
+    return this.page.getByLabel('Job Name', { exact: true });
 }
 get targetInput(): Locator {
     return this.page.getByLabel('Target', { exact: true });
 }
-get createMonitorSubmitButton(): Locator {
+get createJobSubmitButton(): Locator {
     return this.page.getByTestId('create-button');
 }
 get cancelButton(): Locator {
     return this.page.getByTestId('cancel-button');
 }
 
-async createIcmpMonitor(data: {
+async createExportJobFromSheet(data: {
     name: string;
     target: string;
-    checkIntervalLabel: string;
+    runIntervalLabel: string;
     timeout: number;
     submit: boolean;
 }): Promise<void> {
-    await this.createMonitorButton.click();
-    await expect(this.createMonitorSheet).toBeVisible();
+    await this.createJobButton.click();
+    await expect(this.createJobSheet).toBeVisible();
 
-    await expect(this.monitorTypeGrid).toBeVisible();
-    await this.icmpTypeCard().click();
+    await expect(this.jobTypeGrid).toBeVisible();
+    await this.exportTypeCard().click();
     await expect(this.schemaForm).toBeVisible();
 
-    await this.monitorNameInput.fill(data.name);
-    await expect(this.monitorNameInput).toHaveValue(data.name);
+    await this.jobNameInput.fill(data.name);
+    await expect(this.jobNameInput).toHaveValue(data.name);
 
     await this.targetInput.fill(data.target);
     await expect(this.targetInput).toHaveValue(data.target);
 
-    await this.selectCheckIntervalOption(data.checkIntervalLabel);
+    await this.selectRunIntervalOption(data.runIntervalLabel);
     await this.timeoutInput.fill(String(data.timeout));
     await this.timeoutInput.blur();
 
-    await expect(this.createMonitorSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
+    await expect(this.createJobSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
 
     if (data.submit) {
-        await this.createMonitorSubmitButton.click();
-        await expect(this.createMonitorSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
+        await this.createJobSubmitButton.click();
+        await expect(this.createJobSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
     } else {
         await this.cancelButton.click();
-        await expect(this.createMonitorSheet).toBeHidden();
+        await expect(this.createJobSheet).toBeHidden();
     }
 }
 ```
 
 Rules:
-- Always assert the sheet is visible *before* selecting the monitor type, and the schema-form is visible *before* filling.
+- Always assert the sheet is visible *before* selecting the job type, and the schema-form is visible *before* filling.
 - After every `fill`, assert `toHaveValue` (Radix-wrapped inputs occasionally drop characters under fast input).
 - Submit button is asserted `toBeEnabled` BEFORE the click — schema-form validation lights it up only after every required field passes.
-- Click → assert sheet hidden. Network confirmation is added on top via Recipe 13 when the spec needs to read back the new monitor.
+- Click → assert sheet hidden. Network confirmation is added on top via Recipe 13 when the spec needs to read back the new job.
 
 ## 3. Component-library dropdowns / Radix selects
 
 Pattern: Radix `<Select>` exposes a `SelectTrigger` (testid on the trigger or its wrapper) and a `SelectContent` (`data-testid="select-content"`) containing `SelectItem`s (`data-testid="select-item"`). Older selects use a `getByRole('option')` listbox.
 
 ```typescript
-get checkIntervalSelectTrigger(): Locator {
-    return this.page.getByTestId('field-field-checkInterval');
+get runIntervalSelectTrigger(): Locator {
+    return this.page.getByTestId('field-field-runInterval');
 }
 
-async selectCheckIntervalOption(optionLabel: string): Promise<void> {
-    const trigger = this.checkIntervalSelectTrigger;
+async selectRunIntervalOption(optionLabel: string): Promise<void> {
+    const trigger = this.runIntervalSelectTrigger;
     await trigger.scrollIntoViewIfNeeded();
     await expect(trigger).toBeVisible();
 
@@ -216,9 +216,9 @@ async selectCheckIntervalOption(optionLabel: string): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts` `selectCheckIntervalOption`. The "open with retry" wrapper is necessary because Radix occasionally swallows the first click on a stubborn trigger.
+From `pages/app/JobsPage.ts` `selectRunIntervalOption`. The "open with retry" wrapper is necessary because Radix occasionally swallows the first click on a stubborn trigger.
 
-For toolbar filters that use `getByRole('option')` (status / type / health filters):
+For toolbar filters that use `getByRole('option')` (status / type / outcome filters):
 
 ```typescript
 async selectFilterOption(filter: Locator, label: string): Promise<void> {
@@ -265,24 +265,24 @@ async confirmDelete(): Promise<void> {
 }
 ```
 
-`ProbesPage` follows the identical shape with `delete-probe-dialog` / `delete-probe-confirm` / `delete-probe-cancel`.
+`WorkersPage` follows the identical shape with `delete-worker-dialog` / `delete-worker-confirm` / `delete-worker-cancel`.
 
-### 4.2 Synthetics-specific delete dialog
+### 4.2 Jobs-specific delete dialog
 
-The synthetics list ships its own delete dialog with a dedicated testid, following the same per-feature shape:
+The jobs list ships its own delete dialog with a dedicated testid, following the same per-feature shape:
 
 ```typescript
 get deleteDialog(): Locator {
-    return this.page.getByTestId('delete-monitor-dialog');
+    return this.page.getByTestId('delete-job-dialog');
 }
 get deleteConfirmButton(): Locator {
-    return this.page.getByTestId('delete-monitor-confirm');
+    return this.page.getByTestId('delete-job-confirm');
 }
 get deleteCancelButton(): Locator {
     return this.deleteDialog.getByRole('button', { name: /cancel/i });
 }
 
-async deleteMonitorByName(name: string): Promise<void> {
+async deleteJobByName(name: string): Promise<void> {
     const row = this.getRowByName(name);
     await this.openRowActionMenu(row, 'Delete');
     await expect(this.deleteDialog).toBeVisible();
@@ -292,7 +292,7 @@ async deleteMonitorByName(name: string): Promise<void> {
 ```
 
 Rules:
-- Cancel via the inner role-based locator (scoped to the dialog), confirm via the dedicated `delete-monitor-confirm` testid.
+- Cancel via the inner role-based locator (scoped to the dialog), confirm via the dedicated `delete-job-confirm` testid.
 - Always assert `toBeHidden` after confirmation — the row visibility check follows separately (Recipe 16).
 
 ## 5. Toasts / Sonner notifications
@@ -300,14 +300,14 @@ Rules:
 This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message. Confirm the role on your build before switching an existing toast locator (`npx playwright open`, inspect the toast) — if it isn't there, use the `[data-sonner-toast]` fallback.
 
 ```typescript
-async expectSuccessToastForMonitor(name: string): Promise<void> {
+async expectSuccessToastForJob(name: string): Promise<void> {
     const toast = this.page.getByRole('status').filter({ hasText: name });
     await expect(toast).toBeVisible({ timeout: appConfig.timeouts.persist });
     await expect(toast).toContainText(/created successfully/i);
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Filtering by the monitor name first protects against a second toast firing in the same window (e.g. an auto-refresh "Loaded N monitors" toast).
+From `pages/app/JobsPage.ts`. Filtering by the job name first protects against a second toast firing in the same window (e.g. an auto-refresh "Loaded N jobs" toast).
 
 For a generic per-event toast assertion:
 
@@ -335,7 +335,7 @@ class SonnerToast {
 ```
 
 Rules:
-- If two toasts can stack (create + auto-refresh), filter by the unique part of the message (the monitor name) — `page.locator('[data-sonner-toast]')` standalone will trip strict-mode.
+- If two toasts can stack (create + auto-refresh), filter by the unique part of the message (the job name) — `page.locator('[data-sonner-toast]')` standalone will trip strict-mode.
 - Always assert `toBeHidden` if the next test step depends on the toast being gone (it occludes click targets near the corner of the viewport).
 - Invented `notification-success` / `notification-error` testids do **not** exist in the actual Sonner DOM — always use the data-attribute filter shape above.
 
@@ -384,35 +384,35 @@ Rules:
 Pattern: click sidebar link → wait for URL → assert page shell visible. Driven by `pages/app/SideNavigation.ts`.
 
 ```typescript
-get synthetics(): Locator {
-    return this.page.getByTestId('nav-link-synthetics');
+get jobs(): Locator {
+    return this.page.getByTestId('nav-link-jobs');
 }
 
-async navigateToSynthetics(): Promise<void> {
-    await this.synthetics.click();
-    await this.page.waitForURL(/\/synthetics(\?|$)/);
-    await expect(this.page.getByTestId('page-synthetics')).toBeVisible();
+async navigateToJobs(): Promise<void> {
+    await this.jobs.click();
+    await this.page.waitForURL(/\/jobs(\?|$)/);
+    await expect(this.page.getByTestId('page-jobs')).toBeVisible();
 }
 
-async navigateToProbes(): Promise<void> {
+async navigateToWorkers(): Promise<void> {
     await this.settings.click();
     await this.page.waitForURL(/\/settings(\/|\?|$)/);
-    await this.page.getByTestId('settings-nav-item-probes').click();
-    await this.page.waitForURL(/\/settings\/probes(\?|$)/);
-    await expect(this.page.getByTestId('page-probes')).toBeVisible();
+    await this.page.getByTestId('settings-nav-item-workers').click();
+    await this.page.waitForURL(/\/settings\/workers(\?|$)/);
+    await expect(this.page.getByTestId('page-workers')).toBeVisible();
 }
 ```
 
-For sub-navigation (Settings → Probes), the same shape repeats: click parent → wait URL → click child → wait URL → assert page.
+For sub-navigation (Settings → Workers), the same shape repeats: click parent → wait URL → click child → wait URL → assert page.
 
 Rules:
 - Every nav method MUST end with both a `waitForURL` AND a `toBeVisible` assertion on the target page's shell testid (`page-<feature>`). Either alone is insufficient — URL changes can race the SPA mount.
 - Sub-nav clicks must be preceded by a parent-URL wait, not just a `click → click` chain.
-- Don't lift sub-nav clicks into a spec. Add a method like `navigateToProbes()` instead.
+- Don't lift sub-nav clicks into a spec. Add a method like `navigateToWorkers()` instead.
 
 ## 8. Pagination
 
-One canonical shape — the pagination API on `DataTableBase`, inherited by the standard `data-table` pages (`SyntheticsPage`, `InventoryPage`, `ProbesPage`, `PoliciesPage`; pages with non-standard table roots like `AlertsPage` don't extend it):
+One canonical shape — the pagination API on `DataTableBase`, inherited by the standard `data-table` pages (`JobsPage`, `InventoryPage`, `WorkersPage`, `NotificationRulesPage`; pages with non-standard table roots like `NotificationsPage` don't extend it):
 
 ```typescript
 get pageSizeSelect(): Locator {
@@ -483,12 +483,12 @@ Rules:
 When you introduce the first upload flow, expose the hidden `<input type="file">` through a `getByTestId` (request a stable `data-testid` from dev — do not rely on `input[type="file"]` CSS) and call `setInputFiles` on the locator. Path is **relative to the project root**, mirroring `./test-downloads/`:
 
 ```typescript
-get importMonitorsUploadInput(): Locator {
-    return this.page.getByTestId('import-monitors-upload-input');
+get importJobsUploadInput(): Locator {
+    return this.page.getByTestId('import-jobs-upload-input');
 }
 
-async uploadMonitorsFile(filePath: string): Promise<void> {
-    await this.importMonitorsUploadInput.setInputFiles(filePath);
+async uploadJobsFile(filePath: string): Promise<void> {
+    await this.importJobsUploadInput.setInputFiles(filePath);
     await expect(this.uploadSuccessMessage).toBeVisible();
 }
 ```
@@ -499,19 +499,19 @@ Rules:
 
 ## 10. Tabs and tabpanels
 
-The framework uses Radix `Tabs` inside expanded views. Top-level tabs have `role="tab"` with stable accessible names (e.g. ICMP expanded: "Metrics", "Traceroute", "Path"). Active state is exposed via `data-state="active"` on the tab.
+The framework uses Radix `Tabs` inside expanded views. Top-level tabs have `role="tab"` with stable accessible names (e.g. `export` expanded: "Run Stats", "Run Steps", "Timeline"). Active state is exposed via `data-state="active"` on the tab.
 
 ```typescript
-get metricsTab(): Locator {
-    return this.icmpExpandedView.getByRole('tab', { name: 'Metrics' });
+get runStatsTab(): Locator {
+    return this.exportExpandedView.getByRole('tab', { name: 'Run Stats' });
 }
-get tracerouteTab(): Locator {
-    return this.icmpExpandedView.getByRole('tab', { name: 'Traceroute' });
+get runStepsTab(): Locator {
+    return this.exportExpandedView.getByRole('tab', { name: 'Run Steps' });
 }
 
-async switchToMetrics(): Promise<void> {
-    await this.metricsTab.click();
-    await expect(this.metricsTab).toHaveAttribute('data-state', 'active');
+async switchToRunStats(): Promise<void> {
+    await this.runStatsTab.click();
+    await expect(this.runStatsTab).toHaveAttribute('data-state', 'active');
 }
 ```
 
@@ -532,12 +532,12 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`.
+From `pages/app/JobsPage.ts`.
 
 Rules:
 - Active-state assertion is `toHaveAttribute('data-state', 'active' | 'on')` — matches Radix's emitted attribute. Do not use class-name regex (`/_active_/`) unless the markup actually uses CSS-module classes.
-- Disabled tabs (e.g. ICMP "Traceroute" / "Path" in the current build) carry `data-disabled` and `aria-disabled="true"`; assert via `toBeDisabled()` or `toHaveAttribute('aria-disabled', 'true')`.
-- `getByRole('tabpanel')` is currently **not** reliable in this codebase — anchor on the testid of the panel content (`icmp-expanded-view`, `tcp-expanded-view`, `http-expanded-view`) instead.
+- Disabled tabs (e.g. `export` "Run Steps" / "Timeline" in the current build) carry `data-disabled` and `aria-disabled="true"`; assert via `toBeDisabled()` or `toHaveAttribute('aria-disabled', 'true')`.
+- `getByRole('tabpanel')` is currently **not** reliable in this codebase — anchor on the testid of the panel content (`export-expanded-view`, `sftp-expanded-view`, `http-expanded-view`) instead.
 
 ## 11. OTP / multi-input keystroke flows — prescriptive
 
@@ -591,7 +591,7 @@ async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll)
             const url = r.url();
             return (
                 (method === 'POST' || method === 'GET') &&
-                (url.includes('_serverFn') || url.includes('/api/data'))
+                (url.includes('_serverFn') || url.includes('/api/run-stats'))
             );
         },
         { timeout }
@@ -602,23 +602,23 @@ async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll)
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`. Click → network confirmation → button-re-enabled assertion. Three independent signals.
+From `pages/app/JobsPage.ts`. Click → network confirmation → button-re-enabled assertion. Three independent signals.
 
-For monitor creation, the canonical "click submit" wait is the sheet-hidden + Sonner-toast pair:
+For job creation, the canonical "click submit" wait is the sheet-hidden + Sonner-toast pair:
 
 ```typescript
-async createMonitor(data: MonitorData): Promise<void> {
+async createJobFromSheet(data: JobFormData): Promise<void> {
     await this.fillForm(data);
-    await this.createMonitorSubmitButton.click();
-    await expect(this.createMonitorSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
-    await this.expectSuccessToastForMonitor(data.name);
+    await this.createJobSubmitButton.click();
+    await expect(this.createJobSheet).toBeHidden({ timeout: appConfig.timeouts.persist });
+    await this.expectSuccessToastForJob(data.name);
 }
 ```
 
 Rules:
-- For TanStack-Start `_serverFn` calls: predicate matches URL substring (`_serverFn` or `/api/data`) + method.
+- For TanStack-Start `_serverFn` calls: predicate matches URL substring (`_serverFn` or `/api/run-stats`) + method.
 - Status codes vary in this codebase (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
-- For long-running async (first probe data after creating an ICMP monitor), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Synthetic Monitor expanded-view tests below), not on the response wait.
+- For long-running async (the first run stats after creating an `export` job), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Job expanded-view tests below), not on the response wait.
 
 ## 14. Multi-page (popup) flows — prescriptive
 
@@ -648,8 +648,8 @@ async searchByName(name: string): Promise<void> {
     await this.searchInput.fill(name);
 }
 
-async expectMonitorListed(name: string): Promise<void> {
-    const search = this.syntheticsListSearchInput;
+async expectJobListed(name: string): Promise<void> {
+    const search = this.jobsListSearchInput;
     await expect(search).toBeVisible({ timeout: appConfig.timeouts.fastFail });
     await search.clear();
     await search.fill(name);
@@ -664,9 +664,9 @@ async selectStatusOption(label: string): Promise<void> {
 }
 ```
 
-From `pages/app/SyntheticsPage.ts`.
+From `pages/app/JobsPage.ts`.
 
-For a searchable filter popover (the Policies type filter's bespoke MetricDropdown):
+For a searchable filter popover (the Notification Rules type filter's bespoke RunStatDropdown):
 
 ```typescript
 async openTypeFilter(): Promise<void> {
@@ -689,26 +689,26 @@ async selectTypeOption(label: string): Promise<void> {
 }
 ```
 
-From `pages/app/PoliciesPage.ts` — open the popover, assert the list is visible, search-narrow, prefix-match the label (the FE appends unit suffixes like `[ms]`), then settle the table.
+From `pages/app/NotificationRulesPage.ts` — open the popover, assert the list is visible, search-narrow, prefix-match the label (the FE appends unit suffixes like `[ms]`), then settle the table.
 
 Rules:
 - Search inputs in this app debounce client-side; pair the `fill` with a row-visibility assertion (above) — never with `waitForTimeout`.
 - After `applyFilter`, always `waitForTableSettled` (Recipe 1) and re-read the table.
-- Filter chips and active-filter visibility checks belong on the page object (`statusFilter`, `typeFilter`, `healthFilter`); never inline them in a spec.
+- Filter chips and active-filter visibility checks belong on the page object (`statusFilter`, `typeFilter`, `outcomeFilter`); never inline them in a spec.
 
 ## 16. Async row creation — waiting for the new row
 
 The standard shape after a create flow:
 
 ```typescript
-async createIcmpAndVerify(data: { name: string; target: string; checkIntervalLabel: string; timeout: number }): Promise<void> {
-    await this.createIcmpMonitor({ ...data, submit: true });
+async createExportJobFromSheetAndVerify(data: { name: string; target: string; runIntervalLabel: string; timeout: number }): Promise<void> {
+    await this.createExportJobFromSheet({ ...data, submit: true });
 
     await this.searchByName(data.name);
     const newRow = this.getRowByName(data.name);
     await expect(newRow).toBeVisible({ timeout: appConfig.timeouts.persist });
-    await expect(newRow).toContainText('ICMP');
-    await expect(newRow).toContainText(data.checkIntervalLabel);
+    await expect(newRow).toContainText('Export');
+    await expect(newRow).toContainText(data.runIntervalLabel);
     await expect(newRow).toContainText(data.target);
 }
 ```
@@ -717,11 +717,11 @@ Rules:
 - Do NOT poll with `await loc.count()` in a loop. `expect(loc).toBeVisible()` already retries.
 - If the table refresh is debounced, wait for the refresh response (registered before the action), then assert with the default timeout; do not raise budgets or add `waitForTimeout`.
 - For deletion: `await expect(this.getRowByName(name)).toBeHidden();`.
-- The first probe data may take up to 90 seconds to flow into the row's health badge — that wait belongs in the **detail-view functional spec**, not in the CRUD spec (see § 18 Synthetic Monitor expanded-view tests below).
+- The first run stats may take up to 90 seconds to flow into the row's job-status badge — that wait belongs in the **detail-view functional spec**, not in the CRUD spec (see § 18 Job expanded-view tests below).
 
 ## 17. POM vs spec — the placement decision in one flow
 
-A typical ICMP CRUD test illustrating where each locator should live. The shape below mirrors the actual flow in `tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts`:
+A typical `export`-job CRUD test illustrating where each locator should live. The shape below mirrors the actual flow in `tests/app/e2e/jobs-service/jobs/export-job.spec.ts`:
 
 ```typescript
 import { expect, test } from '../../../fixtures/pom/test-options';
@@ -729,65 +729,65 @@ import { qase } from 'playwright-qase-reporter';
 import { faker } from '@faker-js/faker';
 import { SUITES } from '../../../enums/app/qase-suites';
 
-test('Create, verify in grid, view details, edit, and delete ICMP monitor',
+test('Create, verify in grid, view details, edit, and delete `export` job',
     { tag: '@App-E2E' },
     async ({
         page,
         sideNavigation,
-        syntheticsPage,
-        createMonitorPage,
+        jobsPage,
+        createJobPage,
     }) => {
-        qase.suite(SUITES.APP_SYNTHETICS);
+        qase.suite(SUITES.APP_JOBS);
         qase.id(656);
 
-        const monitorName = `e2e-icmp-${faker.string.alphanumeric(6).toLowerCase()}`;
-        const target = faker.internet.ipv4();
+        const jobName = `e2e-export-${faker.string.alphanumeric(6).toLowerCase()}`;
+        const target = faker.system.directoryPath();
 
         // Navigation — POM method owns URL + page-shell assertion.
-        await test.step('GIVEN: User navigates to Synthetics page', async () => {
+        await test.step('GIVEN: User navigates to Jobs page', async () => {
             await page.goto('/');
-            await sideNavigation.navigateToSynthetics();
-            await syntheticsPage.verifyPageLoaded();
+            await sideNavigation.navigateToJobs();
+            await jobsPage.verifyPageLoaded();
         });
 
-        // POM action — every field locator (role-based textboxes, field-field-* select triggers) lives in pages/app/CreateMonitorPage.ts.
-        await test.step('WHEN: User creates an ICMP monitor through the sheet', async () => {
-            await syntheticsPage.createMonitorButton.click();
-            await expect(createMonitorPage.sheet).toBeVisible();
-            await createMonitorPage.waitForTypeSelection();
-            await createMonitorPage.monitorTypeCard('ICMP').click();
-            await createMonitorPage.waitForConfigureForm();
-            await createMonitorPage.fillIcmpMonitorForm({
-                name: monitorName,
+        // POM action — every field locator (role-based textboxes, field-field-* select triggers) lives in pages/app/CreateJobPage.ts.
+        await test.step('WHEN: User creates an `export` job through the sheet', async () => {
+            await jobsPage.createJobButton.click();
+            await expect(createJobPage.sheet).toBeVisible();
+            await createJobPage.waitForTypeSelection();
+            await createJobPage.jobTypeCard('Export').click();
+            await createJobPage.waitForConfigureForm();
+            await createJobPage.fillExportJobForm({
+                name: jobName,
                 target,
-                checkInterval: '1 minute',
+                runInterval: '1 minute',
                 timeout: '5',
             });
-            await expect(createMonitorPage.createButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
-            await createMonitorPage.createButton.click();
+            await expect(createJobPage.createButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
+            await createJobPage.createButton.click();
         });
 
         // INLINE — TOLERATED: one-shot success-toast assertion, never interacted with, no reuse.
         await test.step('THEN: Create success toast is visible', async () => {
-            const toast = page.getByText(new RegExp(`"${monitorName}" created successfully`));
+            const toast = page.getByText(new RegExp(`"${jobName}" created successfully`));
             await expect(toast).toBeVisible({ timeout: appConfig.timeouts.uiResponse });
         });
 
         // POM dynamic locator — exposed publicly so specs can assert against any row.
-        await test.step('AND: ICMP monitor appears in the grid', async () => {
-            await syntheticsPage.searchByName(monitorName);
-            const row = syntheticsPage.getRowByName(monitorName);
+        await test.step('AND: `export` job appears in the grid', async () => {
+            await jobsPage.searchByName(jobName);
+            const row = jobsPage.getRowByName(jobName);
             await expect(row).toHaveCount(1, { timeout: appConfig.timeouts.persist });
-            await expect(row).toContainText('ICMP');
+            await expect(row).toContainText('Export');
             await expect(row).toContainText('1 minute');
             await expect(row).toContainText(target);
         });
 
         // POM action — openRowActionMenu encapsulates the click + retry + menu-item click.
-        await test.step('AND: View Details shows the monitor', async () => {
-            const row = syntheticsPage.getRowByName(monitorName);
-            await syntheticsPage.openRowActionMenu(row, 'View details');
-            await expect(syntheticsPage.detailsSheet).toBeVisible();
+        await test.step('AND: View Details shows the job', async () => {
+            const row = jobsPage.getRowByName(jobName);
+            await jobsPage.openRowActionMenu(row, 'View details');
+            await expect(jobsPage.detailsSheet).toBeVisible();
         });
     });
 ```
@@ -801,50 +801,50 @@ Forbidden in this same flow (anti-recipe):
 
 ```typescript
 // FORBIDDEN — CSS in spec
-await page.locator('.create-monitor-button').click();
+await page.locator('.create-job-button').click();
 
 // FORBIDDEN — interaction with inline locator
 await page.getByPlaceholder('Search by name or target').fill(name);
 
 // FORBIDDEN — same locator used twice in the same spec
-const row = page.locator('tbody tr').filter({ hasText: monitorName });
+const row = page.locator('tbody tr').filter({ hasText: jobName });
 await expect(row).toBeVisible();
 // …later in the same test…
-await expect(row).toBeHidden();   // promote this to syntheticsPage.getRowByName(name)
+await expect(row).toBeHidden();   // promote this to jobsPage.getRowByName(name)
 ```
 
 See [SKILL.md → "Where selectors live"](SKILL.md#where-selectors-live--pom-vs-spec) for the full decision tree.
 
 ---
 
-## 18. Synthetic Monitor expanded-view tests (HTTP / TCP / WebSocket / SSL / DNS / MCP / ICMP)
+## 18. Job expanded-view tests (HTTP / SFTP / stream / backup / email / webhook / `export`)
 
-The expanded-row UI for every monitor type follows the same shape: header controls (probe selector, refresh, auto-refresh), metric cards, a timing-breakdown card (stacked bar + legend), and protocol-specific cards. The test strategy is a **two-layer split** — keep the expensive UI-creation flow in the E2E CRUD spec, do the structural / behavioural assertions in a dedicated functional detail-view spec that seeds via API.
+The expanded-row UI for every job type follows the same shape: header controls (worker selector, refresh, auto-refresh), run-stat cards, a timing-breakdown card (stacked bar + legend), and type-specific cards. The test strategy is a **two-layer split** — keep the expensive UI-creation flow in the E2E CRUD spec, do the structural / behavioural assertions in a dedicated functional detail-view spec that seeds via API.
 
-### Layer 1 — E2E CRUD spec (`tests/app/e2e/{type}-synthetic-monitor-crud.spec.ts`)
+### Layer 1 — E2E CRUD spec (`tests/app/e2e/{type}-job-crud.spec.ts`)
 
 Inside the existing CRUD flow, add **one** small `test.step("Expand row and verify {type} detail view loads", ...)` of roughly 20 lines that:
 
 - expands the newly-created row;
 - asserts `{type}-expanded-view` is visible (or `loading` / `no-data` fallback);
-- asserts `"No expanded view available for this monitor type."` is hidden;
+- asserts `"No expanded view available for this job type."` is hidden;
 - collapses the row.
 
-Do **not** assert metric cards, timing breakdowns, tooltips, tabs, or section cards here — that's the functional spec's job. This step is a smoke check that the route from creation → list → expanded view works at all.
+Do **not** assert run-stat cards, timing breakdowns, tooltips, tabs, or section cards here — that's the functional spec's job. This step is a smoke check that the route from creation → list → expanded view works at all.
 
-### Layer 2 — Functional detail-view spec (`tests/app/functional/{type}-monitor-detail-view.spec.ts`)
+### Layer 2 — Functional detail-view spec (`tests/app/functional/{type}-job-detail-view.spec.ts`)
 
 Single source of truth for view structure and behaviour:
 
-- **`beforeAll` seeds one monitor via the API** (use `buildCreate{TYPE}SyntheticBody` + `createSyntheticMonitor` from `helpers/app/synthetics.ts`). **Never through the UI** — UI creation adds 60+ seconds per run and is non-deterministic.
-- **Wait for first probe data** via `expect(async () => { ... }).toPass({ timeout: appConfig.timeouts.firstData })` polling a known metric. Probes typically need a minute or two before the first check completes.
+- **`beforeAll` seeds one job via the API** (use `buildCreate{TYPE}JobBody` + `createJob` from `helpers/app/jobs.ts`). **Never through the UI** — UI creation adds 60+ seconds per test run and is non-deterministic.
+- **Wait for the first run stats** via `expect(async () => { ... }).toPass({ timeout: appConfig.timeouts.firstData })` polling a known run stat. Jobs typically need a minute or two before the first scheduled run completes.
 - **Assertions must be semantic, not just presence:**
-  - Metric cards: regex that matches the value shape (`/^(OPEN|CLOSED)$/`, `/\d+(\.\d+)?ms/`, `/\d{3}/`), not `toBeVisible()` alone.
-  - Timing breakdown: iterate POM constants (`TCP_TIMING_SEGMENTS`, `WS_TIMING_SEGMENTS`, etc.), assert label + color dot + ms value per segment.
+  - Run-stat cards: regex that matches the value shape (`/^(CONNECTED|REFUSED)$/`, `/\d+(\.\d+)?ms/`, `/\d{3}/`), not `toBeVisible()` alone.
+  - Timing breakdown: iterate POM constants (`SFTP_TIMING_SEGMENTS`, `STREAM_TIMING_SEGMENTS`, etc.), assert label + color dot + ms value per segment.
   - Tooltips: assert exact text via `getByRole("tooltip", { name: "..." })`.
   - Collapse / re-expand at the end to verify render stability.
-- **Use POM constants for label arrays** — never hardcode them in the spec. The `pages/app/SyntheticsPage.ts` exports `HTTP_METRIC_CARD_LABELS`, `HTTP_TIMING_SEGMENTS`, etc.
-- **`afterAll` deletes via API** — `listSynthetics` → `deleteSyntheticMonitor`. UI delete is slow + flaky.
+- **Use POM constants for label arrays** — never hardcode them in the spec. The `pages/app/JobsPage.ts` exports `HTTP_RUN_STAT_CARD_LABELS`, `HTTP_TIMING_SEGMENTS`, etc.
+- **`afterAll` deletes via API** — `listJobs` → `deleteJob`. UI delete is slow + flaky.
 
 ### Conditional inline ms labels (`verifyInlineMsLabels`)
 
@@ -853,21 +853,21 @@ The frontend renders inline ms labels on stacked-bar segments only when the segm
 - Large segments (>10%) **must** show the ms label.
 - Sub-10% segments **must not** show the ms label.
 
-Use the parameterized `verifyInlineMsLabels` helper on `SyntheticsPage` — works for HTTP, TCP, WebSocket because the timing-bar shape is identical (stacked segments + legend + scale labels).
+Use the parameterized `verifyInlineMsLabels` helper on `JobsPage` — works for HTTP, SFTP, stream because the timing-bar shape is identical (stacked segments + legend + scale labels).
 
 ### Do NOT
 
-- ❌ **Create a separate `tests/app/e2e/{type}-synthetic-monitor-view.spec.ts`.** The CRUD stub + functional detail-view already cover that ground; a third layer duplicates UI-creation setup (~60s) and slows CI without adding unique coverage.
-- ❌ **Split the mega-test into one-test-per-section without keeping a shared `beforeAll` monitor.** The 90s probe wait is too expensive to repeat per test. If you split, annotate each sub-test with its own `qase.id()`.
-- ❌ **Use UI creation (`createMonitorPage`) inside the detail-view functional spec.** API seeding is mandatory for speed and determinism.
+- ❌ **Create a separate `tests/app/e2e/{type}-job-view.spec.ts`.** The CRUD stub + functional detail-view already cover that ground; a third layer duplicates UI-creation setup (~60s) and slows CI without adding unique coverage.
+- ❌ **Split the mega-test into one-test-per-section without keeping a shared `beforeAll` job.** The 90 s wait for the job's first run is too expensive to repeat per test. If you split, annotate each sub-test with its own `qase.id()`.
+- ❌ **Use UI creation (`createJobPage`) inside the detail-view functional spec.** API seeding is mandatory for speed and determinism.
 
 ### Anti-pattern reference
 
-`tests/app/e2e/monitoring-service/synthetics/icmp-synthetic-monitor-view.spec.ts` (qase 931) pre-dates this convention and is the **anti-pattern**: it repeats the full UI-creation CRUD flow just to re-verify structural assertions already covered by `icmp-monitor-expanded-view.spec.ts`. **Do not replicate this layout for any new monitor type.** Keep it in-tree until product decides to prune it; it's allowed to exist, but it's not a template.
+`tests/app/e2e/jobs-service/jobs/export-job-view.spec.ts` (qase 931) pre-dates this convention and is the **anti-pattern**: it repeats the full UI-creation CRUD flow just to re-verify structural assertions already covered by `export-job-expanded-view.spec.ts`. **Do not replicate this layout for any new job type.** Keep it in-tree until product decides to prune it; it's allowed to exist, but it's not a template.
 
-### Pre-seeded monitor exception (WebSocket)
+### Pre-seeded job exception (stream)
 
-Some monitor types take too long for first probe data to land within reasonable test timeouts. For WebSocket specifically, the `websocket-monitor-detail-view.spec.ts` targets a **pre-seeded monitor** named by `WS_FIXTURE_MONITOR_NAME` (no default committed). If the named monitor is missing, the spec should **fail fast with a clear message** in `beforeAll` (via `listSynthetics`) — never skip, because a skipped spec reads as green; the current self-skip is drift rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
+Some job types take too long for the first run stats to land within reasonable test timeouts. For stream jobs specifically, the `stream-job-detail-view.spec.ts` targets a **pre-seeded job** named by `STREAM_FIXTURE_JOB_NAME` (no default committed). If the named job is missing, the spec should **fail fast with a clear message** in `beforeAll` (via `listJobs`) — never skip, because a skipped spec reads as green; the current self-skip is drift rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
 
 ---
 
@@ -897,8 +897,8 @@ and assorted state attributes — not a native `<select>`.
 ### Why the default order breaks on these components
 
 1. **Visible text changes with state.** A button labelled `Refresh` becomes `Refreshing…` mid-action;
-   a Radix `<Select>` placeholder `Pick a probe` disappears once a value is picked. `getByText('Refresh')`
-   and `getByText('Pick a probe')` work for two seconds and then break.
+   a Radix `<Select>` placeholder `Pick a worker` disappears once a value is picked. `getByText('Refresh')`
+   and `getByText('Pick a worker')` work for two seconds and then break.
 2. **The role is right, but the accessible name is unreliable.** Radix wrappers nest the user-facing
    label deep — `getByRole('combobox', { name: 'Target' })` works only when Radix exposes the name
    correctly, which varies by component version and prop usage. **Try the role first anyway**; fall
