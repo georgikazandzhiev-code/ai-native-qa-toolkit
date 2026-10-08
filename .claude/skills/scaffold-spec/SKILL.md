@@ -1,10 +1,10 @@
 ---
 name: scaffold-spec
-version: 1.3.1
+version: 1.3.2
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
-  asks to add tests for a new endpoint, feature, or monitor type.
+  asks to add tests for a new endpoint, feature, or job type.
 metadata:
   category: authoring
 ---
@@ -42,7 +42,7 @@ Ask the user (or infer from context) which type of spec to create:
 | **E2E** | `tests/app/e2e/<domain>/` | `@App-E2E` | `ui-tests.mdc` |
 | **Functional** | `tests/app/functional/<domain>/` | `@App-regression` | `ui-tests.mdc` |
 
-Specs are grouped into **service-domain subfolders** (mirroring the API Hub): `tenant-service/`, `monitoring-service/`, `policy-service/`, `alerts/`, `shared/`. Within a domain, add a sub-subfolder (`synthetics/`, `probes/`, `metrics/`) only when that domain has 10+ specs in one test type — `monitoring-service/` uses these in all three test types. Place a new spec in the folder matching its domain; e.g. `tests/app/api/monitoring-service/synthetics/http-synthetic-monitor.spec.ts`, `tests/app/functional/alerts/alerts-page.spec.ts`.
+Specs are grouped into **service-domain subfolders** (mirroring the API Hub): `tenant-service/`, `jobs-service/`, `notification-service/`, `shared/`. Within a domain, add a sub-subfolder (`jobs/`, `workers/`, `run-stats/`) only when that domain has 10+ specs in one test type — `jobs-service/` uses these in all three test types. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
 
 ## Step 2: Read the Convention Rule
 
@@ -64,11 +64,11 @@ Read a comparable existing spec to match the established patterns:
 
 | For this type... | Read this reference file... |
 |------------------|-----------------------------|
-| API (synthetics) | `tests/app/api/monitoring-service/synthetics/icmp-synthetic-monitor.spec.ts` |
+| API (jobs) | `tests/app/api/jobs-service/jobs/email-job.spec.ts` |
 | API (admin) | `tests/app/api/tenant-service/admin-tenants.spec.ts` |
-| E2E (monitors) | `tests/app/e2e/monitoring-service/synthetics/http-synthetic-monitor-crud.spec.ts` |
+| E2E (jobs) | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
 | E2E (auth flows) | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
-| Functional | `tests/app/functional/monitoring-service/synthetics/http-create-edit-monitor.spec.ts` |
+| Functional | `tests/app/functional/jobs-service/jobs/http-create-edit-job.spec.ts` |
 
 ## Step 5: Generate the Spec
 
@@ -149,7 +149,7 @@ test.describe("E2E — <Feature> CRUD", () => {
   test(
     "Create, verify, edit, and delete <resource>",
     { tag: "@App-E2E" },
-    async ({ page, sideNavigation, syntheticsPage, createMonitorPage, apiRequest }) => {
+    async ({ page, sideNavigation, jobsPage, createJobPage, apiRequest }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
       const name = `qa-${faker.string.alphanumeric(8).toLowerCase()}`;
@@ -164,7 +164,7 @@ test.describe("E2E — <Feature> CRUD", () => {
       });
 
       await test.step("THEN: Resource appears in grid", async () => {
-        await expect(syntheticsPage.getRowByName(name)).toBeVisible({ timeout: appConfig.timeouts.persist });
+        await expect(jobsPage.getRowByName(name)).toBeVisible({ timeout: appConfig.timeouts.persist });
       });
     },
   );
@@ -181,11 +181,11 @@ import { faker } from "@faker-js/faker";
 
 test.describe("<Feature> — Form Validation", () => {
   test.beforeEach(
-    async ({ page, sideNavigation, syntheticsPage, createMonitorPage }) => {
+    async ({ page, sideNavigation, jobsPage, createJobPage }) => {
       await test.step("GIVEN: User is on the configure form", async () => {
         await page.goto("/");
-        await sideNavigation.navigateToSynthetics();
-        await syntheticsPage.verifyPageLoaded();
+        await sideNavigation.navigateToJobs();
+        await jobsPage.verifyPageLoaded();
         // navigate to form
       });
     },
@@ -194,7 +194,7 @@ test.describe("<Feature> — Form Validation", () => {
   test(
     "Validation scenario description",
     { tag: "@App-regression" },
-    async ({ createMonitorPage }) => {
+    async ({ createJobPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
       // validation test body
@@ -322,10 +322,10 @@ test("Get resource", async ({ apiRequest }) => {
 
 ```typescript
 // BAD — fragile, slow, breaks if UI changes
-test.afterAll(async ({ page, syntheticsPage }) => {
+test.afterAll(async ({ page, jobsPage }) => {
   for (const name of createdNames) {
-    await syntheticsPage.searchByName(name);
-    await syntheticsPage.openRowActionMenu(row, "Delete");
+    await jobsPage.searchByName(name);
+    await jobsPage.openRowActionMenu(row, "Delete");
     // ... click confirm, wait for toast ...
   }
 });
@@ -334,10 +334,10 @@ test.afterAll(async ({ page, syntheticsPage }) => {
 ```typescript
 // CORRECT — fast, reliable, UI-independent
 test.afterAll(async ({ apiRequest }) => {
-  const { body } = await listSynthetics(apiRequest, TOKEN);
+  const { body } = await listJobs(apiRequest, TOKEN);
   for (const name of createdNames) {
-    const match = body.items.find((m) => m.name === name);
-    if (match) await deleteSyntheticMonitor(apiRequest, TOKEN, match.id);
+    const match = body.items.find((j) => j.name === name);
+    if (match) await deleteJob(apiRequest, TOKEN, match.id);
   }
 });
 ```
@@ -449,9 +449,9 @@ Things that will bite you if you don't account for them upfront:
 
 ### Resource dependencies
 
-Some resources can't be created in isolation. Synthetics require a probe to exist first. If your new resource has a dependency, the spec needs:
-- `beforeAll`: create the dependency (e.g. probe)
-- `afterAll`: delete in reverse order — **dependents first, then dependencies** (delete synthetics, then probes)
+Some resources can't be created in isolation. A job needs a worker to exist first. If your new resource has a dependency, the spec needs:
+- `beforeAll`: create the dependency (e.g. a worker)
+- `afterAll`: delete in reverse order — **dependents first, then dependencies** (delete jobs, then workers)
 
 If you get the cleanup order wrong, deletes will fail with 409 (conflict) and orphan resources in the environment.
 
