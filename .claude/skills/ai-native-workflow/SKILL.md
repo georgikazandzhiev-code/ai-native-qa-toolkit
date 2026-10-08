@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.0
+version: 2.1.1
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting

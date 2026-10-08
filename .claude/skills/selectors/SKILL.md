@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 2.0.3
+version: 2.0.4
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain

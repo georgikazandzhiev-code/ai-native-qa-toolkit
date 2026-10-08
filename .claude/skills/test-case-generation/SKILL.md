@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 1.0.1
+version: 1.0.2
 description: Generate requirements and test cases from a user story or acceptance criteria — 6-section package: story analysis, functional requirements, categorized test cases, security & compliance, k6 candidates, unclear requirements. Use when a story/AC is pasted and the user wants test cases or a test plan. Triggers — "generate test cases", "test plan", "user story", "acceptance criteria". Produces documents, not Playwright code (scaffold-spec for code).
 metadata:
   category: authoring
@@ -19,7 +19,7 @@ The skill turns the user story into something an Automation Engineer can execute
 - **NEVER** invent UI design elements (colors, layouts, button text) unless they appear in the user story. Why: the requirement layer must remain technology-agnostic so it survives a UI redesign.
 - **ALWAYS** use precise terminology from `master-context` (probe, collector, scheduler, monitor type, JetStream stream, tenant_id, realm). Why: drift between the test-case package and the platform vocabulary causes downstream misinterpretation.
 - **ALWAYS** trace every functional requirement back to the user story's intent. Why: requirements that aren't anchored to the story produce gold-plating; the test cases over-cover and under-test what the user actually asked for.
-- **ALWAYS** consider the Known Platform Issues from `master-context` § Known Issues when generating edge cases Why: edge cases that ignore the bugs already in production produce false-positive coverage.
+- **ALWAYS** consider the Known Platform Issues from `master-context` § Known Issues when generating edge cases. Why: edge cases that ignore the bugs already in production produce false-positive coverage.
 - **ALWAYS** verify any inline platform snapshot against the actual repos (`git pull` first) before a critical test case relies on them. Why: the inline context is a snapshot — collectors/backend evolve, and a test case anchored to a stale default or an already-fixed issue produces wrong coverage.
 - **ALWAYS** tag every test case with a priority and trace it to the requirements it covers (e.g. `TC-07 [API] (P1, covers R2, R4)`). Why: priority tells the Automation Engineer what to automate first; traceability makes coverage gaps visible — a requirement with zero test cases must jump out.
 - **ALWAYS** flag every API endpoint or data flow that matches a Performance Testing Trigger (see § Performance Testing Triggers below) for a k6 candidate. Why: performance regressions discovered post-deploy are 100× more expensive than ones caught at requirement-time.
@@ -120,10 +120,10 @@ Flag an API or data flow as a k6 candidate when ANY of these apply:
 ```
 - [ ] 1. Read the user story carefully. If anything is ambiguous, list it for Section 6 — do not guess.
 - [ ] 2. Cross-reference against § System & Domain Context — which services / data flows / monitor types does the story touch?
-- [ ] 3. Cross-reference against § Known Platform Issues — does any issue affect this story's surface? If yes, name it in Section 6.
+- [ ] 3. Cross-reference against the Known Platform Issues (`master-context` § Known Issues) — does any issue affect this story's surface? If yes, name it in Section 6.
 - [ ] 4. Generate Section 1 (Story Analysis) — summary in 1-2 sentences.
 - [ ] 5. Generate Section 2 (Functional Requirements) — clear, testable, R1/R2/R3 numbered.
-- [ ] 6. Generate Section 3 (Test Cases) — beyond obvious paths; cover NATS disconnect, JetStream-full, replay, KV corruption, race conditions, metric accuracy under load. Categorize each as [API] / [Integration] / [E2E], assign a priority (P1/P2/P3), and cite the covered requirement(s). Include observability cases — when the feature fails, do the right metrics/alerts fire, or does the platform go silent (Known Issue #3 is exactly this class of bug)? Coverage floor: a story touching probe / scheduler / JetStream surfaces needs 15+ cases.
+- [ ] 6. Generate Section 3 (Test Cases) — beyond obvious paths; cover NATS disconnect, JetStream-full, replay, KV corruption, race conditions, metric accuracy under load. Categorize each as [API] / [Integration] / [E2E], assign a priority (P1/P2/P3), and cite the covered requirement(s). Include observability cases — when the feature fails, do the right metrics/alerts fire, or does the platform go silent (a failure that publishes no result is exactly this class of bug)? Coverage floor: a story touching probe / scheduler / JetStream surfaces needs 15+ cases.
 - [ ] 6b. Traceability sweep — walk R1…Rn and confirm every requirement is covered by at least one test case. A requirement with zero cases means Section 3 is incomplete.
 - [ ] 7. Generate Section 4 (Security & Compliance) — tenant isolation, JWT/JWKS, probe outbound-only, input validation, IDOR / NATS injection / unauthorized metric access.
 - [ ] 8. Generate Section 5 (Performance Testing Candidates) — for every endpoint/flow matching a trigger, specify Endpoint, Trigger matched, k6 test type, Key thresholds, Risk if untested. State "No performance testing candidates identified" if none apply.
@@ -174,7 +174,7 @@ If no candidates: "No performance testing candidates identified for this user st
 ### Section 6: Unclear Requirements & Dependencies
 - Ambiguities, missing info, logical gaps in the user story.
 - Dependencies on other features, teams, services.
-- Cross-reference against § Known Platform Issues — flag if the story is affected by any.
+- Cross-reference against the Known Platform Issues (`master-context` § Known Issues) — flag if the story is affected by any.
 - If nothing is open: "All requirements are well-defined with no immediate ambiguities."
 
 ## Anti-patterns
