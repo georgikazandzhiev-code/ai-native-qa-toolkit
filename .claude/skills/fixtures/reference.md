@@ -6,7 +6,7 @@ Catalog of what exists on the fixture surface. "What is registered, where it liv
 
 ## 1. Fixture inventory
 
-Every fixture merged into `fixtures/pom/test-options.ts`. All are `{ scope: 'test' }` — the framework has **no** `worker`-scoped fixtures today.
+Every fixture merged into `fixtures/pom/test-options.ts`. All are `{ scope: 'test' }` — the framework has **no** Playwright-worker-scoped fixtures today.
 
 ### 1.1 Page-object fixtures — `fixtures/pom/page-object-fixture.ts`
 
@@ -15,17 +15,17 @@ Registered on the `FrameworkFixtures` type + the `base.extend<FrameworkFixtures>
 | Fixture | Class | Source |
 |---------|-------|--------|
 | `loginPage` | `LoginPage` | `pages/util/LoginPage.ts` |
-| `alertsPage` | `AlertsPage` | `pages/app/AlertsPage.ts` |
+| `notificationsPage` | `NotificationsPage` | `pages/app/NotificationsPage.ts` |
 | `sideNavigation` | `SideNavigation` | `pages/app/SideNavigation.ts` |
 | `dashboardPage` | `DashboardPage` | `pages/app/DashboardPage.ts` |
-| `syntheticsPage` | `SyntheticsPage` | `pages/app/SyntheticsPage.ts` |
+| `jobsPage` | `JobsPage` | `pages/app/JobsPage.ts` |
 | `inventoryPage` | `InventoryPage` | `pages/app/InventoryPage.ts` |
-| `policiesPage` | `PoliciesPage` | `pages/app/PoliciesPage.ts` |
-| `createMonitorPage` | `CreateMonitorPage` | `pages/app/CreateMonitorPage.ts` |
-| `createPolicyPage` | `CreatePolicyPage` | `pages/app/CreatePolicyPage.ts` |
-| `probesPage` | `ProbesPage` | `pages/app/ProbesPage.ts` |
-| `metricsPage` | `MetricsPage` | `pages/app/MetricsPage.ts` |
-| `syntheticMetricsViewPage` | `SyntheticMetricsViewPage` | `pages/app/SyntheticMetricsViewPage.ts` |
+| `notificationRulesPage` | `NotificationRulesPage` | `pages/app/NotificationRulesPage.ts` |
+| `createJobPage` | `CreateJobPage` | `pages/app/CreateJobPage.ts` |
+| `createNotificationRulePage` | `CreateNotificationRulePage` | `pages/app/CreateNotificationRulePage.ts` |
+| `workersPage` | `WorkersPage` | `pages/app/WorkersPage.ts` |
+| `runStatsPage` | `RunStatsPage` | `pages/app/RunStatsPage.ts` |
+| `jobRunStatsViewPage` | `JobRunStatsViewPage` | `pages/app/JobRunStatsViewPage.ts` |
 | `settingsProfilePage` | `SettingsProfilePage` | `pages/app/SettingsProfilePage.ts` |
 | `profileSettingsPage` | `ProfileSettingsPage` | `pages/app/ProfileSettingsPage.ts` |
 | `reportsPage` | `ReportsPage` | `pages/app/ReportsPage.ts` |
@@ -91,7 +91,7 @@ Produced by `tests/app/login.setup.ts` (the `app-setup` project). Every setup te
 
 Notes:
 - Token env keys follow `USER_ACCESS_TOKEN_<PERSONA>` (`ADMIN`, `FULL`). ZERO is intentionally absent until RBAC ships (see `<PROJ>-484` note in the setup file).
-- Setup tests degrade gracefully: if `APP_URL` / `KEYCLOAK_URL` are not configured they log a skip and `return` (they do not fail the run).
+- Setup tests degrade gracefully: if `APP_URL` / `KEYCLOAK_URL` are not configured they log a skip and `return` (they do not fail the test run).
 
 ---
 
@@ -99,7 +99,7 @@ Notes:
 
 Deliberate omissions. If you're about to add one of these, re-read `SKILL.md` first.
 
-- **No `worker`-scoped fixtures.** Everything is `test`-scoped. Auth is handled by the `login.setup.ts` project + storage state, not a `worker` fixture.
+- **No Playwright-worker-scoped fixtures.** Everything is `test`-scoped. Auth is handled by the `login.setup.ts` project + storage state, not a Playwright-worker-scoped fixture.
 - **No `auto: true` fixtures.** Implicit fixtures hide cost and surprise readers. Every fixture is explicitly destructured in the test/hook signature.
 - **No auto-login fixture.** A "loggedInUser" fixture would couple persona selection to the fixture and block per-spec overrides. Personas come from storage state + env tokens; specs pick a persona via the project or `test.use({ storageState })`.
 - **No one-file-per-POM.** All page objects share `page-object-fixture.ts`.
