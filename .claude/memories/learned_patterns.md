@@ -8,7 +8,7 @@
 
 **Hard cap: 12 cases in § 2.** Past that this file has stopped being memory and become a landfill nobody reads. Before adding the thirteenth, either merge two entries or promote one out — see § 5.
 
-> **Two of the three code snippets in the original draft of this file violated the constitution** — a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered after the action that triggers it. They are corrected below, with the reason, because a memory file that teaches a bad pattern poisons every session that reads it. `npm run test:memory` now lints every snippet in this file against the same 16 rules the test suite is held to.
+> **Two of the three code snippets in the original draft of this file violated the constitution** — a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered after the action that triggers it. They are corrected below, with the reason, because a memory file that teaches a bad pattern poisons every session that reads it. `npm run test:memory` now lints every snippet in this file against the same 17 rules the test suite is held to.
 
 ---
 

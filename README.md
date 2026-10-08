@@ -59,7 +59,7 @@ The skill arm produced 78% more code and broke no rule. The baseline invented a 
 
 **The earlier runs found no lift, and that result stands as published.** Two LLM-graded runs over 45 written expectations tied at 40/45, because most of those expectations measured general competence rather than house convention. Run 2 also caught a real content defect in `selectors` — it was reaching for `data-testid` against its own priority hierarchy — which is fixed and documented.
 
-**The harness was wrong six times before it was right.** The first pass of run 3 reported the skill arm as *worse*; every extra finding turned out to be a defect in the linter or the eval config, not in the skill. The most consequential: five "discarded schema parse" findings were `expect.soft(Schema.parse(body), label).toBeTruthy()` — the correct form for a negative-case loop. Published as first reported, this repository would have claimed authoritatively that its own skill violates the rule it exists to enforce. What prevented that is a metric which names a file and a line, and a line that said the opposite when opened. **A report is not evidence; the line is.** All six defects are fixed and locked in with regression suites.
+**The harness was wrong six times before it was right.** The first pass of run 3 reported the skill arm as *worse*; every extra finding turned out to be a defect in the linter or the eval config, not in the skill. The most consequential: five "discarded schema parse" findings were `expect.soft(Schema.parse(body), label).toBeTruthy()` — the form the skill modelled for a negative-case loop. (That form later turned out to be broken in its own way: `parse` throws before `expect.soft` sees anything. The loop form is now `expect.soft(Schema.safeParse(body).success, label).toBe(true)`, and the lint reports the old one.) Published as first reported, this repository would have claimed authoritatively that its own skill violates the rule it exists to enforce. What prevented that is a metric which names a file and a line, and a line that said the opposite when opened. **A report is not evidence; the line is.** All six defects are fixed and locked in with regression suites.
 
 Full per-case detail, every defect, and the remaining work: **[BENCHMARK.md](BENCHMARK.md)**. Machine-readable results at `.claude/skills/<skill>/evals/`.
 
@@ -153,7 +153,7 @@ Verified by fault injection rather than assumption: a 13 → 6 drop across six c
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
-Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **16 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.
+Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **17 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.
 
 | Enforced mechanically | Stays a review responsibility |
 |---|---|
@@ -168,7 +168,7 @@ Roughly half the constitution is mechanically checkable. The plugin claims exact
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 21 `RuleTester` suites and 40 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other fifteen rules loaded alongside it.
+The rules ship with 23 `RuleTester` suites and 52 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other sixteen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 
@@ -178,7 +178,7 @@ So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs
 | 2 | **Silent** — lint the compliant tree with only this rule on, expect exactly 0 | The one that decides whether anyone leaves the gate switched on |
 | 3 | **Attributed** — lint the bad tree again with the rule's visitor emptied, expect exactly 0 | Assertion 1 alone passes for the wrong reason if a parse error or a leaked config produced the message |
 
-All 16 rules pass all three. A rule with no fixture case **fails** here rather than being skipped, so a new rule cannot land without something to catch and something to leave alone.
+All 17 rules pass all three. A rule with no fixture case **fails** here rather than being skipped, so a new rule cannot land without something to catch and something to leave alone.
 
 **It found a defect on its first run** — the third in one rule, and the same root cause each time. `schema-parse-idiom` reported `Project.parse(body).id`, a parse whose field is read on the spot and therefore not discarded at all. The rule had been written as an allowlist of accepted parent node types, so every shape of *using* a parsed value that its author had not enumerated read as *discarding* it. It now asks the question it actually means — is this value read by nobody? — with the house idiom on `.toBeTruthy()` split into its own message so nothing was traded away. Assertion 2 is in the harness because of exactly this: five of the six defects in the eval harness were also rules firing on correct code, and a rule that cries wolf gets the whole gate turned off within a week.
 
@@ -219,7 +219,7 @@ Two things keep it from rotting, and both are checks rather than intentions:
 npm run test:memory
 ```
 
-**Every code snippet in the file is linted against the same 16 rules as the test suite.** A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
+**Every code snippet in the file is linted against the same 17 rules as the test suite.** A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
 
 > **The sync is one-directional, and this is the part that bites.** Agents read `~/.claude/memories/learned_patterns.md` — the copy in your home directory. The copy in this repo is what travels to other people. Write to the home copy; the copy here is a snapshot of it. Editing this one directly changes nothing about how any session behaves.
 

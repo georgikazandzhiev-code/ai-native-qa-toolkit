@@ -137,7 +137,7 @@ were caught by opening the flagged line instead of trusting the report.
 | 3 | `isTestCall` did not exclude lifecycle hooks | `test.beforeAll` / `test.afterAll` reported as "a test with no tag". |
 | 4 | `enclosingTest` did not stop at a hook | An `if` inside `beforeAll` reported as forbidden conditional logic — when seeding a precondition there is exactly what the constitution *requires*. |
 | 5 | `no-conditional-in-test` too broad | `body: method === 'DELETE' ? undefined : {}` — shaping a payload in a 405 loop — reported as steering around missing data. |
-| 6 | `schema-parse-idiom` accepted only bare `expect(...)` | **The most consequential.** All five "discarded parse result" findings were `expect.soft(Schema.parse(body), label).toBeTruthy()` — the correct form for a negative-case loop, modelled five times in the skill's own `templates.md`. |
+| 6 | `schema-parse-idiom` accepted only bare `expect(...)` | **The most consequential.** All five "discarded parse result" findings were `expect.soft(Schema.parse(body), label).toBeTruthy()` — the form for a negative-case loop modelled five times in the skill's own `templates.md`. *(Correction, 2026-10: that form is not soft — `parse` throws before `expect.soft` sees anything. The flag was a false positive for the reason given, but the code was still wrong; the loop form is now `expect.soft(Schema.safeParse(body).success, label).toBe(true)`, see #5.)* |
 
 Defect 6 is the one to dwell on. Had run 3 been published as first reported, this repository would
 have claimed — authoritatively, with a number — that its own `api-testing` skill violates the MUST
@@ -146,7 +146,7 @@ names a file and a line number, and the line, when opened, said the opposite.
 
 **A report is not evidence. The line is.**
 
-All six are fixed. Defects 3–6 are locked in with regression suites: 21 `RuleTester` suites now,
+All six are fixed. Defects 3–6 are locked in with regression suites: 23 `RuleTester` suites now,
 including one per false positive, each carrying the code that was wrongly flagged.
 
 ### One change to the skill, and it was not a fix

@@ -21,6 +21,12 @@ const HOOKS = new Set(['beforeAll', 'afterAll', 'beforeEach', 'afterEach']);
 // as "This test has no tag" — a false alarm on correct code.
 const CONFIG_CALLS = new Set(['setTimeout', 'use', 'slow', 'info', 'extend']);
 
+// Calls that disable a test: test.skip / test.fixme / test.fail, in declaration or modifier form,
+// and the same on describe. They are reported by no-disabled-test, so they are not tests to the
+// other rules — otherwise a describe-level `test.fixme(true, '...')` was reported as "no tag",
+// which sends the author to fix the wrong thing.
+const DISABLE_CALLS = new Set(['skip', 'fixme', 'fail']);
+
 /** Playwright/Vitest test-declaring callees: test(), it(), test.only(), it.each()`...` */
 function isTestCall(node) {
   if (node.type !== 'CallExpression') return false;
@@ -36,6 +42,7 @@ function isTestCall(node) {
     // constitution explicitly REQUIRES seeding (and therefore branching) in them.
     if (HOOKS.has(prop)) return false;
     if (CONFIG_CALLS.has(prop)) return false;
+    if (DISABLE_CALLS.has(prop)) return false;
     c = c.object;
   }
   return c.type === 'Identifier' && (c.name === 'test' || c.name === 'it');
@@ -376,6 +383,7 @@ rules['schema-parse-idiom'] = {
   meta: meta('Wrap a schema parse in the canonical assertion: expect(Schema.parse(body)).toBeTruthy().', {
     messages: {
       bare: 'A bare {{name}}.parse(...) result is discarded. Use the canonical idiom: expect({{name}}.parse(body)).toBeTruthy();',
+      soft: 'expect.soft({{name}}.parse(body)) is not soft: parse throws a ZodError before expect.soft receives anything, so a negative-matrix loop still stops at the first bad response. Use expect.soft({{name}}.safeParse(body).success, label).toBe(true) — the constitution carve-out.',
       matcher: 'expect({{name}}.parse(body)) must end in .toBeTruthy() — the project idiom. Any other matcher asserts something about the parsed value instead of the parse, which the constitution already covers.',
     },
   }),
@@ -473,6 +481,13 @@ rules['schema-parse-idiom'] = {
         // Note `expect(Schema.parse(body).name).toBe('x')` is not caught here and must not be —
         // there the asserted value is a property, which is a business assertion, not this parse.
         const wrapper = expectFamilyWrapper(node);
+        // expect.soft(Schema.parse(body)) looks soft and is not: the parse throws first. This form
+        // was accepted until 2026-10 — eval run 3 called it "the correct negative-loop form" — and
+        // #5 PR 3 found it stops the loop it was written for.
+        if (wrapper && wrapper.callee.type === 'MemberExpression' && wrapper.callee.property.name === 'soft') {
+          context.report({ node, messageId: 'soft', data: { name: obj.name } });
+          return;
+        }
         if (wrapper && !chainEndsInToBeTruthy(wrapper)) {
           context.report({ node, messageId: 'matcher', data: { name: obj.name } });
         }
@@ -680,11 +695,35 @@ rules['no-empty-catch'] = {
   },
 };
 
+/** WON'T — No silent coverage drops: a disabled test is commented out under one marker, never skipped. */
+rules['no-disabled-test'] = {
+  meta: meta('No test.skip / test.fixme / test.fail; comment the test out under // TODO: FIXME: <TICKET>.', {
+    messages: {
+      disabled: '{{path}}() disables a test, and a disabled test reads as green in the report and in test management. Comment the whole test(...) block out under // TODO: FIXME: <TICKET> and report the ticket.',
+      fail: '{{path}}() keeps a known failure in the suite as a pass. Comment the whole test(...) block out under // TODO: FIXME: <TICKET> and report the bug — one marker for every disabled test, so one search finds them all.',
+    },
+  }),
+  create(context) {
+    return {
+      CallExpression(node) {
+        if (node.callee.type !== 'MemberExpression') return;
+        const path = memberPath(node.callee);
+        const m = /^(?:test|it|describe)(?:\.describe)?\.(skip|fixme|fail)$/.exec(path);
+        if (!m) return;
+        // test.skip() inside a test body is no-conditional-in-test's report; don't say it twice.
+        if (m[1] === 'skip' && enclosingTest(node)) return;
+        context.report({ node, messageId: m[1] === 'fail' ? 'fail' : 'disabled', data: { path } });
+      },
+    };
+  },
+};
+
 // ---------------------------------------------------------------------------
 // configs
 // ---------------------------------------------------------------------------
 
-const plugin = { meta: { name: 'eslint-plugin-qa-constitution', version: '0.2.0' }, rules };
+// Read from package.json so the two can't drift (they did: 0.2.0 here, 0.3.0 there).
+const plugin = { meta: { name: 'eslint-plugin-qa-constitution', version: require('../package.json').version }, rules };
 
 /** Every rule at error, plus the core/TS rules the constitution also mandates. */
 const all = Object.fromEntries(Object.keys(rules).map((r) => [`qa-constitution/${r}`, 'error']));
