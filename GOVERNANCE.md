@@ -56,7 +56,7 @@ A `major` bump with no history entry is the failure this table exists to prevent
 
 **SHOULD, not MUST.** A pull request should carry **one logical change**: one fix, one rule, one skill, one tool. As soon as a coherent unit can be shipped on its own, it should get its own PR, branched from `main`, instead of piling up on a long-lived branch. Unrelated changes go into separate PRs even when they were found together.
 
-**Why.** A PR that bundles many parts is hard to review properly: it gets rubber-stamped or it stalls, and one disputed change holds every good one hostage. #4 bundled 37 commits into one PR. Every change in it was right, and it was still far too big to review comfortably. This rule exists because of it.
+**Why.** A PR that bundles many parts is hard to review properly: it gets rubber-stamped or it stalls, and one disputed change holds every good one hostage. #4 bundled 41 commits into one PR. Every change in it was right, and it was still far too big to review comfortably. This rule exists because of it.
 
 **Exception: coupled changes.** Related changes that cannot pass CI on their own may ship in one PR. Example from #4: validator check 15 fails on dead links, so the check and the removal of the dead links had to land together. When a PR uses the exception, its description says why the parts can't ship separately.
 
