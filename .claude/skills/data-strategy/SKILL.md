@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 1.2.1
+version: 1.2.2
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -40,7 +40,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 
 | Kind of data | Lives in | Owner pattern | Example |
 |--------------|----------|---------------|---------|
-| **Static — boundary / validation matrices** | `test-data/app/<resource>Validation.json` | Pattern 4 | `test-data/app/httpJobValidation.json`, `test-data/app/backupJobValidation.json`, `test-data/app/webhookJobValidation.json` |
+| **Static — boundary / validation matrices** | `test-data/app/<resource>-validation.json` | Pattern 4 | `test-data/app/httpJobValidation.json`, `test-data/app/backupJobValidation.json`, `test-data/app/webhookJobValidation.json` (legacy camelCase names — drift; new files use hyphen-case) |
 | **Static — sentinels & lookup ids** | `test-data/app/<resource>.json` (keys: `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, etc.) | Pattern 5 | `test-data/app/worker.json`, `test-data/app/job-common.json`, `test-data/app/http-job.json`, `test-data/app/email-job.json` |
 | **Static — frontend mock payloads** | `test-data/app/<resource>.json` (used in `route.fulfill`) | Pattern 5 (route stub) | No mock-JSON fixtures in this project today; reserved for future use — see `refactor-playbook.md §4` |
 | **Static loader (JSON + transformation)** | `helpers/app/<topic>Loader.ts` (or `testDataLoader.ts`) | Pattern 5 wrapper | No loader helpers in this project today; reserved for future use |
@@ -75,7 +75,7 @@ For the full enumeration of every file in each location, see [reference.md](refe
 | 1 | Inline literal | Instant | Perfect | One-off value, never reused; uniqueness via `faker.string.uuid()` or `Date.now()` |
 | 2 | Typed factory with `Partial<T>` overrides | Instant | Perfect | Same shape used in 2+ tests, or a shape that has business rules |
 | 3 | Object Mother on top of factory | Instant | Perfect | Named scenarios (e.g. "matched worker+job pair", "online worker in EU") |
-| 4 | JSON validation matrix | Instant | Perfect | Boundary lists for negative tests (`httpJobValidation.json`, `backupJobValidation.json`) |
+| 4 | JSON validation matrix | Instant | Perfect | Boundary lists for negative tests (`<resource>-validation.json`; legacy camelCase `httpJobValidation.json`, `backupJobValidation.json` are drift) |
 | 5 | JSON lookup / sentinel | Instant | Perfect | Fixed `invalidId`/`nonExistentId`, env-pinned ids (`worker.json`, `job-common.json`) |
 | 6 | API seeder helper | Fast | Perfect | An entity must exist in the system before the test runs (worker, job, tenant, user) |
 | 7 | Per-test user via admin-API + Keycloak + Mailpit | Fast | Perfect | Tests that need a fresh user (registration, reset-password, invitation, brute-force) |
@@ -94,7 +94,7 @@ flowchart TD
     Q3 -->|Yes| ReuseSeeder["Pattern 6:<br/>reuse helpers/app/X.ts"]
     Q3 -->|No| WriteSeeder["Pattern 6:<br/>add helpers/app/X.ts<br/>(create + delete pair)"]
     Q2 -->|No| Q4{Boundary list<br/>or sentinel id?}
-    Q4 -->|Boundary list| ValidationJson["Pattern 4:<br/>test-data/app/XValidation.json"]
+    Q4 -->|Boundary list| ValidationJson["Pattern 4:<br/>test-data/app/X-validation.json"]
     Q4 -->|Fixed id / lookup| LookupJson["Pattern 5:<br/>test-data/app/X.json"]
     Q4 -->|Random payload| Q5{Used in 2+<br/>specs?}
     Q5 -->|Yes| Q6{Factory already<br/>exists?}
@@ -139,7 +139,7 @@ Named scenarios that delegate to the base factory; never re-declare fields. Code
 ### Pattern 4 — JSON validation matrix
 
 For boundary lists driving parametrized negative tests. Code in [patterns.md § Pattern 4](patterns.md). Rules:
-- Path is `test-data/app/<resource>Validation.json`.
+- Path is `test-data/app/<resource>-validation.json` (hyphen-case; for jobs `<type>-job-validation.json`). The camelCase `httpJobValidation.json` / `backupJobValidation.json` / `webhookJobValidation.json` are legacy drift — do not add new camelCase files.
 - Top-level keys describe the negative case (`invalidNames`, `invalidTargets`, `validMethods`, `methodsWithBody`).
 - Values are arrays of primitives. No partial objects (those belong in code, not JSON).
 - Use only when the same matrix is reused in 2+ specs OR when the matrix is large enough to obscure the test.

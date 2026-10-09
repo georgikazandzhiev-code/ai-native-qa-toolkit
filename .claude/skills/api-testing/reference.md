@@ -238,7 +238,7 @@ Current `appConfig.api`:
 | `JOBS` | `/jobs` | Tenant-scoped CRUD |
 | `JOBS_RUN_STATS` | `/jobs/:id/run-stats` | Replace `:id` via `.replace(":id", id)` |
 | `RUN_STATS` | `/run-stats` | Expression-style run-stat values query |
-| `RUN_STATS_AGGREGATE` | `/run-stats/aggregate` | Run-stat definitions |
+| `RUN_STATS_AGGREGATE` | `/run-stats/aggregate` | Aggregated run-stat values query |
 | `WORKERS` | `/workers` | Tenant-scoped CRUD; `/workers/list` for batch |
 
 ## Helper catalog (already exists — reuse before writing new)
@@ -610,13 +610,13 @@ test.beforeAll(async ({ apiRequest }) => {
   initialStates = new Map(body.items.map((r) => [r.id, r.enabled]));
   // Bring everything to the state the tests need
   for (const [id, enabled] of initialStates) {
-    if (!enabled) await updateResource(apiRequest, TOKEN, id, { enabled: true });
+    if (!enabled) await updateResource(apiRequest, id, { enabled: true }, TOKEN);
   }
 });
 
 test.afterAll(async ({ apiRequest }) => {
   for (const [id, wasEnabled] of initialStates) {
-    await updateResource(apiRequest, TOKEN, id, { enabled: wasEnabled });
+    await updateResource(apiRequest, id, { enabled: wasEnabled }, TOKEN);
   }
 });
 ```

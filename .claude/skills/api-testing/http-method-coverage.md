@@ -440,8 +440,8 @@ These cut across every method. Document them once per resource; don't fold them 
 
 **Contract:** every endpoint scoped by tenant must return **404, not 403** when accessed across tenants. This is the contract because 403 leaks the existence of the resource; 404 doesn't.
 
-- Tenant-scoped resources (job, worker, tenant-side user, run stats) — the **token enforces** tenancy. Tenant A's token on Tenant B's resource → 404. See `cross-tenant-isolation.spec.ts`.
-- Admin-scoped resources (admin user) — **`tenantId`-in-path enforces** tenancy. Asking under Tenant B for a user that lives in Tenant A → 404. See `cross-tenant-run-stats-isolation.spec.ts` and [templates.md § 7](templates.md).
+- Tenant-scoped resources (job, worker, tenant-side user, run stats) — the **token enforces** tenancy. Tenant A's token on Tenant B's resource → 404. See `cross-tenant-isolation.spec.ts` and `cross-tenant-run-stats-isolation.spec.ts`.
+- Admin-scoped resources (admin user) — **`tenantId`-in-path enforces** tenancy. Asking under Tenant B for a user that lives in Tenant A → 404. See `cross-tenant-isolation.spec.ts` and [templates.md § 7](templates.md).
 
 Cover **GET, PATCH, DELETE** at minimum. POST cross-tenant is implicit (you can only POST under your own token). The spec is dedicated, not folded into the per-resource CRUD spec.
 

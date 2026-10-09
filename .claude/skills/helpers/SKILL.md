@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.0.2
+version: 1.0.3
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
@@ -161,9 +161,9 @@ User says: _"We're adding `/api/v1/widgets`. Five specs will create widgets. Add
 
 Walk:
 1. **Location** — `helpers/app/widgets.ts` (kebab-case, single word, fine as-is).
-2. **CRUD shape** — start with passthrough CRUD (`createWidget`, `getWidget`, `listWidget`, `updateWidget`, `deleteWidget`), one body builder (`buildCreateWidgetBody`), one URL builder if list takes query params (`buildListWidgetsUrl`).
+2. **CRUD shape** — start with passthrough CRUD (`createWidget`, `getWidget`, `listWidgets`, `updateWidget`, `deleteWidget`), one body builder (`buildCreateWidgetBody`), one URL builder if list takes query params (`buildListWidgetsUrl`).
 3. **Cleanup** — append `cleanupWidgets(apiRequest: ApiRequestFn, widgetIds: string[], headers?: string): Promise<void>` mirroring `cleanupWorkers`: `Promise.allSettled(widgetIds.map((id) => deleteWidget(apiRequest, id, headers)))`. No status-checking, no throw.
-4. **If widgets reference workers (or any other resource that constrains delete order)**, mirror `cleanupWorkersAndJobs`: take both id arrays, delete the dependent resource first, then the referenced one. Name the helper `cleanup<Dependent>And<Referenced>` and document the order in a JSDoc.
+4. **If widgets reference workers (or any other resource that constrains delete order)**, mirror `cleanupWorkersAndJobs`: take both id arrays, delete the dependent resource first, then the referenced one. Name the helper `cleanup<Referenced>And<Dependent>` and document the order in a JSDoc.
 
 ### Example 3 — Adding a body builder for a new job type
 

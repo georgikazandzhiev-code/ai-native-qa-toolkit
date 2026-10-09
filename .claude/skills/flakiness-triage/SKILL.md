@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 1.1.4
+version: 1.1.5
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -119,7 +119,7 @@ If the failing spec passes when its preceding peers are removed, one of those pe
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `TimeoutError` on `expect(locator).toBeVisible()` | Element not rendered when assertion runs — race with async data | Wait on the upstream signal inside the page-object action: register `page.waitForResponse(url => url.includes('/api/run-stats'))` **before** the action that triggers it, then await it |
+| `TimeoutError` on `expect(locator).toBeVisible()` | Element not rendered when assertion runs — race with async data | Wait on the upstream signal inside the page-object action: register `page.waitForResponse(url => url.includes('/api/v1/run-stats'))` **before** the action that triggers it, then await it |
 | `TimeoutError` on `getByRole("button", { name: "X" }).click()` | Button re-renders after data load and the click lands mid-re-render (locators are lazy and never go stale — the element was replaced during the action) | Anchor the click on a parent that stabilizes: `await expect(container).toBeVisible(); await container.getByRole(...).click()` |
 | Strict-mode violation: "resolved to N elements" | Duplicate elements appear briefly (skeleton + final) | Scope the locator: `card.getByRole(...)` not `page.getByRole(...)` |
 | `ZodError` intermittently on `Schema.parse(body)` | API response shape varies (optional field appears sometimes) | Either: API is non-deterministic (real bug — file ticket), or schema is wrong (missing `.optional()`) |
@@ -248,7 +248,7 @@ The most common per-test flake causes in this framework, in rough frequency orde
 2. Step 3 bisect: removed the preceding `http-create-edit-job.spec.ts` → the failing test now passes in suite.
 3. Cause: the edit spec mutated a fixture-seeded job and didn't restore it; the create spec then tries to create with the same name and gets 409.
 
-**Fix:** Add `afterEach` in `http-create-edit-job.spec.ts` calling `deleteJob(apiRequest, jobId)` for the mutated row. Or rename the create spec's job to a faker-generated unique name.
+**Fix:** Add `afterEach` in `http-create-edit-job.spec.ts` calling `deleteJob(apiRequest, jobId, headers)` for the mutated row. Or rename the create spec's job to a faker-generated unique name.
 
 **Verify:** 5× isolated green + 1 full-tag green.
 

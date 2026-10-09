@@ -149,7 +149,7 @@ Fix: `return createWorkerData({ region: 'EU', location: 'EU-Amsterdam' });`.
 
 ## Pattern 4 — JSON validation matrix
 
-### Good (`test-data/app/httpJobValidation.json`)
+### Good (`test-data/app/httpJobValidation.json` — legacy camelCase name; new files use `<resource>-validation.json`)
 
 ```json
 {
@@ -175,7 +175,7 @@ for (const invalidName of httpJobValidation.invalidNames) {
 const invalidTargets = ['not-a-url', 'ftp://wrong-protocol.com', 'just some text', '   ']; // duplicated in another spec
 ```
 
-Fix: move to `test-data/app/<resource>Validation.json` and import. The JSON is the single source of truth for boundary lists.
+Fix: move to `test-data/app/<resource>-validation.json` and import. The JSON is the single source of truth for boundary lists.
 
 ## Pattern 5 — JSON lookup / sentinel
 
@@ -226,13 +226,14 @@ export function createWorkerData(overrides: Partial<WorkerData> = {}): WorkerDat
 // helpers/app/workers.ts (seeder — Pattern 6)
 export async function setupTestWorker(
     apiRequest: ApiRequestFn,
+    headers: string,
     overrides?: Partial<WorkerData>,
 ): Promise<CreateWorkerResponse> {
     const { status, body } = await apiRequest<CreateWorkerResponse>({
         method: 'POST',
         url: appConfig.api.WORKERS,
         baseUrl: appConfig.apiUrl,
-        headers: process.env.USER_ACCESS_TOKEN_FULL,
+        headers,
         body: createWorkerData(overrides),
     });
     expect(status).toBe(201);
@@ -242,6 +243,7 @@ export async function setupTestWorker(
 export async function teardownTestWorker(
     apiRequest: ApiRequestFn,
     id: string,
+    headers: string,
 ): Promise<void> { /* matches setupTestWorker */ }
 ```
 
@@ -253,13 +255,13 @@ Test usage:
 const workerIds: string[] = [];
 
 test('seeded worker path', async ({ apiRequest }) => {
-    const worker = await setupTestWorker(apiRequest);
+    const worker = await setupTestWorker(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!);
     workerIds.push(worker.workerId);
     // ...
 });
 
 test.afterAll(async ({ apiRequest }) => {
-    for (const id of workerIds) await teardownTestWorker(apiRequest, id);
+    for (const id of workerIds) await teardownTestWorker(apiRequest, id, process.env.USER_ACCESS_TOKEN_FULL!);
 });
 ```
 

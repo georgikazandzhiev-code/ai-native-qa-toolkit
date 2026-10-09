@@ -20,9 +20,10 @@ Cross-link from [SKILL.md](SKILL.md). For end-to-end flows, see [recipes.md](rec
 - [P12 — Toast / Sonner notification](#p12--toast--sonner-notification)
 - [P13 — Use the locator API instead of evaluating in the browser](#p13--use-the-locator-api-instead-of-evaluating-in-the-browser)
 - [P14 — Lazy locator vs eager state](#p14--lazy-locator-vs-eager-state)
-- [P15 — `filter({ has: <Locator> })` for parent-by-child](#p15--filter-has-locator-for-parent-by-child)
+- [P15 — `filter({ has: <Locator> })` for parent-by-child](#p15--filter-has-locator--for-parent-by-child)
 - [P16 — Search by exact value](#p16--search-by-exact-value)
 - [P17 — POM vs spec placement](#p17--pom-vs-spec-placement)
+- [P18 — Consistent snapshot for cross-counter assertions](#p18--consistent-snapshot-for-cross-counter-assertions)
 
 ## P1 — Anchor + drill (instead of deep CSS)
 
@@ -276,7 +277,7 @@ await expect(this.something).toBeVisible();
 ```typescript
 async submitCreateJob(): Promise<void> {
     await expect(this.createJobSubmitButton).toBeEnabled({ timeout: appConfig.timeouts.persist });
-    const created = this.page.waitForResponse((r) => r.url().includes('/api/jobs') && r.request().method() === 'POST');
+    const created = this.page.waitForResponse((r) => r.url().includes('/api/v1/jobs') && r.request().method() === 'POST');
     await this.createJobSubmitButton.click();
     expect((await created).ok()).toBe(true);
     await expect(this.createJobSheet).toBeHidden();
@@ -573,7 +574,7 @@ await page.getByTestId('create-job-button').click();
 await page.getByPlaceholder('Search by name or target').fill(name);
 ```
 
-The moment you click, fill, or hover, the locator MUST live behind a POM method (`jobsPage.openCreateJobFlow()`, `jobsPage.searchByName(name)`). Reason: action methods carry the post-condition assertion (see [`page-objects`](../page-objects/SKILL.md)); inlining bypasses that contract.
+The moment you click, fill, or hover, the locator MUST live behind a POM method (`jobsPage.openCreateJob()`, `jobsPage.searchByName(name)`). Reason: action methods carry the post-condition assertion (see [`page-objects`](../page-objects/SKILL.md)); inlining bypasses that contract.
 
 See SKILL.md → "Where selectors live" for the full rule and decision tree.
 
@@ -607,4 +608,4 @@ This is distinct from P9 (action method validates success) — P9 covers verifyi
 
 ## Self-review
 
-After any selector edit, run through the [SKILL.md self-review checklist](SKILL.md#self-review-checklist-11-items). If any item fails, return to the matching pattern above for the fix.
+After any selector edit, run through the [SKILL.md self-review checklist](SKILL.md#self-review-checklist-13-items). If any item fails, return to the matching pattern above for the fix.

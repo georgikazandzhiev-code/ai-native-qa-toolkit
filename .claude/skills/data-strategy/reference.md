@@ -87,7 +87,7 @@ Boundary lists for parametrized negative tests.
 | `test-data/app/backupJobValidation.json` | backup-job boundary cases |
 | `test-data/app/webhookJobValidation.json` | webhook-job boundary cases |
 
-> Gap: no `emailJobValidation.json` / `sftpJobValidation.json` / `streamJobValidation.json` / `exportJobValidation.json` / `workerValidation.json` files yet. Add when a per-type negative matrix grows beyond inline use.
+> Gap: no `email-job-validation.json` / `sftp-job-validation.json` / `stream-job-validation.json` / `export-job-validation.json` / `worker-validation.json` files yet. Add when a per-type negative matrix grows beyond inline use. The three files above use legacy camelCase names (drift); new files use hyphen-case.
 
 ### 2.2 Sentinel / lookup files (Pattern 5)
 

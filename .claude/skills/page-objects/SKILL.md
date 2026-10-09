@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.4
+version: 2.0.5
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -204,7 +204,7 @@ Every public method must:
  * @returns Promise<void>
  */
 async submitCreateJob(): Promise<void> {
-  const created = this.page.waitForResponse((r) => r.url().includes("/api/jobs") && r.request().method() === "POST");
+  const created = this.page.waitForResponse((r) => r.url().includes("/api/v1/jobs") && r.request().method() === "POST");
   await this.submitButton.click();
   await created;
   await expect(this.successToast).toBeVisible();
