@@ -39,7 +39,7 @@ Not aspirations — these are the rules the agent is held to, and the reason the
 - **No conditional test logic.** No `if`/`else`, no ternaries, no `test.skip` to steer around missing data — preconditions get seeded in setup. Skips produce false green and corrupt test-management signal.
 - **No silent failure suppression.** No hard waits, no `try`/`catch` around assertions, no raised timeouts to turn a flake green.
 - **Strict typing.** No `any`, no `as any`, no `@ts-ignore`, no `console.*`.
-- **Evidence labels on findings.** `EXECUTED` / `STATIC` / `INFERRED` / `CONJECTURE`. Quality gates block only on executed or static evidence, so an inferred finding can never quietly become a fact.
+- **Evidence labels on findings.** `EXECUTED` / `STATIC` / `INFERRED`. Quality gates block only on executed or static evidence, so an inferred finding can never quietly become a fact.
 - **Verify before reporting done.** Added or modified tests are *run*. Failing tests mean the task is incomplete, and the fix is never to weaken the assertion.
 
 ## Does it work? Measured, not asserted

@@ -83,21 +83,116 @@ function frontmatter(text) {
  * and every other tool that reads the file showed it broken, and nothing here noticed. Both cases
  * were found by hand in October 2026 (build-alternatives, test-case-generation).
  *
- * Zero-dependency on purpose, like the rest of this script: it checks the two shapes that bit,
- * not the whole YAML grammar. Quoted values and block scalars (`>-`, `|`) are fine.
+ * Zero-dependency on purpose, like the rest of this script: it checks the shapes that bit, not the
+ * whole YAML grammar. It reads the front matter line by line and keeps state across lines:
+ *
+ * - Only real keys are checked: top-level keys, and keys nested under a key with an empty value
+ *   (`metadata:`). A key is plain text up to its ":": it does not start with a quote, a bracket,
+ *   "#" or "- ", and holds no ":" or "#". Lines inside a value are never read as keys.
+ * - A value starts on its key's line or, when that is empty, on the first deeper line that is not
+ *   a key or a sequence item (`description:` with the text on the next line).
+ * - A plain (unquoted) value fails on ": ", on a trailing ":", or on " #", on its first line and
+ *   on every continuation line indented deeper than its key. A continuation line after a `#`
+ *   comment line fails too: strict YAML ended the value at the comment.
+ * - A quoted value fails when its quote never closes, or when text other than a ` #comment`
+ *   follows the closing quote. Its continuation lines are skipped until the quote closes.
+ * - A block scalar (`>-`, `|`) and a flow collection (`[…]`, `{…}`) are fine. Every following
+ *   line that is blank or indented deeper than its key is content, and the mapping-indent stack
+ *   never reads such a line as a key, so it is skipped.
  */
 function frontmatterYamlProblems(text) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
   if (!m) return [];
   const problems = [];
+  const plainProblem = (key, val, where) => {
+    if (/:\s/.test(val)) return `\`${key}\` has an unquoted ": "${where} — strict YAML reads a nested mapping; use a block scalar (\`${key}: >-\`) or quote the value`;
+    if (/:$/.test(val)) return `\`${key}\` has an unquoted trailing ":"${where} — strict YAML reads a nested mapping; use a block scalar (\`${key}: >-\`) or quote the value`;
+    if (/(^|\s)#/.test(val)) return `\`${key}\` has an unquoted " #"${where} — strict YAML cuts the value off there as a comment; quote it or use a block scalar`;
+    return null;
+  };
+  // Index of the quote that closes a quoted scalar, or -1. `\"` escapes in double quotes, `''` in single.
+  const closingQuote = (s, from, q) => {
+    for (let i = from; i < s.length; i++) {
+      if (q === '"' && s[i] === '\\') i++;
+      else if (s[i] === q && q === "'" && s[i + 1] === "'") i++;
+      else if (s[i] === q) return i;
+    }
+    return -1;
+  };
+  const afterQuote = (key, rest) => {
+    if (!/^(\s+#.*)?\s*$/.test(rest)) problems.push(`\`${key}\` has text after its closing quote — strict YAML rejects it; quote the whole value or use a block scalar`);
+  };
+
+  const mappings = [0]; // indents at which a line is a key
+  let parent = null; // { key, indent } — a key with an empty value: a deeper line is its value or a nested mapping
+  let plain = null; // { key, indent, cut } — an open plain value; deeper lines continue it
+  let quoted = null; // { key, q } — an open quoted value; lines continue it until the quote closes
+
+  // Classify the value of `key` (at `indent`), whether it sits on the key's line or on the next one.
+  const openValue = (key, indent, val) => {
+    // Block scalar or flow collection: its content is deeper than any key indent, so nothing reads it.
+    if (/^[|>][-+0-9]*(\s+#.*)?$/.test(val) || /^[[{]/.test(val)) return;
+    if (/^["']/.test(val)) {
+      const at = closingQuote(val, 1, val[0]);
+      if (at >= 0) afterQuote(key, val.slice(at + 1));
+      else quoted = { key, q: val[0] };
+      return;
+    }
+    const p = plainProblem(key, val, '');
+    if (p) problems.push(p);
+    plain = { key, indent, cut: false };
+  };
+
   for (const raw of m[1].split(/\r?\n/)) {
-    const kv = /^\s*([\w-]+):\s+(.+)$/.exec(raw);
-    if (!kv) continue;
-    const [, key, val] = kv;
-    if (/^["'[{|>]/.test(val)) continue; // quoted, flow collection or block scalar
-    if (/:\s/.test(val)) problems.push(`\`${key}\` has an unquoted ": " — strict YAML reads a nested mapping; use a block scalar (\`${key}: >-\`) or quote the value`);
-    else if (/\s#/.test(val)) problems.push(`\`${key}\` has an unquoted " #" — strict YAML cuts the value off there as a comment; quote it or use a block scalar`);
+    const indent = /^[ \t]*/.exec(raw)[0].length;
+    const body = raw.trim();
+    if (quoted) {
+      const at = closingQuote(raw, 0, quoted.q);
+      if (at >= 0) {
+        afterQuote(quoted.key, raw.slice(at + 1));
+        quoted = null;
+      }
+      continue;
+    }
+    if (plain) {
+      if (!body) continue;
+      if (body.startsWith('#')) {
+        plain.cut = true; // a comment line ends the value; text after it is an error
+        continue;
+      }
+      if (indent > plain.indent) {
+        const p = plain.cut
+          ? `\`${plain.key}\` continues after a "#" comment line — strict YAML ends the value at the comment; quote it or use a block scalar`
+          : plainProblem(plain.key, body, ' on a continuation line');
+        if (p) problems.push(p);
+        plain.cut = false; // report each comment line once
+        continue;
+      }
+      plain = null;
+    }
+    if (!body || body.startsWith('#')) continue;
+
+    const kv = /^[ \t]*(?!-(?:\s|$))([^\s:#'"[{][^:#]*?):(?:[ \t]+(.*))?$/.exec(raw);
+    if (parent && indent > parent.indent) {
+      if (!kv && !/^-(\s|$)/.test(body)) {
+        // Neither a key nor a sequence item: the empty key's value starts on this line.
+        const { key, indent: at } = parent;
+        parent = null;
+        openValue(key, at, body);
+        continue;
+      }
+      mappings.push(indent);
+    }
+    parent = null;
+    while (mappings.length > 1 && mappings[mappings.length - 1] > indent) mappings.pop();
+    if (!kv || mappings[mappings.length - 1] !== indent) continue; // not a key: a sequence item or stray text
+
+    const key = kv[1].trimEnd();
+    const val = (kv[2] ?? '').trim();
+    if (!val || val.startsWith('#')) parent = { key, indent };
+    else openValue(key, indent, val);
   }
+  if (quoted) problems.push(`\`${quoted.key}\` opens a quote that never closes — strict YAML rejects the front matter`);
   return problems;
 }
 

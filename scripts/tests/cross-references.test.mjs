@@ -10,7 +10,10 @@
  * that does not exist; a section name runs on past its end ("§ Verificationx"); the persona line
  * is missing altogether; and a link climbs out of `.claude/`, which works here and is dead in an
  * installed `~/.claude`; a link to `~/…`, which no Markdown viewer expands; and front matter that
- * strict YAML rejects (an unquoted ": "). Silent cases prove the check stays quiet on a correct reference, on a TBD
+ * strict YAML rejects: an unquoted ": ", " #" or trailing ":", a ": " on a continuation line, a
+ * plain value that continues after a "#" comment line, a plain value that starts on the line after its key, a ": " after a dotted key, a quote that
+ * never closes, text after a closing quote, and an unquoted ": " in a command file (a separate
+ * call site from skills). Silent cases prove the check stays quiet on a correct reference, on a TBD
  * label for a skill not yet written, on a folded-block description, on a link to a real file, and on placeholders, code and
  * URLs, because a gate that fires on correct text gets switched off.
  *
@@ -28,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CONSTITUTION = join('.claude', 'CLAUDE.md');
 const PR_REVIEW = join('.claude', 'skills', 'pr-review', 'SKILL.md');
+const BUG_HELPER = join('.claude', 'commands', 'bug-helper.md');
 
 const SKIP = new Set(['node_modules', '.git', 'coverage', 'playwright-report', 'test-results']);
 
@@ -134,13 +138,125 @@ const CASES = [
     expect: 'front matter is not valid YAML',
   },
   {
-    name: 'front matter as a folded block stays silent',
+    name: 'front matter with an unquoted " #" (cut off as a comment)',
     break: (dir) =>
       edit(
         dir,
         PR_REVIEW,
-        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: >-\n  Pre-push review: walks every changed file, then reports every MUST and WON\'T it finds, with a fix for each. Do NOT use for bugs.\n'),
-        'make the description a folded block containing ": "'
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: Pre-push review #1 of every changed file. Do NOT use for bugs.\n'),
+        'make the description an unquoted value containing " #"'
+      ),
+    exit: 1,
+    expect: 'has an unquoted " #"',
+  },
+  {
+    name: 'front matter with a trailing bare ":"',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: Pre-push review of every changed file, in this order:\n'),
+        'make the description an unquoted value ending in ":"'
+      ),
+    exit: 1,
+    expect: 'has an unquoted trailing ":"',
+  },
+  {
+    name: 'front matter with ": " on a continuation line',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: Pre-push review of every changed file.\n  Triggers: review my PR.\n'),
+        'make the description a plain value whose second line contains ": "'
+      ),
+    exit: 1,
+    expect: 'on a continuation line',
+  },
+  {
+    name: 'front matter with a plain value that continues after a "#" comment line',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: Pre-push review of every changed file.\n  # note\n  Do NOT use for bugs.\n'),
+        'put a comment-only line inside a plain description, with text after it'
+      ),
+    exit: 1,
+    expect: 'continues after a "#" comment line',
+  },
+  {
+    name: 'front matter with a plain value that starts on the line after its key',
+    // The value's first line is not a key, so it must be read as the value, not skipped as a nested mapping.
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description:\n  Pre-push review of every changed file.\n  Triggers: review my PR.\n'),
+        'start the description on the next line, with ": " on its second line'
+      ),
+    exit: 1,
+    expect: 'on a continuation line',
+  },
+  {
+    name: 'front matter with an unquoted ": " after a dotted key',
+    // Keys are not limited to letters, digits, "_" and "-"; a dotted key is still checked.
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^(description: )/m, 'review.scope: every changed file: specs and page objects\n$1'),
+        'add a dotted key whose value contains ": "'
+      ),
+    exit: 1,
+    expect: '`review.scope` has an unquoted ": "',
+  },
+  {
+    name: 'front matter with a quote that never closes',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: "Pre-push review: walks every changed file. Do NOT use for bugs.\n'),
+        'open a quote in the description and never close it'
+      ),
+    exit: 1,
+    expect: 'opens a quote that never closes',
+  },
+  {
+    name: 'front matter with text after the closing quote',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: "Pre-push review" of every changed file.\n'),
+        'put text after the closing quote of the description'
+      ),
+    exit: 1,
+    expect: 'has text after its closing quote',
+  },
+  {
+    name: 'a command file with an unquoted ": "',
+    // Commands are checked by a separate call site; a skill case does not reach it.
+    break: (dir) =>
+      edit(
+        dir,
+        BUG_HELPER,
+        (md) => md.replace(/^description: .*\n/m, 'description: Bug helper: turns a failure into a Jira-ready bug report.\n'),
+        'make the command description an unquoted value containing ": "'
+      ),
+    exit: 1,
+    expect: 'commands/bug-helper.md: front matter is not valid YAML',
+  },
+  {
+    name: 'front matter as a folded block stays silent',
+    // The content line starts with one word and a colon, so it fails if block content is ever read as a key.
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: >-\n  Pre-push review: walks every changed file. Do NOT use for bugs.\n  Triggers: a: b #c\n'),
+        'make the description a folded block containing ": " and " #"'
       ),
     exit: 0,
   },

@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.7
+version: 1.1.8
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -23,7 +23,7 @@ Non-negotiable. Every rule below was learned from a real drift incident in this 
 - **SURFACE DRIFT, NEVER PERPETUATE IT.** When the codebase deviates from canonical (camelCase legacy filenames, `z.object` instead of `z.strictObject`, `process.env.X` read outside the config module, etc.), name the deviation explicitly with "drift, fix on next touch" — do NOT bake the deviation in as the rule. The skill teaches the going-forward target, not the current state.
 - **STANDARDIZED STRUCTURE IS MANDATORY.** Every SKILL.md must include, in order: frontmatter (with "Do NOT use for X" disclaimers) → opener → `## Critical` block → `## What's in each file` (when multi-file) → workflow / phases / decision tables → `## Anti-patterns` → `## Self-review checklist` → `## Examples` (2-3 worked walkthroughs) → `## Troubleshooting` (symptom → cause → fix table) → `## See Also`. See § Standardized SKILL.md structure.
 - **BOUNDARY DISCIPLINE.** Rules / decisions / anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Copy-paste skeletons live in `templates.md`. Per-dimension playbooks (e.g. http-method-coverage) live in their own `<topic>.md`. **No code blocks longer than ~5 lines in `SKILL.md` unless the code IS the rule** (a single `expect(SchemaName.parse(body)).toBeTruthy()` line or a `headers: tokens.full()` idiom is fine; a 30-line spec skeleton is not).
-- **NO PAIRED RULES — rule content lives in skills.** This repo retired the fat per-area glob rules — invariants and workflow live in the matching skill (`api-testing`, `selectors`, `page-objects`, `test-standards`, etc.). The always-on rule file is `~/.claude/CLAUDE.md` (orchestrator with MUST/SHOULD/WON'T tables and the Routed Skill Index); `api-tests.mdc` / `ui-tests.mdc` exist only as thin glob routers (folder maps + skill pointers). New skills must NOT introduce new paired glob rules with rule content; consolidate everything into the skill.
+- **NO PAIRED RULES — rule content lives in skills.** This repo retired the fat per-area glob rules — invariants and workflow live in the matching skill (`api-testing`, `selectors`, `page-objects`, `test-standards`, etc.). The always-on rule file is `~/.claude/CLAUDE.md` (orchestrator with MUST/SHOULD/WON'T tables and the Routed Skill Index); the previous `api-tests.mdc` / `ui-tests.mdc` rules were consolidated into skills, and this toolkit ships no glob rules. New skills must NOT introduce new paired glob rules with rule content; consolidate everything into the skill.
 - **CROSS-REFERENCES MUST BE VERIFIED AND BIDIRECTIONAL.** When you cite a sibling skill in `See Also`, confirm the sibling exists (not a TBD placeholder), and update that sibling's `See Also` to mention the new skill back when relevant. Stale TBD references and one-way cross-links are the #1 source of audit churn.
 - **NO DRIFT TRIGGERS in any code example.** No `Zod 4` syntax in a Zod 3 codebase. No `schema-field-` as an input hook when the frontend puts it on the field wrapper. No `process.env` read outside the config module (`config/env.ts`; code reads `env.X` / `tokens.full()`). No `!`, `as string` or `??` defaulting on env values at call sites — defaults belong in the schema in `config/env.ts`. Verify every snippet against `type-safety` skill conventions and the actual codebase.
 - **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. `npm run validate` errors on an empty description and warns on a thin one; neither blocks a weak but present one — that's on the author.
@@ -67,7 +67,7 @@ Every skill in this repo follows this exact section order. The template encodes 
 |---------|-----------|---------|
 | **Frontmatter** (`name`, `description`, `metadata.category`, optional `disable-model-invocation`) | Yes | Discoverability gate. `description` includes WHAT + WHEN + 3-7 quoted trigger phrases + "Do NOT use for X" disclaimers. |
 | **Opener** (1 paragraph) | Yes | What surface this skill covers, who pairs with it, single sentence on the failure mode it prevents. |
-| **`## Critical`** | Yes | 5–9 hard rules is the target (several skills run 11–16 today — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form. Each rule is enforceable, not aspirational. Drawn from real incidents. |
+| **`## Critical`** | Yes | 5–9 hard rules is the target (several skills run 11–16, a hand count on 2026-10-09, not checked by validate — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form. Each rule is enforceable, not aspirational. Drawn from real incidents. |
 | **`## What's in each file`** | When multi-file | Mini-index table mapping `SKILL.md` / `reference.md` / `templates.md` / `<topic>.md` to purpose. Includes the "boundary rule" callout. |
 | **Workflow / phases / architecture / decision tree** | Usually | The skill's substance: numbered checklist (Workflow pattern), worked examples (Examples pattern), branched decision (Conditional pattern), or validate-loop (Feedback-loop pattern). Pick from `references/patterns.md`. |
 | **`## Anti-patterns`** | Yes | Bulleted ❌ list of mistakes that real authors hit. Each anti-pattern names what to do instead. |
@@ -132,7 +132,7 @@ Five questions. Use `AskQuestion` only when more than one answer is genuinely am
 1. **What** is the skill's job in one sentence? (Verb-led, no filler.)
 2. **When** should the agent reach for it?
 3. **Where** does it land — populating an existing empty placeholder (the Routed Skill Index in `~/.claude/CLAUDE.md`), creating a new folder, or refactoring a rule via `/migrate-to-skills`?
-4. **Paired rule** — this repo has no fat per-area glob rules (they were consolidated into the matching skills; `api-tests.mdc` / `ui-tests.mdc` survive only as thin routers with folder maps). Do NOT introduce new paired glob rules with rule content; everything lives in the skill. The always-on rule file is `~/.claude/CLAUDE.md`.
+4. **Paired rule** — this repo has no fat per-area glob rules (they were consolidated into the matching skills; this toolkit ships no `.mdc` rules). Do NOT introduce new paired glob rules with rule content; everything lives in the skill. The always-on rule file is `~/.claude/CLAUDE.md`.
 5. **Output shape** — what does success look like (scaffolded spec / diagnostic / decision / refactor)?
 
 If the user asks "what skills do we still need", route directly to the Routed Skill Index in `~/.claude/CLAUDE.md` and the empty `~/.claude/skills/*` folders — that **is** the answer. The live list of populated skills is the Routed Skill Index in `~/.claude/CLAUDE.md`.
@@ -354,7 +354,7 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 
 - [ ] Frontmatter: `name` matches folder, `description` ≤ 1024 chars third-person pushy with WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers, `metadata.category` set.
 - [ ] Opener: one paragraph, paired-rule callout if applicable.
-- [ ] `## Critical` block present at top — 5–9 hard rules is the target (several skills run 11–16 today — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form.
+- [ ] `## Critical` block present at top — 5–9 hard rules is the target (several skills run 11–16, a hand count on 2026-10-09, not checked by validate — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form.
 - [ ] `## What's in each file` table present when the skill has reference / templates / topic siblings.
 - [ ] Workflow / decisions / patterns body — uses one or more of the four patterns from `references/patterns.md`. Project signature device (table / mermaid / numbered checklist) present.
 - [ ] `## Anti-patterns` section with ❌ list — each anti-pattern names the fix.
