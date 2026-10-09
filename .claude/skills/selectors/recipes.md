@@ -179,7 +179,7 @@ Rules:
 
 ## 3. Component-library dropdowns / Radix selects
 
-Pattern: Radix `<Select>` exposes a `SelectTrigger` (testid on the trigger or its wrapper) and a `SelectContent` (`data-testid="select-content"`) containing `SelectItem`s (`data-testid="select-item"`). Older selects use a `getByRole('option')` listbox.
+Pattern: Radix `<Select>` exposes a `SelectTrigger` (testid on the trigger or its wrapper) and a `SelectContent` (tagged `data-testid="select-content"` by the app's select wrapper — Radix itself emits no testids) containing `SelectItem`s (`data-testid="select-item"`). Older selects use a `getByRole('option')` listbox.
 
 ```typescript
 get runIntervalSelectTrigger(): Locator {
@@ -297,7 +297,7 @@ Rules:
 
 ## 5. Toasts / Sonner notifications
 
-This framework uses [Sonner](https://sonner.emilkowal.ski/) for all in-app notifications. Each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message. Confirm the role on your build before switching an existing toast locator (`npx playwright open`, inspect the toast) — if it isn't there, use the `[data-sonner-toast]` fallback.
+When the app uses [Sonner](https://sonner.emilkowal.ski/) for in-app notifications, each toast renders with `role="status"` (and a `data-sonner-toast` attribute, the fallback hook), and toasts **stack** (several can be on screen at once), so always filter by the message. Confirm the role on your build before switching an existing toast locator (`npx playwright open`, inspect the toast) — if it isn't there, use the `[data-sonner-toast]` fallback.
 
 ```typescript
 async expectSuccessToastForJob(name: string): Promise<void> {
@@ -499,7 +499,7 @@ Rules:
 
 ## 10. Tabs and tabpanels
 
-The framework uses Radix `Tabs` inside expanded views. Top-level tabs have `role="tab"` with stable accessible names (e.g. `export` expanded: "Run Stats", "Run Steps", "Timeline"). Active state is exposed via `data-state="active"` on the tab.
+When the app builds tab sets on Radix `Tabs` (e.g. inside expanded views), top-level tabs have `role="tab"` with stable accessible names (e.g. `export` expanded: "Run Stats", "Run Steps", "Timeline"). Active state is exposed via `data-state="active"` on the tab.
 
 ```typescript
 get runStatsTab(): Locator {
@@ -591,7 +591,7 @@ async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll)
             const url = r.url();
             return (
                 (method === 'POST' || method === 'GET') &&
-                (url.includes('_serverFn') || url.includes('/api/run-stats'))
+                (url.includes('/_server') || url.includes('/api/run-stats'))
             );
         },
         { timeout }
@@ -604,7 +604,7 @@ async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll)
 
 From `pages/app/JobsPage.ts`. Click → network confirmation → button-re-enabled assertion. Three independent signals.
 
-For job creation, the canonical "click submit" wait is the sheet-hidden + Sonner-toast pair:
+For job creation, the canonical "click submit" wait is the sheet-hidden + success-toast pair (Recipe 5 shows the Sonner shape):
 
 ```typescript
 async createJobFromSheet(data: JobFormData): Promise<void> {
@@ -616,7 +616,7 @@ async createJobFromSheet(data: JobFormData): Promise<void> {
 ```
 
 Rules:
-- For TanStack-Start `_serverFn` calls: predicate matches URL substring (`_serverFn` or `/api/run-stats`) + method.
+- For server-function calls: predicate matches URL substring (`/_server` or `/api/run-stats`) + method. Swap `/_server` for the path segment your app's server-function calls carry (see the Network tab).
 - Status codes vary in this codebase (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
 - For long-running async (the first run stats after creating an `export` job), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Job expanded-view tests below), not on the response wait.
 
@@ -888,7 +888,7 @@ Some job types take too long for the first run stats to land within reasonable t
 > priority-hierarchy section made agents read the exception as the default. `SKILL.md` now carries
 > the narrow rule; the argument lives here. Evidence: `evals/results.json`, `BENCHMARK.md`.
 
-This codebase uses **Radix UI primitives** (via shadcn/ui) for nearly every interactive component:
+When an app builds its interactive components on **Radix UI primitives** (directly or through a component kit), they typically include:
 `<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>`, `<Tabs>`, `<Accordion>`. Radix is
 "headless" — it provides accessible behaviour but renders complex DOM. A Radix `<Select>` is a
 `role="combobox"` trigger button, a portal-rendered `role="listbox"` popover, a hidden form input,
@@ -904,8 +904,8 @@ and assorted state attributes — not a native `<select>`.
    correctly, which varies by component version and prop usage. **Try the role first anyway**; fall
    back only once you have seen it fail, and file the unreliable name as an accessibility defect
    (the `accessibility-testing` skill).
-3. **There is a test-id contract.** The frontend systematically emits stable test-ids, agreed between
-   FE and QA, which do not change without coordination. Prefixes and the field-wrapper vs
+3. **There is a test-id contract** — when the frontend emits stable test-ids, agreed between
+   FE and QA, that do not change without coordination. Prefixes and the field-wrapper vs
    input/trigger distinction: [reference.md § 4](reference.md).
 
 ### Promote `getByTestId` to priority 4 — only when BOTH hold, for THAT element
