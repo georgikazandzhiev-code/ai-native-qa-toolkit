@@ -245,13 +245,13 @@ User says: *"Add API tests for `POST /workers` covering 201, 400 (each required 
 
 User says: *"Tests/app/functional/http-create-edit-job.spec.ts is flaky in CI but passes locally. Investigate."*
 
-1. **Step 1 — categorize.** Investigation, not creation → `debugging` skill, **not** generation.
-2. **Step 2 — load deep skill.** `debugging` (failure-mode taxonomy, Playwright tools).
-3. **Step 3 — precondition.** Pull the CI artifacts — trace, video, error message. Identify the exact failing assertion.
-4. **Step 4 — walk workflow.** `debugging` decision tree: TimeoutError on a locator → narrow / anchor-and-drill (the `selectors` skill) OR add a missing `page.waitForResponse(...)` to the POM action method (the `page-objects` skill). ZodError → schema vs API drift (the `api-testing` skill). Strict-mode violation → narrow with `getByRole`'s `name`.
-5. **Step 5 — Critical block.** Do NOT raise the timeout. Do NOT wrap in `try/catch`. Do NOT loosen the schema.
+1. **Step 1 — categorize.** Investigation, not creation. The failure is intermittent → classify it first with the `flakiness-triage` skill, then fix it with the `debugging` skill — **not** generation.
+2. **Step 2 — classify.** `flakiness-triage` § Workflow: capture the failure rate and mode, run the isolation experiment (5× isolated, once in-suite) and read the § Step 2 table — real bug, cross-test interference, or per-test flake.
+3. **Step 3 — load the fixing skill.** `debugging` (failure-mode taxonomy, Playwright tools). Pull the CI artifacts — trace, video, error message. Identify the exact failing assertion.
+4. **Step 4 — walk workflow.** `debugging` decision tree: TimeoutError on a locator → narrow / anchor-and-drill (the `selectors` skill) OR add a missing `page.waitForResponse(...)` to the POM action method (the `page-objects` skill). ZodError → schema vs API drift (the `api-testing` skill). Strict-mode violation → narrow with `getByRole`'s `name`. Cross-test interference → bisect the polluting spec (`flakiness-triage` § Step 3).
+5. **Step 5 — Critical block.** Do NOT raise the timeout. Do NOT wrap in `try/catch`. Do NOT loosen the schema. Do NOT add retries.
 6. **Step 6 — fix.** Apply the root-cause fix (e.g., move the missing wait into the POM action method).
-7. **Step 8 — re-run.** `npx playwright test <spec>` 5 times consecutively to confirm flake fix.
+7. **Step 7 — re-run.** 5 consecutive isolated runs plus one in-suite run (`flakiness-triage` § Step 5) to confirm the flake fix.
 
 ## Troubleshooting
 

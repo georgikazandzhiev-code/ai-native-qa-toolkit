@@ -66,6 +66,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 |------|----------------|
 | **Faker for dynamics** | Use a faker library for unique-per-run values; JSON for fixed constants |
 | **Test isolation** | Each `test()` independently runnable. Setup in `beforeEach`/`beforeAll`, never side effects of prior tests |
+| **Parallel-safe suites** | Write suites so they can run in parallel: unique data per test, no shared mutable state, setup and teardown per describe. Each repository's own CLAUDE.md states whether its suite is parallel-safe; a suite on a shared environment that isn't yet runs with `--workers=1` |
 | **Step structure** | `test.step("GIVEN/WHEN/THEN ...")` for readability and report clarity |
 | **Fixture scoping** | Default `{ scope: 'test' }`. Worker scope only for genuinely expensive shared setup (auth storage) |
 | **JSDoc** | On action methods only — never on locator getters |

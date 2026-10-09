@@ -59,7 +59,7 @@ Lives at `pages/app/JobsPage.ts`.
 - `open()` — navigate to `/jobs` and wait for list-ready signal.
 - `verifyPageLoaded()` — assert `page-jobs` root + table chrome.
 - `getRowByName(name)` → `Locator` — filter table rows by visible text. Excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded.
-- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit job`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: appConfig.timeouts.retryBlock })` because the menu trigger occasionally needs a re-click on slow CI.
+- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit job`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: appConfig.timeouts.retryBlock })` because the menu trigger occasionally needs a re-click on slow CI. **Drift:** `selectors` allows `toPass` only for reads of a value that legitimately keeps changing; retrying an action with `toPass` hides why the first click didn't land. Fix on next touch: wait for the menu's ready state (trigger enabled, menu visible) before acting.
 - `searchByName(name)` / `clearSearch()` — **inherited from `DataTableBase`** (debounced fill with re-fill retry + `waitForTableSettled`); `JobsPage` only overrides `get searchInput()`.
 - `expandRow(row)` / `collapseRow(row)` — toggle the expanded-row UI.
 - `getAllJobStatusCounts()` → `{ total, passing, degraded, failing, paused }` — read all 5 job-status stat cards. **Always wrap in `expect(async () => { … }).toPass(...)` when comparing across counters** (see `selectors/patterns.md` P18).
@@ -270,7 +270,7 @@ The directory contains exactly **two** files: `BasePage.ts` and `DataTableBase.t
 ### `DataTableBase` — API
 
 - Table core: `dataTable` (`data-table` testid), `tableRows` (`[data-testid^='table-row-']` under `dataTable`), `noResultsMessage`, `verifyTableHasRows()`.
-- Search: `searchByName(value)` / `clearSearch()` — debounced, URL-synced fill with re-fill retry (`toPass`) + `waitForTableSettled()`.
+- Search: `searchByName(value)` / `clearSearch()` — debounced, URL-synced fill with re-fill retry (`toPass`) + `waitForTableSettled()`. **Drift:** retrying the fill with `toPass` hides why the first fill didn't land (`selectors` allows `toPass` only for reads of a value that keeps changing). Fix on next touch: wait for the search field's ready state before filling.
 - Cells & columns: `cellForRow(row, columnId)` (`table-cell-<columnId>`), `getColumnTexts(columnId)`.
 - Sorting: `getSortHeader(columnId)` (`sort-header-<columnId>`), `clickSortHeader(columnId)`.
 - Pagination getters: `pageSizeSelect` (`page-size-select`), `previousPageButton` / `nextPageButton` (`getByRole('button', { name: 'Previous' | 'Next' })`), `pageInfoText`, `rowCountText`, `rowsPerPageLabel`.

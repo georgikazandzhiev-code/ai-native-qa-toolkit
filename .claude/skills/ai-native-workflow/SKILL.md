@@ -113,12 +113,12 @@ User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 
 User: *"`tests/app/functional/jobs-service/jobs/email-create-edit-job.spec.ts` flakes on CI but passes locally."*
 
-1. **Understand** — debug task, suspected isolation or env drift.
-2. **Locate** — `tests/app/functional/**` → Routed Skill Index → load `debugging` skill (failure-mode taxonomy + Trace Viewer / UI Mode workflow), plus `selectors` + `playwright-cli` if a locator looks suspect after re-exploration. UI invariants live in `page-objects` + `selectors` + `test-standards`.
+1. **Understand** — debug task on an intermittent failure, suspected isolation or env drift.
+2. **Locate** — `tests/app/functional/**` → Routed Skill Index → load `flakiness-triage` first to classify the failure (isolation experiment: real bug, cross-test interference, or per-test flake), then `debugging` to fix it (failure-mode taxonomy + Trace Viewer / UI Mode workflow), plus `selectors` + `playwright-cli` if a locator looks suspect after re-exploration. UI invariants live in `page-objects` + `selectors` + `test-standards`.
 3. **Audit** — read the spec from disk. Pull the CI artifact (`gh run download`), open the trace.
 4. **Plan** — root-cause first (env? race? isolation?), no scope creep into unrelated cleanup.
 5. **Generate** — fix at root cause (e.g. add a readiness check in `auth.setup.ts`). Re-run `npx playwright open` (see the `playwright-cli` skill) if a locator looks suspect.
-6. **Verify** — push, watch CI, re-run locally with `ENVIRONMENT=ci`.
+6. **Verify** — 5 consecutive isolated runs plus one in-suite run (`flakiness-triage` § Step 5), re-run locally with `ENVIRONMENT=ci`, then push and watch CI.
 7. **Surface** — report root cause and the diagnostic path you walked (which Playwright tool, what the trace showed, why this fix is the minimal one).
 
 ### Example 3 — Adding a new env variable

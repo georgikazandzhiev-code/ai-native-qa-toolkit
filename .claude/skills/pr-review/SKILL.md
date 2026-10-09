@@ -13,7 +13,7 @@ Last-line-of-defense self-review before a PR opens. The framework already has `/
 ## Critical
 
 - **ALWAYS run this skill BEFORE `git push`.** Husky's `lint-staged` only runs ESLint + Prettier on staged files; it cannot catch a missing `qase.suite()`, a `getByTestId` violating the Radix exception, or a leftover `console.log`. This skill closes that gap.
-- **ALWAYS run the affected specs with `--workers=1` before declaring the PR ready.** A passing lint is not a passing test. Per memory: shared tenant env causes cross-spec flakes in parallel — always a single Playwright worker.
+- **ALWAYS run the affected specs before declaring the PR ready.** A passing lint is not a passing test. Run at the worker count the repository's own `CLAUDE.md` declares (`--workers=1` for a suite that is not parallel-safe). New or modified specs get 5 consecutive isolated runs plus one in-suite run — the [`flakiness-triage`](../flakiness-triage/SKILL.md) merge bar; unchanged affected specs run once.
 - **NEVER bypass this skill to ship faster.** Every shipped convention violation becomes future drift. The 5 minutes this skill takes saves a reviewer round-trip.
 - **ALWAYS check the scope before the conventions, and advise — never block.** A PR should be one logical change that can ship on its own (`GOVERNANCE.md` § One logical change per PR, a SHOULD). If the diff mixes unrelated parts, flag it and propose the split. If the author keeps the scope — for example coupled changes that cannot pass CI separately — continue the review and make sure the PR description says why. There is no size limit; the test is coherence.
 - **NEVER reuse this skill for actual bug-hunting or efficiency review.** Bugs are `/code-review`. Skill-canon depth is `/review-changes`. This skill is the convention layer between them.
@@ -147,8 +147,13 @@ Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 ### Step 3 — Run the affected specs
 
 ```bash
-# Spec-by-spec, single Playwright worker, before pushing
-npx playwright test tests/app/path/to/changed-spec.spec.ts --workers=1
+# New or modified spec: 5 consecutive isolated runs (flakiness-triage merge bar)
+for i in 1 2 3 4 5; do
+  npx playwright test tests/app/path/to/changed-spec.spec.ts --workers=1 || echo "RUN $i FAILED"
+done
+
+# Unchanged affected specs: once, at the worker count the repo's CLAUDE.md declares
+npx playwright test tests/app/path/to/affected-spec.spec.ts --workers=<repo worker count>
 
 # Or the full tag for the affected layer
 npm run app-regression  # or app-api, app-e2e, app-smoke, app-sanity
@@ -170,7 +175,7 @@ Husky `lint-staged` will run `eslint --fix` + `prettier --write` on commit autom
 Required sections:
 
 - **Summary** (1–3 bullets): what changed and why
-- **Test plan**: bulleted checklist of what was run, with `--workers=1` results
+- **Test plan**: bulleted checklist of what was run, with the worker count and the pass count (e.g. 5/5 isolated)
 - **Risk / blast radius**: if the change touches shared infra (base classes, fixtures, helpers), list affected specs
 
 ## Decision tree — which review skill to load
@@ -192,7 +197,7 @@ Need a check before pushing?
 
 - ❌ Piling unrelated changes onto one branch, or adding new work to a branch whose PR is already in review. Ship each logical unit as its own PR from `main`.
 - ❌ Skipping the affected-spec test run "because lint passed". Lint doesn't run Playwright; you don't know the spec works.
-- ❌ Running with default parallelism (`--workers` not set). Always `--workers=1` for this framework — shared tenant env interference.
+- ❌ Running at a worker count other than the one the repository's own `CLAUDE.md` declares. A suite that is not parallel-safe runs with `--workers=1`; default parallelism on it produces cross-spec interference that looks like your spec's bug.
 - ❌ Bypassing husky with `--no-verify` because pre-commit is "slow". The hook catches real issues; investigate failures, don't bypass.
 - ❌ Letting commented-out scratch code ship "to revisit later". Either keep it with a `// TODO:` + ticket reference, or delete.
 - ❌ Pushing a PR description that says "small fixes" with no test plan. Reviewers (and your future self) need to know what was tested.
@@ -207,7 +212,7 @@ Before declaring the PR ready:
 
 - [ ] The PR is one logical change that can ship on its own — or a mixed scope was flagged with a proposed split, and the PR description explains why the author kept it.
 - [ ] Walked the per-kind checklist above for every file in `git diff --name-status main...HEAD`.
-- [ ] Ran `npx playwright test <affected> --workers=1` and recorded pass/fail.
+- [ ] Ran new or modified specs 5× isolated plus once in-suite, unchanged affected specs once, at the repo's declared worker count — and recorded pass/fail.
 - [ ] Ran `npx eslint <changed>` and `npx tsc --noEmit` — both clean (or pre-existing errors are documented).
 - [ ] PR description has Summary + Test plan + Risk sections.
 - [ ] No `.only`, no `console.log`, no commented-out code without context, no `test.skip` (comment the test out with a ticket instead).
@@ -229,7 +234,7 @@ Walk:
 1. **`notifications.spec.ts`** — spec-file checklist: import ✓, single tag (`@App-API`) ✓, `qase.suite(SUITES.API_NOTIFICATIONS)` ✓, `test.step` ✓, web-first assertions ✓, no `try/catch` ✓, no `if`, no UI cleanup, schema validation idiom ✓.
 2. **`NotificationsPage.ts`** — POM checklist: extends `BasePage` ✓, locator getters ✓, no JSDoc on getters ✓, action methods have waits ✓, feedback locators present ✓, registered in `page-object-fixture.ts` ✓.
 3. **`notifications.ts`** (new helper) — helper checklist: `apiRequest` first arg ✓, no Zod schema inside ✓, cleanup `Promise.allSettled` ✓, kebab-case filename ✓.
-4. **Run:** `npx playwright test tests/app/api/notification-service/notifications/notifications.spec.ts --workers=1` — green.
+4. **Run:** `npx playwright test tests/app/api/notification-service/notifications/notifications.spec.ts --workers=1` 5× in a row (new spec, isolated) — 5/5 green; then once inside `@App-API` at the repo's declared worker count — green.
 5. **Lint:** clean. **tsc:** clean.
 
 Push.
@@ -244,7 +249,7 @@ Push.
 |---------|-------|-----|
 | "`pr-review` says my PR is ready but reviewer found 3 violations" | The skill missed those because it's mechanical, not semantic | Add `/review-changes` to the loop for semantic depth |
 | "Husky is blocking on lint but `eslint` shows zero errors" | `lint-staged` runs `eslint --fix` then re-stages; an unfixable error (like a real type error) blocks | Run `npx tsc --noEmit` to find the real cause; don't `--no-verify` |
-| "Spec passed locally but the PR pipeline is red" | Local ran with default Playwright workers; CI uses a single Playwright worker but cross-spec interference | Load [`flakiness-triage`](../flakiness-triage/SKILL.md) — likely cross-test interference, not your spec's bug |
+| "Spec passed locally but the PR pipeline is red" | Local and CI ran at different worker counts, or another spec in the pipeline leaks state | Load [`flakiness-triage`](../flakiness-triage/SKILL.md) — likely cross-test interference, not your spec's bug |
 | "I changed a base class — what's the blast radius?" | Affects every consumer | `git grep -l "extends BasePage"` (or the changed class) and run each consumer's spec |
 
 ## See Also

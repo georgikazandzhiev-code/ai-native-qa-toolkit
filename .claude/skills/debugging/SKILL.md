@@ -13,12 +13,12 @@ When a Playwright test fails in this framework, you investigate first and fix se
 ## Critical
 
 - **ALWAYS read the failure message first.** Playwright's terminal output names the failing locator, the assertion or action, the timeout type, and the source line. Most failures are diagnosed before any tool is opened.
-- **NEVER suppress a failure.** No `try/catch` around `expect`, no raised `actionTimeout` / `expect.timeout`, no loosened Zod schema, no deletion of the failing test. These are explicit WON'T rules in `~/.claude/CLAUDE.md`.
+- **NEVER suppress a failure.** No `try/catch` around `expect`, no raised `actionTimeout` / `expect.timeout`, no loosened Zod schema, no deletion of the failing test. The constitution forbids each of them: `try/catch` in tests (WON'T), loosening a schema (MUST § Schemas), raising timeouts (AI Workflow step 8 and When You're Stuck) — see [`../../CLAUDE.md`](../../CLAUDE.md).
 - **NEVER add `page.waitForTimeout(...)` to "give it time".** Hard waits hide the real cause. Use a web-first assertion (`await expect(locator).toBeVisible()`) or `page.waitForResponse(...)`.
 - **When a test fails, load this skill BEFORE iterating.** Do not start guessing fixes. Classify the failure, pick the right tool, then change code.
 - **Match the tool to the failure type.** UI Mode for interactive iteration, Trace Viewer for post-mortem on a captured trace, Inspector for breakpoint stepping, HTML report for screenshot + video + trace links. One tool per session — do not bounce between three.
 - **CI-only failures: replay the trace locally before assuming "it's the environment".** Download the CI artifact, open it with `npx playwright show-trace`, and compare. Do not raise timeouts or add retries on the assumption of a CI quirk without proof.
-- **Re-run a flake fix multiple times before declaring done.** A single green test run after a flake fix is not enough — aim for at least 3–5 consecutive green test runs of the affected test.
+- **Re-run a flake fix multiple times before declaring done.** A single green test run after a flake fix is not enough — the bar is 5 consecutive green isolated runs plus one in-suite run ([`flakiness-triage`](../flakiness-triage/SKILL.md) § Step 5).
 - **Never commit `test.only(...)`.** `playwright.config.ts` has `forbidOnly: !!process.env.CI`; CI will fail the build. Use `--grep` to narrow in CI workflows.
 
 ## Capture defaults (this project)
@@ -43,7 +43,7 @@ What `playwright.config.ts` automatically captures and where it lands:
 | Pause and step through a single test in a real browser | Playwright Inspector | `npm run app-debug` (or `--project=api`: `npm run api-debug`) |
 | Read failure summary, screenshots, video, and trace links after a test run | HTML reporter | `npx playwright show-report` |
 | Force trace + single Playwright worker + no retries for deterministic local repro | Ad-hoc CLI | `npx playwright test <file> --trace on --workers=1 --retries=0` |
-| Repeat a single test many times to surface flake | Repeat-each | `npm run app-repeat` (defaults to `--repeat-each=20`) or `npx playwright test <file> --repeat-each=10` |
+| Repeat a single test many times to reproduce an intermittent failure (to reproduce, not to verify a fix — verifying is 5 consecutive runs, `flakiness-triage`) | Repeat-each | `npm run app-repeat` (defaults to `--repeat-each=20`) or `npx playwright test <file> --repeat-each=10` |
 
 UI Mode is the default first choice for interactive iteration; Trace Viewer is the default for post-mortem on a captured trace.
 
@@ -77,7 +77,7 @@ Open the terminal output first. Identify (a) which test failed, (b) which assert
 
 ### Phase 2: Reproduce locally before changing anything
 
-Narrow the test run to a tight feedback loop. A single spec, one Playwright worker, retries off: `npx playwright test tests/app/api/<domain>/<file>.spec.ts --workers=1 --retries=0`. Narrow further with `--grep "<test title or tag>"` if the file is large. If the failure is intermittent, repeat: `npx playwright test <file> --repeat-each=10 --workers=1 --retries=0` (or `npm run app-repeat`). If the test is green locally and red in CI, jump to § CI-only failures — do not assume "it's CI" without evidence.
+Narrow the test run to a tight feedback loop. A single spec, one Playwright worker, retries off: `npx playwright test tests/app/api/<domain>/<file>.spec.ts --workers=1 --retries=0`. Narrow further with `--grep "<test title or tag>"` if the file is large. If the failure is intermittent, classify it with [`flakiness-triage`](../flakiness-triage/SKILL.md) first; to reproduce it, repeat: `npx playwright test <file> --repeat-each=10 --workers=1 --retries=0` (or `npm run app-repeat`) — this is to reproduce, not to verify a fix. If the test is green locally and red in CI, jump to § CI-only failures — do not assume "it's CI" without evidence.
 
 ### Phase 3: Fix the root cause
 
@@ -85,7 +85,7 @@ Map the diagnosis to the right file. **Do not patch in the spec when the bug liv
 
 ### Phase 4: Verify the fix is real, not a flake
 
-Re-run the affected file with retries off and a single Playwright worker. Then re-run the file 3–5 consecutive times for confidence on flake fixes (a single pass after a timing fix is not enough). Then re-run the broader suite (`npm run app-test` or the appropriate area script) to confirm no neighbour broke. Confirm linter is clean (`npx eslint .`) and no `test.only(...)` was left behind.
+Re-run the affected file with retries off and a single Playwright worker. Then re-run the file 5 consecutive times for confidence on flake fixes (a single pass after a timing fix is not enough — the `flakiness-triage` bar is 5 isolated runs plus one in-suite run). Then re-run the broader suite (`npm run app-test` or the appropriate area script) to confirm no neighbour broke. Confirm linter is clean (`npx eslint .`) and no `test.only(...)` was left behind.
 
 ## CI-only failures (red CI, green local)
 
@@ -96,10 +96,10 @@ When a test passes locally but fails in CI, you need CI's artifacts to reproduce
 3. **Compare against local.** Common CI-only causes in this project:
    - Storage state stale or absent (`.auth/app/appMainUserSession.json` not produced) — confirm `app-setup` ran and succeeded.
    - Different `ENVIRONMENT` (CI loads `env/.env.<ENVIRONMENT>`; local typically `env/.env.dev`).
-   - Parallelism — CI sets `workers: 1`, local runs parallel by default. A test that depends on shared state passes serially and fails parallel (or vice versa).
+   - Parallelism — the CI worker count is a per-repository fact (the repo's own `CLAUDE.md` states it). If your CI runs `workers: 1` while local runs in parallel (or the reverse), a test that depends on shared state passes serially and fails in parallel (or vice versa).
    - Token drift (`process.env.USER_ACCESS_TOKEN_*`) between CI secrets and local `.env`.
    - First-load timing on a cold dev cluster (real cause: missing readiness check, NOT a low timeout).
-   - **Wrong environment loaded** — if tests hit the wrong backend, add a temporary `console.log` block to `playwright.config.ts` (wrapped in `/* eslint-disable no-console */` / `/* eslint-enable no-console */`) logging `ENVIRONMENT`, the dotenv file path, `APP_URL`, `API_URL`, and `KEYCLOAK_URL`. Commit, run one CI build, inspect, then **remove the debug block before merging**. Remember: CI platform variables override `.env` file values (see `config` skill § How env files load).
+   - **Wrong environment loaded** — if tests hit the wrong backend, find out which `ENVIRONMENT`, dotenv file, `APP_URL`, `API_URL` and `KEYCLOAK_URL` the run used from evidence you already have: the request URLs in the CI trace/report artifacts, a `DEBUG=pw:api` run, or a local run reproducing the CI settings (`CI=1 ENVIRONMENT=<ci-env>`). **Never commit debug output** (`console.log` in `playwright.config.ts` or anywhere else) to run one CI build. Remember: CI platform variables override `.env` file values (see `config` skill § How env files load).
 4. **Replay locally with the same flags.** `CI=1 ENVIRONMENT=<ci-env> npx playwright test <file> --workers=1 --retries=1`.
 5. **Only if still green locally** add temporary instrumentation (`--trace on` for one CI test run, screenshot points), commit, run in CI, inspect the new artifacts, then **remove the instrumentation** before merging. Never ship a raised timeout as a "CI fix".
 
@@ -125,7 +125,7 @@ Before declaring a failure resolved:
 - [ ] I reproduced the failure locally with `--workers=1 --retries=0` before changing any code.
 - [ ] I identified the root cause and named the failure-mode category from the taxonomy.
 - [ ] My fix is at the root (POM getter / schema / helper / fixture) — not a `try/catch`, not a raised timeout, not a loosened schema.
-- [ ] I ran the affected test 3–5 consecutive times with `--workers=1 --retries=0` and it passed every time.
+- [ ] I ran the affected test 5 consecutive times with `--workers=1 --retries=0` and it passed every time.
 - [ ] I ran the broader suite (`npm run app-test` or area script) and no neighbour broke.
 - [ ] Linter is clean (`npx eslint .`); no `test.only(...)` remains.
 - [ ] If a test was disabled for a real backend bug, it is **commented out** (not `test.skip`) with `// TODO: FIXME: <TICKET> <description>` directly above.
@@ -167,7 +167,7 @@ Before declaring a failure resolved:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | No trace file after a local failure | `playwright.config.ts` has `trace: 'on-first-retry'` and locally `retries: 0` | Re-run with `--trace on` or use `npm run app-ui` (UI Mode always traces) |
-| Test passes solo, fails when run with the full suite | Cleanup ordering or shared-state bug; parallel collision (local has parallel Playwright workers, CI is serial) | Check `afterAll` cleanup order. For jobs with assigned worker resources, use `cleanupWorkersAndJobs` — jobs first, worker resources second (`api-testing`). For shared mutators, move to a fixture or `beforeEach`. |
+| Test passes solo, fails when run with the full suite | Cleanup ordering or shared-state bug; parallel collision (if your local run is parallel and CI is serial, or the reverse — the CI worker count is per-repo) | Check `afterAll` cleanup order. For jobs with assigned worker resources, use `cleanupWorkersAndJobs` — jobs first, worker resources second (`api-testing`). For shared mutators, move to a fixture or `beforeEach`. |
 | `expect(locator).toBeVisible()` times out | Locator wrong OR element waits on a network call | Re-explore via `npx playwright open` (see the `playwright-cli` skill) to verify the locator. If the locator is right, scope the action's `page.waitForResponse(...)` inside the page-object method. Never raise `expect.timeout`. |
 | `ZodError` on `Schema.parse(body)` | API response disagrees with the schema (contract drift) | `api-testing` § Skipping a test for a real backend bug — **comment out** the test with `// TODO: FIXME: <TICKET>`. **Never** use `test.skip` (corrupts Qase IDs). **Never** loosen the schema or change `z.strictObject` to `z.object`. |
 | `Error: strict mode violation: ... resolved to N elements` | Locator matches >1 element | `selectors` skill § Strict mode — disambiguation. Add `{ exact: true }`, scope to a parent (Pattern 7), or `.filter({ hasText })`. |
@@ -180,6 +180,7 @@ Before declaring a failure resolved:
 
 ## See Also
 
+- **[`flakiness-triage`](../flakiness-triage/SKILL.md)** — intermittent failures: classify first (real bug, cross-test interference, per-test flake), then come back here to fix.
 - **`selectors`** — strict-mode disambiguation, locator priority, Pattern 7 (sub-component scoping). Read when the failure is a strict-mode violation or "element not attached".
 - **`api-testing`** — `Schema.parse` failures, error envelope shapes (`APIErrorSchema` / `GatewayErrorSchema`), the comment-out + `// TODO: FIXME:` workflow for real backend bugs, `cleanupWorkersAndJobs` ordering.
 - **`playwright-cli`** — re-explore the live app via `npx playwright open` when a locator no longer matches. **Mandatory** before guessing at a new selector.
@@ -189,4 +190,4 @@ Before declaring a failure resolved:
 - **`refactor-values`** — when an `expect()` mismatch traces to a `MESSAGES.*` enum value or `test-data/app/*.json` value drift.
 - **`data-strategy`** — when test data has drifted from the live API contract or from the UI's rendered strings.
 - **[`test-standards`](../test-standards/SKILL.md)** — test independence, single-tag rule, structure conventions; many "passes alone, fails in suite" failures originate here. Pair with [`api-testing`](../api-testing/SKILL.md) for API-spec failures, [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI-spec failures.
-- **`~/.claude/CLAUDE.md`** — § When You're Stuck; the WON'T rules (no `try/catch`, no raised timeouts, no loosened schemas, no XPath, no `waitForTimeout`).
+- **[`../../CLAUDE.md`](../../CLAUDE.md)** — the constitution: § When You're Stuck; WON'T (no `try/catch`, no XPath, no `waitForTimeout`); MUST § Schemas (never loosen); AI Workflow step 8 (never raise timeouts).

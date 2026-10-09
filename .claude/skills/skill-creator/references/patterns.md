@@ -240,9 +240,9 @@ Use when output quality is verifiable and the agent benefits from "validate → 
    ```
 3. If `parse` throws:
    - Read the Zod error path (`field 'createdAt' expected string, got null`).
-   - Decide: is the schema wrong (loosen it), or is the API wrong (file a bug, then `.nullable()` with a comment citing the bug)?
+   - Decide by the contract: if the OpenAPI spec allows the value, the schema was wrong — fix it to match the contract. If the contract forbids it, the API is wrong — file a bug, comment the test out under `// TODO: FIXME: <TICKET>`, and keep the schema strict. Never loosen a schema to make a run pass.
    - Re-run.
-4. **Only commit the spec once `parse` succeeds three times in a row.** Schemas that flake to pass under load mask real drift.
+4. **Only commit the spec once it passes 5 consecutive isolated runs plus one in-suite run** (the `flakiness-triage` merge bar). Schemas that flake to pass under load mask real drift.
 ````
 
 **When this pattern wins:** Zod parsing, lint runs, type-check loops, snapshot diffing, anywhere the agent has a deterministic verifier in hand.

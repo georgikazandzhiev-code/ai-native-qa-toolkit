@@ -52,9 +52,9 @@ When the repository provides a repo-context skill, read its matching router (`ap
 
 Before writing any test code, understand the current state of what you're testing:
 
-- **API tests**: Make a real API request (GET the endpoint, POST with sample data) to see the actual response shape, status codes, and field names. Don't assume the API matches the docs — verify it.
-- **E2E tests**: Navigate to the page in the browser. Look at the actual elements, test IDs, form fields, and component structure. Use `page.goto()` and inspect before writing locators.
-- **Functional tests**: Open the form/sheet you'll be testing. Check what fields exist, what validation messages appear, and what the default state looks like.
+- **API tests**: Read the OpenAPI contract first — it is the source of truth for the response shape, status codes, and field names. Make a live request only when no docs exist. If the live API disagrees with the docs, that is a bug to report (comment the test out under `// TODO: FIXME: <TICKET>`), not a reason to follow the live response.
+- **E2E tests**: Explore the page with `npx playwright open` per the `playwright-cli` skill — not a scratch test with `page.goto()`. Look at the actual elements, test IDs, form fields, and component structure before writing locators.
+- **Functional tests**: Open the form/sheet you'll be testing with `npx playwright open` (same `playwright-cli` workflow). Check what fields exist, what validation messages appear, and what the default state looks like.
 
 This step prevents writing tests against an imagined API or UI that doesn't match reality.
 
