@@ -1,16 +1,17 @@
 /**
  * Tests for the skill-snippet lint itself. `npm run test:snippets-harness`
  *
- * The snippet lint decides what counts as a counter-example, what is a placeholder, how a diff is
- * read and when an opt-out is honoured. Each of those is a place where it can go silently wrong in
- * both directions: skip a good example that breaks a rule (a gate that never fires), or lint a
- * counter-example that is meant to be wrong (a gate that cries wolf and gets switched off). So every
- * branch has a case here, and the whole script is run end to end against a throwaway skills tree
- * with one planted defect per case.
+ * The snippet lint decides what counts as a counter-example, what is a placeholder, where a fence
+ * starts and ends, how a diff is read and when an opt-out is honoured. Each of those can go wrong
+ * in both directions: skip a good example that breaks a rule (a gate that never fires), or lint a
+ * counter-example that is meant to be wrong (a gate that cries wolf and gets switched off). So
+ * every branch has a case here, and the whole script is run end to end against throwaway skills
+ * trees with one planted defect each.
  *
- * Written after #59, where a new validator check shipped with a test for only one of its branches
- * and flagged valid input — the lesson is to test a check against every branch, not just against
- * the tree as it happens to be today.
+ * Written after #59, where a new check shipped with a test for one of its branches and flagged
+ * valid input; and revised after this suite's own first version claimed a case per branch while an
+ * independent review found 14 of 20 mutants surviving it. The cases marked [mutant] were added
+ * because a specific mutation of the lint had survived; each names what it now catches.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -25,6 +26,7 @@ import {
   afterSideOfDiff,
   skipReason,
   virtualPath,
+  lintSnippet,
 } from './skill-snippets.test.mjs';
 
 const PLUGIN_DIR = fileURLToPath(new URL('..', import.meta.url));
@@ -32,49 +34,105 @@ const SCRIPT = join(PLUGIN_DIR, 'tests', 'skill-snippets.test.mjs');
 const fence = (body, lang = 'typescript') => '```' + lang + '\n' + body + '\n```';
 
 let failed = 0;
+let count = 0;
 const check = (name, ok, detail = '') => {
+  count++;
   if (!ok) failed++;
-  console.log(`  ${ok ? 'OK  ' : 'FAIL'} ${name}${ok || !detail ? '' : `\n         ${detail}`}`);
+  console.log(`  ${ok ? 'OK  ' : 'FAIL'} ${name}${ok || !detail ? '' : `\n         ${String(detail).slice(0, 600)}`}`);
 };
-const block = (md) => snippets(md)[0];
+const block = (md, i = 0) => snippets(md)[i];
+const counter = (md, i = 0) => isCounterExample(block(md, i));
 
 console.log('\nSkill-snippet lint — harness tests\n');
 
-// ── counter-example detection, every branch ──
-check('first comment ❌/BAD → skipped', isCounterExample(block(fence('// ❌ BAD — hard wait\nawait page.waitForTimeout(1);'))));
-check('first comment GOOD under an Anti-patterns heading → linted', !isCounterExample(block('## Anti-patterns\n\n' + fence('// GOOD — web-first\nawait expect(x).toBeVisible();'))));
-check('"### Bad" heading → skipped', isCounterExample(block('### Bad\n\n' + fence('x();'))));
-check('"### Good" heading → linted', !isCounterExample(block('### Good\n\n' + fence('x();'))));
-check('Good block right after a Bad block under "### Good" → linted', !isCounterExample(snippets('### Bad\n\n' + fence('a();') + '\n\n### Good\n\n' + fence('b();'))[1]));
-check('❌ bullet introducing the block → skipped', isCounterExample(block('- ❌ Never do this:\n\n' + fence('x();'))));
-check('"Fix:" line introducing the block → linted', !isCounterExample(block('**Fix:**\n\n' + fence('x();'))));
-check('an unlabelled block → linted', !isCounterExample(block('Some prose.\n\n' + fence('x();'))));
+// ── fences ──
+check('CRLF files: the block is found and carries no \\r [mutant: split on \\n only]', block('### Good\r\n\r\n```ts\r\nx();\r\n```\r\n')?.code === 'x();');
+check('a fence indented inside a list item is dedented', block('1. Step\n   ```ts\n   const a = 1;\n   ```\n')?.code === 'const a = 1;');
+check('an info string after the language is accepted (```ts title="a.ts")', snippets('```ts title="a.ts"\nx();\n```\n').length === 1);
+check('tilde fences are accepted', snippets('~~~ts\nx();\n~~~\n').length === 1);
+check('a ```` fence containing ``` is one block, and pairing stays in sync', snippets('````md\n```ts\nbad();\n```\n````\n\n```ts\ny();\n```\n').map((b) => b.code).join() === 'y();');
+check('a ``` line does not close a ~~~ fence [mutant: closing fence of any character]',
+  block('~~~ts\na();\n```\nstill inside\n~~~\n')?.code.includes('still inside') === true);
+check('```js, ```bash and ```tsx blocks are not linted [mutant: language check removed]', snippets('```js\na();\n```\n```bash\nls\n```\n```tsx\n<A/>\n```\n').length === 0);
+let threw = false;
+try {
+  snippets('```ts\nnever closed();\n');
+} catch {
+  threw = true;
+}
+check('an unclosed fence throws instead of silently dropping the rest of the file', threw);
+
+// ── counter-example detection ──
+check('first comment ❌/BAD → skipped', counter(fence('// ❌ BAD — hard wait\nawait page.waitForTimeout(1);')));
+check('first comment GOOD wins over a BAD word on the same line [mutant: RIGHT/WRONG order, RIGHT removed]', !counter('### Bad\n\n' + fence('// GOOD — replaces the BAD version above\nx();')));
+check('"### Bad" directly above → skipped', counter('### Bad\n\n' + fence('x();')));
+check('"### Bad", then explanatory prose, then the block → still skipped (no block in between)', counter('### Bad\n\nThis hides the cause.\n\n' + fence('x();')));
+check('"### Good" → linted', !counter('### Good\n\n' + fence('x();')));
+check('a ❌ bullet introducing the block → skipped', counter('- ❌ Never do this:\n\n' + fence('x();')));
+check('"Fix (replaces the BAD call above):" introducing the block → linted [mutant: RIGHT removed from prose check]', !counter('### Bad\n\n' + fence('a();') + '\n\nFix (replaces the BAD call above):\n\n' + fence('b();'), 1));
+check('Bad block, neutral prose, next block → the next block is linted (label does not carry over) [mutant: fence crossing ignored]', !counter('### Bad\n\n' + fence('a();') + '\n\nThe web-first way:\n\n' + fence('b();'), 1));
+check('under "### Good", a block introduced by "never do THIS (BAD):" → skipped [mutant: nearest BAD ignored]',
+  counter('### Good\n\n' + fence('a();') + '\n\nBut never do THIS (BAD):\n\n' + fence('b();'), 1));
+check('Bad block directly followed by another block → both skipped', counter('### Bad\n\n' + fence('a();') + '\n\n' + fence('b();'), 1));
+check('"## Bad request (400) tests" is not a counter-example label', !counter('## Bad request (400) tests\n\n' + fence('x();')));
+check('"### Forbidden (403)" is not a counter-example label', !counter('### Forbidden (403)\n\n' + fence('x();')));
+check('"## Avoid flaky tests with web-first assertions" is not a label', !counter('## Avoid flaky tests with web-first assertions\n\n' + fence('x();')));
+check('a label far above (past 30 lines of prose) is still found [mutant: walk cap lowered]', counter('### Bad\n\n' + 'prose line\n'.repeat(30) + fence('x();')) === true);
+check('an unlabelled block → linted', !counter('Some prose.\n\n' + fence('x();')));
 
 // ── placeholders vs generics ──
-const filled = fillPlaceholders('const r = await apiRequest<CreateJobResponse>({});\nconst p: Promise<void> = f();\nimport { create<Resource>, Get<Resource>Schema } from "../<domain>/x";\nexport async function create<Resource><T = X>() {}');
-check('generic type arguments are left alone', filled.includes('apiRequest<CreateJobResponse>(') && filled.includes('Promise<void>'), filled);
-check('placeholders become identifiers (glued, in lists, in paths, before a generic)', filled.includes('createXResource,') && filled.includes('GetXResourceSchema') && filled.includes('/Xdomain/') && filled.includes('createXResource<T = X>'), filled);
+const filled = fillPlaceholders(
+  'const r = await apiRequest<APIError>({});\nconst p: Partial<WorkerData> = {};\nconst q: Promise<void> = f();\ntest.extend<Pages>({});\n' +
+    'import { create<Resource>, Get<Resource>Schema } from "../<domain>/x";\nqase.suite(SUITES.API_<SUITE>);\nexport async function create<Resource><T = X>() {}'
+);
+check('real type arguments are left alone: apiRequest<APIError>(, Partial<WorkerData>, Promise<void>, test.extend<Pages>(',
+  filled.includes('apiRequest<APIError>(') && filled.includes('Partial<WorkerData>') && filled.includes('Promise<void>') && filled.includes('test.extend<Pages>('), filled);
+check('placeholders become identifiers: create<Resource>, Get<Resource>Schema, /<domain>/, API_<SUITE>, create<Resource><T>',
+  filled.includes('createXResource,') && filled.includes('GetXResourceSchema') && filled.includes('/Xdomain/') && filled.includes('API_XSUITE') && filled.includes('createXResource<T = X>'), filled);
+check('a PascalCase type word glued to an identifier is a placeholder: Get<Worker>Schema [mutant: glued words as types]',
+  fillPlaceholders('Get<Worker>Schema') === 'GetXWorkerSchema');
+check('a <Word> after a non-identifier is a placeholder: pages/app/<Page>.ts [mutant: no identifier check]',
+  fillPlaceholders('pages/app/<Page>.ts') === 'pages/app/XPage.ts');
 let parses = true;
 try {
   parse(filled, { ecmaVersion: 2022, sourceType: 'module' });
-} catch (e) {
+} catch {
   parses = false;
 }
-check('filled placeholders parse as TypeScript (differential: the real parser decides)', parses);
+check('the filled code parses as TypeScript (differential: the real parser decides)', parses);
 
 // ── diffs ──
-check('a diff block is linted as its "after" side', afterSideOfDiff('- const a = process.env.X;\n+ const a = env.X;') === 'const a = env.X;');
+check('a diff block is linted as its "after" side [mutant: + not stripped]', afterSideOfDiff('- const a = process.env.X;\n+ const a = env.X;') === 'const a = env.X;');
 check('a block with an occasional "- " line is not a diff', afterSideOfDiff('const a = 1;\nconst b = 2;\n- not a diff marker\nconst c = 3;\nconst d = 4;').includes('- not'));
 
 // ── explicit skip ──
-check('a skip marker with a reason is honoured', skipReason('<!-- snippet-lint: skip — two files in one block -->') === 'two files in one block');
-check('a skip marker without a reason is NOT honoured', skipReason('<!-- snippet-lint: skip -->') === null);
+check('skip marker with an em-dash reason → honoured', skipReason('<!-- snippet-lint: skip — two files in one block -->') === 'two files in one block');
+check('skip marker with an en dash, a hyphen or -- → honoured [mutant: em dash only]',
+  ['–', '-', '--'].every((d) => skipReason(`<!-- snippet-lint: skip ${d} two files -->`) === 'two files'));
+check('skip marker with no reason → NOT honoured', skipReason('<!-- snippet-lint: skip -->') === null);
+check('skip marker with an empty or punctuation-only reason → NOT honoured', [
+  '<!-- snippet-lint: skip — -->',
+  '<!-- snippet-lint: skip -- - -->',
+  '<!-- snippet-lint: skip —   … -->',
+].every((m) => skipReason(m) === null));
+check('a skip marker belongs to the next block only (does not carry past a fence)',
+  skipReason(block('<!-- snippet-lint: skip — two files -->\n' + fence('a();') + '\n\n' + fence('b();'), 1).nearest) === null);
 
 // ── virtual paths ──
-check('a header comment names the path', virtualPath('// config/env.ts\nexport const env = 1;') === 'config/env.ts');
+check('a header comment names the path (even after a ❌ line)', virtualPath('// ❌ BAD — drift\n// config/env.ts\nexport const env = 1;') === 'config/env.ts');
 check('a block declaring tests is a spec', virtualPath("test('@App-API a', async () => {});").endsWith('.spec.ts'));
+check('a regex .test(x) call is not a test declaration', virtualPath('const ok = /x/.test(name);').startsWith('helpers/'));
 check('a block extending BasePage is a page object', virtualPath('class A extends BasePage {}').startsWith('pages/'));
 check('anything else is a helper', virtualPath('export const x = 1;').startsWith('helpers/'));
+
+// ── wrappers and line numbers ──
+const shifted = await lintSnippet('private readonly x = 1;\nasync f() { await this.page.waitForTimeout(1); }');
+check('a class-member fragment parses and reports on its own line numbers [mutant: line shift dropped]',
+  !shifted.parse && shifted.real.some((m) => m.ruleId === 'qa-constitution/no-hard-waits' && m.line === 2), JSON.stringify(shifted.real?.map((m) => [m.ruleId, m.line])));
+const obj = await lintSnippet('headers: tokens.full(),\nbaseUrl: appConfig.apiUrl,');
+check('an object-property fragment parses (object wrapper)', !obj.parse, obj.parse?.message);
+const stmts = await lintSnippet('const row = jobsPage.getRowByName(name);\nreturn row;');
+check('statements, even with a top-level return, parse as written', !stmts.parse, stmts.parse?.message);
 
 // ── end to end: plant one defect in a throwaway skills tree ──
 const TMP = join(PLUGIN_DIR, '.snippet-harness');
@@ -86,33 +144,39 @@ const run = (md) => {
   return { code: p.status, out: p.stdout + p.stderr };
 };
 const HARD_WAIT = 'await page.waitForTimeout(2000);';
-let r = run('### Good\n\n' + fence(HARD_WAIT));
+const CLEAN = "test('@App-API creates a job', async ({ apiRequest }) => {\n  const { status } = await createJob(apiRequest, body, tokens.full());\n  expect(status).toBe(201);\n});";
+let r;
+r = run('### Good\n\n' + fence(HARD_WAIT));
 check('BITES: a hard wait in an example presented as good fails the run', r.code === 1 && r.out.includes('no-hard-waits'), r.out);
 r = run('### Bad\n\n' + fence(HARD_WAIT));
 check('SILENT: the same hard wait under "### Bad" passes', r.code === 0, r.out);
 r = run('<!-- snippet-lint: skip -->\n' + fence(HARD_WAIT));
 check('BITES: a skip marker with no reason does not hide the defect', r.code === 1, r.out);
+r = run('<!-- snippet-lint: skip — -->\n' + fence(HARD_WAIT));
+check('BITES: a skip marker with an empty reason does not hide the defect', r.code === 1, r.out);
 r = run('<!-- snippet-lint: skip — demo of a multi-file block -->\n' + fence('this is not { typescript'));
 check('SILENT: a reasoned skip is honoured and printed', r.code === 0 && r.out.includes('SKIP') && r.out.includes('demo of a multi-file block'), r.out);
+r = run('<!-- snippet-lint: skip — two files -->\n' + fence('foo bar') + '\n\n' + fence(HARD_WAIT));
+check('BITES: a skip marker does not carry over to the next block', r.code === 1 && r.out.includes('no-hard-waits'), r.out);
 r = run('Prose.\n\n' + fence('this is not { typescript'));
 check('BITES: an unmarked block that does not parse fails the run', r.code === 1 && r.out.includes('PARSE'), r.out);
-// Each fragment wrapper has a case — a mutant that broke the object wrapper once survived the suite.
-// Each fragment must need its own wrapper: a plain method also parses as an object-literal method,
-// so a class FIELD is used (it only parses in a class). Statements need no wrapper at all — the
-// parser takes top-level `await` and `return`, which is why the function wrapper was removed.
-r = run('Prose.\n\n' + fence('private readonly heading = this.page.getByRole("heading", { name: "Jobs" });'));
-check('SILENT: a class-member fragment parses (class wrapper)', r.code === 0, r.out);
-r = run('Prose.\n\n' + fence('const row = jobsPage.getRowByName(name);\nreturn row;'));
-check('SILENT: statements, even with a top-level return, parse as written', r.code === 0, r.out);
-r = run('Prose.\n\n' + fence('headers: tokens.full(),\nbaseUrl: appConfig.apiUrl,'));
-check('SILENT: an object-property fragment parses (object wrapper)', r.code === 0, r.out);
-r = run('Prose.\n\n' + fence("test('@App-API creates a job', async ({ apiRequest }) => {\n  const { status } = await createJob(apiRequest, body, tokens.full());\n  expect(status).toBe(201);\n});"));
+r = run('Prose.\n\n' + fence(CLEAN));
 check('SILENT: a compliant example passes', r.code === 0, r.out);
+r = run('### Good\n\n' + fence('/* eslint-disable */\n' + HARD_WAIT));
+check('BITES: a bare eslint-disable does not hide a violation silently', r.code === 1 && r.out.includes('no "-- reason"'), r.out);
+r = run('### Good\n\n' + fence('// eslint-disable-next-line qa-constitution/no-hard-waits -- demo of a reasoned suppression\n' + HARD_WAIT));
+check('SILENT: a reasoned eslint-disable passes and is printed as DISABLED', r.code === 0 && r.out.includes('DISABLED') && r.out.includes('demo of a reasoned suppression'), r.out);
+r = run('### Good\n\n' + fence('// eslint-disable-next-line playwright/no-force-option -- Radix trigger\nawait page.getByRole("combobox").click({ force: true });'));
+check('SILENT: a directive for an eslint-plugin-playwright rule is not an error [mutant: playwright not registered]', r.code === 0, r.out);
+r = run('Just prose, no code.\n');
+check('BITES: a run that lints no block at all fails (a parser that finds nothing must not pass)', r.code === 1 && r.out.includes('no TypeScript block was linted'), r.out);
+r = run('Prose.\n\n```ts\nnever closed();\n');
+check('BITES: an unclosed fence fails the run', r.code === 1 && r.out.includes('unclosed code fence'), r.out);
 rmSync(TMP, { recursive: true, force: true });
 
 console.log('');
 if (failed) {
-  console.log(`  ${failed} harness case(s) failed`);
+  console.log(`  ${failed} of ${count} harness case(s) failed`);
   process.exit(1);
 }
-console.log('  every branch of the snippet lint behaves as specified');
+console.log(`  ${count} cases — every branch of the snippet lint behaves as specified`);

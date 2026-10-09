@@ -414,11 +414,6 @@ tester.run('no-disabled-test', plugin.rules['no-disabled-test'], {
 });
 
 /**
- * Found linting the #5 PR 2 templates, 2026-10-07: a describe-level test.fixme(true, '...') was
- * reported by single-tag-on-test as "This test has no tag". It must fail, but as a disabled test
- * (no-disabled-test) — the "no tag" message sent the author to add a tag to a skip.
- */
-/**
  * Found by the skill-snippet lint, October 2026: `test.step(...)` was treated as a test
  * declaration. Inside a test it was hidden, but a step in a hook — legitimate setup — was reported
  * as an untagged test with no assertion.
@@ -438,6 +433,11 @@ tester.run('regression/steps-are-not-tests (assertions)', plugin.rules['require-
   ],
 });
 
+/**
+ * Found linting the #5 PR 2 templates, 2026-10-07: a describe-level test.fixme(true, '...') was
+ * reported by single-tag-on-test as "This test has no tag". It must fail, but as a disabled test
+ * (no-disabled-test) — the "no tag" message sent the author to add a tag to a skip.
+ */
 tester.run('regression/disabled-tests-are-not-untagged', plugin.rules['single-tag-on-test'], {
   valid: [
     `test.describe('area', () => { test.fixme(true, 'broken'); test('@App-API a', async () => {}); });`,

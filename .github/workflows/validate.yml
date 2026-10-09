@@ -83,7 +83,7 @@ jobs:
       - name: Install plugin dev dependencies
         run: npm install --no-audit --no-fund
 
-      # 21 RuleTester suites, including a regression suite for every false positive the
+      # 25 RuleTester suites, including a regression suite for every false positive the
       # lint-gate eval and the fault-injection harness have exposed.
       - name: Run rule tests
         run: node tests/rules.test.js
