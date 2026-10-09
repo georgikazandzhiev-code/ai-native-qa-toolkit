@@ -418,6 +418,26 @@ tester.run('no-disabled-test', plugin.rules['no-disabled-test'], {
  * reported by single-tag-on-test as "This test has no tag". It must fail, but as a disabled test
  * (no-disabled-test) — the "no tag" message sent the author to add a tag to a skip.
  */
+/**
+ * Found by the skill-snippet lint, October 2026: `test.step(...)` was treated as a test
+ * declaration. Inside a test it was hidden, but a step in a hook — legitimate setup — was reported
+ * as an untagged test with no assertion.
+ */
+tester.run('regression/steps-are-not-tests', plugin.rules['single-tag-on-test'], {
+  valid: [
+    `test.beforeAll(async () => { await test.step('GIVEN: a seeded worker', async () => {}); });`,
+    `await test.step('GIVEN: the page is open', async () => {});`,
+  ],
+  invalid: [],
+});
+tester.run('regression/steps-are-not-tests (assertions)', plugin.rules['require-assertion-in-test'], {
+  valid: [`test.beforeAll(async () => { await test.step('seed', async () => { await seed(); }); });`],
+  invalid: [
+    // the test around the steps still needs its assertion
+    { code: `test('@App-API a', async () => { await test.step('act', async () => { await act(); }); });`, errors: [{ messageId: 'none' }] },
+  ],
+});
+
 tester.run('regression/disabled-tests-are-not-untagged', plugin.rules['single-tag-on-test'], {
   valid: [
     `test.describe('area', () => { test.fixme(true, 'broken'); test('@App-API a', async () => {}); });`,

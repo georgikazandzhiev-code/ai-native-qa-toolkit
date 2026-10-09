@@ -19,7 +19,10 @@ const HOOKS = new Set(['beforeAll', 'afterAll', 'beforeEach', 'afterEach']);
 // Playwright configuration calls on `test`: they declare no test, so they carry no tag and no
 // assertion. Without this, a describe-level `test.setTimeout(...)` or `test.use(...)` was reported
 // as "This test has no tag" — a false alarm on correct code.
-const CONFIG_CALLS = new Set(['setTimeout', 'use', 'slow', 'info', 'extend']);
+// `step` belongs here too: `test.step(...)` groups work inside a test or hook and declares no test.
+// Inside a test it was hidden (enclosingTest skips it), but a step in a beforeAll was reported as an
+// untagged, assertion-free test — found by the skill-snippet lint, October 2026.
+const CONFIG_CALLS = new Set(['setTimeout', 'use', 'slow', 'info', 'extend', 'step']);
 
 // Calls that disable a test: test.skip / test.fixme / test.fail, in declaration or modifier form,
 // and the same on describe. They are reported by no-disabled-test, so they are not tests to the
