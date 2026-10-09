@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.6
+version: 1.0.7
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -16,7 +16,7 @@ metadata:
 - **Pair the two sources.** Stable artifact (testid, route, component shape) → frontend source. Runtime behavior (state changes, timing) → live app via `npx playwright open`. Do not pick one and ignore the other.
 - **When the frontend source contradicts a skill,** surface the drift in the same edit — fix the skill text, do not silently work around the contradiction. (Example: if `selectors` says `field-field-${path}` and the source emits `schema-field-${name}`, the skill is wrong, not the source.)
 - **Do not edit the frontend repo.** This skill is read-only — grep, read, audit, report. Frontend changes go through the frontend owners.
-- **Frontend lives at** `<sibling-repos>/<frontend-repo>`. Read its `package.json` before grepping: the component conventions, i18n library and toast library decide where testids and strings actually come from.
+- **Frontend lives at** `<sibling-repos>/frontend`. Read its `package.json` before grepping: the component conventions, i18n library and toast library decide where testids and strings actually come from.
 
 ## When to cross-check
 

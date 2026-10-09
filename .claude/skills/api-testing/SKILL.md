@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 1.2.4
+version: 1.2.5
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -200,7 +200,7 @@ Where invalid values live drives whether the next reviewer can find them. Pick t
 | Tier | What | Where | Example |
 |------|------|-------|---------|
 | **1. Universal type-mismatch** | Values that are wrong for any field of a given primitive type (any required string field, any integer field, …) | `fixtures/api/invalid-types.ts` (the constants below) | `invalidString` for any required string field |
-| **2. Domain-specific curated** | Project-specific invalid sets (invalid email formats, password-policy violations, job-type-specific bad configs) | `test-data/app/<resource>.json` (e.g. `<type>-job-validation.json`; legacy camelCase `httpJobValidation.json` is drift) | `invalidEmails`, `invalidExportConfigs` |
+| **2. Domain-specific curated** | Project-specific invalid sets (invalid email formats, password-policy violations, job-type-specific bad configs) | `test-data/app/<resource>-validation.json` (e.g. `<type>-job-validation.json`; legacy camelCase `httpJobValidation.json` is drift) | `invalidEmails`, `invalidExportConfigs` |
 | **3. Field-specific boundary / range** | Out-of-range numerics that are wrong for exactly one field (e.g. `runInterval` outside `15..3600`) | Inline `const` in the spec, only when the set is meaningful to one field and used in one place | `const outOfRangeIntervals = [-1, 0, 14, 3601, 999999];` |
 
 If a tier-3 inline set appears in 2+ specs, promote it to tier 2.

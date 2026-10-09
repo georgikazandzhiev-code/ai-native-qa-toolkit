@@ -1,6 +1,6 @@
 ---
 name: enums
-version: 1.0.2
+version: 1.0.3
 description: Conventions for enums/app/ — where repeated string constants live (SUITES in qase-suites.ts, job statuses, inventory labels, report messages), the `as const` pattern, naming, and barrel exports. Use when adding a Qase suite, status value, or any repeated string constant. Triggers — "enum", "SUITES", "status value", "message string". Not for changing existing values (refactor-values) or endpoint paths (config — paths live in appConfig).
 metadata:
   category: domain
@@ -189,7 +189,7 @@ User says: _"Two specs assert the login error 'Invalid email or password'. Centr
 | I'm about to hardcode `"API\tJobs"` in a `qase.suite()` call. | Constant not imported. | Use `SUITES.API_JOBS` from `enums/app/qase-suites.ts`. |
 | I'm about to hardcode `/jobs` as an endpoint path in a spec. | Wrong source of truth. Paths live in `config/app.ts` in this codebase, not `enums/`. | Use `appConfig.api.JOBS`. See the `config` skill. |
 | I want to put `process.env.APP_URL` in an enum. | Env-driven values are not enum candidates. | Keep it in `config/app.ts` (`appConfig.baseUrl`). See the `config` skill. |
-| I want to add an array `INVALID_EMAILS = [...]` to `enums/`. | Arrays of curated test inputs are not enums. | Put it in `test-data/app/<resource>.json` and import. See the `data-strategy` skill. |
+| I want to add an array `INVALID_EMAILS = [...]` to `enums/`. | Arrays of curated test inputs are not enums. | Put it in `test-data/app/<resource>-validation.json` and import. See the `data-strategy` skill. |
 | I need to rename `SUITES.API_JOBS` to `SUITES.API_JOBS_V2`. | Cascades through every spec, page object, and Qase mapping. | Stop. Read the `refactor-values` skill — it owns the impact-analysis workflow. |
 | My test assertion `expect(text).toHaveText(MESSAGES.X)` fails — text drifted from the live UI. | Constant value diverged from the real app text. | Re-capture via the `playwright-cli` skill workflow (`npx playwright open`) and update via `refactor-values` (not a local find-and-replace that may miss other consumers). |
 | The new file I added to `enums/app/` is not picked up when consumers `import { X } from "../../../enums/app";`. | Forgot to re-export through the barrel. | Add `export * from './<new-file>';` to `enums/app/index.ts`. |
