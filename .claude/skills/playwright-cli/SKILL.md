@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-version: 1.0.3
+version: 1.0.4
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
 metadata:
   category: running
@@ -67,7 +67,7 @@ The human navigates to the feature, opens forms, triggers CRUD, observes feedbac
 - **Element roles** — buttons, links, headings, dialogs, comboboxes
 - **Accessible names** — what `getByRole(role, { name })` would resolve to
 - **Visible labels** for form inputs (`getByLabel(...)`)
-- **Test ids** for elements wrapped by Radix primitives or schema-form fields (`schema-field-<fieldName>`, `monitor-actions-<id>`, `error-<fieldName>`, `data-sonner-toast`)
+- **Test ids** for elements wrapped by Radix primitives or schema-form fields (`schema-field-<fieldName>`, `job-actions-<id>`, `error-<fieldName>`, `data-sonner-toast`)
 - **Exact rendered strings** for messages, page titles, toast text, validation errors — these go into `enums/app/*`
 
 ### Phase 4 — Apply findings
@@ -122,22 +122,22 @@ This matches how the reference framework (`the upstream reference framework`) wo
 
 ## Examples
 
-### Example 1 — First-time exploration of the synthetics list page
+### Example 1 — First-time exploration of the jobs list page
 
-User says: *"Add a page object for the synthetics list."*
+User says: *"Add a page object for the jobs list."*
 
-1. Run `npx playwright open --load-storage .auth/app/appMainUserSession.json https://<app-host>/synthetics` (path from `playwright.config.ts`).
-2. The human lands on the synthetics list. Observes: page heading `"Synthetics"`, a `Create Monitor` button (role=button), a search input (role=textbox, labelled `Search by name`), a data table with row testids matching `monitor-actions-<id>`.
+1. Run `npx playwright open --load-storage .auth/app/appMainUserSession.json https://<app-host>/jobs` (path from `playwright.config.ts`).
+2. The human lands on the jobs list. Observes: page heading `"Jobs"`, a `Create Job` button (role=button), a search input (role=textbox, labelled `Search by name`), a data table with row testids matching `job-actions-<id>`.
 3. The human reports observations to the model.
-4. The model authors the page object following the `selectors` skill — `getByRole('heading', { name: 'Synthetics' })` for the title; `getByRole('button', { name: 'Create Monitor' })`, since exploration showed role=button with that name (being a Radix primitive is not on its own a reason for a test-id); `getByLabel(/^Search by name/i)` for the labelled search field.
+4. The model authors the page object following the `selectors` skill — `getByRole('heading', { name: 'Jobs' })` for the title; `getByRole('button', { name: 'Create Job' })`, since exploration showed role=button with that name (being a Radix primitive is not on its own a reason for a test-id); `getByLabel(/^Search by name/i)` for the labelled search field.
 
 ### Example 2 — Re-exploring after a UI change broke a test
 
-User says: *"`SyntheticsPage.createMonitorButton` test fails — the button isn't found."*
+User says: *"`JobsPage.createJobButton` test fails — the button isn't found."*
 
 1. **Don't bump timeouts.** Re-explore.
-2. Run `npx playwright open --load-storage .auth/app/appMainUserSession.json https://<app-host>/synthetics`.
-3. The human inspects: the button is now wrapped differently — accessible name is the same, but the testid changed from `create-monitor-button` to `create-synthetic-button`.
+2. Run `npx playwright open --load-storage .auth/app/appMainUserSession.json https://<app-host>/jobs`.
+3. The human inspects: the button is now wrapped differently — accessible name is the same, but the testid changed from `create-job-button` to `create-scheduled-job-button`.
 4. Update the page object. Update the locator to the new testid; if the rename was deliberate, also update any `enums/app/*` constant.
 5. Run the affected spec via the `debugging` skill's flow.
 
