@@ -7,8 +7,15 @@ Side-by-side good/bad examples for every pattern in [SKILL.md](SKILL.md). All ex
 ### Good
 
 ```typescript
+const createdJobNames: string[] = [];
+
+test.afterAll(async ({ apiRequest }) => {
+    await cleanupUiCreatedJobs(apiRequest, createdJobNames, tokens.full());
+});
+
 test('creates a job under a unique name', { tag: '@App-regression' }, async ({ createJobPage, jobsPage }) => {
     const jobName = `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`;
+    createdJobNames.push(jobName);
     await createJobPage.createJobFromSheet({ name: jobName });
     await expect(jobsPage.getRowByName(jobName)).toBeVisible();
 });
@@ -264,7 +271,8 @@ test('seeded worker path', { tag: '@App-API' }, async ({ apiRequest }) => {
     workerIds.push(worker.id);
     const { status, body } = await getWorker(apiRequest, worker.id, tokens.full());
     expect(status).toBe(200);
-    expect(body.worker.name).toBe(worker.name);
+    expect(GetWorkerResponseSchema.parse(body)).toBeTruthy();
+    expect(body.worker.id).toBe(worker.id);
 });
 
 test.afterAll(async ({ apiRequest }) => {

@@ -544,13 +544,14 @@ Rules:
 
 The framework today does **not** include OTP inputs. Email-based flows (`forgot-password`, `initial-user-registration`) use Mailpit + a clickable link; the inbox lookup happens through the `mailpit` fixture, not a UI OTP component. The shape below is reserved for the first OTP UI:
 
-<!-- snippet-lint: skip — two files in one block: the page-object getter, then the caller -->
 ```typescript
 // Page object
 get codeInput(): Locator {
     return this.page.getByTestId('otp-input-0');
 }
+```
 
+```typescript
 // Caller — click() already waits for the input to be visible and enabled
 await loginPage.codeInput.click();
 await expect(loginPage.codeInput).toBeFocused();
@@ -626,7 +627,6 @@ Rules:
 
 The framework today does **not** open any new browser tabs from inside a test (`page.waitForEvent('popup')` has zero callers). If you add the first popup flow (OAuth, third-party billing portal, "Open in new tab"), use the shape below and lift it into a base class on the second usage:
 
-<!-- snippet-lint: skip — two files in one block: the page-object method, then the caller -->
 ```typescript
 async openExternalBillingPortal(): Promise<Page> {
     const popupPromise = this.page.waitForEvent('popup');
@@ -634,7 +634,9 @@ async openExternalBillingPortal(): Promise<Page> {
     const popup = await popupPromise;
     return popup;
 }
+```
 
+```typescript
 // Caller
 const popup = await tenantSettings.openExternalBillingPortal();
 await expect(popup.getByRole('heading', { name: 'Billing Portal' })).toBeVisible();

@@ -200,8 +200,9 @@ test.describe("<Feature> — Form Validation", () => {
     async ({ createJobPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
-      // validation test body: fill the field with the invalid value, then submit
-      await createJobPage.submit();
+      // validation test body: fill the field with the invalid value, then click submit.
+      // Not createJobPage.submit(): that action waits for the API and asserts the success toast.
+      await createJobPage.submitButton.click();
       await expect(createJobPage.fieldError("<field>")).toBeVisible();
       // close sheet at end to leave clean state
     },

@@ -262,7 +262,6 @@ The most common per-test flake causes in this framework, most common first (roug
 2. Trace replay: the notifications XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/notifications` resolves.
 
 **Fix:** Give the page object a `refreshNotifications()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: `BasePage` already provides one, and redefining it would silently override the base behaviour.)
-<!-- snippet-lint: skip — two files in one block: the page-object method, then the spec lines that call it -->
 ```ts
 // NotificationsPage
 async refreshNotifications(): Promise<void> {
@@ -270,7 +269,9 @@ async refreshNotifications(): Promise<void> {
   await this.refreshButton.click();
   await loaded;
 }
+```
 
+```ts
 // spec
 await notificationsPage.refreshNotifications();
 await expect(notificationsPage.firstNotificationRow).toBeVisible();

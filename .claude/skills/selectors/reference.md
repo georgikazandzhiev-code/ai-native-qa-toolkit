@@ -304,12 +304,13 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 
 Acceptable for sets of repeating elements. Always pair with a follow-up assertion that bounds the count or scopes by a parent:
 
-<!-- snippet-lint: skip — two fragments in one block: a page-object getter and an assertion that uses it -->
 ```typescript
 get tableHeaders(): Locator {
     return this.page.getByTestId(/columnheader/);
 }
+```
 
+```typescript
 await expect(this.tableHeaders).toHaveCount(expectedColumnCount);
 ```
 

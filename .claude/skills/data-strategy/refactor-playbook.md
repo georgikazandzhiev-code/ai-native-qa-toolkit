@@ -242,18 +242,21 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 ### Symptoms
 
 ```typescript
+// ❌ BAD — the aliasing this section removes
 // tests/app/api/jobs-service/run-stats/job-run-stats.spec.ts
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
 
 ```typescript
+// ❌ BAD — the aliasing this section removes
 // tests/app/api/tenant-service/tenant-schema.spec.ts
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
 
 ```typescript
+// ❌ BAD — the aliasing this section removes
 // tests/app/api/jobs-service/workers/workers.spec.ts
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;

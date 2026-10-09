@@ -120,7 +120,7 @@ test.describe('Invite email loop', () => {
         await mailpit.deleteEmailsForRecipient(recipient);
     });
 
-    test('user receives an invite email', { tag: '@App-regression' }, async ({ mailpit /*, page objects */ }) => {
+    test('user receives an invite email', { tag: '@App-Integration' }, async ({ mailpit /*, page objects */ }) => {
         /* trigger the flow that emails `recipient` */
         const email = await mailpit.getLastEmail(recipient);
         expect(email).not.toBeNull();

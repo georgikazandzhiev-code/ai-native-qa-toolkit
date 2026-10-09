@@ -222,7 +222,6 @@ Verification methods (the `xxxAndVerify()` pattern, e.g. `loginAndVerify`) may u
 
 Every new app POM is registered in `fixtures/pom/page-object-fixture.ts` in the same edit as the class file. The diff has exactly two parts:
 
-<!-- snippet-lint: skip — two parts of fixture registration in one block: the FrameworkFixtures type entry and the fixture body inside base.extend -->
 ```typescript
 // 1. Type entry on FrameworkFixtures
 export type FrameworkFixtures = {
@@ -233,7 +232,9 @@ export type FrameworkFixtures = {
   settingsPage: SettingsPage; // NEW
   resetStorageState: () => Promise<void>;
 };
+```
 
+```typescript
 // 2. Fixture body inside base.extend<FrameworkFixtures>({...})
 settingsPage: async ({ page }, use) => {
   await use(new SettingsPage(page));
@@ -248,6 +249,7 @@ No `mergeTests` change is needed — the page-object fixture is already merged i
 import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
 import { SUITES } from "../../../../enums/app/qase-suites";
+import { faker } from "@faker-js/faker";
 
 test.describe("Settings — Profile", () => {
   test.beforeEach(async ({ sideNavigation, settingsPage }) => {
@@ -258,13 +260,16 @@ test.describe("Settings — Profile", () => {
   });
 
   test(
-    "Verify profile save shows success toast",
+    "Verify a saved first name survives a reload",
     { tag: "@App-regression" },
-    async ({ settingsPage }) => {
+    async ({ page, settingsPage }) => {
       qase.suite(SUITES.APP_SETTINGS);
       // qase.id(N);
-      await settingsPage.saveProfile({ "profile.firstName": "Jordan" });
-      await expect(settingsPage.successToast).toBeVisible();
+      const firstName = faker.person.firstName();
+      // saveProfile() already asserts the success toast; the test asserts what the toast can't: persistence
+      await settingsPage.saveProfile({ "profile.firstName": firstName });
+      await page.reload();
+      await expect(settingsPage.fieldInput("profile.firstName")).toHaveValue(firstName);
     },
   );
 });
