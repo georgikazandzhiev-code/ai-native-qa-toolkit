@@ -73,6 +73,34 @@ function frontmatter(text) {
   return out;
 }
 
+/**
+ * Front-matter values that strict YAML parsers reject or silently truncate.
+ *
+ * `frontmatter()` above is deliberately forgiving, so it accepted values that a real YAML parser
+ * does not: an unquoted value containing ": " is read as a nested mapping ("Nested mappings are
+ * not allowed in compact mappings"), and one containing " #" is cut off at the "#" as a comment.
+ * Claude Code's own loader tolerated both, so the skill still worked — but every editor preview
+ * and every other tool that reads the file showed it broken, and nothing here noticed. Both cases
+ * were found by hand in October 2026 (build-alternatives, test-case-generation).
+ *
+ * Zero-dependency on purpose, like the rest of this script: it checks the two shapes that bit,
+ * not the whole YAML grammar. Quoted values and block scalars (`>-`, `|`) are fine.
+ */
+function frontmatterYamlProblems(text) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (!m) return [];
+  const problems = [];
+  for (const raw of m[1].split(/\r?\n/)) {
+    const kv = /^\s*([\w-]+):\s+(.+)$/.exec(raw);
+    if (!kv) continue;
+    const [, key, val] = kv;
+    if (/^["'[{|>]/.test(val)) continue; // quoted, flow collection or block scalar
+    if (/:\s/.test(val)) problems.push(`\`${key}\` has an unquoted ": " — strict YAML reads a nested mapping; use a block scalar (\`${key}: >-\`) or quote the value`);
+    else if (/\s#/.test(val)) problems.push(`\`${key}\` has an unquoted " #" — strict YAML cuts the value off there as a comment; quote it or use a block scalar`);
+  }
+  return problems;
+}
+
 // ── 1 + 2 + 3. Skills: valid SKILL.md, unique names, required sections ──────────
 
 const REQUIRED_SECTIONS = [
@@ -106,6 +134,7 @@ for (const folder of skillDirs) {
     err(where, 'SKILL.md has no YAML front matter');
     continue;
   }
+  for (const p of frontmatterYamlProblems(text)) err(where, `front matter is not valid YAML: ${p}`);
 
   // name present, matches folder, and unique
   if (!fm.name) err(where, 'front matter has no `name`');
@@ -239,6 +268,9 @@ const rulesDir = join(ROOT, '.cursor', 'rules');
 if (!existsSync(rulesDir)) {
   warn('.cursor/rules', 'not present — skipped');
 } else {
+  for (const f of readdirSync(rulesDir).filter((f) => f.endsWith('.mdc'))) {
+    for (const p of frontmatterYamlProblems(read(join(rulesDir, f)))) err(`.cursor/rules/${f}`, `front matter is not valid YAML: ${p}`);
+  }
   const mdc = readdirSync(rulesDir).filter((f) => f.endsWith('.mdc'));
   if (mdc.length === 0) warn('.cursor/rules', 'no .mdc rule files');
   for (const f of mdc) {
@@ -282,6 +314,11 @@ if (!existsSync(ignorePath)) {
 // connected they must be, and this is where the connection is made.
 
 const cmdDir = join(ROOT, '.claude', 'commands');
+if (existsSync(cmdDir)) {
+  for (const f of readdirSync(cmdDir).filter((f) => f.endsWith('.md'))) {
+    for (const p of frontmatterYamlProblems(read(join(cmdDir, f)))) err(`commands/${f}`, `front matter is not valid YAML: ${p}`);
+  }
+}
 const pluginIndex = join(ROOT, 'eslint-plugin-qa-constitution', 'lib', 'index.js');
 const ruleTests = join(ROOT, 'eslint-plugin-qa-constitution', 'tests', 'rules.test.js');
 const selfPath = fileURLToPath(import.meta.url);
@@ -870,9 +907,11 @@ for (const dir of CI_DIRS) {
     }
 
     // d. Relative links resolve. Only file existence is checked, not `#anchors`. Exempt, because
-    //    they are not links into this tree: URLs, `~/` paths (the reader's home directory),
-    //    `<placeholder>` targets, links inside code, and `*-template.md` files, whose links are
-    //    written relative to the folder the template is copied into.
+    //    they are not links into this tree: URLs, `<placeholder>` targets, links inside code, and
+    //    `*-template.md` files, whose links are written relative to the folder the template is
+    //    copied into. A `~/` target is NOT exempt: no Markdown viewer expands `~`, so the link is
+    //    dead everywhere. It used to be skipped as "the reader's home directory", and 21 links to
+    //    `~/.claude/CLAUDE.md` shipped that way (October 2026).
     const link = /\[(?:[^[\]]|\[[^\]]*\])*\]\(([^)\s]+)\)/g;
     const CLAUDE_DIR = join(ROOT, '.claude');
     const linkFiles = [
@@ -894,7 +933,12 @@ for (const dir of CI_DIRS) {
           for (const m of line.matchAll(link)) {
             if (code.some(([a, b]) => m.index >= a && m.index < b)) continue;
             const target = m[1];
-            if (/^(?:[a-z]+:|#|~)/i.test(target) || target.includes('<')) continue;
+            if (target.startsWith('~')) {
+              const where = `${relative(ROOT, file).replace(/\\/g, '/')}:${i + 1}`;
+              err(where, `links to ${target} — Markdown does not expand ~, so this link is dead in every viewer; use a relative path`);
+              continue;
+            }
+            if (/^(?:[a-z]+:|#)/i.test(target) || target.includes('<')) continue;
             const path = decodeURIComponent(target.split('#')[0]);
             if (!path) continue;
             const where = `${relative(ROOT, file).replace(/\\/g, '/')}:${i + 1}`;

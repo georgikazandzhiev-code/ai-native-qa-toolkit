@@ -127,4 +127,4 @@ User says: _"A run message the executor can't process should end up in the dead-
 - **`flakiness-triage`** — when an async test is intermittently red, the bounded-wait-vs-sleep distinction is the first thing to check.
 - **`quality-gate`** — a release gate can require the dead-letter path tested for a messaging flow before shipping.
 - **`bug-helper`** — filing a dropped message, a missing DLQ field, or a broken ordering guarantee as a triaged bug.
-- **[~/.claude/CLAUDE.md](~/.claude/CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.
+- **[~/.claude/CLAUDE.md](../../CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.

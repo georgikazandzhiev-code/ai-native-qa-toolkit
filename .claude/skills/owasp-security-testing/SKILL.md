@@ -151,4 +151,4 @@ User says: _"Check the job-name field is safe against XSS."_
 - **`pr-review`** — the pre-push gate; pair with `review-checklist.md` for a security pass on the diff.
 - **`bug-helper`** — filing a confirmed finding as a triaged bug.
 - **`accessibility-testing`** — the other non-functional skill; same "a gate that can fail" discipline and known-exception-with-expiry policy.
-- **[~/.claude/CLAUDE.md](~/.claude/CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.
+- **[~/.claude/CLAUDE.md](../../CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.

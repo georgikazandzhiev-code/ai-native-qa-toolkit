@@ -265,4 +265,4 @@ Push.
 - [`debugging`](../debugging/SKILL.md) — when the test run is red and you need to diagnose.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — pair its `review-checklist.md` for a security pass on the diff (access control, auth, injection, misconfiguration).
 - Slash commands: `/code-review` (bugs), `/review-changes` (deep skill canon), `/security-review`, `/simplify`.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Verification Standard codifies the don't-say-"looks-fine" rule.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Verification Standard codifies the don't-say-"looks-fine" rule.

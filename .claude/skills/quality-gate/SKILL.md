@@ -154,4 +154,4 @@ User says: _"Can this PR merge? `defect-prediction` flagged the worker-assignmen
 - **`config`** — where the thresholds live (`appConfig.gates.*`); the gate reads constants, never literals.
 - **`qe-pattern-memory`** — where a reusable gate lesson (a calibration, a recurring blocker) is stored across sessions.
 - **`bug-helper`** — filing the bug a failed gate surfaced; the gate names the blocker, `bug-helper` triages it.
-- **[~/.claude/CLAUDE.md](~/.claude/CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.
+- **[~/.claude/CLAUDE.md](../../CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.

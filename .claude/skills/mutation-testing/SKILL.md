@@ -160,4 +160,4 @@ The durable learning — "status-only assertions on this service pass through in
 - [`defect-prediction`](../defect-prediction/SKILL.md) — use it to choose *which* module to mutation-test first; risk ranking beats alphabetical.
 - [`qe-pattern-memory`](../qe-pattern-memory/SKILL.md) — store recurring weak-assertion classes so the next session recognises them without re-running.
 - [`debugging`](../debugging/SKILL.md) — for a test that fails unexpectedly during a run.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § No redundant assertions after Zod parse, and the WON'T rule against loosening schemas, both constrain how survivors may be fixed.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § No redundant assertions after Zod parse, and the WON'T rule against loosening schemas, both constrain how survivors may be fixed.

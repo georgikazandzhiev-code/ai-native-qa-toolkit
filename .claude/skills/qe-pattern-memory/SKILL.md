@@ -190,4 +190,4 @@ The pattern survives in a narrower form once the backend is fixed or the contrac
 - [`defect-prediction`](../defect-prediction/SKILL.md) — consumes stored patterns as a risk signal; a file with several falsified patterns is a risky file.
 - [`mutation-testing`](../mutation-testing/SKILL.md) — surviving mutants often reveal a durable weak-assertion pattern worth storing.
 - [`skill-creator`](../skill-creator/SKILL.md) — when a `canonical` pattern turns out to be a general rule, graduate it into a skill.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Search Before Creating applies to the pattern store exactly as it applies to helpers.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Search Before Creating applies to the pattern store exactly as it applies to helpers.

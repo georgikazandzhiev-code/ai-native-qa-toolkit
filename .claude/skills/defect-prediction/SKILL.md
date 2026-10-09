@@ -171,4 +171,4 @@ This is the shape of most PR-level use. The output is attention, not test count.
 - [`flakiness-triage`](../flakiness-triage/SKILL.md) — a file whose *tests* are unstable is a different problem; do not confuse test risk with product risk.
 - [`qe-pattern-memory`](../qe-pattern-memory/SKILL.md) — supplies signal 7, and stores the calibration record so the next release inherits the evidence.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — security risk is threat-modelled, not history-ranked; run it alongside, not instead.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Coverage Plan requires every status code enumerated regardless of risk rank.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Coverage Plan requires every status code enumerated regardless of risk rank.

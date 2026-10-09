@@ -331,4 +331,4 @@ The deliverable is a threshold that fails when the SLO is missed, not a graph.
 - [`defect-prediction`](../defect-prediction/SKILL.md) — which endpoint to load-test first when the budget covers only a few.
 - [`flakiness-triage`](../flakiness-triage/SKILL.md) — when a load test run destabilises the functional suite, that skill classifies the fallout.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — a load generator against an unauthorised target is an attack; the authorisation discipline is shared.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — Sources of Truth applies to thresholds and URLs alike.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — Sources of Truth applies to thresholds and URLs alike.

@@ -347,7 +347,7 @@ The finished shape: a body builder in `helpers/app/` that takes the resolved `ow
 - [`enums`](../enums/SKILL.md) — repeated strings belong there, not in a test-data file.
 - [`refactor-values`](../refactor-values/SKILL.md) — read before changing any existing fixed value; consumers must update atomically.
 - [`flakiness-triage`](../flakiness-triage/SKILL.md) — shared fixed data is a leading cause of the cross-test interference that skill diagnoses.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Sources of Truth and the WON'T rule against hardcoded ids both constrain every decision here.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Sources of Truth and the WON'T rule against hardcoded ids both constrain every decision here.
 ## Additional resources
 
 - [reference.md](reference.md) — env-token catalog, JSON file catalog, helper catalog, storage state catalog, faker recipes.

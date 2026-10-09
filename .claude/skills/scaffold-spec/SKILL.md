@@ -536,4 +536,4 @@ Report the blocker with the exact failure, and offer what can be done without th
 - [`playwright-cli`](../playwright-cli/SKILL.md) — the mandatory explore-before-generate step for UI work.
 - [`fixtures`](../fixtures/SKILL.md) — registering a new page object for injection.
 - [`pr-review`](../pr-review/SKILL.md) — run before pushing the scaffold.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — the pre-edit checklist and the Verification Standard both apply to a scaffold.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — the pre-edit checklist and the Verification Standard both apply to a scaffold.

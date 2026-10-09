@@ -8,7 +8,7 @@ metadata:
 
 # Page Objects
 
-Page Object classes are the seam between specs and the UI: they own every locator the framework interacts with, encapsulate every wait, and expose **business actions** (`jobsPage.openRowActionMenu`, `createJobPage.fillHttpJobForm`) instead of raw clicks. Authoring drift in this layer leaks into every spec that consumes the page object — so the rules below are tighter than they look. This skill is the **single source of truth** for POM class structure, action-method standards, and fixture registration. Pair with [`selectors`](../selectors/SKILL.md) for locator strategy and [`test-standards`](../test-standards/SKILL.md) for spec-side rules. Always-on framework invariants live in [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md).
+Page Object classes are the seam between specs and the UI: they own every locator the framework interacts with, encapsulate every wait, and expose **business actions** (`jobsPage.openRowActionMenu`, `createJobPage.fillHttpJobForm`) instead of raw clicks. Authoring drift in this layer leaks into every spec that consumes the page object — so the rules below are tighter than they look. This skill is the **single source of truth** for POM class structure, action-method standards, and fixture registration. Pair with [`selectors`](../selectors/SKILL.md) for locator strategy and [`test-standards`](../test-standards/SKILL.md) for spec-side rules. Always-on framework invariants live in [`~/.claude/CLAUDE.md`](../../CLAUDE.md).
 
 ## Critical
 
@@ -381,6 +381,6 @@ User says: *"`DashboardPage`, `JobsPage`, and `WorkersPage` all duplicate the su
 
 ## See Also
 
-- **Always-on rules:** [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) — framework invariants (imports, type-safety, MUST/SHOULD/WON'T). UI-specific POM Method Standards, Locator Priority, and cleanup are now in this skill (consolidated from the previous `ui-tests.mdc`).
+- **Always-on rules:** [~/.claude/CLAUDE.md](../../CLAUDE.md) — framework invariants (imports, type-safety, MUST/SHOULD/WON'T). UI-specific POM Method Standards, Locator Priority, and cleanup are now in this skill (consolidated from the previous `ui-tests.mdc`).
 - **Sibling cluster (UI authoring):** [`selectors`](../selectors/SKILL.md) (locator strategy, Radix exception), [`playwright-cli`](../playwright-cli/SKILL.md) (live-app exploration tool), [`fixtures`](../fixtures/SKILL.md) (fixture DI / helper-fixture promotion), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding that consumes POMs), [`enums`](../enums/SKILL.md) (where `MESSAGES.X` lives; endpoint paths live in `config`, never in enums), [`test-standards`](../test-standards/SKILL.md) (spec-side rules — `test.step`, tags, Qase, imports), [`frontend-cross-check`](../frontend-cross-check/SKILL.md) (verifying testids against the live frontend), [`config`](../config/SKILL.md) (`appConfig.paths.X` for navigation URLs).
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.

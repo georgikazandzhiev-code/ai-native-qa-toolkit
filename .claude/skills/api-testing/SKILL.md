@@ -449,7 +449,7 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 - **`scaffold-spec`** — sibling skill for greenfield spec scaffolding (templates and conventions).
 - **`debugging`** — failure-mode taxonomy, UI Mode / Trace Viewer / Inspector, CI-only-failure replay.
 - **`owasp-security-testing`** — layers OWASP access-control / auth / injection negative tests on this matrix (BOLA/BFLA/BOPLA, second-principal tests, SSRF, misconfiguration surface). Reach for it when a spec needs security coverage, not just functional coverage.
-- **[~/.claude/CLAUDE.md](~/.claude/CLAUDE.md)** — always-on framework invariants (imports, type-safety, MUST/SHOULD/WON'T tables). API-specific rules live in this skill.
+- **[~/.claude/CLAUDE.md](../../CLAUDE.md)** — always-on framework invariants (imports, type-safety, MUST/SHOULD/WON'T tables). API-specific rules live in this skill.
 - **`~/.claude/CLAUDE.md`** — root orchestrator with MUST/SHOULD/WON'T tables.
 
 ## Additional resources
