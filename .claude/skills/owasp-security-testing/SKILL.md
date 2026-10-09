@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 2.0.0
+version: 2.0.1
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -95,14 +95,14 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 
 ### Example 1 — BOLA on a GET-by-id endpoint
 
-User says: _"Make sure a tenant can't read another tenant's synthetic monitor."_
+User says: _"Make sure a tenant can't read another tenant's job."_
 
 1. **Principals** — tenant A (`USER_ACCESS_TOKEN_FULL`) owns the object; tenant B has a valid token but no access to A's data.
-2. **Seed** — in `beforeAll`, create a synthetic as tenant A, capture `syntheticId`.
+2. **Seed** — in `beforeAll`, create a job as tenant A, capture `jobId`.
 3. **Risk** — API1 (BOLA), from `api-top10.md`.
-4. **Test** — `Verify GET /synthetics/:id returns 404 for a cross-tenant caller`: call the endpoint with tenant B's token and A's `syntheticId`, assert status is `404` (existence hidden) or `403`, and `APIErrorSchema.parse(body)`. A `200` with A's data is the bug.
-5. **Cleanup** — delete the synthetic as tenant A in `afterAll`.
-6. **If it returns 200** — comment the test out with `// TODO: FIXME: PROJ-XXXX — cross-tenant read exposes synthetic`, file via `bug-helper`.
+4. **Test** — `Verify GET /jobs/:id returns 404 for a cross-tenant caller`: call the endpoint with tenant B's token and A's `jobId`, assert status is `404` (existence hidden) or `403`, and `APIErrorSchema.parse(body)`. A `200` with A's data is the bug.
+5. **Cleanup** — delete the job as tenant A in `afterAll`.
+6. **If it returns 200** — comment the test out with `// TODO: FIXME: PROJ-XXXX — cross-tenant read exposes job`, file via `bug-helper`.
 
 ### Example 2 — BFLA on an admin-only operation
 
@@ -115,10 +115,10 @@ User says: _"A regular user shouldn't be able to hit the admin tenant-create end
 
 ### Example 3 — Stored XSS on a UI-created resource name
 
-User says: _"Check the monitor-name field is safe against XSS."_
+User says: _"Check the job-name field is safe against XSS."_
 
 1. **Risk** — A03 Injection/XSS, from `web-top10.md`.
-2. **Input path** — create a synthetic whose `name` is an XSS payload (e.g. an `<img onerror>` string from a curated payload array in `test-data/`), via API or the Page Object.
+2. **Input path** — create a job whose `name` is an XSS payload (e.g. an `<img onerror>` string from a curated payload array in `test-data/`), via API or the Page Object.
 3. **Reject branch** — if the contract rejects it, assert `400` + `APIErrorSchema`.
 4. **Safe-render branch** — if it's accepted, navigate to where the name renders and assert the payload appears as **inert text**, not an executed script: the text is visible via `getByText(rawPayload)` and no dialog/script fired. Never use `page.evaluate` to probe the DOM (framework rule) — assert through locators.
 5. **Finding** — a rendered/executed payload is a bug; capture and report.
