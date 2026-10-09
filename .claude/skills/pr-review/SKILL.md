@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 2.2.1
+version: 2.2.2
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -13,7 +13,7 @@ Last-line-of-defense self-review before a PR opens. The framework already has `/
 ## Critical
 
 - **ALWAYS run this skill BEFORE `git push`.** Husky's `lint-staged` only runs ESLint + Prettier on staged files; it cannot catch a missing `qase.suite()`, a `getByTestId` violating the Radix exception, or a leftover `console.log`. This skill closes that gap.
-- **ALWAYS run the affected specs with `--workers=1` before declaring the PR ready.** A passing lint is not a passing test. Per memory: shared tenant env causes cross-spec flakes in parallel — always single-worker.
+- **ALWAYS run the affected specs with `--workers=1` before declaring the PR ready.** A passing lint is not a passing test. Per memory: shared tenant env causes cross-spec flakes in parallel — always a single Playwright worker.
 - **NEVER bypass this skill to ship faster.** Every shipped convention violation becomes future drift. The 5 minutes this skill takes saves a reviewer round-trip.
 - **ALWAYS check the scope before the conventions, and advise — never block.** A PR should be one logical change that can ship on its own (`GOVERNANCE.md` § One logical change per PR, a SHOULD). If the diff mixes unrelated parts, flag it and propose the split. If the author keeps the scope — for example coupled changes that cannot pass CI separately — continue the review and make sure the PR description says why. There is no size limit; the test is coherence.
 - **NEVER reuse this skill for actual bug-hunting or efficiency review.** Bugs are `/code-review`. Skill-canon depth is `/review-changes`. This skill is the convention layer between them.
@@ -61,7 +61,7 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
 - [ ] **No `try/catch` around `expect`.** The only allowed `try/catch` is capturing an accidentally-created resource ID for cleanup.
 - [ ] **No `if`/`else`/ternary in test bodies.** Tests are deterministic; one case per test.
-- [ ] Page objects consumed via fixture destructuring (`async ({ syntheticsPage }) => {...}`). **No `new SyntheticsPage(page)`** inside the test.
+- [ ] Page objects consumed via fixture destructuring (`async ({ jobsPage }) => {...}`). **No `new JobsPage(page)`** inside the test.
 - [ ] State-mutating tests have `afterEach`/`afterAll` cleanup via the matching `helpers/app/<resource>.ts` helper. **No UI deletes** — API only.
 - [ ] **No `test.only(...)`** anywhere. **No `test.skip`** — a test disabled for a known bug is commented out with `// TODO: FIXME: <TICKET>` directly above.
 - [ ] **No `console.log`/`console.debug`** in committed code.
@@ -104,7 +104,7 @@ Routed skill: [`helpers`](../helpers/SKILL.md):
 - [ ] First arg of every exported helper is `apiRequest: ApiRequestFn`. Last optional arg is `headers?: string`.
 - [ ] No Zod schema authored inside a helper — schemas live only in `fixtures/api/schemas/app/`.
 - [ ] Cleanup helpers use `Promise.allSettled` and tolerate 404s (resource may already be gone).
-- [ ] Cleanup ordering respects FK constraints (synthetics-before-probes).
+- [ ] Cleanup ordering respects FK constraints (jobs-before-workers).
 - [ ] New files use **kebab-case** filenames (`admin-tenants.ts`, not `adminTenants.ts`).
 
 #### Zod schemas (`fixtures/api/schemas/app/**`)
@@ -147,7 +147,7 @@ Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 ### Step 3 — Run the affected specs
 
 ```bash
-# Spec-by-spec, single worker, before pushing
+# Spec-by-spec, single Playwright worker, before pushing
 npx playwright test tests/app/path/to/changed-spec.spec.ts --workers=1
 
 # Or the full tag for the affected layer
@@ -191,7 +191,7 @@ Need a check before pushing?
 ## Anti-patterns
 
 - ❌ Piling unrelated changes onto one branch, or adding new work to a branch whose PR is already in review. Ship each logical unit as its own PR from `main`.
-- ❌ Skipping the affected-spec run "because lint passed". Lint doesn't run Playwright; you don't know the spec works.
+- ❌ Skipping the affected-spec test run "because lint passed". Lint doesn't run Playwright; you don't know the spec works.
 - ❌ Running with default parallelism (`--workers` not set). Always `--workers=1` for this framework — shared tenant env interference.
 - ❌ Bypassing husky with `--no-verify` because pre-commit is "slow". The hook catches real issues; investigate failures, don't bypass.
 - ❌ Letting commented-out scratch code ship "to revisit later". Either keep it with a `// TODO:` + ticket reference, or delete.
@@ -220,16 +220,16 @@ Before declaring the PR ready:
 
 ```
 git diff --name-status main...HEAD
-# M tests/app/api/alerts/alerts.spec.ts
-# M pages/app/AlertsPage.ts
-# A helpers/app/alerts.ts
+# M tests/app/api/notification-service/notifications/notifications.spec.ts
+# M pages/app/NotificationsPage.ts
+# A helpers/app/notifications.ts
 ```
 
 Walk:
-1. **`alerts.spec.ts`** — spec-file checklist: import ✓, single tag (`@App-API`) ✓, `qase.suite(SUITES.API_ALERTS)` ✓, `test.step` ✓, web-first assertions ✓, no `try/catch` ✓, no `if`, no UI cleanup, schema validation idiom ✓.
-2. **`AlertsPage.ts`** — POM checklist: extends `BasePage` ✓, locator getters ✓, no JSDoc on getters ✓, action methods have waits ✓, feedback locators present ✓, registered in `page-object-fixture.ts` ✓.
-3. **`alerts.ts`** (new helper) — helper checklist: `apiRequest` first arg ✓, no Zod schema inside ✓, cleanup `Promise.allSettled` ✓, kebab-case filename ✓.
-4. **Run:** `npx playwright test tests/app/api/alerts/alerts.spec.ts --workers=1` — green.
+1. **`notifications.spec.ts`** — spec-file checklist: import ✓, single tag (`@App-API`) ✓, `qase.suite(SUITES.API_NOTIFICATIONS)` ✓, `test.step` ✓, web-first assertions ✓, no `try/catch` ✓, no `if`, no UI cleanup, schema validation idiom ✓.
+2. **`NotificationsPage.ts`** — POM checklist: extends `BasePage` ✓, locator getters ✓, no JSDoc on getters ✓, action methods have waits ✓, feedback locators present ✓, registered in `page-object-fixture.ts` ✓.
+3. **`notifications.ts`** (new helper) — helper checklist: `apiRequest` first arg ✓, no Zod schema inside ✓, cleanup `Promise.allSettled` ✓, kebab-case filename ✓.
+4. **Run:** `npx playwright test tests/app/api/notification-service/notifications/notifications.spec.ts --workers=1` — green.
 5. **Lint:** clean. **tsc:** clean.
 
 Push.
@@ -244,7 +244,7 @@ Push.
 |---------|-------|-----|
 | "`pr-review` says my PR is ready but reviewer found 3 violations" | The skill missed those because it's mechanical, not semantic | Add `/review-changes` to the loop for semantic depth |
 | "Husky is blocking on lint but `eslint` shows zero errors" | `lint-staged` runs `eslint --fix` then re-stages; an unfixable error (like a real type error) blocks | Run `npx tsc --noEmit` to find the real cause; don't `--no-verify` |
-| "Spec passed locally but the PR pipeline is red" | Local ran with default workers; CI uses single worker but cross-spec interference | Load [`flakiness-triage`](../flakiness-triage/SKILL.md) — likely cross-test interference, not your spec's bug |
+| "Spec passed locally but the PR pipeline is red" | Local ran with default Playwright workers; CI uses a single Playwright worker but cross-spec interference | Load [`flakiness-triage`](../flakiness-triage/SKILL.md) — likely cross-test interference, not your spec's bug |
 | "I changed a base class — what's the blast radius?" | Affects every consumer | `git grep -l "extends BasePage"` (or the changed class) and run each consumer's spec |
 
 ## See Also
@@ -255,8 +255,8 @@ Push.
 - [`api-testing`](../api-testing/SKILL.md) — Zod validation idiom, negative-test matrix.
 - [`helpers`](../helpers/SKILL.md) — helper signature, cleanup discipline.
 - [`type-safety`](../type-safety/SKILL.md) — no `any`, `process.env.X!` pattern.
-- [`flakiness-triage`](../flakiness-triage/SKILL.md) — when the run is flaky, not red.
-- [`debugging`](../debugging/SKILL.md) — when the run is red and you need to diagnose.
+- [`flakiness-triage`](../flakiness-triage/SKILL.md) — when the test run is flaky, not red.
+- [`debugging`](../debugging/SKILL.md) — when the test run is red and you need to diagnose.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — pair its `review-checklist.md` for a security pass on the diff (access control, auth, injection, misconfiguration).
 - Slash commands: `/code-review` (bugs), `/review-changes` (deep skill canon), `/security-review`, `/simplify`.
 - Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Verification Standard codifies the don't-say-"looks-fine" rule.
