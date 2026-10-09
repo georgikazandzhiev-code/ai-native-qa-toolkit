@@ -45,12 +45,12 @@ The fields have visible labels, so `getByLabel` is the locator (priority 2). The
 ```typescript
 get codeInput(): Locator {
     return this.page
-        .locator('.dialog-wrapper .field-input > input.shadcn-input')
+        .locator('.dialog-wrapper .field-input > input.ui-input')
         .first();
 }
 ```
 
-App-level / shadcn template classes track styling, not semantics; any theme tweak breaks the chain. The fix is either a stable testid added by the front-end team or, as a stopgap, scoping by a labelled wrapper plus `.locator('input')`.
+App-level / component-kit template classes track styling, not semantics; any theme tweak breaks the chain. The fix is either a stable testid added by the frontend owners or, as a stopgap, scoping by a labelled wrapper plus `.locator('input')`.
 
 ## P2 — `getByText` with `exact: true`
 
@@ -76,7 +76,7 @@ get successCreateMsg(): Locator {
 }
 ```
 
-Tolerated for full-sentence Sonner-toast messages because no other string contains it. For any short or generic string ("Edit", "Save", "Active"), drop the toleration and pass `exact: true`.
+Tolerated for full-sentence toast messages because no other string contains it. For any short or generic string ("Edit", "Save", "Active"), drop the toleration and pass `exact: true`.
 
 ## P3 — Filter by row text (instead of column position)
 
@@ -110,7 +110,7 @@ getJobTypeByName(jobName: string): Locator {
 }
 ```
 
-Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids (`pages/app/JobsPage.ts` `getSortHeader`); per-cell column testids are missing and should be requested from the front-end team. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
+Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids (`pages/app/JobsPage.ts` `getSortHeader`); per-cell column testids are missing and should be requested from the frontend owners. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
 
 ## P4 — Component scoping (instead of repeated top-level lookups)
 
@@ -404,7 +404,7 @@ get successNotification(): Locator {
 }
 ```
 
-Invented testids like `notification-success` / `notification-error` don't exist in the actual app — Sonner is the real toast component and it renders `[data-sonner-toast]` data attributes, not per-variant testids. Always use the filter shape above.
+Invented testids like `notification-success` / `notification-error` must not be used: confirm any testid in the app's source first (`frontend-cross-check`), and even a real per-variant testid ranks below `getByRole('status')` in the locator priority. When the app uses Sonner, each toast renders `[data-sonner-toast]` data attributes, not per-variant testids. Always use the filter shape above.
 
 ## P13 — Use the locator API instead of evaluating in the browser
 

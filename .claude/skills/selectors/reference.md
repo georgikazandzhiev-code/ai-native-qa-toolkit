@@ -82,7 +82,7 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 
 ## 2. ARIA role catalog (most-used in this framework)
 
-`role` argument to `getByRole`. Roles toward the top of the table are the most reliable in this framework's component library (Radix primitives wrapped via `shadcn/ui`).
+`role` argument to `getByRole`. Roles toward the top of the table are the most reliable in component libraries built on Radix primitives (used directly or through a component kit).
 
 | Role | When the UI uses it | Common `name` examples |
 |------|---------------------|------------------------|
@@ -298,7 +298,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Pattern | Meaning |
 |---------|---------|
 | `[data-sonner-toast]` | Per-toast container (multiple toasts can stack) — filter by text to pick one |
-| `data-testid="sonner"` | Toast region wrapper — used as a fallback in `expectSuccessToastForJob` (`pages/app/JobsPage.ts`) |
+| `data-testid="sonner"` | Toast region wrapper testid added by the app (Sonner does not emit it) — used as a fallback in `expectSuccessToastForJob` (`pages/app/JobsPage.ts`) |
 
 ### 4.10 Regex / prefix testids
 
@@ -329,7 +329,7 @@ getJobStatusBadge(row: Locator): Locator {
 When you cannot find an element via role/label/placeholder/text/testid:
 
 1. Check whether nearby elements have a testid — the missing one is usually a sibling.
-2. Open a ticket / PR with the front-end team to add `data-testid` following the taxonomy above. Do **not** drop to CSS classes that track styling.
+2. Open a ticket / PR with the frontend owners to add `data-testid` following the taxonomy above. Do **not** drop to CSS classes that track styling.
 3. While unblocked, anchor on the closest testid and drill (Pattern 3 in `SKILL.md`). Add a `// TODO: add data-testid="…"` comment.
 
 ## 5. Attribute filters and CSS hooks
@@ -342,10 +342,10 @@ When you cannot find an element via role/label/placeholder/text/testid:
 | `[role="switch"]` | Radix `Switch` | Auto-refresh toggle (assert via `aria-checked`) |
 | `[data-state="checked"]` / `[data-state="open"]` / `[data-state="on"]` | Radix state attribute on checkboxes, selects, dialogs, toggle groups | Active-state assertion (chart timeframe `data-state="on"`); checkbox state |
 | `[data-sonner-toast]` | Sonner toast container | Toast targeting (Recipe 5) — multiple toasts stack |
-| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Radix select content / option (emitted via `<SelectContent>`) | Drill into an open Radix select dropdown — see `pages/app/JobsPage.ts` `selectRunIntervalOption` |
+| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Testids the app's select wrapper puts on Radix `SelectContent` / `SelectItem` (Radix itself emits no testids) | Drill into an open Radix select dropdown — see `pages/app/JobsPage.ts` `selectRunIntervalOption` |
 | `[data-testid^='table-row-']` | Per-row anchor (prefix — rows carry `table-row-<id>`) | Row collection — `tableRows` getter in `pages/baseClasses/DataTableBase.ts`:29 |
 
-These are tolerated because the design system / Radix primitives treat them as a public API. Treat any other CSS class as private.
+These are tolerated because the Radix role and state attributes and Sonner's `data-sonner-toast` are public API of those libraries, and the app-added testids are a contract with the frontend. Treat any other CSS class as private.
 
 ### 5.2 Native element drills
 
@@ -455,7 +455,7 @@ Default rule: **new top-level page → extend `BasePage`** (**table-bearing page
 Full canonical rules in [`page-objects`](../page-objects/SKILL.md). Quick recap:
 
 - Methods represent meaningful flows, not single clicks ("**No single-action methods** — every POM method must include at least one built-in validation").
-- Every action method validates success (visible/hidden/value/URL change, or `waitForResponse`, or a Sonner toast assertion).
+- Every action method validates success (visible/hidden/value/URL change, or `waitForResponse`, or a toast assertion — Recipe 5).
 - Every public method has JSDoc with `@param` and `@returns`.
 - Encapsulate waits — put `waitForResponse` (registered before the triggering action) and web-first assertions inside the POM method, not in the test. Prefer locators over `waitForSelector`.
 - Explicit `Promise<void>` return types on all async methods.

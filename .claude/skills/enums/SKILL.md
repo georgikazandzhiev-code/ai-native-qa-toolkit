@@ -1,6 +1,6 @@
 ---
 name: enums
-version: 1.0.1
+version: 1.0.2
 description: Conventions for enums/app/ — where repeated string constants live (SUITES in qase-suites.ts, job statuses, inventory labels, report messages), the `as const` pattern, naming, and barrel exports. Use when adding a Qase suite, status value, or any repeated string constant. Triggers — "enum", "SUITES", "status value", "message string". Not for changing existing values (refactor-values) or endpoint paths (config — paths live in appConfig).
 metadata:
   category: domain
@@ -30,7 +30,7 @@ The `enums/` tree is small and intentional. List every file before adding more.
 | `enums/app/chart-export.ts` | `CHART_EXPORT_FORMATS` + `ChartExportFormat` type | `as const` array + derived union type | Chart export format literals (`csv`, `png`, `jpg`, `pdf`) |
 | `enums/app/job-status.ts` | `JOB_STATUSES` + `JobStatus` type | `as const` array + derived union type | Job statuses (`passing`, `degraded`, `failing`, `paused`) |
 | `enums/app/inventory.ts` | `INVENTORY_CARD_LABELS`, `INVENTORY_ACTION_MENU`, `INVENTORY_COLUMNS`, `INVENTORY_SOURCE_FILTER` | `as const` object literals / array | Inventory page UI labels — job-status overview cards, row action menu, table columns, source filter |
-| `enums/app/reports.ts` | `ReportMessages` | `as const` object literal | Reports page UI message strings (mirrors frontend paraglide messages) |
+| `enums/app/reports.ts` | `ReportMessages` | `as const` object literal | Reports page UI message strings (mirrors the frontend's i18n message catalog) |
 | `enums/app/index.ts` | — | Barrel | `export *` for all five files above |
 
 **That is the entire current inventory — `enums/app/` only; no `enums/util/` directory exists.** No `messages.ts`, no `roles.ts`, no `statuses.ts`, no `storage-state-paths.ts`, no `api-endpoints.ts` exist today. Endpoint paths live in `config/app.ts`. Storage-state paths are inline literals in `playwright.config.ts` (e.g. `".auth/app/appMainUserSession.json"`). If you genuinely need one of these new files, follow the workflow in § Adding a new enum file.
@@ -200,8 +200,8 @@ User says: _"Two specs assert the login error 'Invalid email or password'. Centr
 
 - **`config`** — where URLs, endpoint paths, route paths, credentials, and env-driven settings live (NOT in enums in this codebase).
 - **`refactor-values`** — impact analysis and cascading update workflow for enum value / key changes.
-- **`playwright-cli`** — how to capture real UI text before encoding it as a message constant (uses `npx playwright open`). Pair with `frontend-cross-check` (source) for stable Paraglide keys + inline literals.
-- **`frontend-cross-check`** — verify what UI strings the frontend actually emits (Paraglide keys in `messages/en.json` + inline literals in `src/components/**`) before encoding into an enum. `git pull` `<sibling-repos>/frontend` first.
+- **`playwright-cli`** — how to capture real UI text before encoding it as a message constant (uses `npx playwright open`). Pair with `frontend-cross-check` (source) for stable catalog message keys + inline literals.
+- **`frontend-cross-check`** — verify what UI strings the frontend actually emits (message keys in the i18n message catalog, e.g. `messages/en.json`, + inline literals in `src/components/**`) before encoding into an enum. `git pull` `<sibling-repos>/frontend` first.
 - **`data-strategy`** — where curated arrays of test inputs live (`test-data/app/*.json`, not enums).
 - **`api-testing`** — primary consumer of `SUITES.API_*` for `qase.suite()`.
 - **`~/.claude/CLAUDE.md`** — orchestrator constitution. The MUST row on Sources of Truth correctly states paths live in `config/app.ts` (`appConfig.api.X` / `appConfig.paths.X`) and message/role/suite constants live in `enums/app/*`.

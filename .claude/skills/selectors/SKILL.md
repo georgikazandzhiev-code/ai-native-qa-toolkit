@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 2.0.5
+version: 2.0.6
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -181,7 +181,7 @@ Use ONLY when the element is a real native or ARIA-mapped role AND the accessibl
 
 ### 2. `getByTestId` — the planned fallback
 
-Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-job-button`, `delete-job-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-runInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^job-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row job-status badges). Need a new testid? **Ask the front-end team to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
+Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-job-button`, `delete-job-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-runInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^job-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row job-status badges). Need a new testid? **Ask the frontend owners to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
 
 ### 3. Anchor + drill (composition over deep CSS) — the most important pattern
 
