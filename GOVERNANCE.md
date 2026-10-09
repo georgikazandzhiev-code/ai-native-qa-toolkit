@@ -74,7 +74,7 @@ Every example in the skills uses one invented product: a **scheduled-jobs platfo
 | Agent that executes the resource, in a location | **worker**, in a **region** | `Worker`, `workers`, `WorkerSchema`, `workersPage`, `createWorker`, `deleteWorker` |
 | Data that arrives minutes after creation | **run stats**, and a run's **steps** | `RunStats`, `runStats`, `RunStep` |
 | Event raised by a rule | **notification**, raised by a **notification rule** | `Notification`, `NotificationRule`, `notificationRulesPage` |
-| Resource state | **status**: `passing` / `failing` / `degraded` / `paused` | `JobStatus` |
+| Resource state | **status**: `passing` / `failing` / `degraded` / `paused`. An "add a new status" example uses `archived`, which is not one of the four | `JobStatus`, `JOB_STATUSES` in `enums/app/job-status.ts` |
 | Service folders and routes | `jobs-service/` (sub-folders `jobs/`, `workers/`, `run-stats/`), `notification-service/`, `tenant-service/`, `shared/`; `/api/v1/jobs`, `/api/v1/workers` | — |
 | Internals for distributed-failure cases | a **message queue** with queue streams and a key-value state store, an **event bus**, **executors**, a **scheduler**. The scheduler's work items are *schedule entries*, never *jobs*, and a queue stream is never a bare *stream*, which is a job type. A worker has a `WORKER_ID` that must not be spoofable. Name no real queue or streaming product | `schedules` queue stream, `schedules.dispatch`, `{jobType}` topics, `WORKER_ID` |
 | More job types, where a lesson needs more than four | `sftp` (host-only target, port in config), `backup` (port and retention days), `stream` (a `wss://` target) | `buildCreateSFTPJobBody`, `buildCreateBackupJobBody`, `buildCreateStreamJobBody` |
