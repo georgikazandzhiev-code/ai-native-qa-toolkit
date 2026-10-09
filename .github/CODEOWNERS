@@ -17,6 +17,11 @@
 # Skills. A rule change owes a version bump and, if it is a major, a recorded measurement.
 /.claude/skills/                    @georgikazandzhiev-code
 
+# Hooks run on every adopter's machine, in every session. A change here changes what an agent
+# is allowed to do without being asked.
+/.claude/settings.json              @georgikazandzhiev-code
+/.claude/hooks/                     @georgikazandzhiev-code
+
 # The enforcement layer. A change here changes what a pipeline refuses to merge.
 /eslint-plugin-qa-constitution/     @georgikazandzhiev-code
 

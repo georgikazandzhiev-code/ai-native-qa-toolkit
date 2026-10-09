@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 1.3.1 -->
+<!-- toolkit-version: 1.4.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -58,6 +58,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Search Before Creating** | Grep helpers/pages/fixtures/enums/config for existing equivalents before adding anything new |
 | **Lint & Format** | Zero lint/format warnings. Pre-commit hooks must pass — never bypass with `--no-verify` |
 | **Verification** | Added/modified tests are **run** before reporting complete. See Verification Standard |
+| **Alternatives, not questions** | When the task is clear but there are several ways to do it (approach A or B, helper or inline, one PR or two), **build every way** — each on its own local `alt/<topic>/<option>` branch, never pushed — then ask only which to keep, naming the branches, and delete the rest. Applies to unattended runs too. Ask instead only when building cannot answer it, and say why: `[human-only: outward]` (push, PR, comment, merge, delete), `[human-only: fact]` (something only a person knows), `[human-only: requirement]` (what to build is unclear). Enforced by the hook in `.claude/settings.json`. See `build-alternatives` skill |
 
 ### SHOULD — Recommended Unless There's a Concrete Reason
 
@@ -69,7 +70,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Fixture scoping** | Default `{ scope: 'test' }`. Worker scope only for genuinely expensive shared setup (auth storage) |
 | **JSDoc** | On action methods only — never on locator getters |
 | **Single concern per assertion** | Don't chain unrelated checks in one `expect` |
-| **Ask before guessing** | Ambiguous prompt (which endpoint? create or edit?) → ask first |
+| **Ask before guessing** | Ambiguous **requirement** (which endpoint? create or edit?) → ask first, marked `[human-only: requirement]`. An open **implementation** is not a reason to ask — build the alternatives (MUST § Alternatives, not questions) |
 
 ### WON'T — Forbidden, Refuse Even If Asked
 
@@ -113,6 +114,7 @@ For **new files**, follow the canonical pattern **of the current repo**. Never i
 5. **Use fixtures** — import from the project's `test-options`; register new POMs in the fixture module.
 6. **Generate data** — faker for unique-per-run, JSON for fixed constants.
 7. **Verify compliance** — re-check the MUST and WON'T tables.
+   An open choice on the way (approach, PR split) is not a stop: build each option on its own `alt/` branch and present them (`build-alternatives` skill).
 8. **Run tests** — `npx playwright test [path]`. Failing tests = incomplete task. On failure load the `debugging` skill; never raise timeouts, add `try/catch`, or loosen schemas to pass.
 
 ---
@@ -164,6 +166,7 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `accessibility-testing` | Accessibility (a11y) tests — axe scans per page state with `@axe-core/playwright`, WCAG A/AA tags, keyboard and focus checks, ARIA snapshots, known-violations policy |
 | `owasp-security-testing` | Security testing — OWASP Top 10 (web) + API Security Top 10 mapped to QA tests; access control / BOLA / BFLA / injection / XSS / SSRF; pre-release security review gate |
 | `ai-native-workflow` | "How should I work with AI here?", multi-skill planning |
+| `build-alternatives` | About to ask the human to choose between ways of doing a clear task — build every way on `alt/` branches, then ask which to keep |
 | `skill-creator` | Authoring or refactoring a skill (manual) — owns the SKILL.md structure contract |
 | `test-case-generation` | Requirements + test cases from a user story / AC (manual) |
 

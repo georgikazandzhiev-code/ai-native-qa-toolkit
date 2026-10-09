@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.2
+version: 2.1.3
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -153,4 +153,5 @@ User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 - **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`test-standards`](../test-standards/SKILL.md) — class structure, locator strategy, spec conventions (consolidated from the previous `ui-tests.mdc`).
 - **Domain orientation:** `master-context` (project repo only — trimmed from this toolkit), `run-stats-api-tests-context` (project repo only — trimmed from this toolkit), [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).
 - **The skill list** — `~/.claude/CLAUDE.md § Routed Skill Index`. Not repeated here on purpose.
+- [`build-alternatives`](../build-alternatives/SKILL.md) — the rule for open choices: build every way on `alt/` branches, then ask which to keep.
 - **`skill-creator`** — for authoring or refactoring a skill (manual invocation only). Use this when you catch a gap (e.g. when an empty placeholder needs to be authored).

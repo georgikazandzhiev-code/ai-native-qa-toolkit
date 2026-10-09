@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 2.2.2
+version: 2.2.3
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -250,6 +250,7 @@ Push.
 ## See Also
 
 - [`test-standards`](../test-standards/SKILL.md) — spec-file conventions (tag, qase, test.step, fixture import).
+- [`build-alternatives`](../build-alternatives/SKILL.md) — a kept alternative is renamed off its `alt/` branch and reviewed here before it is pushed; `alt/` branches are never pushed.
 - [`page-objects`](../page-objects/SKILL.md) — POM class structure rules.
 - [`selectors`](../selectors/SKILL.md) — locator priority, Radix exception.
 - [`api-testing`](../api-testing/SKILL.md) — Zod validation idiom, negative-test matrix.
