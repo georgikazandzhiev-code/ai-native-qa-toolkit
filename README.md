@@ -1,6 +1,6 @@
 # AI-Native QA Toolkit
 
-A governance layer for AI-assisted quality engineering: **27 on-demand skills** and a written engineering constitution that define what "done" means *before* an agent writes a line of test code.
+A governance layer for AI-assisted quality engineering: **28 on-demand skills** and a written engineering constitution that define what "done" means *before* an agent writes a line of test code.
 
 Built for [Claude Code](https://claude.com/claude-code); the skills are plain Markdown and port to any agent harness that supports on-demand instruction loading.
 
@@ -149,7 +149,7 @@ Verified by fault injection rather than assumption: a 13 → 6 drop across six c
 
 `npm run check:bump` is the advisory companion — it warns when a `SKILL.md` changed against the base ref while its `version` did not. Never blocking: failing CI over a forgotten patch bump trains people to bump meaninglessly. What it prevents is the version quietly ceasing to describe the file, which is the point at which eval history starts to lie.
 
-**Current coverage: 3 of 27 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
+**Current coverage: 3 of 28 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
@@ -323,6 +323,25 @@ cp -r ai-native-qa-toolkit/.claude/commands/*  ~/.claude/commands/
 ```
 
 If you already have a `~/.claude/CLAUDE.md`, merge rather than overwrite — the constitution is the routing table, and clobbering it loses your own rules.
+
+Then the gate that enforces **Alternatives, not questions** (build every way of doing a clear task, then ask only which to keep). It is a hook, so it needs both the script and a settings entry:
+
+```bash
+mkdir -p ~/.claude/hooks && cp ai-native-qa-toolkit/.claude/hooks/alternatives-gate.mjs ~/.claude/hooks/
+```
+
+Merge this into `~/.claude/settings.json` (don't overwrite the file — add to its `hooks`). At user level the script lives in your home directory, so the command uses `$HOME`, which both bash and PowerShell expand:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{ "matcher": "AskUserQuestion", "hooks": [{ "type": "command", "command": "node \"$HOME/.claude/hooks/alternatives-gate.mjs\" ask", "timeout": 15 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"$HOME/.claude/hooks/alternatives-gate.mjs\" stop", "timeout": 15 }] }]
+  }
+}
+```
+
+Copying the whole `.claude/` folder into a repository instead needs no merge: the shipped `.claude/settings.json` points at `${CLAUDE_PROJECT_DIR}/.claude/hooks/`. Either way, open `/hooks` once (or restart Claude Code) so a running session picks it up. `npm run test:alternatives` proves the gate denies an unbuilt choice and lets a marked question through.
 
 ## Adopting it in your repo
 

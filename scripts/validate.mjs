@@ -643,6 +643,7 @@ for (const dir of CI_DIRS) {
     'Search Before Creating': { skill: 'common-tasks' },
     'Lint & Format': { crossCutting: 'the eslint-plugin-qa-constitution gate, not one skill' },
     Verification: { crossCutting: 'CLAUDE.md § Verification Standard, applied by every skill' },
+    'Alternatives, not questions': { skill: 'build-alternatives', token: 'alt/<topic>/<option>' },
     // WON'T
     'No XPath': { skill: 'selectors', token: 'XPath' },
     'No hard waits': { skill: 'test-standards', token: 'waitForTimeout' },

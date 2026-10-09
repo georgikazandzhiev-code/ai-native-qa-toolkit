@@ -62,6 +62,11 @@ jobs:
       - name: Version bump reminder — a deleted skill must not silence it
         run: npm run test:bump
 
+      # The alternatives gate runs as a hook on every adopter's machine, where nobody sees it do
+      # nothing. This proves it still denies an unbuilt choice and still lets a marked one through.
+      - name: Alternatives gate — bites on unbuilt choices, silent on the rest
+        run: npm run test:alternatives
+
   plugin:
     name: Lint plugin rules
     runs-on: ubuntu-latest

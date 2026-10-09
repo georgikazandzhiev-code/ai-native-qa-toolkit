@@ -14,7 +14,7 @@ A number in prose is a claim. A number a script recomputes is a fact. Where the 
 
 ```mermaid
 flowchart LR
-  A["AI-driven SDLC<br/>competency model"] --> B["QA AI toolkit<br/>constitution + 27 skills"]
+  A["AI-driven SDLC<br/>competency model"] --> B["QA AI toolkit<br/>constitution + 28 skills"]
   B --> C["Surfaces<br/>Cursor · Claude Code · MCP"]
   C --> D["QA engineers"]
   D --> E["Assessments<br/>merged artifacts, not quizzes"]
@@ -50,7 +50,7 @@ The class is decided by **what the change does to output that was previously cor
 | A push to the public mirror | n/a | the pull request template's "Before pushing to the public mirror" checklist is complete: no client or repository-specific name, internal host, ticket key or token | owner |
 | A number stated in the docs | n/a | either a validator check that recomputes it, or a sentence naming it as unverified | CI green for the eight claim shapes check 7 recognises; any number in a shape it does not match is a reviewer's job |
 
-A `major` bump with no history entry is the failure this table exists to prevent, and it is only half-caught: where a skill already has history, `validate` warns when the declared version and the newest entry disagree on major.minor; where a skill has none — 24 of 27 — nothing fires at all. The version is what a score is attributed to, and a version that no longer describes its file makes the history lie retroactively, so treat this row as a reviewer's job until every skill is measured.
+A `major` bump with no history entry is the failure this table exists to prevent, and it is only half-caught: where a skill already has history, `validate` warns when the declared version and the newest entry disagree on major.minor; where a skill has none — 25 of 28 — nothing fires at all. The version is what a score is attributed to, and a version that no longer describes its file makes the history lie retroactively, so treat this row as a reviewer's job until every skill is measured.
 
 ## One logical change per PR
 
@@ -214,8 +214,8 @@ Out of band, immediately, on any of: a `canonical` pattern falsified; an eval re
 
 | | |
 |---|---|
-| Skills | 27 on-demand skills — 13 domain, 6 authoring, 4 running, 4 cross-cutting |
-| Measured | 3 of 27 skills have recorded history |
+| Skills | 28 on-demand skills — 13 domain, 6 authoring, 4 running, 5 cross-cutting |
+| Measured | 3 of 28 skills have recorded history |
 | Lint rules, blocking | **17 ESLint rules**, every one firing on the known-bad tree and silent on the compliant one |
 | Validator | 15 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
 | Reviewers with merge rights | **1** |
