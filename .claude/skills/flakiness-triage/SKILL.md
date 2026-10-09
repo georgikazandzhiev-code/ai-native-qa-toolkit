@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 1.1.3
+version: 1.1.4
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -15,11 +15,11 @@ Sister skill to `debugging`. `debugging` covers "this test just failed — what'
 - **NEVER add a retry to "fix" a flake without classification.** A retry hides root cause. The framework's `playwright.config.ts` already retries on CI (`retries: process.env.CI ? 1 : 0`). Adding more retries (`test.describe.configure({ retries: N })`) is a `~/.claude/CLAUDE.md` WON'T-rule violation.
 - **NEVER raise `actionTimeout` / `expect.timeout` to make a flake go green.** Same WON'T-rule. The timeout exposed a timing assumption; fix the assumption.
 - **NEVER wrap an `expect` in `try/catch` to suppress an intermittent failure.** Per the orchestrator: a `catch` that doesn't re-throw or assert is hiding a failure.
-- **ALWAYS reproduce N times before declaring a test "fixed".** Single green run after a flake fix means nothing — aim for **3–5 consecutive green runs** of the affected spec at the same parallelism level (always `--workers=1` for this framework per the memory note on shared-tenant interference).
+- **ALWAYS reproduce N times before declaring a test "fixed".** A single green test run after a flake fix means nothing — aim for **3–5 consecutive green test runs** of the affected spec at the same parallelism level (always `--workers=1` for this framework per the memory note on shared-tenant interference).
 - **ALWAYS isolate the test before debugging.** Run the spec alone (`npx playwright test <spec> --workers=1`). If it passes alone but fails in the suite, the cause is **cross-test interference** (shared tenant state, leaked fixture, cleanup ordering). If it fails alone too, it's a **per-test bug** (race, missing wait, stale storage state).
 - **ALWAYS check the storage-state age for `401` flakes.** This framework's `login.setup.ts` writes storage-state files; long-running local sessions may use expired tokens. Re-run setup before assuming a code bug.
 - **NEVER skip a flaky test with `test.skip`.** Per the orchestrator, `test.skip` corrupts Qase ID mappings. Comment out under `// TODO: FIXME: <TICKET> flaky — investigating` and report the ticket.
-- **ALWAYS repeat-run a new or modified spec before merging it.** 5 consecutive green runs at `--workers=1` is the merge bar. A spec that has only ever run once is unverified, not stable — and the cheapest flake to fix is the one that never reached main.
+- **ALWAYS repeat-run a new or modified spec before merging it.** 5 consecutive green test runs at `--workers=1` is the merge bar. A spec that has only ever run once is unverified, not stable — and the cheapest flake to fix is the one that never reached main.
 - **NEVER quarantine without a ticket and an expiry date.** A quarantine with no expiry is silent coverage loss that nobody ever revisits. See § Quarantine policy.
 
 ## What's in each file
@@ -72,7 +72,7 @@ Test fails intermittently
 
 Before any classification, capture:
 
-1. **Failure rate** — out of N runs, how many failed? (Bitbucket CI shows historical pass rate per spec.) A test that fails **every** isolated run isn't flaky — it's a real bug (§ Decision tree). A mix of passes and failures is a flake; check whether the failures cluster in one environment (CI only, one worker count) before blaming the test or the app.
+1. **Failure rate** — out of N test runs, how many failed? (Bitbucket CI shows historical pass rate per spec.) A test that fails **every** isolated test run isn't flaky — it's a real bug (§ Decision tree). A mix of passes and failures is a flake; check whether the failures cluster in one environment (CI only, one Playwright worker count) before blaming the test or the app.
 2. **Failure mode** — TimeoutError? Strict-mode violation? ZodError? 401/403? Network race? (Load `debugging` skill for the taxonomy.)
 3. **Failure site** — same line every time, or different lines? Same-line failures classify faster than wandering failures.
 4. **Local vs CI** — does it fail locally too, or only in CI?
@@ -80,7 +80,7 @@ Before any classification, capture:
 ### Step 2 — Run the isolation experiment
 
 ```bash
-# Isolate: run ONLY the failing spec, 5 times in a row, single worker
+# Isolate: run ONLY the failing spec, 5 times in a row, single Playwright worker
 for i in 1 2 3 4 5; do
   npx playwright test tests/app/api/<failing-spec>.spec.ts --workers=1 || echo "RUN $i FAILED"
 done
@@ -110,16 +110,16 @@ npx playwright test --grep "@App-regression" --workers=1 \
 ```
 
 If the failing spec passes when its preceding peers are removed, one of those peers is leaking state. Common causes in this framework:
-- **Synthetic not cleaned up** → next spec's "should not see any synthetics" fails. Fix: ensure `helpers/app/synthetics.deleteSynthetic(...)` in `afterEach`.
-- **Probe not cleaned up** → cleanup-ordering violation (synthetics-before-probes). Fix per `helpers` skill § Cleanup ordering.
-- **Storage state mutated** → a UI spec changed user prefs. Fix: re-create the user per worker, not per suite.
+- **Job not cleaned up** → next spec's "should not see any jobs" fails. Fix: ensure `helpers/app/jobs.deleteJob(...)` in `afterEach`.
+- **Worker resource not cleaned up** → cleanup-ordering violation (jobs-before-workers). Fix per `helpers` skill § Cleanup ordering.
+- **Storage state mutated** → a UI spec changed user prefs. Fix: re-create the user per Playwright worker, not per suite.
 - **Tenant left in wrong state** → an admin spec changed tenant config. Fix: capture-and-restore in `beforeAll` / `afterAll`.
 
 ### Step 4 — For genuine per-test flakes: classify the cause
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `TimeoutError` on `expect(locator).toBeVisible()` | Element not rendered when assertion runs — race with async data | Wait on the upstream signal inside the page-object action: register `page.waitForResponse(url => url.includes('/api/data'))` **before** the action that triggers it, then await it |
+| `TimeoutError` on `expect(locator).toBeVisible()` | Element not rendered when assertion runs — race with async data | Wait on the upstream signal inside the page-object action: register `page.waitForResponse(url => url.includes('/api/run-stats'))` **before** the action that triggers it, then await it |
 | `TimeoutError` on `getByRole("button", { name: "X" }).click()` | Button re-renders after data load and the click lands mid-re-render (locators are lazy and never go stale — the element was replaced during the action) | Anchor the click on a parent that stabilizes: `await expect(container).toBeVisible(); await container.getByRole(...).click()` |
 | Strict-mode violation: "resolved to N elements" | Duplicate elements appear briefly (skeleton + final) | Scope the locator: `card.getByRole(...)` not `page.getByRole(...)` |
 | `ZodError` intermittently on `Schema.parse(body)` | API response shape varies (optional field appears sometimes) | Either: API is non-deterministic (real bug — file ticket), or schema is wrong (missing `.optional()`) |
@@ -142,7 +142,7 @@ Then run the spec inside its tag at parallelism (CI shape):
 npx playwright test --grep "@App-regression" --workers=1
 ```
 
-Only declare done when 5 consecutive isolated runs and 1 full-suite run all pass.
+Only declare done when 5 consecutive isolated test runs and 1 full-suite test run all pass.
 
 ## Proactive detection — flake hunting
 
@@ -158,9 +158,9 @@ Grep the changed specs and page objects for the constructs that cause flakes in 
 | Unscoped locator | `page.getByRole` / `page.locator` in a spec | Strict-mode violation the moment a skeleton or duplicate renders. |
 | Ungated action-then-assert | `.click()` immediately followed by `expect(` with no `waitForResponse` | The missing-wait race — ~40% of flakes here. |
 | Non-web-first assertion | `expect(await ` | Snapshots a value instead of retrying on it. |
-| Shared mutable state | module-scope `let` / `const` holding an id in a spec | Cross-test interference when workers or order change. |
+| Shared mutable state | module-scope `let` / `const` holding an id in a spec | Cross-test interference when Playwright workers or order change. |
 | Missing cleanup | a create helper called with no matching `afterEach` / `afterAll` | Leaves state that trips a later spec (the `409` class). |
-| Fixed test data | a hardcoded name/email where faker belongs | Collides with a previous run's leftovers. |
+| Fixed test data | a hardcoded name/email where faker belongs | Collides with a previous test run's leftovers. |
 | `try`/`catch` in a spec | `try {` | Suppression; also hides intermittency from the report. |
 
 Two or more hits on one spec means read it properly before merging. Zero hits does not prove stability — it only means the known shapes are absent.
@@ -175,15 +175,15 @@ for i in 1 2 3 4 5; do
 done
 ```
 
-Then once inside its tag, to catch interference the isolated run cannot see. Interpretation is the same table as § Step 2.
+Then once inside its tag, to catch interference the isolated test run cannot see. Interpretation is the same table as § Step 2.
 
 ### C. Trend tracking (per suite, not per test)
 
-A single failure is noise; a drifting pass rate is a signal. Track per-spec pass rate across CI runs and watch the **direction**, not the absolute value:
+A single failure is noise; a drifting pass rate is a signal. Track per-spec pass rate across CI test runs and watch the **direction**, not the absolute value:
 
 | Pass rate | Action |
 |-----------|--------|
-| 100% over 20+ runs | Stable. Leave it alone. |
+| 100% over 20+ test runs | Stable. Leave it alone. |
 | 95–99% | Watch. Triage when it next fails; do not chase it yet. |
 | 80–95% | Triage now, before it becomes background noise the team learns to ignore. |
 | < 80% | Quarantine per § Quarantine policy, then triage. It is actively destroying trust in the suite. |
@@ -207,7 +207,7 @@ The most common per-test flake causes in this framework, in rough frequency orde
 
 1. **Missing wait between cause and effect** (~40%). Test fires a click that triggers an XHR + DOM update, then asserts the updated DOM before the XHR has returned. Fix: `page.waitForResponse` or `expect(...).toHaveText(...)` (which auto-retries).
 2. **Strict-mode violation under load** (~20%). Skeleton/placeholder + real content briefly co-exist. Fix: scope to the container that stabilizes.
-3. **Cleanup ordering** (~15%). FK-constrained resource (synthetic → probe) deleted in wrong order, leaving an orphan that a later test trips on. Fix: per the `helpers` skill cleanup-order rules.
+3. **Cleanup ordering** (~15%). FK-constrained resource (job → worker) deleted in wrong order, leaving an orphan that a later test trips on. Fix: per the `helpers` skill cleanup-order rules.
 4. **Storage-state expiry** (~10%). Long sessions, `KEYCLOAK_*` tokens have TTL. Fix: rerun setup.
 5. **Network jitter / API non-determinism** (~10%). Real bug on the BE side. Fix: file ticket, comment out the test under `// TODO: FIXME: <TICKET>`.
 6. **Genuine race in app code** (~5%). The flake is a real bug — the app has a race condition (e.g. two competing updates). Fix: file ticket, the FE must fix.
@@ -218,7 +218,7 @@ The most common per-test flake causes in this framework, in rough frequency orde
 - ❌ Wrapping the assertion in `try { await expect(...).toBeVisible() } catch { await expect(...).toBeVisible({ timeout: 30_000 }) }`. Two-level catch is still suppression.
 - ❌ Raising `expect.timeout` in `playwright.config.ts` globally. Every test eats the new timeout; flakes elsewhere now take 3× longer to surface.
 - ❌ `test.describe.configure({ retries: 3 })` on the flaky describe block. Hides the underlying race; CI passes but production user hits the same race.
-- ❌ Calling a test "fixed" after one green run. One green proves nothing about an intermittent failure.
+- ❌ Calling a test "fixed" after one green test run. One green proves nothing about an intermittent failure.
 - ❌ Marking the test `test.skip` with no ticket. Loses Qase ID mapping and removes visibility.
 - ❌ Bisecting flakes by sprinkling `console.log`. Use the trace (`trace: 'on-first-retry'` in `playwright.config.ts` already captures one).
 
@@ -229,11 +229,11 @@ The most common per-test flake causes in this framework, in rough frequency orde
 - [ ] Classified the failure: real bug / cross-test interference / per-test flake / CI-only.
 - [ ] If cross-test interference: identified the polluting spec and the leaked state.
 - [ ] If per-test flake: matched the symptom to a row in § Step 4's table.
-- [ ] Fix is applied and verified with 5 consecutive isolated runs + 1 full-tag run, all green.
+- [ ] Fix is applied and verified with 5 consecutive isolated test runs + 1 full-tag test run, all green.
 - [ ] No `waitForTimeout`, no try/catch around `expect`, no raised global timeout, no `test.describe.configure({ retries })`.
 - [ ] If file-a-ticket path: ticket exists and the test is commented out under `// TODO: FIXME: <TICKET>`, not `test.skip`-ed.
 - [ ] **Pre-merge (hunting mode):** static flake-risk grep run over the changed specs; two-or-more hits were read properly.
-- [ ] **Pre-merge (hunting mode):** changed spec repeat-run 5× isolated, 5/5 green, plus one in-tag run.
+- [ ] **Pre-merge (hunting mode):** changed spec repeat-run 5× isolated, 5/5 green, plus one in-tag test run.
 - [ ] If quarantined: comment-out (not `test.skip`), ticket with suspected cause, expiry date set, coverage loss reported in the gate decision.
 - [ ] Confirmed flake cause with reuse value stored via `qe-pattern-memory` rather than re-derived next time.
 
@@ -241,37 +241,37 @@ The most common per-test flake causes in this framework, in rough frequency orde
 
 ### Example 1 — Cross-test interference (cleanup ordering)
 
-**Symptom:** `synthetic-monitor-crud.spec.ts > "creates a new HTTP monitor"` passes in isolation but fails in `@App-regression` with a `409 Conflict` on the create POST.
+**Symptom:** `http-job-crud.spec.ts > "creates a new HTTP job"` passes in isolation but fails in `@App-regression` with a `409 Conflict` on the create POST.
 
 **Triage:**
 1. Step 2 isolation: 5/5 green → confirms not a per-test bug.
-2. Step 3 bisect: removed the preceding `synthetic-monitor-edit.spec.ts` → the failing test now passes in suite.
-3. Cause: the edit spec mutated a fixture-seeded monitor and didn't restore it; the create spec then tries to create with the same name and gets 409.
+2. Step 3 bisect: removed the preceding `http-create-edit-job.spec.ts` → the failing test now passes in suite.
+3. Cause: the edit spec mutated a fixture-seeded job and didn't restore it; the create spec then tries to create with the same name and gets 409.
 
-**Fix:** Add `afterEach` in `synthetic-monitor-edit.spec.ts` calling `deleteSynthetic(apiRequest, monitorId)` for the mutated row. Or rename the create spec's monitor to a faker-generated unique name.
+**Fix:** Add `afterEach` in `http-create-edit-job.spec.ts` calling `deleteJob(apiRequest, jobId)` for the mutated row. Or rename the create spec's job to a faker-generated unique name.
 
 **Verify:** 5× isolated green + 1 full-tag green.
 
 ### Example 2 — Per-test race (missing wait)
 
-**Symptom:** `alerts-page.spec.ts > "renders firing alerts"` fails ~30% of CI runs with `TimeoutError: expect(locator).toBeVisible()` on the first alert row.
+**Symptom:** `notifications-page.spec.ts > "renders firing notifications"` fails ~30% of CI test runs with `TimeoutError: expect(locator).toBeVisible()` on the first notification row.
 
 **Triage:**
 1. Step 2 isolation: 3/5 green → confirms genuine flake.
-2. Trace replay: the alerts XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/alerts` resolves.
+2. Trace replay: the notifications XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/notifications` resolves.
 
-**Fix:** Give the page object a `refreshAlerts()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: `BasePage` already provides one, and redefining it would silently override the base behaviour.)
+**Fix:** Give the page object a `refreshNotifications()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: `BasePage` already provides one, and redefining it would silently override the base behaviour.)
 ```ts
-// AlertsPage
-async refreshAlerts(): Promise<void> {
-  const loaded = this.page.waitForResponse((r) => r.url().includes('/api/v1/alerts'));
+// NotificationsPage
+async refreshNotifications(): Promise<void> {
+  const loaded = this.page.waitForResponse((r) => r.url().includes('/api/v1/notifications'));
   await this.refreshButton.click();
   await loaded;
 }
 
 // spec
-await alertsPage.refreshAlerts();
-await expect(alertsPage.firstAlertRow).toBeVisible();
+await notificationsPage.refreshNotifications();
+await expect(notificationsPage.firstNotificationRow).toBeVisible();
 ```
 
 **Verify:** 5× isolated green + 1 full-tag green.
@@ -281,9 +281,9 @@ await expect(alertsPage.firstAlertRow).toBeVisible();
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | "Test passed locally 5× but still fails in CI" | CI is slower; absolute-timing assumptions fail. | Replay the CI trace (`show-trace`), look for the action that's slow in CI. Often the fix is the same as a per-test race (use `waitForResponse`). |
-| "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check `tests/app/login.setup.ts`. Restart workers between tags (CI does, local may not). |
+| "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check `tests/app/login.setup.ts`. Restart Playwright workers between tags (CI does, local may not). |
 | "Spec is `@App-Critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to `@App-regression` if the run-time budget is the issue; don't retry it under Critical. |
-| "Flake only happens when ICMP probe is unhealthy" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out under `// TODO: FIXME: <ENV-TICKET>`. |
+| "Flake only happens while the worker resource running `export` jobs flaps between Online and Offline" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out under `// TODO: FIXME: <ENV-TICKET>`. |
 
 ## See Also
 
