@@ -1,6 +1,6 @@
 ---
 argument-hint: "[failure output | log | prose | @file | Jira key]"
-description: Turn a failure, log, or observation into a clean, Jira-ready bug report for the platform. Triages real-bug vs test-issue first (isolation runs, Qase artifacts, manual repro, recent FE/BE commits), de-duplicates against existing bugs, then optionally files it into your Jira project via Jira MCP.
+description: Turn a failure, log, or observation into a clean, Jira-ready bug report for the platform. Triages real-bug vs test-issue first (isolation test runs, Qase artifacts, manual repro, recent FE/BE commits), de-duplicates against existing bugs, then optionally files it into your Jira project via Jira MCP.
 # Manual only: this persona can write to Jira, so only a person starts it (/bug-helper).
 disable-model-invocation: true
 ---
@@ -16,21 +16,21 @@ De-dup search and filing need the **Atlassian MCP** connected (configure via `cl
 The user will describe a defect in one of these forms — detect which:
 
 1. **Pasted evidence** — a failing test output, stack trace, API response, log snippet, or screenshot description.
-2. **A prose description** — "the alerts list returns duplicates when sorting by severity".
+2. **A prose description** — "the notifications list returns duplicates when sorting by severity".
 3. **An `@`-attached file** — a trace, HAR, or log file. Read it.
 4. **A Jira ticket key/URL** — an existing bug to refine or expand. Fetch it via Atlassian MCP first.
 
-If the input is too thin to produce reproducible steps, **ask targeted questions** (which endpoint? which monitor type? what environment? what did you expect vs see?) before writing. A vague bug is worse than no bug.
+If the input is too thin to produce reproducible steps, **ask targeted questions** (which endpoint? which job type? what environment? what did you expect vs see?) before writing. A vague bug is worse than no bug.
 
 ## Triage FIRST — is it a real bug or a test issue? (mandatory gate)
 
 **Never draft a bug report from a failing test alone.** A red test has three possible causes — app bug, test bug, or environment/flake — and only the first one deserves a Jira ticket. Before writing anything, walk this verification ladder and record what you checked:
 
 1. **Classify the failure.** If the evidence is a failing automated test, load the `debugging` skill (failure-mode taxonomy) and, for intermittent failures, the `flakiness-triage` skill. Run the isolation experiment from that skill: the spec alone, `--workers=1`, several times. Passes alone but fails in the suite = cross-test interference — that's a test bug, not a product bug. Fails every time = keep going down the ladder.
-2. **Review the run artifacts.** For nightly/CI failures, open the Qase run and inspect the **video, screenshots, and trace** of the failing case (locally: `npx playwright show-trace <trace.zip>`). Look for what actually happened on screen vs what the assertion claims — a selector drift or skeleton-state race is a test issue, not a defect.
+2. **Review the test-run artifacts.** For nightly/CI failures, open the Qase test run and inspect the **video, screenshots, and trace** of the failing case (locally: `npx playwright show-trace <trace.zip>`). Look for what actually happened on screen vs what the assertion claims — a selector drift or skeleton-state race is a test issue, not a defect.
 3. **Reproduce it manually, outside the test.** API bug → replay the exact request (method, path, body, auth role) and confirm the wrong response yourself. UI bug → walk the same steps by hand on the same environment. **If you cannot reproduce it manually, it is not ready to be filed** — say so and route to `flakiness-triage` instead.
-4. **Check whether a recent change introduced it.** Look at recent commits in the relevant sibling repos — `<sibling-repos>/frontend` (UI contracts, testids, strings), `<sibling-repos>/backend` (API), `<sibling-repos>/collectors` (probe/collector behavior), `<sibling-repos>/helm-charts` (infra/deploy). **`git pull` the repo first** — stale copies cause wrong assumptions. `git log --oneline --since="<last green run>"` scoped to the affected service usually finds the culprit. A found commit becomes the strongest "Notes / suspected area" evidence in the report.
-5. **Rule out environment.** Expired storage state (401s after long sessions), unhealthy probe, env reset that wiped seeded data — these are environment issues, not product bugs. Check the obvious ones before blaming the app.
+4. **Check whether a recent change introduced it.** Look at recent commits in the relevant sibling repos — `<sibling-repos>/frontend` (UI contracts, testids, strings), `<sibling-repos>/backend` (API), `<sibling-repos>/executors` (worker/executor behavior), `<sibling-repos>/helm-charts` (infra/deploy). **`git pull` the repo first** — stale copies cause wrong assumptions. `git log --oneline --since="<last green test run>"` scoped to the affected service usually finds the culprit. A found commit becomes the strongest "Notes / suspected area" evidence in the report.
+5. **Rule out environment.** Expired storage state (401s after long sessions), unhealthy worker, env reset that wiped seeded data — these are environment issues, not product bugs. Check the obvious ones before blaming the app.
 
 Only when the ladder says **"real, manually reproducible product defect"** do you proceed to de-dup and drafting. Record the triage outcome — it feeds the report's Evidence section ("reproduced manually 3/3 via curl; introduced by backend commit `abc123`").
 
@@ -48,14 +48,14 @@ If a matching bug exists, **stop and show it to the user** — link it instead o
 
 Produce the report in this exact structure:
 
-- **Title** — one line, sentence case, specific. Format: `<area>: <symptom> (<condition>)`. Example: `Alerts list: severity sort returns duplicate rows across pages`.
-- **Environment** — cluster/env, build, and how it was observed (nightly run, manual, CI). If unknown, say so.
+- **Title** — one line, sentence case, specific. Format: `<area>: <symptom> (<condition>)`. Example: `Notifications list: severity sort returns duplicate rows across pages`.
+- **Environment** — cluster/env, build, and how it was observed (nightly test run, manual, CI). If unknown, say so.
 - **Severity** — Critical / High / Medium / Low, with a one-line justification (blast radius, data impact, workaround availability).
-- **Preconditions** — the exact state required to reproduce (seeded data, auth role, tenant, monitor type).
+- **Preconditions** — the exact state required to reproduce (seeded data, auth role, tenant, job type).
 - **Steps to reproduce** — numbered, deterministic, copy-pasteable. Include the exact request (method + path + relevant params) for API bugs.
 - **Expected result** — what the contract / spec / OpenAPI says should happen.
 - **Actual result** — what actually happened, with the evidence (status code, response body, error text).
-- **Evidence** — log lines, Qase ID + run link, trace/video path, and the triage outcome (isolation runs, manual reproduction result, suspect commit from FE/BE/collectors/helm if found).
+- **Evidence** — log lines, Qase ID + test-run link, trace/video path, and the triage outcome (isolation test runs, manual reproduction result, suspect commit from FE/BE/executors/helm if found).
 - **Notes / suspected area** — optional: point to the likely file/service if the evidence suggests it (e.g. `policy/internal/repository/alert_repository.go`).
 
 Keep it factual. Assert against the contract, not opinion. Do not propose the fix as if it were confirmed — suspected areas go under Notes.
