@@ -70,6 +70,9 @@ jobs:
   plugin:
     name: Lint plugin rules
     runs-on: ubuntu-latest
+    # The mutation sweep spawns the harness once per mutant; a mutant that made the lint loop would
+    # otherwise hold the job for the 6-hour default.
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: eslint-plugin-qa-constitution
@@ -129,6 +132,12 @@ jobs:
       # Each branch has a case, and a planted defect must fail the run while a labelled one passes.
       - name: Skill snippets — the snippet lint itself bites and stays quiet where it should
         run: node tests/skill-snippets.harness.test.mjs
+
+      # The claim "every branch of the lint has a case" is recomputed, not trusted: each mutant
+      # breaks one condition, and the harness must fail against it. A survivor or a stale mutant
+      # fails the build.
+      - name: Skill snippets — mutation sweep, every mutant of the lint is killed
+        run: node tests/skill-snippets.mutation.test.mjs
 
   regression:
     name: Skill eval regression

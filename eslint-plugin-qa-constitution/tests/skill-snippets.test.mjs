@@ -196,6 +196,8 @@ export function virtualPath(code) {
 // `eslint-disable` for one of its rules, and an unregistered rule in a directive is itself an error.
 // Unused directives are not reported (the playwright rules are off here); suppressions are, below.
 const { default: playwright } = await import('eslint-plugin-playwright');
+// Per process, defensively: lintText never creates this folder, but parallel runs must not share a work dir.
+const WORK_DIR = `.skill-snippets-${process.pid}`;
 const eslint = new ESLint({
   cwd: PLUGIN_DIR,
   overrideConfigFile: 'smoke/eslint.config.mjs',
@@ -205,7 +207,7 @@ const eslint = new ESLint({
 });
 
 async function lintAs(code, path) {
-  const [r] = await eslint.lintText(code, { filePath: join(PLUGIN_DIR, '.skill-snippets', path) });
+  const [r] = await eslint.lintText(code, { filePath: join(PLUGIN_DIR, WORK_DIR, path) });
   const msgs = r?.messages ?? [];
   return { fatal: msgs.find((m) => m.fatal), real: msgs.filter((m) => !m.fatal), suppressed: r?.suppressedMessages ?? [] };
 }
@@ -236,7 +238,7 @@ export async function lintSnippet(code) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  mkdirSync(join(PLUGIN_DIR, '.skill-snippets'), { recursive: true });
+  mkdirSync(join(PLUGIN_DIR, WORK_DIR), { recursive: true });
   const report = { linted: 0, skipped: 0, marked: [], suppressed: [], parse: [], violations: [], errors: [] };
   for (const file of mdFiles(SKILLS)) {
     const rel = relative(join(SKILLS, '..', '..'), file).replace(/\\/g, '/');
@@ -275,7 +277,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
         );
     }
   }
-  rmSync(join(PLUGIN_DIR, '.skill-snippets'), { recursive: true, force: true });
+  rmSync(join(PLUGIN_DIR, WORK_DIR), { recursive: true, force: true });
   console.log(
     `\nSkill snippets — ${report.linted} linted, ${report.skipped} counter-examples skipped, ${report.marked.length} marked skip, ${report.suppressed.length} suppressed with a reason\n`
   );

@@ -17,20 +17,16 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from '@typescript-eslint/parser';
-import {
-  snippets,
-  isCounterExample,
-  fillPlaceholders,
-  afterSideOfDiff,
-  skipReason,
-  virtualPath,
-  lintSnippet,
-} from './skill-snippets.test.mjs';
 
 const PLUGIN_DIR = fileURLToPath(new URL('..', import.meta.url));
-const SCRIPT = join(PLUGIN_DIR, 'tests', 'skill-snippets.test.mjs');
+// The lint under test. The mutation sweep points this at a mutated copy (SNIPPET_LINT) so it never
+// has to edit the real file.
+const SCRIPT = process.env.SNIPPET_LINT ?? join(PLUGIN_DIR, 'tests', 'skill-snippets.test.mjs');
+const { snippets, isCounterExample, fillPlaceholders, afterSideOfDiff, skipReason, virtualPath, lintSnippet } = await import(
+  pathToFileURL(SCRIPT).href
+);
 const fence = (body, lang = 'typescript') => '```' + lang + '\n' + body + '\n```';
 
 let failed = 0;
@@ -40,8 +36,22 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
   console.log(`  ${ok ? 'OK  ' : 'FAIL'} ${name}${ok || !detail ? '' : `\n         ${String(detail).slice(0, 600)}`}`);
 };
-const block = (md, i = 0) => snippets(md)[i];
-const counter = (md, i = 0) => isCounterExample(block(md, i));
+// A throw inside a case must FAIL that case, not crash the harness: the mutation sweep counts only
+// failed cases as kills, and a crash would also hide every later case's result.
+const block = (md, i = 0) => {
+  try {
+    return snippets(md)[i];
+  } catch {
+    return undefined;
+  }
+};
+const counter = (md, i = 0) => {
+  const b = block(md, i);
+  return b ? isCounterExample(b) : 'error';
+};
+// Exact booleans: an error result must fail a case whichever way it expects.
+const isBad = (md, i = 0) => counter(md, i) === true;
+const isGood = (md, i = 0) => counter(md, i) === false;
 
 console.log('\nSkill-snippet lint — harness tests\n');
 
@@ -63,22 +73,22 @@ try {
 check('an unclosed fence throws instead of silently dropping the rest of the file', threw);
 
 // ── counter-example detection ──
-check('first comment ❌/BAD → skipped', counter(fence('// ❌ BAD — hard wait\nawait page.waitForTimeout(1);')));
-check('first comment GOOD wins over a BAD word on the same line [mutant: RIGHT/WRONG order, RIGHT removed]', !counter('### Bad\n\n' + fence('// GOOD — replaces the BAD version above\nx();')));
-check('"### Bad" directly above → skipped', counter('### Bad\n\n' + fence('x();')));
-check('"### Bad", then explanatory prose, then the block → still skipped (no block in between)', counter('### Bad\n\nThis hides the cause.\n\n' + fence('x();')));
-check('"### Good" → linted', !counter('### Good\n\n' + fence('x();')));
-check('a ❌ bullet introducing the block → skipped', counter('- ❌ Never do this:\n\n' + fence('x();')));
-check('"Fix (replaces the BAD call above):" introducing the block → linted [mutant: RIGHT removed from prose check]', !counter('### Bad\n\n' + fence('a();') + '\n\nFix (replaces the BAD call above):\n\n' + fence('b();'), 1));
-check('Bad block, neutral prose, next block → the next block is linted (label does not carry over) [mutant: fence crossing ignored]', !counter('### Bad\n\n' + fence('a();') + '\n\nThe web-first way:\n\n' + fence('b();'), 1));
+check('first comment ❌/BAD → skipped', isBad(fence('// ❌ BAD — hard wait\nawait page.waitForTimeout(1);')));
+check('first comment GOOD wins over a BAD word on the same line [mutant: RIGHT/WRONG order, RIGHT removed]', isGood('### Bad\n\n' + fence('// GOOD — replaces the BAD version above\nx();')));
+check('"### Bad" directly above → skipped', isBad('### Bad\n\n' + fence('x();')));
+check('"### Bad", then explanatory prose, then the block → still skipped (no block in between)', isBad('### Bad\n\nThis hides the cause.\n\n' + fence('x();')));
+check('"### Good" → linted', isGood('### Good\n\n' + fence('x();')));
+check('a ❌ bullet introducing the block → skipped', isBad('- ❌ Never do this:\n\n' + fence('x();')));
+check('"Fix (replaces the BAD call above):" introducing the block → linted [mutant: RIGHT removed from prose check]', isGood('### Bad\n\n' + fence('a();') + '\n\nFix (replaces the BAD call above):\n\n' + fence('b();'), 1));
+check('Bad block, neutral prose, next block → the next block is linted (label does not carry over) [mutant: fence crossing ignored]', isGood('### Bad\n\n' + fence('a();') + '\n\nThe web-first way:\n\n' + fence('b();'), 1));
 check('under "### Good", a block introduced by "never do THIS (BAD):" → skipped [mutant: nearest BAD ignored]',
-  counter('### Good\n\n' + fence('a();') + '\n\nBut never do THIS (BAD):\n\n' + fence('b();'), 1));
-check('Bad block directly followed by another block → both skipped', counter('### Bad\n\n' + fence('a();') + '\n\n' + fence('b();'), 1));
-check('"## Bad request (400) tests" is not a counter-example label', !counter('## Bad request (400) tests\n\n' + fence('x();')));
-check('"### Forbidden (403)" is not a counter-example label', !counter('### Forbidden (403)\n\n' + fence('x();')));
-check('"## Avoid flaky tests with web-first assertions" is not a label', !counter('## Avoid flaky tests with web-first assertions\n\n' + fence('x();')));
-check('a label far above (past 30 lines of prose) is still found [mutant: walk cap lowered]', counter('### Bad\n\n' + 'prose line\n'.repeat(30) + fence('x();')) === true);
-check('an unlabelled block → linted', !counter('Some prose.\n\n' + fence('x();')));
+  isBad('### Good\n\n' + fence('a();') + '\n\nBut never do THIS (BAD):\n\n' + fence('b();'), 1));
+check('Bad block directly followed by another block → both skipped', isBad('### Bad\n\n' + fence('a();') + '\n\n' + fence('b();'), 1));
+check('"## Bad request (400) tests" is not a counter-example label', isGood('## Bad request (400) tests\n\n' + fence('x();')));
+check('"### Forbidden (403)" is not a counter-example label', isGood('### Forbidden (403)\n\n' + fence('x();')));
+check('"## Avoid flaky tests with web-first assertions" is not a label', isGood('## Avoid flaky tests with web-first assertions\n\n' + fence('x();')));
+check('a label far above (past 30 lines of prose) is still found [mutant: walk cap lowered]', isBad('### Bad\n\n' + 'prose line\n'.repeat(30) + fence('x();')) === true);
+check('an unlabelled block → linted', isGood('Some prose.\n\n' + fence('x();')));
 
 // ── placeholders vs generics ──
 const filled = fillPlaceholders(
@@ -135,7 +145,9 @@ const stmts = await lintSnippet('const row = jobsPage.getRowByName(name);\nretur
 check('statements, even with a top-level return, parse as written', !stmts.parse, stmts.parse?.message);
 
 // ── end to end: plant one defect in a throwaway skills tree ──
-const TMP = join(PLUGIN_DIR, '.snippet-harness');
+// Per process: the mutation sweep runs several harnesses at once, and a shared folder let one run
+// overwrite another's planted defect — which showed up as false kills.
+const TMP = join(PLUGIN_DIR, `.snippet-harness-${process.pid}`);
 const run = (md) => {
   rmSync(TMP, { recursive: true, force: true });
   mkdirSync(join(TMP, 'demo'), { recursive: true });
