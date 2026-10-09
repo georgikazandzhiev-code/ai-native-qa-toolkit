@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 2.0.1
+version: 2.0.2
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -100,7 +100,7 @@ User says: _"Make sure a tenant can't read another tenant's job."_
 1. **Principals** — tenant A (`USER_ACCESS_TOKEN_FULL`) owns the object; tenant B has a valid token but no access to A's data.
 2. **Seed** — in `beforeAll`, create a job as tenant A, capture `jobId`.
 3. **Risk** — API1 (BOLA), from `api-top10.md`.
-4. **Test** — `Verify GET /jobs/:id returns 404 for a cross-tenant caller`: call the endpoint with tenant B's token and A's `jobId`, assert status is `404` (existence hidden) or `403`, and `APIErrorSchema.parse(body)`. A `200` with A's data is the bug.
+4. **Test** — `Verify GET /jobs/:id returns 404 for a cross-tenant caller`: call the endpoint with tenant B's token and A's `jobId`, assert status is `404` (existence hidden), and `APIErrorSchema.parse(body)`. A `200` with A's data is the bug.
 5. **Cleanup** — delete the job as tenant A in `afterAll`.
 6. **If it returns 200** — comment the test out with `// TODO: FIXME: PROJ-XXXX — cross-tenant read exposes job`, file via `bug-helper`.
 
