@@ -1,6 +1,6 @@
 ---
 name: qe-pattern-memory
-version: 1.1.2
+version: 1.1.3
 description: Persist and reuse what the agent learns about a codebase across sessions — a git-tracked, human-reviewed pattern store with confidence scoring, tier promotion, and falsification. Use when a session discovers a reusable fact (a recurring flake cause, a locator that survives re-renders, an endpoint quirk, a cleanup ordering rule), when starting work on a repo the team has touched before, or when the same discovery is being re-derived a second time. Trigger phrases — "remember this pattern", "we already learned this", "load what we know about this repo", "why did we do it this way last time", "promote this pattern", "this pattern is wrong". Do NOT use for repo-specific static catalogs that never change (keep those in the repository's own repo-context skill). Do NOT use for one-off session notes with no reuse value (leave them in the PR description). Do NOT use for framework conventions that belong in a rule (use the `skill-creator` skill to author a skill instead).
 metadata:
   category: cross-cutting
@@ -8,7 +8,7 @@ metadata:
 
 # QE Pattern Memory
 
-Cross-session memory for quality engineering. Every session an agent discovers things — that a given API returns `201` with an empty body, that a Radix dropdown needs anchor-and-drill, that deleting a job before its assigned worker throws `409`. Without a store, the next session re-derives all of it, badly. This skill defines **where** those learnings live, **how** they earn confidence, and **who** approves promotion — so the store becomes an asset instead of a pile of stale guesses.
+Cross-session memory for quality engineering. Every session an agent discovers things — that a given API returns `201` with an empty body, that a Radix dropdown needs anchor-and-drill, that deleting a worker while a job still references it throws `409`. Without a store, the next session re-derives all of it, badly. This skill defines **where** those learnings live, **how** they earn confidence, and **who** approves promotion — so the store becomes an asset instead of a pile of stale guesses.
 
 The failure mode this prevents: an agent that "remembers" something wrong and confidently applies it for six months.
 
