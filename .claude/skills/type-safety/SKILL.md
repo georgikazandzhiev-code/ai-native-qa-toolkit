@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 1.1.0
+version: 1.1.1
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and the process.env.X! access rule. Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -98,10 +98,10 @@ This codebase uses **Zod 3** (`^3.25.23`). Patterns below match that version; Zo
 ### `z.strictObject()` for new schemas
 
 ```typescript
-export const ProbeSchema = z.strictObject({ /* ... */ });
+export const WorkerSchema = z.strictObject({ /* ... */ });
 ```
 
-`z.object()` silently strips unknown keys; a backend that adds a new field nobody noticed will pass tests forever. `z.strictObject()` rejects unknown keys at runtime, so additive contract drift surfaces as a `ZodError` immediately. The migration is **essentially complete**: ~93 `z.strictObject` definitions across `fixtures/api/schemas/` vs 5 intentional lax ones (2 in `data.ts` `VMResponseSchema`, commented as intentional — VictoriaMetrics responses may include extra fields; 2 credential-input shapes in `util/keycloak.ts`; 1 deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`). Do not add new lax `z.object` schemas.
+`z.object()` silently strips unknown keys; a backend that adds a new field nobody noticed will pass tests forever. `z.strictObject()` rejects unknown keys at runtime, so additive contract drift surfaces as a `ZodError` immediately. The migration is **essentially complete**: ~93 `z.strictObject` definitions across `fixtures/api/schemas/` vs 5 intentional lax ones (2 in `run-stats.ts` `StatsStoreResponseSchema`, commented as intentional — the third-party run-stats store's responses may include extra fields; 2 credential-input shapes in `util/keycloak.ts`; 1 deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`). Do not add new lax `z.object` schemas.
 
 ### Chained string-format validators (Zod 3)
 
@@ -121,12 +121,12 @@ Default ids to `z.string().uuid()`; only loosen to `z.string()` when the API has
 This is the contract. Three things must be present:
 
 ```typescript
-const { status, body } = await apiRequest<ProbeResponse>({ /* ... */ });
+const { status, body } = await apiRequest<GetWorkerResponse>({ /* ... */ });
 expect(status).toBe(200);
-expect(ProbeResponseSchema.parse(body)).toBeTruthy();
+expect(GetWorkerResponseSchema.parse(body)).toBeTruthy();
 ```
 
-- The `<ProbeResponse>` generic gives compile-time safety on `body`.
+- The `<GetWorkerResponse>` generic gives compile-time safety on `body`.
 - `Schema.parse(body)` validates the shape at runtime.
 - The `expect(...).toBeTruthy()` wrapper makes the parse a Playwright assertion (so the failure is reported as a test failure, not a thrown exception that bypasses Playwright's reporting). A bare `Schema.parse(body)` with no wrapper is insufficient.
 
@@ -138,7 +138,7 @@ Defer to the `api-testing` skill's strictness ladder (§ Zod schema conventions,
 
 ### No response-envelope factory
 
-This codebase has **no** `createApiResponseSchema` factory. Each resource file under `fixtures/api/schemas/app/` declares its own schemas. The shared shapes (`PageInfoSchema`, `APIErrorSchema`, `JSONSchemaResponseSchema`) live canonically in `fixtures/api/schemas/util/common.ts` — import from there. `GatewayErrorSchema` is not yet centralized (strict local copies in `tenant.ts` / `user.ts` / `policy.ts`); a few legacy local `APIErrorSchema` copies also remain. See `api-testing` § Architecture map and § Error envelopes.
+This codebase has **no** `createApiResponseSchema` factory. Each resource file under `fixtures/api/schemas/app/` declares its own schemas. The shared shapes (`PageInfoSchema`, `APIErrorSchema`, `JSONSchemaResponseSchema`) live canonically in `fixtures/api/schemas/util/common.ts` — import from there. `GatewayErrorSchema` is not yet centralized (strict local copies in `tenant.ts` / `user.ts` / `notification-rule.ts`); a few legacy local `APIErrorSchema` copies also remain. See `api-testing` § Architecture map and § Error envelopes.
 
 ## No `any`, no unsafe casts
 
@@ -197,7 +197,7 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 
 ### Example 1 — Adding a new env var consumed by a helper
 
-User says: *"Add a `GRAFANA_API_TOKEN` for a perf-runs annotation helper."*
+User says: *"Add a `GRAFANA_API_TOKEN` for a perf-test-run annotation helper."*
 
 1. **Use `!` at the access point** — the canonical pattern. Crashing loudly at startup if the var is missing is the desired behaviour, matching the framework convention (and upstream).
 2. **Declare the env var** per the `config` skill (`env/.env.example` blank entry, real value in `env/.env.${ENVIRONMENT}`).
@@ -212,26 +212,26 @@ User says: *"Add a `GRAFANA_API_TOKEN` for a perf-runs annotation helper."*
 
 ### Example 2 — Authoring a new Zod schema for a new endpoint
 
-User says: *"Add `POST /synthetics/:id/pause` and validate the response."*
+User says: *"Add `POST /jobs/:id/pause` and validate the response."*
 
-1. **Where the schema lives.** `fixtures/api/schemas/app/synthetic.ts` — one file per resource, no factory. Re-export from `fixtures/api/schemas/app/index.ts` (per `api-testing` § Zod schema conventions).
+1. **Where the schema lives.** `fixtures/api/schemas/app/job.ts` — one file per resource, no factory. Re-export from `fixtures/api/schemas/app/index.ts` (per `api-testing` § Zod schema conventions).
 2. **Use `z.strictObject()`** for the new schema. Match the existing response shape catalog: `{ <resource>Id: string, status: ... }`.
 
    ```typescript
-   export const PauseSyntheticResponseSchema = z.strictObject({
-     syntheticId: z.string().uuid(),
+   export const PauseJobResponseSchema = z.strictObject({
+     jobId: z.string().uuid(),
      status: z.string(),
    });
-   export type PauseSyntheticResponse = z.infer<typeof PauseSyntheticResponseSchema>;
+   export type PauseJobResponse = z.infer<typeof PauseJobResponseSchema>;
    ```
 
 3. **`id` is `z.string().uuid()`**, not `z.string()`. Tighten by default; loosen only with verified evidence.
 4. **Assert the response with the exact pattern:**
 
    ```typescript
-   const { status, body } = await apiRequest<PauseSyntheticResponse>({ /* ... */ });
+   const { status, body } = await apiRequest<PauseJobResponse>({ /* ... */ });
    expect(status).toBe(200);
-   expect(PauseSyntheticResponseSchema.parse(body)).toBeTruthy();
+   expect(PauseJobResponseSchema.parse(body)).toBeTruthy();
    ```
 
 5. **No `createApiResponseSchema`.** This codebase has no factory; each resource declares its own schemas. Reuse shared shapes (`APIErrorSchema`, `PageInfoSchema`) by importing — never duplicate.
@@ -269,7 +269,7 @@ User says: *"`appConfig.apiUrl` is typed `string | undefined` and downstream cal
 - **`api-testing`** — schema conventions by resource (where each schema lives, the strictness ladder for `.optional()` / `.nullable()`, the response-shape catalog, the no-factory rule, the response-validation idiom in spec context).
 - **`config`** — env var declaration (`env/.env.example`, dotenv loading, `appConfig` shape). This skill owns the `process.env.X` *access* pattern; `config` defers to it.
 - **`enums`** — the `as const` going-forward rule (this skill aligns with it; new constants use `as const`, legacy TS `enum` migrates on next touch).
-- **`data-strategy`** — Faker usage for unique-per-run values; static JSON for fixed constants.
+- **`data-strategy`** — Faker usage for unique-per-test-run values; static JSON for fixed constants.
 - **`refactor-values`** — workflow when an enum value, route constant, or static `test-data/` value needs to change across the codebase.
 - **`debugging`** — when a `ZodError` or unexpected `string | undefined` surfaces at runtime instead of compile time.
 - **`~/.claude/CLAUDE.md`** — orchestrator. The MUST rows on Type Safety, Schemas, Response Validation, and Sources of Truth, plus the WON'T row "No `any`", are this skill's pair on the rules side.

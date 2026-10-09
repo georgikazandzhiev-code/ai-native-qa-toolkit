@@ -1,6 +1,6 @@
 ---
 name: debugging
-version: 1.0.2
+version: 1.0.3
 description: Investigate any Playwright test failure — failure-mode taxonomy (TimeoutError, strict mode, ZodError, detachment, network race, stale storage state), trace capture/replay, and choosing UI Mode vs Trace Viewer vs Inspector. Load whenever a test fails or behaves unexpectedly. Triggers — "test fails", "timeout", "ZodError", "trace". Never to silence a failure; for intermittent failures use flakiness-triage first.
 metadata:
   category: running
@@ -18,7 +18,7 @@ When a Playwright test fails in this framework, you investigate first and fix se
 - **When a test fails, load this skill BEFORE iterating.** Do not start guessing fixes. Classify the failure, pick the right tool, then change code.
 - **Match the tool to the failure type.** UI Mode for interactive iteration, Trace Viewer for post-mortem on a captured trace, Inspector for breakpoint stepping, HTML report for screenshot + video + trace links. One tool per session — do not bounce between three.
 - **CI-only failures: replay the trace locally before assuming "it's the environment".** Download the CI artifact, open it with `npx playwright show-trace`, and compare. Do not raise timeouts or add retries on the assumption of a CI quirk without proof.
-- **Re-run a flake fix multiple times before declaring done.** A single green run after a flake fix is not enough — aim for at least 3–5 consecutive green runs of the affected test.
+- **Re-run a flake fix multiple times before declaring done.** A single green test run after a flake fix is not enough — aim for at least 3–5 consecutive green test runs of the affected test.
 - **Never commit `test.only(...)`.** `playwright.config.ts` has `forbidOnly: !!process.env.CI`; CI will fail the build. Use `--grep` to narrow in CI workflows.
 
 ## Capture defaults (this project)
@@ -39,10 +39,10 @@ What `playwright.config.ts` automatically captures and where it lands:
 | Need | Tool | Command |
 |------|------|---------|
 | Watch a test run interactively, step-by-step, with a timeline and locator picker | Playwright UI Mode | `npm run app-ui` (or `npx playwright test --ui`) |
-| Investigate a specific failed run from a trace zip (local or CI artifact) | Trace Viewer | `npx playwright show-trace <path/to/trace.zip>` |
+| Investigate a specific failed test run from a trace zip (local or CI artifact) | Trace Viewer | `npx playwright show-trace <path/to/trace.zip>` |
 | Pause and step through a single test in a real browser | Playwright Inspector | `npm run app-debug` (or `--project=api`: `npm run api-debug`) |
-| Read failure summary, screenshots, video, and trace links after a run | HTML reporter | `npx playwright show-report` |
-| Force trace + single worker + no retries for deterministic local repro | Ad-hoc CLI | `npx playwright test <file> --trace on --workers=1 --retries=0` |
+| Read failure summary, screenshots, video, and trace links after a test run | HTML reporter | `npx playwright show-report` |
+| Force trace + single Playwright worker + no retries for deterministic local repro | Ad-hoc CLI | `npx playwright test <file> --trace on --workers=1 --retries=0` |
 | Repeat a single test many times to surface flake | Repeat-each | `npm run app-repeat` (defaults to `--repeat-each=20`) or `npx playwright test <file> --repeat-each=10` |
 
 UI Mode is the default first choice for interactive iteration; Trace Viewer is the default for post-mortem on a captured trace.
@@ -62,10 +62,10 @@ Map the failure message to a category — each routes to a tool and (often) a si
 | Locator "not attached" | `element is not attached to the DOM` | Misdiagnosis — Playwright's `Locator` is lazy; it never goes stale on its own. Real cause: page replaced before the action, frame swap, navigation race | Trace Viewer — check whether the action fired before/after a navigation event. |
 | Network race | Action then immediate assert; flaky pass/fail | Action fires the XHR, assertion runs before the response lands | Wrap the action with `page.waitForResponse(...)` in the page-object method (NOT in the spec). |
 | Auth failure / 401 mid-test | `Unauthorized` after a previously-passing flow | Stale storage state at `.auth/app/appMainUserSession.json` | Re-run the `app-setup` project. Verify `login.setup.ts` produced the file. |
-| Token expiry mid-suite | 401s appearing only in the last ~20% of a long CI run (>1h) | Auth token lifespan shorter than total suite duration | Check Keycloak realm → Access Token Lifespan. Increase to 2× the longest suite duration, or implement token refresh in `beforeEach` via the auth-bootstrap helper. |
+| Token expiry mid-suite | 401s appearing only in the last ~20% of a long CI test run (>1h) | Auth token lifespan shorter than total suite duration | Check Keycloak realm → Access Token Lifespan. Increase to 2× the longest suite duration, or implement token refresh in `beforeEach` via the auth-bootstrap helper. |
 | `beforeAll` timeout → cascading 401s | Multiple tests in a describe fail with 401 / "Request context disposed" / "`beforeAll` hook timeout exceeded" | `beforeAll` hook creates tenants/users/Keycloak entities and exceeds its timeout on a slow environment. The disposed request context causes every subsequent test to report 401. | Check the `beforeAll` timeout first. Size it to the number of slow operations (see `api-testing` § Setup timeouts). Do NOT raise the global `actionTimeout` or add retries. |
 | Stale UI aggregate | `expect(uiCount).toBe(apiCount)` fails with a small delta (e.g., 75 vs 77) | Dashboard/list page loaded with cached or pre-render data; API returned a fresher count | Move the API call outside the retry loop for a stable expected value. Inside `expect(async () => { … }).toPass()`, call `page.reload()` + `verifyPageLoaded()` to force the UI to re-fetch, then re-read the UI value. Timeout 30s. |
-| 409 Conflict on cleanup | `cleanup failed: 409` deleting a probe in `afterAll` | Probe still bound to a synthetic — wrong delete order | Use `cleanupProbesAndSynthetics` (synthetics first, then probes). See `api-testing` § Cleanup patterns. |
+| 409 Conflict on cleanup | `cleanup failed: 409` deleting a worker resource in `afterAll` | Worker resource still assigned to a job — wrong delete order | Use `cleanupWorkersAndJobs` (jobs first, then worker resources). See `api-testing` § Cleanup patterns. |
 | Test passes alone, fails in suite | Green via `--grep`, red via `npm run app-test` | Test independence violation, shared state, parallel collision, missing cleanup | `test-standards` test isolation rules. Promote shared mutators to a fixture or `beforeEach`. |
 | `forbidOnly` failed CI | `Error: focused tests are not allowed in CI` | Committed `test.only(...)` | Remove `test.only(...)`. Use `--grep` instead. |
 
@@ -77,7 +77,7 @@ Open the terminal output first. Identify (a) which test failed, (b) which assert
 
 ### Phase 2: Reproduce locally before changing anything
 
-Narrow the run to a tight feedback loop. A single spec, one worker, retries off: `npx playwright test tests/app/api/<file>.spec.ts --workers=1 --retries=0`. Narrow further with `--grep "<test title or tag>"` if the file is large. If the failure is intermittent, repeat: `npx playwright test <file> --repeat-each=10 --workers=1 --retries=0` (or `npm run app-repeat`). If the test is green locally and red in CI, jump to § CI-only failures — do not assume "it's CI" without evidence.
+Narrow the test run to a tight feedback loop. A single spec, one Playwright worker, retries off: `npx playwright test tests/app/api/<file>.spec.ts --workers=1 --retries=0`. Narrow further with `--grep "<test title or tag>"` if the file is large. If the failure is intermittent, repeat: `npx playwright test <file> --repeat-each=10 --workers=1 --retries=0` (or `npm run app-repeat`). If the test is green locally and red in CI, jump to § CI-only failures — do not assume "it's CI" without evidence.
 
 ### Phase 3: Fix the root cause
 
@@ -85,7 +85,7 @@ Map the diagnosis to the right file. **Do not patch in the spec when the bug liv
 
 ### Phase 4: Verify the fix is real, not a flake
 
-Re-run the affected file with retries off and a single worker. Then re-run the file 3–5 consecutive times for confidence on flake fixes (a single pass after a timing fix is not enough). Then re-run the broader suite (`npm run app-test` or the appropriate area script) to confirm no neighbour broke. Confirm linter is clean (`npx eslint .`) and no `test.only(...)` was left behind.
+Re-run the affected file with retries off and a single Playwright worker. Then re-run the file 3–5 consecutive times for confidence on flake fixes (a single pass after a timing fix is not enough). Then re-run the broader suite (`npm run app-test` or the appropriate area script) to confirm no neighbour broke. Confirm linter is clean (`npx eslint .`) and no `test.only(...)` was left behind.
 
 ## CI-only failures (red CI, green local)
 
@@ -101,7 +101,7 @@ When a test passes locally but fails in CI, you need CI's artifacts to reproduce
    - First-load timing on a cold dev cluster (real cause: missing readiness check, NOT a low timeout).
    - **Wrong environment loaded** — if tests hit the wrong backend, add a temporary `console.log` block to `playwright.config.ts` (wrapped in `/* eslint-disable no-console */` / `/* eslint-enable no-console */`) logging `ENVIRONMENT`, the dotenv file path, `APP_URL`, `API_URL`, and `KEYCLOAK_URL`. Commit, run one CI build, inspect, then **remove the debug block before merging**. Remember: CI platform variables override `.env` file values (see `config` skill § How env files load).
 4. **Replay locally with the same flags.** `CI=1 ENVIRONMENT=<ci-env> npx playwright test <file> --workers=1 --retries=1`.
-5. **Only if still green locally** add temporary instrumentation (`--trace on` for one CI run, screenshot points), commit, run in CI, inspect the new artifacts, then **remove the instrumentation** before merging. Never ship a raised timeout as a "CI fix".
+5. **Only if still green locally** add temporary instrumentation (`--trace on` for one CI test run, screenshot points), commit, run in CI, inspect the new artifacts, then **remove the instrumentation** before merging. Never ship a raised timeout as a "CI fix".
 
 ## Anti-patterns
 
@@ -134,12 +134,12 @@ Before declaring a failure resolved:
 
 ### Example 1 — `TimeoutError` on `await expect(locator).toBeVisible()`
 
-> `expect.toBeVisible: Timeout 10000ms exceeded for getByTestId('create-monitor-button')` in `tests/app/functional/monitoring-service/synthetics/icmp-create-edit-monitor.spec.ts`.
+> `expect.toBeVisible: Timeout 10000ms exceeded for getByTestId('create-job-button')` in `tests/app/functional/jobs-service/jobs/export-create-edit-job.spec.ts`.
 
 1. **Phase 1** — read the trace. Locally `retries: 0` so no trace was captured; re-run with `npm run app-ui` (UI Mode always traces).
-2. **Phase 2** — re-run a single test: `npx playwright test tests/app/functional/monitoring-service/synthetics/icmp-create-edit-monitor.spec.ts --grep "create monitor" --workers=1 --retries=0 --trace on`. Open UI Mode timeline at the assertion frame.
-3. **Diagnosis** — DOM at the moment of failure shows the synthetics list page is still loading; the create-monitor button has not rendered yet. The test asserts visibility before the list response lands.
-4. **Fix at root** — in `pages/app/SyntheticsPage.ts`, the navigation method should `await page.waitForResponse(...)` for the synthetics list endpoint before returning. The spec stays as-is. **Do NOT** raise `expect.timeout`. **Do NOT** add `page.waitForTimeout(...)`. If the locator itself was wrong, re-explore via `npx playwright open` (see the `playwright-cli` skill) — never guess.
+2. **Phase 2** — re-run a single test: `npx playwright test tests/app/functional/jobs-service/jobs/export-create-edit-job.spec.ts --grep "create job" --workers=1 --retries=0 --trace on`. Open UI Mode timeline at the assertion frame.
+3. **Diagnosis** — DOM at the moment of failure shows the jobs list page is still loading; the create-job button has not rendered yet. The test asserts visibility before the list response lands.
+4. **Fix at root** — in `pages/app/JobsPage.ts`, the navigation method should `await page.waitForResponse(...)` for the jobs list endpoint before returning. The spec stays as-is. **Do NOT** raise `expect.timeout`. **Do NOT** add `page.waitForTimeout(...)`. If the locator itself was wrong, re-explore via `npx playwright open` (see the `playwright-cli` skill) — never guess.
 5. **Verify** — re-run the spec 5x with `--workers=1 --retries=0`; confirm `npm run app-test` is clean.
 
 ### Example 2 — `ZodError` on `Schema.parse(body)`
@@ -154,34 +154,34 @@ Before declaring a failure resolved:
 
 ### Example 3 — Test passes locally, fails in CI
 
-> `Verify GET /synthetics returns 200 with valid schema` passes 5x locally, fails in the first CI run with `Timeout 30000ms exceeded waiting for navigation`.
+> `Verify GET /jobs returns 200 with valid schema` passes 5x locally, fails in the first CI test run with `Timeout 30000ms exceeded waiting for navigation`.
 
 1. **§ CI-only failures** — pull the artifact: `gh run download <run-id> -n playwright-report`.
-2. Open the trace: `npx playwright show-trace path/to/trace.zip`. The trace shows `login.setup.ts` ran and `appMainUserSession.json` was produced — but the synthetic-monitor list endpoint returned 401 on the first request and then the test aborted.
+2. Open the trace: `npx playwright show-trace path/to/trace.zip`. The trace shows `login.setup.ts` ran and `appMainUserSession.json` was produced — but the jobs list endpoint returned 401 on the first request and then the test aborted.
 3. **Compare environments** — local `env/.env.dev` has `USER_ACCESS_TOKEN_FULL` from a long-lived dev account; CI's token is minted fresh by `app-setup` against a colder cluster. The token-mint step in `app-setup` raced ahead of the Keycloak service being ready.
 4. **Replay locally:** `CI=1 ENVIRONMENT=ci npx playwright test <file> --workers=1 --retries=1` — reproduces the 401.
-5. **Fix at root** — add a readiness probe in `login.setup.ts` (or the helper that mints tokens) that polls Keycloak before issuing the credential request. **Do NOT** raise `navigationTimeout` — that masks the real timing bug. Verify the CI run is green for 3 consecutive pipeline executions.
+5. **Fix at root** — add a readiness check in `login.setup.ts` (or the helper that mints tokens) that polls Keycloak before issuing the credential request. **Do NOT** raise `navigationTimeout` — that masks the real timing bug. Verify the CI test run is green for 3 consecutive pipeline executions.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | No trace file after a local failure | `playwright.config.ts` has `trace: 'on-first-retry'` and locally `retries: 0` | Re-run with `--trace on` or use `npm run app-ui` (UI Mode always traces) |
-| Test passes solo, fails when run with the full suite | Cleanup ordering or shared-state bug; parallel collision (local has parallel workers, CI is serial) | Check `afterAll` cleanup order. For synthetics-with-probes, use `cleanupProbesAndSynthetics` — synthetics first, probes second (`api-testing`). For shared mutators, move to a fixture or `beforeEach`. |
+| Test passes solo, fails when run with the full suite | Cleanup ordering or shared-state bug; parallel collision (local has parallel Playwright workers, CI is serial) | Check `afterAll` cleanup order. For jobs with assigned worker resources, use `cleanupWorkersAndJobs` — jobs first, worker resources second (`api-testing`). For shared mutators, move to a fixture or `beforeEach`. |
 | `expect(locator).toBeVisible()` times out | Locator wrong OR element waits on a network call | Re-explore via `npx playwright open` (see the `playwright-cli` skill) to verify the locator. If the locator is right, scope the action's `page.waitForResponse(...)` inside the page-object method. Never raise `expect.timeout`. |
 | `ZodError` on `Schema.parse(body)` | API response disagrees with the schema (contract drift) | `api-testing` § Skipping a test for a real backend bug — **comment out** the test with `// TODO: FIXME: <TICKET>`. **Never** use `test.skip` (corrupts Qase IDs). **Never** loosen the schema or change `z.strictObject` to `z.object`. |
 | `Error: strict mode violation: ... resolved to N elements` | Locator matches >1 element | `selectors` skill § Strict mode — disambiguation. Add `{ exact: true }`, scope to a parent (Pattern 7), or `.filter({ hasText })`. |
-| 409 Conflict deleting a probe in cleanup | Probe still bound to a synthetic | Use `cleanupProbesAndSynthetics(apiRequest, probeIds, syntheticIds, token)`; never raw-delete probes in `afterAll` for monitor specs. |
+| 409 Conflict deleting a worker resource in cleanup | Worker resource still assigned to a job | Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, token)`; never raw-delete worker resources in `afterAll` for job specs. |
 | `element is not attached to the DOM` | Misdiagnosis — `Locator` is lazy and never goes stale; the real cause is page replacement, frame swap, or a navigation race | Open the trace; check whether the action fired before/after navigation. Add a web-first assertion or `page.waitForResponse(...)` in the page-object method to anchor the wait. |
 | Auth fails mid-test (401 on a previously-passing flow) | Stale storage state at `.auth/app/appMainUserSession.json` | Re-run the `app-setup` project; check `login.setup.ts` produced the file; verify `playwright.config.ts` `storageState` path is unchanged. |
-| `forbidOnly` failed the CI build | Committed `test.only(...)` | Remove `test.only(...)`; use `--grep "<title>"` to narrow CI workflow runs. |
-| HTML report opens empty / stale | No run produced one yet, OR `playwright-report/` is stale | Run the failing test once first to refresh the report; then `npx playwright show-report`. |
+| `forbidOnly` failed the CI build | Committed `test.only(...)` | Remove `test.only(...)`; use `--grep "<title>"` to narrow test runs in CI workflows. |
+| HTML report opens empty / stale | No test run produced one yet, OR `playwright-report/` is stale | Run the failing test once first to refresh the report; then `npx playwright show-report`. |
 | UI Mode is slow / consumes lots of memory | UI Mode keeps a hot context across sessions | Close it after each session. For pure post-mortem on a captured trace, prefer Trace Viewer (`npx playwright show-trace ...`) — lighter weight. |
 
 ## See Also
 
 - **`selectors`** — strict-mode disambiguation, locator priority, Pattern 7 (sub-component scoping). Read when the failure is a strict-mode violation or "element not attached".
-- **`api-testing`** — `Schema.parse` failures, error envelope shapes (`APIErrorSchema` / `GatewayErrorSchema`), the comment-out + `// TODO: FIXME:` workflow for real backend bugs, `cleanupProbesAndSynthetics` ordering.
+- **`api-testing`** — `Schema.parse` failures, error envelope shapes (`APIErrorSchema` / `GatewayErrorSchema`), the comment-out + `// TODO: FIXME:` workflow for real backend bugs, `cleanupWorkersAndJobs` ordering.
 - **`playwright-cli`** — re-explore the live app via `npx playwright open` when a locator no longer matches. **Mandatory** before guessing at a new selector.
 - **`frontend-cross-check`** — when a locator failure points to a possible testid rename or component change, `git pull` `<sibling-repos>/frontend` and grep the source to confirm what the FE actually emits — before re-authoring the locator. Source is the truth for stable artifacts; `playwright-cli` is the truth for runtime behavior.
 - **`page-objects`** — where the fix lives when an action raced navigation: in the POM action method, NOT in the spec.
