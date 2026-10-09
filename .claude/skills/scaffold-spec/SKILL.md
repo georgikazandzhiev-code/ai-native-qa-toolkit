@@ -75,10 +75,11 @@ Read a comparable existing spec to match the established patterns:
 ### API Spec Template
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
-import { appConfig } from "../../../config/app";
+import { SUITES } from "../../../../enums/app/qase-suites";
+import { appConfig } from "../../../../config/app";
 import { faker } from "@faker-js/faker";
 // Import Zod schemas from fixtures/api/schemas/app/<resource>
 // Import helpers from helpers/app/<resource>
@@ -129,11 +130,12 @@ test.describe("METHOD /path - Description", () => {
 ### E2E Spec Template
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
-import { appConfig } from "../../../config/app";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
+import { appConfig } from "../../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 // Import API helpers for cleanup
 
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
@@ -174,9 +176,10 @@ test.describe("E2E — <Feature> CRUD", () => {
 ### Functional Spec Template
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 import { faker } from "@faker-js/faker";
 
 test.describe("<Feature> — Form Validation", () => {

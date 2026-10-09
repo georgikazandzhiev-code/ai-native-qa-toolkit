@@ -44,7 +44,8 @@ flowchart TD
     B -->|Yes| POM[Register in page-object-fixture.ts<br/>FrameworkFixtures + base.extend]
     B -->|No| C{Is it a single API call<br/>or short setup?}
     C -->|Yes, used in 1 spec| Inline[apiRequest direct in the hook]
-    C -->|Reused in 2+ specs| D{Needs cleanup that MUST<br/>run on test failure?}
+    C -->|Reused in 2 specs| Helper
+    C -->|Reused in 3+ specs| D{Needs cleanup that MUST<br/>run on test failure?}
     D -->|No| Helper[Plain helper, or helper<br/>returning a cleanup callback]
     D -->|Yes| E{Owns a long-lived resource<br/>context / client / session?}
     E -->|Yes| Fixture[Author a fixture:<br/>setup, await use, dispose]
@@ -62,7 +63,7 @@ The full, current inventory (every registered POM, `apiRequest` / `loginUser` / 
 
 ## test-options.ts — the merge point
 
-`fixtures/pom/test-options.ts` is the single source of truth for `test` and `expect` in every spec. It calls Playwright's `mergeTests(...)` to combine four fixture layers (page objects, `apiRequest`, login, mailpit) into one `test` export, and re-exports `expect` from `@playwright/test`. Specs always import `{ expect, test }` from this file (relative path varies by spec depth — e.g. `../../../fixtures/pom/test-options` for `tests/app/api/*.spec.ts`).
+`fixtures/pom/test-options.ts` is the single source of truth for `test` and `expect` in every spec. It calls Playwright's `mergeTests(...)` to combine four fixture layers (page objects, `apiRequest`, login, mailpit) into one `test` export, and re-exports `expect` from `@playwright/test`. Specs always import `{ expect, test }` from this file (relative path varies by spec depth — e.g. `../../../../fixtures/pom/test-options` for `tests/app/api/<domain>/*.spec.ts`).
 
 When you add a new fixture, you append it to the `mergeTests(...)` call here. That is the only step that makes the fixture visible to specs — without it, the file might exist on disk but specs cannot destructure it.
 
@@ -166,7 +167,7 @@ User says: *"Every job-mutation test needs a worker seeded first. Should I write
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| TypeScript: `Property 'jobsPage' does not exist on type 'TestArgs'` (or fixture is `undefined` at runtime) | Spec imports `test` / `expect` from `@playwright/test` instead of `fixtures/pom/test-options` | Replace the import: `import { expect, test } from "../../../fixtures/pom/test-options";` (relative path varies by spec depth) |
+| TypeScript: `Property 'jobsPage' does not exist on type 'TestArgs'` (or fixture is `undefined` at runtime) | Spec imports `test` / `expect` from `@playwright/test` instead of `fixtures/pom/test-options` | Replace the import: `import { expect, test } from "../../../../fixtures/pom/test-options";` (relative path varies by spec depth) |
 | New fixture file exists on disk but specs cannot see it | Forgot to merge into `fixtures/pom/test-options.ts` | Append the import and add the fixture to the `mergeTests(...)` call. That is the only step that wires it through |
 | Tests share mutable state mid-suite (a record one test created appears in the next test) | Fixture is `{ scope: 'worker' }` when it should be `{ scope: 'test' }` | Switch to `test` scope. Use Playwright worker scope only for read-only, expensive, shareable setup |
 | Teardown didn't run after a test failure | Teardown code is placed **before** `await use(...)`, OR `await use(...)` was omitted, OR the fixture itself threw before reaching `use()` | Restructure as `setup → await use(value) → teardown`. If setup can throw, wrap it so the failure is reported but resources you did create still get cleaned up |

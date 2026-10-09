@@ -85,7 +85,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **No `try/catch` in tests** | Let assertions throw. Only exception: capturing an accidentally-created resource ID for cleanup |
 | **No `await expect(...).not.toThrow()`** | Just call the function |
 | **No tags on `describe` / no multi-tag** | Exactly one tag, on `test()` only |
-| **No magic numbers** | Timeouts and constants live in config or enums |
+| **No magic numbers** | Timeouts live in config (named budgets on `appConfig.timeouts`); fixed test values in test-data files; named sets of app strings and statuses in enums |
 | **No JSDoc on locator getters** | Action methods only |
 | **No commented-out code** | Delete dead code. `// TODO:` / `// FIXME:` / `// BUG:` annotations only, with context. The two sanctioned exceptions: a disabled `test(...)` block under `// TODO: FIXME: <TICKET>` (see No silent coverage drops), and the `// qase.id(N);` placeholder |
 | **No silent coverage drops** | API doesn't match docs → write the test, comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>`, report the bug. Never `test.skip` |

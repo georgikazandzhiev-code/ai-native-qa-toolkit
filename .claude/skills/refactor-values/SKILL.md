@@ -11,7 +11,7 @@ metadata:
 ## Critical
 
 - **ALWAYS** run Phase 1 (find all consumers) before making any edit. Enum values and `test-data/app/*.json` keys feed specs, page objects, helpers, and Zod schemas — the blast radius must be known up front.
-- **ALWAYS** search for both the **enum key** (e.g. `SUITES.API_JOBS`) **and the raw string value** (e.g. `"API\tJobs"`, or `"Active"` for `Status.ACTIVE`). Some consumers may have bypassed the enum and hardcoded the string — those will not auto-update.
+- **ALWAYS** search for both the **enum key** (e.g. `SUITES.API_JOBS`) **and the raw string value** (e.g. `"API\tJobs"`, or `"paused"` for the `JOB_STATUSES` member). Some consumers may have bypassed the enum and hardcoded the string — those will not auto-update.
 - **NEVER** edit a value, rename a key, or change a `test-data/app/*.json` field without updating every consumer **in the same commit**. No intermediate broken state on the default branch.
 - **NEVER** loosen a Zod schema (`z.literal`, `z.enum([...])`, e.g. `StatusSchema` in `fixtures/api/schemas/app/tenant.ts`) to make an updated value pass. Update the schema literal/enum to match the new value — the schema is the contract.
 - **ALWAYS** run `npx tsc --noEmit` and the lint-staged pipeline (eslint + prettier) plus the affected Playwright tests before declaring the refactor done. TypeScript catches key renames; eslint catches stale patterns; tests catch assertion drift.
@@ -45,11 +45,11 @@ grep -rn "SUITES.API_JOBS" <sibling-repos>/automation/ --include="*.ts"
 grep -rn "API\\\\tJobs" <sibling-repos>/automation/ --include="*.ts"
 ```
 
-For a `Status` enum value change (`Status.ACTIVE = 'Active'` → `'Online'`):
+For a job-status value change (`"paused"` → `"suspended"` in `JOB_STATUSES`, `enums/app/job-status.ts`):
 
 ```bash
-grep -rn "Status.ACTIVE" <sibling-repos>/automation/ --include="*.ts"
-grep -rn "'Active'" <sibling-repos>/automation/ --include="*.ts"
+grep -rn "JOB_STATUSES" <sibling-repos>/automation/ --include="*.ts"
+grep -rn "'paused'\|\"paused\"" <sibling-repos>/automation/ --include="*.ts"
 ```
 
 For a JSON field rename (e.g. `defaultPageSize` in `test-data/app/worker.json`):
@@ -102,7 +102,7 @@ Where a value-change in this repo radiates to. Check each row before committing.
 |---------------|-------------|-----------------------|
 | `enums/app/qase-suites.ts` value (e.g. `SUITES.API_JOBS`) | `qase.suite(SUITES.API_JOBS)` calls in every spec under `tests/app/api/**` AND **the Qase UI suite name** | Suite renames in Qase; mapped `qase.id(...)` may detach from the renamed suite |
 | `enums/app/qase-suites.ts` key rename | TypeScript imports across all spec files | TS compile errors at every consumer (caught by `npx tsc --noEmit`) |
-| `enums/util/statuses.ts` value (e.g. `Status.ACTIVE = 'Active'`) | `getByText(Status.ACTIVE)` page-object calls; `expect(...).toHaveText(Status.ACTIVE)` UI assertions; any spec that hardcoded `'Active'` directly | UI assertions drift; hardcoded copies fail silently |
+| `enums/app/job-status.ts` value (e.g. `"paused"` in `JOB_STATUSES`) | Page-object `getByText(...)` calls and `expect(...).toHaveText(...)` UI assertions that take the status from `JOB_STATUSES`; any spec that hardcoded `'paused'` directly | UI assertions drift; hardcoded copies fail silently |
 | `appConfig.api.<X>` route constant (in `config/app.ts`) | Every `apiRequest({ url: appConfig.api.X, ... })` call AND any spec that hardcoded the path string | API tests hit the wrong URL; 404s look like coverage failures |
 | `StatusSchema = z.enum([...])` in `fixtures/api/schemas/app/tenant.ts` | Every response body parsed as `Schema.parse(body)` where the schema includes `status: StatusSchema` | `ZodError: Invalid enum value` on parse — the schema rejects the new API value |
 | `fixtures/api/schemas/app/job.ts` `z.enum(["enabled", "disabled"])` | Every job create/list response parse | Same — schema rejects new value |
@@ -176,20 +176,20 @@ The API renamed the `"logged out"` status to `"signed_out"`. The Zod literal nee
    grep -rn "logged out" <sibling-repos>/automation/ --include="*.ts"
    grep -rn "StatusSchema" <sibling-repos>/automation/ --include="*.ts"
    ```
-   Hits: the schema definition itself, every spec asserting `expect(body.status).toBe("logged out")`, and the schema barrel re-export.
+   Hits: the schema definition itself, every spec asserting `expect(body.status).toBe("logged out")`, and every spec or helper that imports it from `fixtures/api/schemas/app/tenant.ts` (there is no schema barrel — consumers deep-import the resource file).
 2. **Phase 2**: update `StatusSchema = z.enum(["created", "updated", "deleted", "signed_out"])`. Update each `expect(body.status).toBe("logged out")` to `"signed_out"` in the same diff. Do **NOT** loosen to `z.string()`.
 3. **Phase 3**: `npx tsc --noEmit`, `npx eslint .`, `npm run app-api`. The `Schema.parse(body)` calls now validate the new contract.
 
-### Example 4 (abstract) — UI message wording (`Messages.LOGIN_ERROR`-shaped change)
+### Example 4 (abstract) — UI message wording (`MESSAGES.LOGIN_ERROR`-shaped change)
 
-Generic shape: a UI message enum's value changes (e.g. `"Invalid email or password"` → `"Incorrect credentials. Please try again."`). Search for both the enum key and the old raw string. Page objects using `getByText(Messages.LOGIN_ERROR)` auto-update; any test that hardcoded the literal must be edited in the same commit. (This project's `enums/util/statuses.ts` and `qase-suites.ts` are the analogous real cases — `Messages.*` is the canonical pattern.)
+Generic shape: a UI message enum's value changes (e.g. `"Invalid email or password"` → `"Incorrect credentials. Please try again."`). Search for both the enum key and the old raw string. Page objects using `getByText(MESSAGES.LOGIN_ERROR)` auto-update; any test that hardcoded the literal must be edited in the same commit. (This project's `enums/app/job-status.ts` and `qase-suites.ts` are the analogous real cases — `MESSAGES.*` is the canonical pattern.)
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `Property 'API_JOBS' does not exist on type` after rename | A consumer was missed — old key still referenced | Run `npx tsc --noEmit`, fix every reported location, then re-grep `~/.claude/skills/*` and `.cursor/rules/*` for the old name in documentation. |
-| Test fails `expect(locator).toHaveText('Active')` after a `Status.ACTIVE` value change | A spec or page object hardcoded the old raw string instead of importing `Status.ACTIVE` | Search for the old string under `tests/`, `pages/`. Replace with the imported enum reference. |
+| Test fails `expect(locator).toHaveText('paused')` after a `JOB_STATUSES` value change | A spec or page object hardcoded the old raw string instead of taking it from `JOB_STATUSES` | Search for the old string under `tests/`, `pages/`. Replace with the imported enum reference. |
 | `ZodError: Invalid enum value. Expected ... received "signed_out"` | The API now returns the new value but the schema's `z.enum([...])` still has the old one | Update the literal in `fixtures/api/schemas/app/<resource>.ts`. Do **not** weaken to `z.string()`. |
 | Qase report shows two separate suites after a `SUITES.*` value change | The old suite still has historical results; the new value created a fresh suite | Coordinate with the Qase project owner to merge or rename the suite directly in the Qase UI. Decide before merging the code change. |
 | Pagination test fails after editing `defaultPageSize` in `worker.json` | A spec hardcoded the integer (e.g. `expect(body.pageInfo.pageSize).toBe(10)`) instead of `workerData.defaultPageSize` | Replace the literal with the import. Add this finding to the PR description so the reviewer knows the cleanup happened. |

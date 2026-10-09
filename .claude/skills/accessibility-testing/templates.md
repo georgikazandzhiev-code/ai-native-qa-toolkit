@@ -18,7 +18,7 @@ Two lists, because they do different things:
 - **Known violations** are never excluded. The page is scanned in full, and afterwards `unexpectedViolations()` drops only the exact pairs on the list: **this rule on this element**. Another rule failing on the same element, or the same rule failing anywhere else, still fails.
 
 ```typescript
-// enums/util/accessibility.ts
+// enums/app/accessibility.ts (a new enums/app/<name>.ts — re-export it from enums/app/index.ts)
 /** WCAG conformance target for automated scans: 2.x A + AA. Raise deliberately, here only. */
 export const A11Y_WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] as const;
 
@@ -36,11 +36,11 @@ export const A11Y_KNOWN_VIOLATIONS: ReadonlyArray<A11yKnownViolation> = [];
 ```
 
 ```typescript
-// fixtures/a11y/axe-fixture.ts
+// fixtures/services/axe-fixture.ts
 import { test as base } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import type { AxeResults } from "axe-core";
-import { A11Y_WCAG_TAGS, A11Y_THIRD_PARTY_REGIONS, A11Y_KNOWN_VIOLATIONS } from "../../enums/util/accessibility";
+import { A11Y_WCAG_TAGS, A11Y_THIRD_PARTY_REGIONS, A11Y_KNOWN_VIOLATIONS } from "../../enums/app/accessibility";
 
 type AxeFixtures = { makeAxeBuilder: () => AxeBuilder };
 
@@ -88,9 +88,9 @@ Matching is exact on purpose. When the markup around a known violation changes, 
 One test per state. Reach the state through the page object, prove it's on screen, scan, attach, and assert strictly.
 
 ```typescript
-import { test, expect } from "../../../fixtures/pom/test-options";
-import { unexpectedViolations } from "../../../fixtures/a11y/axe-fixture";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { test, expect } from "../../../../fixtures/pom/test-options";
+import { unexpectedViolations } from "../../../../fixtures/services/axe-fixture";
+import { SUITES } from "../../../../enums/app/qase-suites";
 import { qase } from "playwright-qase-reporter";
 
 test.describe("Settings accessibility", () => {

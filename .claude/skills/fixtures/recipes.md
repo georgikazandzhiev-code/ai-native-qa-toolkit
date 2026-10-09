@@ -44,14 +44,14 @@ No change to `test-options.ts` — the whole `pageObjectFixture` module is alrea
 The most common UI-spec shape: seed a resource over the API, drive the UI against it, delete it after. This does **not** need a fixture (see `SKILL.md` § When a fixture, when a helper).
 
 ```typescript
-import { expect, test } from '../../../fixtures/pom/test-options';
-import { appConfig } from '../../../config/app';
+import { expect, test } from '../../../../fixtures/pom/test-options';
+import { appConfig } from '../../../../config/app';
 import {
     buildCreateBackupJobBody,
     createJob,
     cleanupWorkersAndJobs,
-} from '../../../helpers/app/jobs';
-import { buildCreateWorkerBody, createWorker } from '../../../helpers/app/workers';
+} from '../../../../helpers/app/jobs';
+import { buildCreateWorkerBody, createWorker } from '../../../../helpers/app/workers';
 import { faker } from '@faker-js/faker';
 
 // No token aliases — use process.env.USER_ACCESS_TOKEN_* directly (see data-strategy §1.6).
@@ -107,7 +107,7 @@ Why this shape:
 Trigger: a flow that sends email (invite, password reset). The `mailpit` fixture builds its own `Basic`-auth `APIRequestContext` and disposes it after the test.
 
 ```typescript
-import { expect, test } from '../../../fixtures/pom/test-options';
+import { expect, test } from '../../../../fixtures/pom/test-options';
 
 test.describe('Invite email loop', () => {
     const recipient = `qa+${Date.now()}@<your-test-domain>`;
@@ -137,7 +137,7 @@ Notes:
 Trigger: a spec must start logged-out (login negative cases, unauthenticated navigation).
 
 ```typescript
-import { expect, test } from '../../../fixtures/pom/test-options';
+import { expect, test } from '../../../../fixtures/pom/test-options';
 
 test.describe('Guest navigation', () => {
     test.beforeEach(async ({ resetStorageState, loginPage }) => {

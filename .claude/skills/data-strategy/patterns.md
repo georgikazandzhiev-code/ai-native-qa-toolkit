@@ -94,7 +94,7 @@ test('Creates worker', async ({ apiRequest }) => {
 });
 ```
 
-Fix: `import { buildCreateWorkerBody } from '../../../helpers/app/workers';` and call `buildCreateWorkerBody({ region: 'EU' })`.
+Fix: `import { buildCreateWorkerBody } from '../../../../helpers/app/workers';` and call `buildCreateWorkerBody({ region: 'EU' })`.
 
 ### Bad — Forking the builder instead of adding overrides
 
@@ -160,7 +160,7 @@ Fix: `return createWorkerData({ region: 'EU', location: 'EU-Amsterdam' });`.
 ```
 
 ```typescript
-import httpJobValidation from '../../../test-data/app/httpJobValidation.json';
+import httpJobValidation from '../../../../test-data/app/httpJobValidation.json';
 
 for (const invalidName of httpJobValidation.invalidNames) {
     test(`rejects invalid name: '${invalidName}'`, async ({ apiRequest }) => {
@@ -191,7 +191,7 @@ Fix: move to `test-data/app/<resource>-validation.json` and import. The JSON is 
 ```
 
 ```typescript
-import workerData from '../../../test-data/app/worker.json';
+import workerData from '../../../../test-data/app/worker.json';
 
 await apiRequest({
     url: `${appConfig.api.WORKERS}/${workerData.nonExistentId}`,
@@ -212,7 +212,7 @@ Fix: every "non-existent" or "invalid" sentinel lives in `test-data/app/<resourc
 ### Good (the shape we want — assertion-style)
 
 ```typescript
-// helpers/app/testDataGenerators.ts (factory — Pattern 2)
+// helpers/app/test-data-generators.ts (factory — Pattern 2)
 export type WorkerData = { name: string; location: string; region: string };
 export function createWorkerData(overrides: Partial<WorkerData> = {}): WorkerData {
     return {
@@ -304,14 +304,14 @@ const { body } = await apiRequest({
 });
 ```
 
-Fix: `import { createWorker, buildCreateWorkerBody } from '../../../helpers/app/workers';` then `await createWorker(apiRequest, buildCreateWorkerBody(), process.env.USER_ACCESS_TOKEN_FULL);`.
+Fix: `import { createWorker, buildCreateWorkerBody } from '../../../../helpers/app/workers';` then `await createWorker(apiRequest, buildCreateWorkerBody(), process.env.USER_ACCESS_TOKEN_FULL);`.
 
 ## Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
 
 ### Good (`helpers/app/adminUsers.ts` shape)
 
 ```typescript
-import { setupTestUser, teardownTestUser } from '../../../helpers/app/adminUsers';
+import { setupTestUser, teardownTestUser } from '../../../../helpers/app/adminUsers';
 
 const adminToken = process.env.USER_ACCESS_TOKEN_ADMIN!;
 const tenantId = process.env.TENANT_ID!;
@@ -451,7 +451,7 @@ Fix: drop the alias; use `process.env.USER_ACCESS_TOKEN_FULL` directly. See [ref
 ### Good — purely-frontend assertion against a stub response
 
 ```typescript
-import workerStub from '../../../test-data/app/worker.json';
+import workerStub from '../../../../test-data/app/worker.json';
 await page.route('**/api/v1/workers/123', (route) =>
     route.fulfill({ status: 200, body: JSON.stringify(workerStub) })
 );
@@ -460,7 +460,7 @@ await page.route('**/api/v1/workers/123', (route) =>
 ### Bad — using a mock JSON as if it described a real backend resource
 
 ```typescript
-import workerStub from '../../../test-data/app/worker.json';
+import workerStub from '../../../../test-data/app/worker.json';
 const { body } = await apiRequest({ url: `${path}/${workerStub.nonExistentId}`, /* ... */ });
 expect(body.name).toBe(workerStub.name); // backend may have drifted
 ```

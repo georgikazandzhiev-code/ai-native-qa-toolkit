@@ -57,7 +57,7 @@ Map the failure message to a category — each routes to a tool and (often) a si
 | `TimeoutError` on assertion | `expect(locator).toBeVisible() Timeout 10000ms exceeded` | Locator wrong; OR element waits on a network response; OR fixture / setup ordering | UI Mode — re-snapshot just before the assertion. If locator is right, scope `expect` after `page.waitForResponse(...)`. |
 | `TimeoutError` on navigation | `page.goto(...) Timeout 30000ms exceeded` | Wrong URL, env file wrong, app down, cold cache | Verify `process.env.APP_URL` and the loaded `env/.env.<ENVIRONMENT>` file. Curl the URL. |
 | Strict-mode violation | `Error: strict mode violation: getByRole(...) resolved to N elements` | Locator matches >1 element | `selectors` skill § Strict mode disambiguation. Add `{ exact: true }`, scope to a parent (Pattern 7), or `.filter({ hasText })`. |
-| `expect()` mismatch | `Expected: "X" / Received: "Y"` | Page state / data drift; OR a `Messages.*` enum value drifted from the live UI | Compare received vs expected. If a `Messages.*` value drifted, follow `refactor-values`. |
+| `expect()` mismatch | `Expected: "X" / Received: "Y"` | Page state / data drift; OR a `MESSAGES.*` enum value drifted from the live UI | Compare received vs expected. If a `MESSAGES.*` value drifted, follow `refactor-values`. |
 | `ZodError` on `Schema.parse(body)` | `expect.parse: ZodError: at body.X: Invalid enum value...` | API response disagrees with the Zod schema (contract drift) | If OpenAPI is the source of truth, this is a backend bug — route to `api-testing` § Skipping a test for a real backend bug. **Never** loosen the schema. |
 | Locator "not attached" | `element is not attached to the DOM` | Misdiagnosis — Playwright's `Locator` is lazy; it never goes stale on its own. Real cause: page replaced before the action, frame swap, navigation race | Trace Viewer — check whether the action fired before/after a navigation event. |
 | Network race | Action then immediate assert; flaky pass/fail | Action fires the XHR, assertion runs before the response lands | Wrap the action with `page.waitForResponse(...)` in the page-object method (NOT in the spec). |
@@ -77,11 +77,11 @@ Open the terminal output first. Identify (a) which test failed, (b) which assert
 
 ### Phase 2: Reproduce locally before changing anything
 
-Narrow the test run to a tight feedback loop. A single spec, one Playwright worker, retries off: `npx playwright test tests/app/api/<file>.spec.ts --workers=1 --retries=0`. Narrow further with `--grep "<test title or tag>"` if the file is large. If the failure is intermittent, repeat: `npx playwright test <file> --repeat-each=10 --workers=1 --retries=0` (or `npm run app-repeat`). If the test is green locally and red in CI, jump to § CI-only failures — do not assume "it's CI" without evidence.
+Narrow the test run to a tight feedback loop. A single spec, one Playwright worker, retries off: `npx playwright test tests/app/api/<domain>/<file>.spec.ts --workers=1 --retries=0`. Narrow further with `--grep "<test title or tag>"` if the file is large. If the failure is intermittent, repeat: `npx playwright test <file> --repeat-each=10 --workers=1 --retries=0` (or `npm run app-repeat`). If the test is green locally and red in CI, jump to § CI-only failures — do not assume "it's CI" without evidence.
 
 ### Phase 3: Fix the root cause
 
-Map the diagnosis to the right file. **Do not patch in the spec when the bug lives in a page object, schema, or helper.** Locator wrong → fix the POM getter (use `npx playwright open` to re-explore the live app, not guesswork — see the `playwright-cli` skill). Action raced ahead of navigation → add `page.waitForResponse(...)` in the page-object action method. `Messages.*` enum drifted → `refactor-values` workflow. Schema disagreed with documented contract → comment out the test with `// TODO: FIXME: <TICKET>` (`api-testing` § Skipping). Schema disagreed with undocumented response → update the schema to the real shape (never loosen with `z.unknown()`). Fixture missing → `fixtures` skill.
+Map the diagnosis to the right file. **Do not patch in the spec when the bug lives in a page object, schema, or helper.** Locator wrong → fix the POM getter (use `npx playwright open` to re-explore the live app, not guesswork — see the `playwright-cli` skill). Action raced ahead of navigation → add `page.waitForResponse(...)` in the page-object action method. `MESSAGES.*` enum drifted → `refactor-values` workflow. Schema disagreed with documented contract → comment out the test with `// TODO: FIXME: <TICKET>` (`api-testing` § Skipping). Schema disagreed with undocumented response → update the schema to the real shape (never loosen with `z.unknown()`). Fixture missing → `fixtures` skill.
 
 ### Phase 4: Verify the fix is real, not a flake
 
@@ -186,7 +186,7 @@ Before declaring a failure resolved:
 - **`frontend-cross-check`** — when a locator failure points to a possible testid rename or component change, `git pull` `<sibling-repos>/frontend` and grep the source to confirm what the FE actually emits — before re-authoring the locator. Source is the truth for stable artifacts; `playwright-cli` is the truth for runtime behavior.
 - **`page-objects`** — where the fix lives when an action raced navigation: in the POM action method, NOT in the spec.
 - **`fixtures`** — "fixture is undefined" failures; storage-state fixtures; the `apiRequest` and `mailpit` lifecycle.
-- **`refactor-values`** — when an `expect()` mismatch traces to a `Messages.*` enum value or `test-data/app/*.json` value drift.
+- **`refactor-values`** — when an `expect()` mismatch traces to a `MESSAGES.*` enum value or `test-data/app/*.json` value drift.
 - **`data-strategy`** — when test data has drifted from the live API contract or from the UI's rendered strings.
 - **[`test-standards`](../test-standards/SKILL.md)** — test independence, single-tag rule, structure conventions; many "passes alone, fails in suite" failures originate here. Pair with [`api-testing`](../api-testing/SKILL.md) for API-spec failures, [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI-spec failures.
 - **`~/.claude/CLAUDE.md`** — § When You're Stuck; the WON'T rules (no `try/catch`, no raised timeouts, no loosened schemas, no XPath, no `waitForTimeout`).

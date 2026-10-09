@@ -391,7 +391,7 @@ User says: *"Populate the `page-objects` skill folder."*
 User says: *"`enums/SKILL.md` is missing the `## Examples` section."*
 
 1. **Phase 1 (diagnose)** — checklist gate failing: project-fit (signature device may be present, but Examples section absent).
-2. **Phase 5 only** — open the skill, identify the right insertion point (after `## Self-review checklist`, before `## Troubleshooting`). Author 2-3 worked walkthroughs using REAL enum names from `enums/app/qase-suites.ts` (`SUITES.API_JOBS`) and `enums/util/statuses.ts` (`Status.ACTIVE`, `UserStatus.PENDING_VERIFICATION`).
+2. **Phase 5 only** — open the skill, identify the right insertion point (after `## Self-review checklist`, before `## Troubleshooting`). Author 2-3 worked walkthroughs using REAL enum names from `enums/app/qase-suites.ts` (`SUITES.API_JOBS`) and `enums/app/job-status.ts` (`JOB_STATUSES`, e.g. `"paused"`).
 3. **Phase 7 (cross-link)** — no orchestrator-level changes (the skill was already in the index). No sibling-See-Also updates needed (the skill name is unchanged).
 4. **Phase 8 (verify)** — re-run checklist; confirm `## Examples` is now present and `npm run validate` is green.
 

@@ -63,7 +63,7 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 - **`## Critical` block at the top of every `SKILL.md`.** The model can scan the hard rules in 30 seconds before reading the workflow.
 - **Layered topology.** Constitution → skills → personas. One source per concern; precedence is documented.
 - **Routed by area through one index, not by free text.** The Routed Skill Index makes skill selection deterministic — the model does not have to guess.
-- **One source of truth per concern.** URLs/credentials in `process.env.*` (declared in `env/.env.example`); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` and `enums/util/*`; fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
+- **One source of truth per concern.** URLs/credentials in `process.env.*` (declared in `env/.env.example`); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` (e.g. `job-status.ts`, `qase-suites.ts`); fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
 - **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern but the codebase still has the legacy form, it says so (e.g. `api-testing` names legacy camelCase test-data files as drift and forbids new ones). The next person to touch the file converges; they don't perpetuate the drift.
 - **Hard-stop forbidden patterns.** `~/.claude/CLAUDE.md § WON'T` and each skill's `## Anti-patterns` list refusal triggers, not soft preferences.
 
@@ -105,7 +105,7 @@ User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 2. **Locate** — `tests/app/api/**` → Routed Skill Index → load `api-testing` skill (carries the previous `api-tests.mdc` invariants + workflow).
 3. **Audit** — `ls config/app.ts`, `ls fixtures/api/schemas/app/`, `ls helpers/app/`. Confirm whether `JOBS_PAUSE` already exists as a route constant.
 4. **Plan** — schema additions, helper need (likely none — single-spec call), coverage plan from OpenAPI (200/400/401/403/404/405/409), test-data needs.
-5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`, re-export from the barrel. Spec follows `Verify <METHOD> <path> returns <status>` naming.
+5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`; the spec imports it from that file (there is no `app/` schema barrel). Spec follows `Verify <METHOD> <path> returns <status>` naming.
 6. **Verify** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@App-API"` + `eslint .` + re-read from disk.
 7. **Surface** — report files added, flag any drift caught (e.g. duplicated `APIErrorSchema`).
 

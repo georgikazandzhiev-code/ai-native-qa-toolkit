@@ -214,7 +214,7 @@ User says: *"Add a `GRAFANA_API_TOKEN` for a perf-test-run annotation helper."*
 
 User says: *"Add `POST /jobs/:id/pause` and validate the response."*
 
-1. **Where the schema lives.** `fixtures/api/schemas/app/job.ts` — one file per resource, no factory. Re-export from `fixtures/api/schemas/app/index.ts` (per `api-testing` § Zod schema conventions).
+1. **Where the schema lives.** `fixtures/api/schemas/app/job.ts` — one file per resource, no factory. Specs import it from that resource file directly — there is no `fixtures/api/schemas/app/index.ts` barrel (per `api-testing` § Zod schema conventions).
 2. **Use `z.strictObject()`** for the new schema. Match the existing response shape catalog: `{ <resource>Id: string, status: ... }`.
 
    ```typescript

@@ -65,7 +65,7 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
 - [ ] 8. Cover the negative matrix (see § The negative test matrix).
 - [ ] 9. Wire cleanup (afterEach/afterAll DELETE through the helper). For jobs-with-workers use
         `cleanupWorkersAndJobs` — jobs MUST be deleted before workers (409 otherwise).
-- [ ] 10. Run: `npx playwright test <spec> --grep-invert "@App-E2E"` (or `--grep "@App-API"`) and read lints.
+- [ ] 10. Run: `npx playwright test <spec> --grep "@App-API"` and read lints.
 ```
 
 ## The `apiRequest` contract
@@ -188,7 +188,7 @@ Before writing a new helper, check the full inventory in [reference.md § Helper
 
 ## Test data
 
-- **Static** (deterministic ids, strings, numbers): `test-data/app/<resource>.json`. Import and destructure: `import workerData from "../../../test-data/app/worker.json"; const { invalidId, nonExistentId } = workerData;` (the `invalidId` / `nonExistentId` keys live in resource-specific files like `worker.json`; cross-cutting numeric tables live in `job-common.json`).
+- **Static** (deterministic ids, strings, numbers): `test-data/app/<resource>.json`. Import and destructure: `import workerData from "../../../../test-data/app/worker.json"; const { invalidId, nonExistentId } = workerData;` (the `invalidId` / `nonExistentId` keys live in resource-specific files like `worker.json`; cross-cutting numeric tables live in `job-common.json`).
 - **Filename convention: hyphen-case** — `webhook-job.json`, `email-job.json`, `job-common.json`. Three legacy camelCase files (`httpJobValidation.json`, `webhookJobValidation.json`, `backupJobValidation.json`) are drift; do not add new camelCase JSON files. New validation tables go in `<type>-job-validation.json`.
 - **Dynamic** (random per test run): `faker` inside body builders (`buildCreateJobBody`, `buildCreateWorkerBody`, …). Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`).
 - Never invent new uuid/tokens — read from JSON or `faker.string.uuid()`.
@@ -318,14 +318,14 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 - `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
 - For tests without a mapped Qase id yet, **leave `qase.suite(...)` and comment out `qase.id(...)`** — do not delete them.
 - Tags drive runtime selection (one tag per test, never combined):
-  - `@App-API` — single-endpoint API specs (default for `tests/app/api/**`)
-  - `@App-E2E` — multi-endpoint end-to-end API flows (e.g. tenant onboarding)
+  - `@App-API` — every spec in `tests/app/api/**`, including multi-endpoint API flows (e.g. tenant onboarding over HTTP only)
+  - `@App-E2E` — UI journeys in `tests/app/e2e/**` only, never an API flow
 
 **Skeleton:** [templates.md § 17](templates.md).
 
 ## Multi-step & E2E API tests
 
-- E2E onboarding tests use the `@App-E2E` tag, both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
+- Multi-endpoint onboarding API flows use the `@App-API` tag (they live in `tests/app/api/`), both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
 - Email tests **must** use `@<your-test-domain>` recipient domain — Mailpit catches only that domain on the test infra.
 - Mailpit pattern: `await mailpit.deleteEmailsForRecipient(email)` **before** triggering the action and again **after** the test finishes; then `const message = await mailpit.getLastEmail(email, 10, 2000)`. **`getLastEmail` returns `MailMessage | null`** — guard with `expect(message).not.toBeNull()` before dereferencing, then read `message!.Content.Body`.
 - For invite-style flows, prefer `getInviteLinkFromEmail(mailpit, email)` from `helpers/util/mailpit.ts` — it already retries, asserts non-null, and runs the body through `extractLinkFromEmail`.
@@ -369,7 +369,7 @@ Before declaring a spec done, verify:
 - [ ] Imports `test`/`expect` from `fixtures/pom/test-options`, **not** `@playwright/test`.
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
 - [ ] `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test (or commented if pending mapping).
-- [ ] Each test carries `{ tag: "@App-API" }` (or `@App-E2E` for multi-endpoint flows).
+- [ ] Each test carries `{ tag: "@App-API" }` — multi-endpoint API flows included.
 - [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
 - [ ] Jobs-with-workers specs use `cleanupWorkersAndJobs` (jobs first, workers second).
@@ -441,7 +441,7 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 
 - **`type-safety`** — Zod 3 schemas, `z.strictObject()`, the `expect(Schema.parse(body)).toBeTruthy()` pattern, type inference (`z.infer<typeof X>`), and the canonical `process.env.X!` access pattern.
 - **`data-strategy`** — when to use JSON, faker, env, or API-seeded data; the three-tier rule for negative-test arrays.
-- **`enums`** — `SUITES.API_*`, route constants, message constants used in assertions.
+- **`enums`** — `SUITES.API_*`, message constants used in assertions (endpoint paths are not enums; they live in `appConfig.api.*` — see `config`).
 - **`fixtures`** — `apiRequest`, `mailpit`, `loginUser`, helper-fixture authoring.
 - **`helpers`** — auth bootstrap (`createStorageState`, login flows), helper-vs-fixture decision.
 - **`test-standards`** — tag whitelist, `test.step` requirements, single-tag rule, structure conventions.

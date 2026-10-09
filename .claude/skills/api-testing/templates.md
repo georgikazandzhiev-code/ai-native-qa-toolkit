@@ -10,15 +10,16 @@ Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase
 
 ## 1. Full CRUD spec
 
-Drop into `tests/app/api/<resource>.spec.ts`.
+Drop into `tests/app/api/<domain>/<resource>.spec.ts`.
 
 > **Helper vs direct `apiRequest` — pick per test.** The template below uses helpers because most CRUD specs are large and helpers de-duplicate the URL/headers boilerplate. **For single-spec one-shot calls, prefer direct `apiRequest({...})` inline** — it surfaces the request shape next to the assertion (upstream-style; see `tests/app/api/tenant-service/admin-realms.spec.ts` and `tests/app/api/shared/cross-tenant-isolation.spec.ts`). Mix freely within one file: helpers for repeated CRUD, inline `apiRequest` for one-off calls.
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
-import { appConfig } from "../../../config/app";
+import { SUITES } from "../../../../enums/app/qase-suites";
+import { appConfig } from "../../../../config/app";
 import { faker } from "@faker-js/faker";
 import {
     <Resource>Schema,
@@ -37,14 +38,14 @@ import {
     type List<Resource>sResponse,
     type APIError,
     type GatewayError,
-} from "../../../fixtures/api/schemas/app/<resource>";
+} from "../../../../fixtures/api/schemas/app/<resource>";
 // There is no fixtures/api/schemas/app/index.ts barrel — specs deep-import
 // from the resource file directly.
 import {
     invalidString,
     invalidIntegerTypes,
     // specialChars, boundaryString, invalidObjectTypes — add as needed; remove unused imports.
-} from "../../../fixtures/api/invalid-types";
+} from "../../../../fixtures/api/invalid-types";
 import {
     list<Resource>s,
     create<Resource>,
@@ -54,8 +55,8 @@ import {
     cleanup<Resource>s,
     buildCreate<Resource>Body,
     buildUpdate<Resource>Body,
-} from "../../../helpers/app/<resource>";
-import resourceData from "../../../test-data/app/<resource>.json";
+} from "../../../../helpers/app/<resource>";
+import resourceData from "../../../../test-data/app/<resource>.json";
 
 // Coverage plan — <METHOD> <path>, every status code in the OpenAPI contract:
 // 200 — happy path, schema + business values
@@ -528,8 +529,8 @@ import {
     buildCreateJobBody, // swap to buildCreate<Type>JobBody for HTTP/SFTP/email/backup/stream/webhook
     createJob,
     deleteJob,
-} from "../../../helpers/app/jobs";
-import { buildCreateWorkerBody, createWorker } from "../../../helpers/app/workers";
+} from "../../../../helpers/app/jobs";
+import { buildCreateWorkerBody, createWorker } from "../../../../helpers/app/workers";
 
 // `!` (definite assignment): set in test.beforeAll. Mirrors tests/app/api/jobs-service/jobs/export-job.spec.ts.
 let workerId!: string;
@@ -911,28 +912,29 @@ export async function setup<Resource>(
 }
 ```
 
-## 6. E2E API flow (`tests/app/api/e2e-<flow>.spec.ts`)
+## 6. Multi-endpoint API flow (`tests/app/api/<domain>/<flow>.spec.ts`)
 
-For multi-endpoint flows that touch Mailpit. Use `@App-E2E` tag, explicit timeout. **Note**: `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
+For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@App-API` tag, explicit timeout. **Note**: `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
-import { appConfig } from "../../../config/app";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
+import { appConfig } from "../../../../config/app";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 import { faker } from "@faker-js/faker";
 import {
     createTenant,
     deleteTenant,
-} from "../../../helpers/app/adminTenants";
+} from "../../../../helpers/app/adminTenants";
 import {
     createUser,
     deleteUser,
-} from "../../../helpers/app/adminUsers";
+} from "../../../../helpers/app/adminUsers";
 import {
     extractLinkFromEmail,
     getInviteLinkFromEmail,
-} from "../../../helpers/util/mailpit";
+} from "../../../../helpers/util/mailpit";
 
 function generateE2EUserPayload() {
     // E2E variant — uses @<your-test-domain> domain (Mailpit-catchable on test infra).
@@ -962,7 +964,7 @@ test.afterAll(async ({ apiRequest, mailpit }) => {
 
 test(
     "Verify tenant onboarding sends invitation email and link is extractable",
-    { tag: "@App-E2E" },
+    { tag: "@App-API" },
     async ({ apiRequest, mailpit }) => {
         qase.suite(SUITES.API_E2E_TENANT_ONBOARDING);
         // qase.id(<id>);
@@ -1045,8 +1047,8 @@ test(
 ### Admin-scoped resource (admin user) — tenantId-in-path enforces isolation
 
 ```typescript
-import { getUser } from "../../../helpers/app/adminUsers";
-import { APIErrorSchema, type APIError } from "../../../fixtures/api/schemas/app/tenant";
+import { getUser } from "../../../../helpers/app/adminUsers";
+import { APIErrorSchema, type APIError } from "../../../../fixtures/api/schemas/app/tenant";
 
 // Module-scope state populated in test.beforeAll:
 // - tenantA_Id, tenantB_Id: ids of two tenants created via createTenant
@@ -1131,7 +1133,7 @@ Job-type config shapes already in use:
 One `test()` per field. The loop runs **inside** the test, iterating the universal invalid-value array. Use `expect.soft()` for the inner assertions so a single test reports every failing value, not just the first. Wrap each iteration in `test.step()` so the trace shows which value broke.
 
 ```typescript
-import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invalid-types";
+import { invalidString, invalidIntegerTypes } from "../../../../fixtures/api/invalid-types";
 
 test.describe("POST /jobs — field validation", () => {
     test.beforeEach(async ({ apiRequest }) => { /* seed worker */ });
@@ -1171,7 +1173,7 @@ test.describe("POST /jobs — field validation", () => {
 Same coverage as § 9, denser source. One `test()` covers every (field × invalid value) combination. Both loops are **inside** the test; each iteration is a `test.step` and uses `expect.soft`. Reach for this when 4+ fields share the same per-type validation pattern.
 
 ```typescript
-import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invalid-types";
+import { invalidString, invalidIntegerTypes } from "../../../../fixtures/api/invalid-types";
 
 test("Verify POST /jobs returns 400 for invalid field values", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_JOBS);

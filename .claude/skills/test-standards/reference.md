@@ -111,7 +111,7 @@ Live under `tests/app/api/`. One spec per API resource. Tag: `@App-API`. The dee
 | `run-stats-query.spec.ts` | `GET /api/v1/run-stats` query endpoint. |
 | `cross-tenant-isolation.spec.ts` | Cross-tenant isolation matrix — token from tenant A cannot read/write tenant B's resources. |
 | `cross-tenant-run-stats-isolation.spec.ts` | Cross-tenant isolation specific to run-stats queries. |
-| `e2e-tenant-onboarding-flow.spec.ts` | E2E onboarding — create tenant + invite user + verify Mailpit email + UUID immutability + multi-user emails. **Tag:** `@App-E2E`. |
+| `e2e-tenant-onboarding-flow.spec.ts` | Multi-endpoint onboarding API flow — create tenant + invite user + verify Mailpit email + UUID immutability + multi-user emails. **Tag:** `@App-API` (an API flow, not a UI journey). |
 
 ---
 

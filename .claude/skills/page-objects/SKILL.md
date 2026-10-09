@@ -106,7 +106,7 @@ Filename is PascalCase — `DashboardPage.ts`, `SideNavigation.ts`, `LoginPage.t
 import { expect, type Locator, type Page } from "@playwright/test";
 import { appConfig } from "../../config/app";
 import { BasePage } from "../baseClasses/BasePage";
-import { Messages } from "../../enums/app";
+import { MESSAGES } from "../../enums/app";
 
 export class SettingsPage extends BasePage {
   constructor(page: Page) {
@@ -148,7 +148,7 @@ export class SettingsPage extends BasePage {
   // ═══════════════════════════════════════════════════════════════
 
   get successToast(): Locator {
-    return this.page.getByRole("status").filter({ hasText: Messages.PROFILE_SAVED });
+    return this.page.getByRole("status").filter({ hasText: MESSAGES.PROFILE_SAVED });
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -183,7 +183,7 @@ This is the [`selectors`](../selectors/SKILL.md) skill's domain. Brief recap so 
 
 - **Default order:** `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`.
 - **Radix exception (narrow, per element):** a single locator may promote `getByTestId` above `getByText`, never higher, only when **that element** has visible text or an accessible name that changes with state or is unreliable, and only after `getByRole` / `getByLabel` were tried. Being a Radix primitive, or having a test-id, is not on its own a reason. It covers the trigger, not the portal content (options, dialogs, alerts and toasts are addressed by role). See `selectors` § Critical.
-- **Strings inside `getByText(...)` come from `enums/app/*`** (`Messages.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
+- **Strings inside `getByText(...)` come from `enums/app/*`** (`MESSAGES.LOGIN_ERROR`, etc.) — never hardcode. See the `enums` skill.
 - **No XPath. No top-level CSS class / id selectors.** Both are forbidden by `selectors` § Critical.
 
 If the locator decision feels non-trivial (Radix-heavy form, async-rendered table row, iframe), open the `selectors` skill's `recipes.md` before guessing — there's almost certainly a worked recipe.
@@ -244,9 +244,9 @@ No `mergeTests` change is needed — the page-object fixture is already merged i
 ### Step 8 — consume from a spec
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 
 test.describe("Settings — Profile", () => {
   test.beforeEach(async ({ sideNavigation, settingsPage }) => {
@@ -279,7 +279,7 @@ For tag rules (lowercase `@App-regression` for functional specs — this exact c
 - ❌ **Action method calls `click()` and returns.** No wait, no assertion — flake amplifier. Fix: add `await expect(toast).toBeVisible()` or `page.waitForResponse(...)` before returning.
 - ❌ **POM imports `test` / `expect` from `fixtures/pom/test-options`.** That import is reserved for spec files. POMs import directly from `@playwright/test`. Fix: `import { expect, type Locator, type Page } from "@playwright/test";`.
 - ❌ **POM not registered in `page-object-fixture.ts`.** Spec ends up doing `new SettingsPage(page)` and loses every merged fixture. Fix: complete Step 7 in the same edit batch.
-- ❌ **Hardcoded `getByText("Profile saved")` instead of `Messages.PROFILE_SAVED`.** Strings inside `getByText` come from `enums/app/*`. Fix: extend the enum (see the `enums` skill) and reference the constant.
+- ❌ **Hardcoded `getByText("Profile saved")` instead of `MESSAGES.PROFILE_SAVED`.** Strings inside `getByText` come from `enums/app/*`. Fix: extend the enum (see the `enums` skill) and reference the constant.
 - ❌ **POM file > 600 lines covering multiple flows.** Class is doing too much. Fix: split by surface (`SettingsProfilePage`, `SettingsBillingPage`) or extract repeated fragments into `pages/baseClasses/<Component>.ts` (mirror `DataTableBase`).
 - ❌ **Inline `page.locator('css selector').click()` in a spec.** Locator that's interacted with belongs in a POM. Fix: move the locator + action into the matching POM and call it from the spec.
 - ❌ **Locator getter in a POM that is never consumed by any spec or action method.** Dead locators add noise, mask naming conflicts, and rot when the UI changes without anyone noticing. Fix: grep for the getter name across `tests/` before declaring a POM change done; remove unused getters in the same edit.
@@ -294,7 +294,7 @@ For tag rules (lowercase `@App-regression` for functional specs — this exact c
 - [ ] Constructor is `constructor(page: Page) { super(page); }` (or, for non-`BasePage` classes, `constructor(private page: Page) {}`).
 - [ ] Every locator is a `get` accessor returning `Locator`. No async, no `Promise<Locator>`, no field-set-in-constructor.
 - [ ] Locator priority follows the `selectors` skill (default order + Radix exception). No XPath, no top-level CSS class / id selectors.
-- [ ] Strings inside `getByText(...)` come from `enums/app/*` (`Messages.X`).
+- [ ] Strings inside `getByText(...)` come from `enums/app/*` (`MESSAGES.X`).
 - [ ] Three sections present (Interactive / Feedback / Actions) with the `═════` visual headers when the page has forms or CRUD.
 - [ ] Every public action method has an explicit return type, JSDoc with `@param` / `@returns`, and at least one built-in wait / assertion.
 - [ ] No `page.waitForTimeout(...)`. No JSDoc on locator getters.
@@ -315,7 +315,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 2. **Step 2 — exploration.** Run `npx playwright open` and walk `/settings`. Capture: profile form fields (firstName, lastName, email, phone) and their `field-field-*` testids; dark-mode toggle role + accessible name; success toast text on save; error toast on validation failure; per-field validation messages.
 3. **Step 3 — location.** App screen → `pages/app/SettingsPage.ts`. Resolve `appConfig.paths.SETTINGS` (or add it under `config/app.ts` if missing — see the `config` skill).
 4. **Step 4 — author.** `extends BasePage`. Section headers Interactive / Feedback / Actions. Use `fieldInput(fieldPath)` / `fieldError(fieldName)` for the schema-form fields.
-5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
+5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `MESSAGES.PROFILE_SAVED` from `enums/app` for the toast text.
 6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PATCH /api/v1/user` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
 7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `runStatsPage`.
 8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
@@ -374,7 +374,7 @@ User says: *"`DashboardPage`, `JobsPage`, and `WorkersPage` all duplicate the su
 | Test passes alone, fails in parallel. | POM action ends on `.click()` without a wait — next assertion runs before the UI settles. | Add a built-in wait inside the action method (`page.waitForResponse(...)` or `await expect(toast).toBeVisible()`). |
 | `Strict mode violation: locator resolved to N elements`. | Locator is too generic — usually a `getByRole('button')` without `name`, or a Radix repeated trigger. | Re-explore in `npx playwright open`, narrow the locator (add `{ name: 'Save' }` or `.filter({ hasText: ... })`), or anchor with a parent testid (`anchor-and-drill` from the `selectors` skill). |
 | Dark-mode toggle locator works in DOM inspector, fails in test. | Radix `data-state` flip is async — initial state is `unchecked`. | Wait for the state attribute: `await expect(toggle).toHaveAttribute('data-state', 'checked')` after the click. |
-| `Messages.X` enum constant doesn't exist for a string the POM needs. | UI text not yet encoded. | Stop and extend `enums/app/<file>.ts` via the `enums` skill — capture the exact text via `npx playwright open` first. Never hardcode the string in `getByText(...)`. |
+| `MESSAGES.X` enum constant doesn't exist for a string the POM needs. | UI text not yet encoded. | Stop and extend `enums/app/<file>.ts` via the `enums` skill — capture the exact text via `npx playwright open` first. Never hardcode the string in `getByText(...)`. |
 | POM file is 700 lines and hard to maintain. | One class is covering 4+ unrelated flows. | Split by surface (`SettingsProfilePage` / `SettingsBillingPage`) or extract repeated fragments into `pages/baseClasses/<Component>.ts`. |
 | Reusing the same setup logic across 3+ tests inside the spec. | Setup belongs in the page-object action, not the spec. | Move into a verification method on the POM (`xxxAndVerify`). If the setup is API-driven and reused across 3+ files, see the `helpers` skill (per-resource setup helper) or the `fixtures` skill (helper fixture promotion). |
 | Locator-getter copy-pasted from the DOM inspector with raw CSS or XPath. | Wrong locator strategy. | Replace with `getByRole` > `getByLabel` > `getByPlaceholder` > `getByText` > `getByAltText` > `getByTitle` > `getByTestId` per the `selectors` skill priority order. If nothing semantic works, coordinate with engineering for a `data-testid` and add it to the `schema-field-*` / `error-*` taxonomy. |
@@ -382,5 +382,5 @@ User says: *"`DashboardPage`, `JobsPage`, and `WorkersPage` all duplicate the su
 ## See Also
 
 - **Always-on rules:** [~/.claude/CLAUDE.md](~/.claude/CLAUDE.md) — framework invariants (imports, type-safety, MUST/SHOULD/WON'T). UI-specific POM Method Standards, Locator Priority, and cleanup are now in this skill (consolidated from the previous `ui-tests.mdc`).
-- **Sibling cluster (UI authoring):** [`selectors`](../selectors/SKILL.md) (locator strategy, Radix exception), [`playwright-cli`](../playwright-cli/SKILL.md) (live-app exploration tool), [`fixtures`](../fixtures/SKILL.md) (fixture DI / helper-fixture promotion), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding that consumes POMs), [`enums`](../enums/SKILL.md) (where `Messages.X` / `ApiEndpoints.X` live), [`test-standards`](../test-standards/SKILL.md) (spec-side rules — `test.step`, tags, Qase, imports), [`frontend-cross-check`](../frontend-cross-check/SKILL.md) (verifying testids against the live frontend), [`config`](../config/SKILL.md) (`appConfig.paths.X` for navigation URLs).
+- **Sibling cluster (UI authoring):** [`selectors`](../selectors/SKILL.md) (locator strategy, Radix exception), [`playwright-cli`](../playwright-cli/SKILL.md) (live-app exploration tool), [`fixtures`](../fixtures/SKILL.md) (fixture DI / helper-fixture promotion), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding that consumes POMs), [`enums`](../enums/SKILL.md) (where `MESSAGES.X` lives; endpoint paths live in `config`, never in enums), [`test-standards`](../test-standards/SKILL.md) (spec-side rules — `test.step`, tags, Qase, imports), [`frontend-cross-check`](../frontend-cross-check/SKILL.md) (verifying testids against the live frontend), [`config`](../config/SKILL.md) (`appConfig.paths.X` for navigation URLs).
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.

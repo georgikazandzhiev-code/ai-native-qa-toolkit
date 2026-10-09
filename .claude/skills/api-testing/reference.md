@@ -13,7 +13,7 @@
 | Helpers | `helpers/app/<resource>.ts` | Reusable API flows (`createJob`, `cleanupWorkersAndJobs`, `createTenant`, …) |
 | Test data | `test-data/app/<resource>.json` | Static fixtures (`invalidId`, `nonExistentId`, boundary values, job-type configs) |
 | Invalid-types | `fixtures/api/invalid-types.ts` | Reusable invalid-value arrays — see § Invalid-type arrays below |
-| Generators | `helpers/app/<resource>.ts` (`buildCreate<X>Body` / `buildUpdate<X>Body`). Per-file is acceptable today; **trigger threshold:** extract to a shared `helpers/app/testDataGenerators.ts` once `jobs.ts` reaches a 10th job type **or** another helper crosses 5 builders. | Payloads unique per test run, via `faker`; never hardcode names |
+| Generators | `helpers/app/<resource>.ts` (`buildCreate<X>Body` / `buildUpdate<X>Body`). Per-file is acceptable today; **trigger threshold:** extract to a shared `helpers/app/test-data-generators.ts` once `jobs.ts` reaches a 10th job type **or** another helper crosses 5 builders. | Payloads unique per test run, via `faker`; never hardcode names |
 | Qase | `enums/app/qase-suites.ts` | `SUITES.API_*` constants used in `qase.suite()` |
 | Mailpit | `helpers/util/mailpit.ts`, `fixtures/api/mailpit-fixture.ts` | Email loop tests; `@<your-test-domain>` recipient domain required |
 
@@ -407,13 +407,13 @@ Size `test.setTimeout()` inside `beforeAll` to the setup pattern (Keycloak ops r
 ## Mailpit recipe (E2E API + email loop)
 
 ```typescript
-import { test, expect } from "../../../fixtures/pom/test-options";
-import { appConfig } from "../../../config/app";
-import { extractLinkFromEmail, getInviteLinkFromEmail } from "../../../helpers/util/mailpit";
+import { test, expect } from "../../../../fixtures/pom/test-options";
+import { appConfig } from "../../../../config/app";
+import { extractLinkFromEmail, getInviteLinkFromEmail } from "../../../../helpers/util/mailpit";
 
 test(
     "Verify tenant onboarding sends invitation email",
-    { tag: "@App-E2E" },
+    { tag: "@App-API" },
     async ({ apiRequest, mailpit }) => {
         test.setTimeout(appConfig.timeouts.asyncFlow);
 
@@ -628,7 +628,7 @@ Use this pattern whenever tests touch settings, toggles, feature flags, or any s
 ## Multi-Step & E2E API tests — operational notes
 
 - Use `test.step()` for setup-then-verify flows.
-- E2E onboarding tests use `@App-E2E` tag, destructure `{ apiRequest, mailpit }`, set test-level budgets (`appConfig.timeouts.asyncFlow` for single-email flows, `asyncFlowHeavy` for multi-user email flows).
+- Multi-endpoint onboarding API flows use the `@App-API` tag (they are API tests in `tests/app/api/`), destructure `{ apiRequest, mailpit }`, set test-level budgets (`appConfig.timeouts.asyncFlow` for single-email flows, `asyncFlowHeavy` for multi-user email flows).
 - Email tests **must** use the `@<your-test-domain>` domain (not `@automation.test`) for Mailpit delivery.
 - Cleanup ordering for onboarding: Mailpit emails → Users → Tenant — each step guarded by `if (tenantId)` / `if (userId)` so partial failures still clean up.
 

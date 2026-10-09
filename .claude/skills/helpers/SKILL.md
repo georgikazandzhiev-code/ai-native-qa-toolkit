@@ -153,7 +153,7 @@ Walk:
 4. **Body** — call `buildCreateJobBody(workerIds, overrides)`, then `apiRequest<CreateJobResponse>({ method: "POST", url: appConfig.api.JOBS, baseUrl: appConfig.apiUrl, headers, body })`. Assert `status === 201`. Run `expect(JobSchema.parse(body)).toBeTruthy()` and return the typed entity.
 5. **Pair with** `teardownJob(apiRequest, jobId, headers)` that calls `deleteJob` and tolerates 404 (just `Promise.allSettled` of one for shape consistency, or a try/log).
 6. **Schema** — already exists in `fixtures/api/schemas/app/job.ts` (`JobSchema`, `CreateJobResponse`). Do not redeclare.
-7. **Schema barrel** — confirm `JobSchema` is re-exported from `fixtures/api/schemas/app/index.ts` (per `api-testing` § Zod schema conventions, the barrel coverage is partial today; converge while you're here).
+7. **Schema import** — import `JobSchema` from the resource file `fixtures/api/schemas/app/job.ts` (per `api-testing` § Zod schema conventions there is no `app/` schema barrel; specs and helpers deep-import from the resource file).
 
 ### Example 2 — Adding a cleanup helper for a brand-new resource
 
@@ -180,7 +180,7 @@ Walk:
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| My helper has a `z.object(...)` in it | Schema declared in the wrong layer | Move the schema to `fixtures/api/schemas/app/<resource>.ts`; export both the schema and the inferred type; re-export from `fixtures/api/schemas/app/index.ts`; import the inferred type back into the helper. See `api-testing` § Zod schema conventions. |
+| My helper has a `z.object(...)` in it | Schema declared in the wrong layer | Move the schema to `fixtures/api/schemas/app/<resource>.ts`; export both the schema and the inferred type; import the inferred type back into the helper from that resource file (there is no `app/` schema barrel). See `api-testing` § Zod schema conventions. |
 | Cleanup fails with `409 Conflict` deleting a worker | The worker is still assigned to a job — wrong delete order | Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` from `helpers/app/jobs.ts`. It deletes jobs first, workers second. |
 | ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The orchestrator's File Naming Conventions section is the source of truth; the legacy camelCase files in this codebase are listed in this skill's File Locations section — do not propagate. |
 | Cleanup throws and breaks the next test's setup | A delete returned 404 (already gone) and the helper threw | Wrap deletes in `Promise.allSettled`. Cleanup must tolerate 404 — never throw. See `cleanupWorkers` and `cleanupWorkersAndJobs`. |
@@ -196,7 +196,7 @@ Walk:
 - **`fixtures`** — Playwright fixture authoring with `use()` lifecycle (`mailpit`, `loginUser`, `apiRequest`); the sibling category to helpers. See also `api-testing` § Helpers — three callable shapes for the helper-vs-fixture decision rule.
 - **`type-safety`** — Zod 3 schemas, `z.strictObject()`, `z.string().uuid()` defaults, type inference (`z.infer<typeof X>`), and the canonical `process.env.X!` access pattern. The strictness ladder for `.optional()` / `.nullable()` lives in `api-testing` § Zod schema conventions.
 - **`data-strategy`** — when to use JSON vs faker vs env vs API seeding; the three-tier rule for invalid-value arrays. Body builders in this skill seed from faker per § 8 of that skill.
-- **`enums`** — `SUITES.API_*`, route constants, message constants. Helpers do not import enums (they are caller-side concerns), but resource path constants (`appConfig.api.X`) live in `config/app.ts` per the orchestrator's Sources of Truth rule.
+- **`enums`** — `SUITES.API_*`, statuses, message constants. Suites and messages are caller-side concerns; a helper may import a domain value it needs (e.g. a `JOB_STATUSES` member), but never a path or URL — resource path constants (`appConfig.api.X`) live in `config/app.ts` per the orchestrator's Sources of Truth rule.
 - **`config`** — `appConfig.api.X` for endpoint paths, `appConfig.apiUrl` for base URL, `appConfig.paths.X` for UI routes.
 - **`refactor-values`** — the workflow when a route constant or static `test-data/` value referenced by a helper needs to change.
 - **`debugging`** — failure-mode taxonomy when a helper-driven setup or teardown misbehaves.
