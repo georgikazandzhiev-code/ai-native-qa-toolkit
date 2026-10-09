@@ -100,9 +100,9 @@ const CASES = [
     name: 'a link points at a file that does not exist',
     // The 416-link case: a skill copied out of a product repo still linking to its code.
     break: (dir) =>
-      edit(dir, PR_REVIEW, (md) => `${md}\n- See [SyntheticsPage](../../../pages/app/SyntheticsPage.ts).\n`, 'append a dead link'),
+      edit(dir, PR_REVIEW, (md) => `${md}\n- See [JobsPage](../../../pages/app/JobsPage.ts).\n`, 'append a dead link'),
     exit: 1,
-    expect: 'links to ../../../pages/app/SyntheticsPage.ts, which does not exist',
+    expect: 'links to ../../../pages/app/JobsPage.ts, which does not exist',
   },
   {
     name: 'a link that leaves .claude/',
