@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.5
+version: 2.0.6
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -165,7 +165,7 @@ export class SettingsPage extends BasePage {
       await this.fieldInput(name).fill(value);
       await expect(this.fieldInput(name)).toHaveValue(value);
     }
-    const saved = this.page.waitForResponse((r) => r.url().includes("/api/profile") && r.request().method() === "PUT");
+    const saved = this.page.waitForResponse((r) => r.url().includes("/api/v1/user") && r.request().method() === "PATCH");
     await this.saveButton.click();
     expect((await saved).ok()).toBe(true);
     await expect(this.successToast).toBeVisible();
@@ -316,7 +316,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 3. **Step 3 — location.** App screen → `pages/app/SettingsPage.ts`. Resolve `appConfig.paths.SETTINGS` (or add it under `config/app.ts` if missing — see the `config` skill).
 4. **Step 4 — author.** `extends BasePage`. Section headers Interactive / Feedback / Actions. Use `fieldInput(fieldPath)` / `fieldError(fieldName)` for the schema-form fields.
 5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `Messages.PROFILE_SAVED` from `enums/app` for the toast text.
-6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PUT /api/profile` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
+6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PATCH /api/v1/user` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
 7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `runStatsPage`.
 8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
 

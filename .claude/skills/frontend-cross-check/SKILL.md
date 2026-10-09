@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.5
+version: 1.0.6
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -107,9 +107,9 @@ User says: *"Add a page object for the new notification-rule form."*
 
 1. **`git pull` frontend.**
 2. **Grep:** `grep -nE "data-testid" <sibling-repos>/frontend/src/components/schema-form/schema-form.tsx`.
-3. Observe: schema-form emits `schema-field-${fieldName}` for inputs and `error-${fieldName}` for validation errors.
-4. **Cross-check against `selectors` skill:** if the skill says something different (e.g. `field-field-${path}`), the skill is **wrong** — fix the skill in this edit. (The frontend source is canonical.)
-5. Author the page object with the correct testid pattern: `getByTestId('schema-field-name')`, `getByTestId('error-name')`, etc.
+3. Observe: schema-form emits `schema-field-${fieldName}` on each field wrapper, `field-field-${fieldPath}` on the input or trigger inside it, and `error-${fieldName}` for validation errors.
+4. **Cross-check against `selectors` skill:** if the skill says something different (e.g. that `schema-field-${fieldName}` is the input itself), the skill is **wrong** — fix the skill in this edit. (The frontend source is canonical.)
+5. Author the page object with the correct testid pattern, as the fallback behind `getByLabel`: `getByTestId('field-field-name')` for the input (its wrapper is `schema-field-name`), `getByTestId('error-name')` for the error, etc.
 6. For dynamic state (loading, errors during submit) → pair with `npx playwright open` (see the `playwright-cli` skill).
 
 ### Example 2 — Capture an exact UI message before adding it to `enums/app/messages.ts`

@@ -254,7 +254,7 @@ Helpers are tagged below with their style:
 - (builder) `buildListJobsUrl({ page, pageSize, sort, direction, name, type, target, status, jobStatus, search })`.
 - (passthrough) `listJobs`, `createJob`, `getJob`, `updateJob`, `deleteJob`.
 - (cleanup) `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` — jobs first, workers second.
-- (cleanup) `cleanupUiCreatedJobs(apiRequest, token, refs)` — resolves id-by-name with retry.
+- (cleanup) `cleanupUiCreatedJobs(apiRequest, refs, token)` — resolves id-by-name with retry.
 - (assertion) `setupWorkerAndJob(apiRequest, headers?) → { workerId, jobId }` — seeds a worker + an `export`-type job in one call, asserts both creates return 201, returns the typed ids. Use for precondition setup in specs exercising job-dependent resources (notification rules, notifications, run stats); clean up via `cleanupWorkersAndJobs`.
 - (assertion, **planned**) `setupJob(apiRequest, workerIds, headers, overrides?) → Job` — seeds a job, parses with `JobSchema`, returns the typed entity. Use only for preconditions; passthroughs above stay for negative tests.
 - Constants: `VALID_RUN_INTERVALS`, `DEFAULT_RUN_INTERVAL`, `DEFAULT_TIMEOUT`, `TIMEOUT_MIN/MAX`, `NAME_MIN/MAX_LENGTH`, `TARGET_MIN/MAX_LENGTH`, `DESCRIPTION_MAX_LENGTH`.
@@ -310,11 +310,11 @@ Helpers are tagged below with their style:
 - (passthrough) `aggregateRunStats(apiRequest, body, headers)` — POST `/run-stats/aggregate` for aggregated run-stat values queries.
 
 ### Notifications — `helpers/app/notifications.ts`
-- (passthrough) `listNotifications(apiRequest, headers?, params?)` — GET `/notifications` (page/pageSize/sort/direction, `severity`, `state`, `jobId`, `search`, `from`/`to`; note `notificationRuleId` is NOT a supported filter here).
+- (passthrough) `listNotifications(apiRequest, params?, headers?)` — GET `/notifications` (page/pageSize/sort/direction, `severity`, `state`, `jobId`, `search`, `from`/`to`; note `notificationRuleId` is NOT a supported filter here).
 - (passthrough) `getNotification(apiRequest, notificationId, headers?)` — GET `/notifications/:id` (notification ids are **numbers**, not UUIDs).
 - (passthrough) `acknowledgeNotification`, `resolveNotification` — POST `/notifications/:id/acknowledge` / `/notifications/:id/resolve`.
 - (passthrough) `bulkResolveNotifications(apiRequest, notificationIds, headers?)` — POST bulk-resolve.
-- (passthrough) `getNotificationsStats(apiRequest, headers?, params?)` — GET `/notifications/stats` (supports `groupBy`, `notificationRuleId`); `getNotificationHistory(apiRequest, headers?, params?)` — GET `/notifications/history` (`timeframe` required).
+- (passthrough) `getNotificationsStats(apiRequest, params?, headers?)` — GET `/notifications/stats` (supports `groupBy`, `notificationRuleId`); `getNotificationHistory(apiRequest, params?, headers?)` — GET `/notifications/history` (`timeframe` required).
 - (cleanup) `cleanupNotificationsForJob(apiRequest, jobId, headers?)` — resolves every non-resolved notification for a job; best-effort.
 - (assertion) `setupFiringNotificationsFixture(apiRequest, jobCount, headers?, opts?) → FiringNotificationsFixture` — provisions worker → jobs → notification rule → firing notifications; self-cleans on failure; long-running (90–360 s). Over-provisions by `FIRING_NOTIFICATIONS_DEFAULT_EXTRA_JOBS` (3) by default.
 - (cleanup) `teardownFiringNotificationsFixture(apiRequest, fixture, headers?)` — drains notifications → deletes notification rule → deletes jobs; tolerates partial state.
@@ -326,7 +326,7 @@ Helpers are tagged below with their style:
 - Constants: `DEFAULT_NOTIFICATION_RULE_OPERATOR/THRESHOLD/EVALUATION_WINDOW/CONSECUTIVE_COUNT/SEVERITY/DESCRIPTION`, `DEFAULT_CASCADE_NOTIFICATION_RULE_DESCRIPTION`, `ALL_JOB_TYPES`.
 - (passthrough) `listNotificationRules`, `createNotificationRule`, `getNotificationRule`, `updateNotificationRule`, `deleteNotificationRule`.
 - (cleanup) `cleanupNotificationRules(apiRequest, notificationRuleIds, headers?)` — `Promise.allSettled` over per-id deletes.
-- (assertion) `setupNotificationRuleSpecFixture(apiRequest, headers?) → NotificationRuleSpecFixture` — seeds 1 worker + one job per job type + 1 extra `export`-type job + a discovered run-stat `normalizedName` per type; throws on any seed failure.
+- (assertion) `setupNotificationRuleSpecFixture(apiRequest, headers?) → NotificationRuleSpecFixture` — seeds 1 worker + one job per job type (7 jobs) + a discovered run-stat `normalizedName` per type; throws on any seed failure.
 
 ### Notification-rule display labels — `helpers/app/notification-rule-display.ts`
 - Pure UI-label mappers (no `apiRequest`): `NOTIFICATION_RULE_OPERATOR_DISPLAY_LABELS`, `NOTIFICATION_RULE_EVALUATION_WINDOW_LABELS`, `formatNormalizedRunStatLabel`, `getNotificationRuleOperatorDisplayLabel`, `getNotificationRuleEvaluationWindowDisplayLabel`, `formatNotificationRuleConditionForDetailsDisplay`. Mirrors the frontend's notification-rule-details-sheet labels — used by UI specs asserting display text.
