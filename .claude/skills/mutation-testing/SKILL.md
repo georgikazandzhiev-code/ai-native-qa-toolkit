@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-version: 1.0.0
+version: 1.0.1
 description: Prove a test suite actually catches defects by mutating the code under test and measuring what survives — plus the black-box substitute (deliberate fault injection) for repos that do not own the source. Use when coverage is high but confidence is low, when reviewing whether generated or AI-authored tests assert anything real, when a suite has never caught a regression, or before trusting a coverage number in a quality gate. Trigger phrases — "are these tests any good", "mutation score", "the tests pass but prove nothing", "prove the test fails on a bug", "false green", "weak assertions", "Stryker". Do NOT use for measuring line or branch coverage (that is a runner flag, see the `test-standards` skill). Do NOT use for diagnosing a failing test (use the `debugging` skill). Do NOT use for deciding which files to test first (use the `defect-prediction` skill).
 metadata:
   category: domain
@@ -160,4 +160,4 @@ The durable learning — "status-only assertions on this service pass through in
 - [`defect-prediction`](../defect-prediction/SKILL.md) — use it to choose *which* module to mutation-test first; risk ranking beats alphabetical.
 - [`qe-pattern-memory`](../qe-pattern-memory/SKILL.md) — store recurring weak-assertion classes so the next session recognises them without re-running.
 - [`debugging`](../debugging/SKILL.md) — for a test that fails unexpectedly during a run.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § No redundant assertions after Zod parse, and the WON'T rule against loosening schemas, both constrain how survivors may be fixed.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § No redundant assertions after Zod parse, and the WON'T rule against loosening schemas, both constrain how survivors may be fixed.

@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-version: 1.0.1
+version: 1.0.2
 description: Turn measured quality signals into an auditable go/no-go verdict at a commit, PR, release, or hotfix gate — thresholds from config, evidence-classed inputs, and overrides that need a named human, not the agent. Use when deciding whether a change is ready to merge or a build is ready to ship, when wiring a CI gate that passes or fails a pipeline, or when asked "is this release-ready / can we deploy / does this pass the bar". It synthesises what other skills measure (coverage, security, flake rate, risk, suite strength) into one verdict with a per-criterion breakdown. Trigger phrases — "quality gate", "release ready", "can we ship", "go/no-go", "deploy decision", "merge bar", "pass the gate". Do NOT use for the pre-push self-review of one diff against the framework rules (use the `pr-review` skill). Do NOT use for ranking what to test first (use the `defect-prediction` skill). Do NOT use for whether the suite actually catches defects (use the `mutation-testing` skill).
 metadata:
   category: cross-cutting
@@ -154,4 +154,4 @@ User says: _"Can this PR merge? `defect-prediction` flagged the worker-assignmen
 - **`config`** — where the thresholds live (`appConfig.gates.*`); the gate reads constants, never literals.
 - **`qe-pattern-memory`** — where a reusable gate lesson (a calibration, a recurring blocker) is stored across sessions.
 - **`bug-helper`** — filing the bug a failed gate surfaced; the gate names the blocker, `bug-helper` triages it.
-- **[~/.claude/CLAUDE.md](~/.claude/CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.
+- **[~/.claude/CLAUDE.md](../../CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.

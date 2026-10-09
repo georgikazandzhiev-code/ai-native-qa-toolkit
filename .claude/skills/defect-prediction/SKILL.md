@@ -1,6 +1,6 @@
 ---
 name: defect-prediction
-version: 1.0.0
+version: 1.0.1
 description: Rank files and changesets by defect risk using signals computable from git history, complexity and coverage — then spend test effort where the risk is, and calibrate the ranking against what actually broke. Use when deciding what to test first on a large surface, when scoping regression effort for a release, when reviewing a PR that touches many files, when a test budget will not cover everything, or when asked where the quality risk sits. Trigger phrases — "what should we test first", "where is the risk", "regression scope for this release", "which files are risky", "prioritise the test effort", "risk-based testing". Do NOT use for classifying an already-failing test (use the `flakiness-triage` skill). Do NOT for measuring whether existing tests assert anything (use the `mutation-testing` skill). Do NOT use for security-specific threat surfaces (use the `owasp-security-testing` skill).
 metadata:
   category: domain
@@ -171,4 +171,4 @@ This is the shape of most PR-level use. The output is attention, not test count.
 - [`flakiness-triage`](../flakiness-triage/SKILL.md) — a file whose *tests* are unstable is a different problem; do not confuse test risk with product risk.
 - [`qe-pattern-memory`](../qe-pattern-memory/SKILL.md) — supplies signal 7, and stores the calibration record so the next release inherits the evidence.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — security risk is threat-modelled, not history-ranked; run it alongside, not instead.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Coverage Plan requires every status code enumerated regardless of risk rank.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Coverage Plan requires every status code enumerated regardless of risk rank.

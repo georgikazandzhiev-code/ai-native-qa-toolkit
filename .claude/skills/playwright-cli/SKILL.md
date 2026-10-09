@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-version: 2.0.0
+version: 2.0.1
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
 metadata:
   category: running
@@ -14,7 +14,7 @@ metadata:
 
 - **`npx playwright open` is the sanctioned exploration tool** — it ships with `@playwright/test` (already in your `package.json`, no install needed). Use it before authoring or editing any page object, UI test, UI-derived schema, or selector.
 - **Forbidden substitutes for the explore-before-generate step:**
-  - `npx playwright codegen` — generates brittle CSS-heavy locators that violate the `selectors` priority hierarchy. Use `open`, never `codegen`.
+  - `npx playwright codegen` — modern codegen does prefer role, text and test-id locators, but it records one click path inline in a spec: no exploration report, no page object, no priority decision you can review. Use `open`, never `codegen`.
   - **IDE browser MCP / Cursor browser tools** — not auditable, varies by IDE version.
   - Devtools-as-exploration / hand-typed CSS chains — unstable, miss accessible names.
   - Hand-written assumptions from Figma mocks, screenshots, or design specs — no substitute for the live app.
@@ -91,11 +91,13 @@ If you want **AI-driven shell-based exploration** (the model takes snapshots, pi
 
 This matches how the reference framework (`the upstream reference framework`) works — upstream uses standard `@playwright/test` with no separate CLI binary.
 
+> **Re-check this section when you adopt new tooling.** It was written before Playwright's MCP server and agent-readable accessibility snapshots were common. Either one would let the model explore directly — and the constitution currently forbids browser MCP as a substitute for `npx playwright open`. Changing that is a constitution decision, not a skill edit.
+
 ## Forbidden substitutes — what NOT to use
 
 | Tool | Why forbidden | Use instead |
 |------|---------------|-------------|
-| `npx playwright codegen` | Generates brittle CSS-heavy locators that violate the `selectors` priority hierarchy. The output looks tempting but corrodes the framework | `npx playwright open` for exploration; author selectors by hand following the `selectors` skill |
+| `npx playwright codegen` | Records one click path as inline spec code. Its locators are often role-based now, but nothing in the output says why each was chosen, and it bypasses the page object and the exploration report | `npx playwright open` for exploration; author selectors by hand following the `selectors` skill |
 | IDE browser MCP / Cursor browser tools | Varies by IDE version, not auditable, doesn't honor the same exploration contract | `npx playwright open` |
 | Devtools console + manual CSS-chain copying | Almost always brittle (generated class names, index-based selectors) | Find a role/label/testid via observation; ask FE for a testid if missing |
 | Figma mocks, design specs, screenshots without verification | The rendered app may differ from the design (state-dependent text, wrapped Radix DOM, missing accessible names) | Run `npx playwright open` against the actual deployed app |
@@ -103,7 +105,7 @@ This matches how the reference framework (`the upstream reference framework`) wo
 
 ## Anti-patterns
 
-- ❌ Using `npx playwright codegen` to generate "starter selectors" and committing them. Even if you intend to clean up later, the generated CSS chains corrode the codebase.
+- ❌ Using `npx playwright codegen` to generate "starter selectors" and committing them. Even when its locators are role-based, the generated spec skips the page object and the exploration report, and "clean it up later" rarely happens.
 - ❌ Inventing selector names from a Figma mock without ever opening the live app.
 - ❌ Falling back to "guess from a screenshot" when `npx playwright open` failed to start. Stop and notify the human instead.
 - ❌ Hardcoding text observed during exploration in a spec without routing through `enums/app/*` — app text always goes to an enum, even when used once.

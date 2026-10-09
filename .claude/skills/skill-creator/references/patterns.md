@@ -25,7 +25,7 @@ The validator (`npm run validate`) enforces frontmatter, section presence and le
 |---|---------|-----------|---------|
 | 1 | **Frontmatter** (`name`, `description`, `metadata.category`, optional `disable-model-invocation`) | Yes | Discoverability gate. `description` includes WHAT + WHEN + 3-7 quoted trigger phrases + 2-4 "Do NOT use for X" disclaimers. |
 | 2 | **Opener** (1 paragraph) | Yes | What surface this skill covers, who pairs with it, the failure mode it prevents. Names the paired rule (or `(none)`). |
-| 3 | **`## Critical`** | Yes | 5–9 hard rules in `**ALWAYS**` / `**NEVER**` form. Drawn from real incidents. The model scans this in 30 seconds. |
+| 3 | **`## Critical`** | Yes | 5–9 hard rules (the target) in `**ALWAYS**` / `**NEVER**` form. Drawn from real incidents. The model scans this in 30 seconds. |
 | 4 | **`## What's in each file`** | When multi-file | Mini-index table mapping `SKILL.md` / `reference.md` / `templates.md` / `<topic>.md` to purpose. Skip when single-file. Includes the "boundary rule" callout. |
 | 5 | **`## Architecture map | Storage location map | Decision tree`** (signature device) | Yes (at least one) | The project signature: table or mermaid. Hook flags missing. |
 | 6 | **Workflow / phases / decision tables** | Usually | The skill's substance. Use one or more body patterns from §1–§4. |

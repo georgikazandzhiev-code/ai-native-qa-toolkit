@@ -59,7 +59,7 @@ orchestrates the full authoring workflow on top of it.
 ## Critical
 
 <!--
-REQUIRED. 5-9 hard rules in **ALWAYS** / **NEVER** form. Each rule must be
+REQUIRED. 5–9 hard rules (the target) in **ALWAYS** / **NEVER** form. Each rule must be
 enforceable, not aspirational. Drawn from real incidents, not theory.
 
 The Critical block is the #1 thing future authors of this skill rely on —
@@ -266,4 +266,4 @@ Cluster siblings (pick the cluster from skill-creator Phase 2):
 - **Paired rule:** [.cursor/rules/<rule>.mdc](../../rules/<rule>.mdc) — non-negotiable invariants for this domain. <!-- Or: "No paired rule (skill-only)." -->
 - **Sibling cluster (<cluster name>):** [`<sibling-1>`](../<sibling-1>/SKILL.md), [`<sibling-2>`](../<sibling-2>/SKILL.md), [`<sibling-3>`](../<sibling-3>/SKILL.md).
 - **Orchestration:** the Routed Skill Index in `~/.claude/CLAUDE.md` — add this skill's row there.
-- **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.
+- **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.

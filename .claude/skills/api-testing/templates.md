@@ -72,12 +72,8 @@ import resourceData from "../../../../test-data/app/<resource>.json";
 // See data-strategy/reference.md §1.6 for rationale (grepability, no alias-name drift).
 // Existing specs with aliases are tech debt; normalize when next touching the file.
 
-// Optional: hoist the file's single tag to a const when every test in the file shares it.
-// One source of truth, and re-tagging the whole file is a one-line change:
-//   const TAG = { tag: "@App-API" } as const;
-//   test("Verify ...", TAG, async ({ apiRequest }) => { ... });
-// The inline `{ tag: "@App-API" }` form used below is equally valid — pick one per file.
-// The tag whitelist + single-tag rule is owned by the `test-standards` skill.
+// Tags stay inline (`{ tag: "@App-API" }`) on every test: the single-tag lint rule reads the literal,
+// so a tag hoisted into a shared const reads as "no tag". The whitelist is owned by `test-standards`.
 
 // ═══════════════════════════════════════════════════════════════
 // GET /<resource>s — List

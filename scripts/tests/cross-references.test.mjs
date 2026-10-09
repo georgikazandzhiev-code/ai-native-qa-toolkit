@@ -9,8 +9,9 @@
  * command file behind it; a written skill is still labelled "(TBD)"; a link points at a file
  * that does not exist; a section name runs on past its end ("§ Verificationx"); the persona line
  * is missing altogether; and a link climbs out of `.claude/`, which works here and is dead in an
- * installed `~/.claude`. Silent cases prove the check stays quiet on a correct reference, on a TBD
- * label for a skill not yet written, on a link to a real file, and on placeholders, code and
+ * installed `~/.claude`; a link to `~/…`, which no Markdown viewer expands; and front matter that
+ * strict YAML rejects (an unquoted ": "). Silent cases prove the check stays quiet on a correct reference, on a TBD
+ * label for a skill not yet written, on a folded-block description, on a link to a real file, and on placeholders, code and
  * URLs, because a gate that fires on correct text gets switched off.
  *
  * Each case copies the working tree, breaks one thing, runs the real validate.mjs, and asserts
@@ -111,6 +112,37 @@ const CASES = [
       edit(dir, PR_REVIEW, (md) => `${md}\n- See [the README](../../../README.md).\n`, 'append a link out of .claude'),
     exit: 1,
     expect: 'outside .claude/',
+  },
+  {
+    // 21 of these shipped while `~` targets were exempt (October 2026).
+    name: 'a link to ~/ (dead in every Markdown viewer)',
+    break: (dir) =>
+      edit(dir, PR_REVIEW, (md) => `${md}\n- See [the constitution](~/.claude/CLAUDE.md).\n`, 'append a ~ link'),
+    exit: 1,
+    expect: 'Markdown does not expand ~',
+  },
+  {
+    name: 'front matter with an unquoted ": " (invalid YAML)',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: Pre-push review: walks every changed file. Do NOT use for bugs.\n'),
+        'make the description an unquoted value containing ": "'
+      ),
+    exit: 1,
+    expect: 'front matter is not valid YAML',
+  },
+  {
+    name: 'front matter as a folded block stays silent',
+    break: (dir) =>
+      edit(
+        dir,
+        PR_REVIEW,
+        (md) => md.replace(/^description: (?:>-\n(?:  .*\n)+|.*\n)/m, 'description: >-\n  Pre-push review: walks every changed file, then reports every MUST and WON\'T it finds, with a fix for each. Do NOT use for bugs.\n'),
+        'make the description a folded block containing ": "'
+      ),
+    exit: 0,
   },
   {
     name: 'a link to a real file stays silent',

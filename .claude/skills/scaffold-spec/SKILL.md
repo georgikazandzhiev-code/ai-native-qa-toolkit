@@ -1,10 +1,11 @@
 ---
 name: scaffold-spec
-version: 2.0.0
+version: 2.0.1
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
-  asks to add tests for a new endpoint, feature, or job type.
+  asks to add tests for a new endpoint, feature, or job type. Do NOT use for the API negative-test matrix
+  (use the `api-testing` skill). Do NOT use for locator strategy (use the `selectors` skill).
 metadata:
   category: authoring
 ---
@@ -38,15 +39,15 @@ Ask the user (or infer from context) which type of spec to create:
 
 | Type | Directory | Tag | Rule |
 |------|-----------|-----|------|
-| **API** | `tests/app/api/<domain>/` | `@App-API` | `api-tests.mdc` |
-| **E2E** | `tests/app/e2e/<domain>/` | `@App-E2E` | `ui-tests.mdc` |
-| **Functional** | `tests/app/functional/<domain>/` | `@App-regression` | `ui-tests.mdc` |
+| **API** | `tests/app/api/<domain>/` | `@App-API` | `api-testing` skill |
+| **E2E** | `tests/app/e2e/<domain>/` | `@App-E2E` | `page-objects` + `selectors` skills |
+| **Functional** | `tests/app/functional/<domain>/` | `@App-regression` | `page-objects` + `selectors` skills |
 
 Specs are grouped into **service-domain subfolders** (mirroring the API Hub): `tenant-service/`, `jobs-service/`, `notification-service/`, `shared/`. Within a domain, add a sub-subfolder (`jobs/`, `workers/`, `run-stats/`) only when that domain has 10+ specs in one test type — `jobs-service/` uses these in all three test types. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
 
 ## Step 2: Read the Convention Rule
 
-When the repository provides a repo-context skill, read its matching router (`api-router.md` or `ui-router.md`) before generating any code, and follow it exactly. In any other repo, read that repo's own conventions (its `CLAUDE.md` / project rules and existing sibling specs) instead.
+When the repository provides a repo-context skill, read its API or UI routing section before generating any code, and follow it exactly. In any other repo, read that repo's own conventions (its `CLAUDE.md` / project rules and existing sibling specs) instead.
 
 ## Step 3: Explore First
 
@@ -489,7 +490,7 @@ If multiple `test.describe` blocks in the same file need the same resource, crea
 
 ### Auth token scope mismatch
 
-Admin endpoints use `USER_ACCESS_TOKEN_ADMIN`. Tenant endpoints use `USER_ACCESS_TOKEN_FULL`. Using the wrong one doesn't always return 401 — some endpoints return 404 (the resource exists but is invisible to that token's scope). Check the endpoint context in `api-tests.mdc` for the correct token.
+Admin endpoints use `USER_ACCESS_TOKEN_ADMIN`. Tenant endpoints use `USER_ACCESS_TOKEN_FULL`. Using the wrong one doesn't always return 401 — some endpoints return 404 (the resource exists but is invisible to that token's scope). Check the token catalog in the `api-testing` skill's `reference.md` for the correct token.
 
 ### Sorting tests: don't assert exact order
 
@@ -536,4 +537,4 @@ Report the blocker with the exact failure, and offer what can be done without th
 - [`playwright-cli`](../playwright-cli/SKILL.md) — the mandatory explore-before-generate step for UI work.
 - [`fixtures`](../fixtures/SKILL.md) — registering a new page object for injection.
 - [`pr-review`](../pr-review/SKILL.md) — run before pushing the scaffold.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — the pre-edit checklist and the Verification Standard both apply to a scaffold.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — the pre-edit checklist and the Verification Standard both apply to a scaffold.

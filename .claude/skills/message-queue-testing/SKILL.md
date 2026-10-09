@@ -1,6 +1,6 @@
 ---
 name: message-queue-testing
-version: 1.0.0
+version: 1.0.1
 description: Test asynchronous messaging and queues as QA targets — delivery guarantees, message ordering, dead-letter routing, retry and poison-message handling, consumer-group rebalance, transactional commit/rollback, backpressure, and schema-validated envelopes. Use when the system under test produces or consumes messages on a queue, stream, or event bus and you need to prove delivery is correct rather than assume it, or when a story touches async processing, eventual consistency, or a dead-letter path. Trigger phrases — "message queue", "queue test", "dead letter", "DLQ", "consumer group", "at-least-once", "event bus", "poison message", "async delivery". Do NOT use for synchronous REST/RPC endpoint tests (use the `api-testing` skill). Do NOT use for load/throughput numbers under volume (use the `k6-load-testing` skill). Do NOT use for picking UI locators or asserting rendered state (use the `selectors` skill).
 metadata:
   category: domain
@@ -127,4 +127,4 @@ User says: _"A run message the executor can't process should end up in the dead-
 - **`flakiness-triage`** — when an async test is intermittently red, the bounded-wait-vs-sleep distinction is the first thing to check.
 - **`quality-gate`** — a release gate can require the dead-letter path tested for a messaging flow before shipping.
 - **`bug-helper`** — filing a dropped message, a missing DLQ field, or a broken ordering guarantee as a triaged bug.
-- **[~/.claude/CLAUDE.md](~/.claude/CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.
+- **[~/.claude/CLAUDE.md](../../CLAUDE.md)** — always-on framework invariants; this skill routes from its Routed Skill Index.

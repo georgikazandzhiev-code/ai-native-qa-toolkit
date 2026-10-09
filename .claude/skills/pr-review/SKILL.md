@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 3.0.0
+version: 3.1.0
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -137,7 +137,7 @@ Routed skills: [`enums`](../enums/SKILL.md), [`config`](../config/SKILL.md), [`d
 
 Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 
-- [ ] New skill's `SKILL.md` is **<500 lines** (Anthropic's canonical guidance).
+- [ ] New skill's `SKILL.md` is **≤ 380 lines** — this repository's threshold (`npm run validate` warns above it), well inside Anthropic's 500.
 - [ ] Frontmatter has `name` (lowercase + hyphens, max 64 chars, no "anthropic"/"claude") and `description` (<1024 chars, follows `[what] + [when] + triggers + "Do NOT use for X (use the <other> skill)"`).
 - [ ] Supplementary files (`reference.md`, `templates.md`, `<topic>.md`) have **Load-When** annotations in SKILL.md's `## What's in each file` table.
 - [ ] **No README.md** inside the skill folder. Docs go in SKILL.md or `references/`.
@@ -265,4 +265,4 @@ Push.
 - [`debugging`](../debugging/SKILL.md) — when the test run is red and you need to diagnose.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — pair its `review-checklist.md` for a security pass on the diff (access control, auth, injection, misconfiguration).
 - Slash commands: `/code-review` (bugs), `/review-changes` (deep skill canon), `/security-review`, `/simplify`.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Verification Standard codifies the don't-say-"looks-fine" rule.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Verification Standard codifies the don't-say-"looks-fine" rule.

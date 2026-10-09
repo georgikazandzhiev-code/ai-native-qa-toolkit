@@ -276,7 +276,7 @@ rules['single-tag-on-test'] = {
 
 /** WON'T — No conditional logic inside a test body. */
 rules['no-conditional-in-test'] = {
-  meta: meta('No if/else, ternary, logical short-circuit or test.skip inside a test body; seed preconditions in setup.', {
+  meta: meta('No if/else, switch, control-flow ternary or test.skip inside a test body; seed preconditions in setup.', {
     messages: {
       conditional: '{{kind}} inside a test body is forbidden — it steers around missing data and produces a false green. Seed the precondition in beforeAll/beforeEach.',
       skip: 'test.skip() inside a test body is forbidden. A skip gives a false green and corrupts test-management signal. Comment the block out with a // TODO: FIXME: <TICKET> marker instead.',

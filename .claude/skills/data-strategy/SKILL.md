@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 2.0.0
+version: 2.0.1
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -347,7 +347,7 @@ The finished shape: a body builder in `helpers/app/` that takes the resolved `ow
 - [`enums`](../enums/SKILL.md) — repeated strings belong there, not in a test-data file.
 - [`refactor-values`](../refactor-values/SKILL.md) — read before changing any existing fixed value; consumers must update atomically.
 - [`flakiness-triage`](../flakiness-triage/SKILL.md) — shared fixed data is a leading cause of the cross-test interference that skill diagnoses.
-- Orchestrator: [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Sources of Truth and the WON'T rule against hardcoded ids both constrain every decision here.
+- Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Sources of Truth and the WON'T rule against hardcoded ids both constrain every decision here.
 ## Additional resources
 
 - [reference.md](reference.md) — env-token catalog, JSON file catalog, helper catalog, storage state catalog, faker recipes.

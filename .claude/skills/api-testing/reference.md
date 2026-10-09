@@ -4,7 +4,7 @@
 
 | Layer | Path | Responsibility |
 |-------|------|----------------|
-| Spec | `tests/app/api/<domain>/<resource>.spec.ts` | Behavior + assertions, one spec per endpoint group (CRUD, e2e flow, isolation); domain folders per `api-tests.mdc` |
+| Spec | `tests/app/api/<domain>/<resource>.spec.ts` | Behavior + assertions, one spec per endpoint group (CRUD, e2e flow, isolation); domain folders per the `scaffold-spec` skill |
 | Fixture (HTTP) | `fixtures/api/api-request-fixture.ts` + `plain-function.ts` | Wraps `request` into a typed `apiRequest<T>()` returning `{ status, body }` |
 | Fixture (merge) | `fixtures/pom/test-options.ts` | Merges page-object, api, login and mailpit fixtures; **specs import `test`/`expect` from here** |
 | Schemas (per-resource) | `fixtures/api/schemas/app/<resource>.ts` | Zod schemas + inferred types for that resource. 8 resource files: `job.ts`, `notification-rule.ts`, `notification.ts`, `run-stats.ts`, `tenant-schema.ts`, `tenant.ts`, `user.ts`, `worker.ts`. **No `app/index.ts` barrel exists** — specs deep-import from the resource file. |
