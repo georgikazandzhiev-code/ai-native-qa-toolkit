@@ -1,7 +1,18 @@
 ---
 name: build-alternatives
 version: 1.0.0
-description: Turn "which way should I do this?" into finished work — when the task is clear but there are several ways to do it, build every way on its own local alt/<topic>/<option> branch, present them side by side, and ask only which to keep, then delete the rest. Use whenever you are about to ask the human to choose between implementations, PR splits, approaches or designs, and on every unattended run, where a question means the human returns to nothing. Reach for it the moment a draft reply contains "should I", "do you want me to", "A or B?" or "which approach". Trigger phrases — "build both", "build the alternatives", "don't ask, do it", "one PR or two", "which approach", "show me the options built". Do NOT use when what to build is unclear (ask, marked [human-only: requirement]). Do NOT use for outward actions — push, PR, comment, merge, delete (ask, marked [human-only: outward]). Do NOT use for splitting finished work into PRs once chosen (use the GOVERNANCE.md § One logical change per PR rule).
+description: >-
+  Turn "which way should I do this?" into finished work — when the task is clear but there are several
+  ways to do it, build every way on its own local alt/<topic>/<option> branch, present them side by
+  side, and ask only which to keep, then delete the rest. Use whenever you are about to ask the human
+  to choose between implementations, PR splits, approaches or designs, and on every unattended run,
+  where a question means the human returns to nothing. Reach for it the moment a draft reply contains
+  "should I", "do you want me to", "A or B?" or "which approach". Trigger phrases — "build both",
+  "build the alternatives", "don't ask, do it", "one PR or two", "which approach", "show me the
+  options built". Do NOT use when what to build is unclear (ask, marked [human-only: requirement]). Do
+  NOT use for outward actions — push, PR, comment, merge, delete (ask, marked [human-only: outward]).
+  Do NOT use for splitting finished work into PRs once chosen (use the GOVERNANCE.md § One logical
+  change per PR rule).
 metadata:
   category: cross-cutting
 ---
