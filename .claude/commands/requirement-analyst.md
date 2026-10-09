@@ -51,7 +51,7 @@ What's absent that QA/engineering will need: undefined error behavior, missing d
 Statements that could be read two ways, undefined terms, or requirements that conflict with each other or with existing platform behavior.
 
 ### 4. Risks & dependencies
-Cross-team/service/feature dependencies (probe ↔ backend, scheduler, Keycloak realms, VictoriaMetrics), and cross-reference **Known Platform Issues** that could affect this requirement. Flag anything that fans out to all probes (cascade risk).
+Cross-team/service/feature dependencies (worker ↔ backend, scheduler, Keycloak realms, the run-stats store), and cross-reference **Known Platform Issues** that could affect this requirement. Flag anything that fans out to all workers (cascade risk).
 
 ### 5. Clarifying questions
 A numbered list of the exact questions to ask the PO/BA before development. Each question should be answerable and unblock a concrete decision. Provide your recommended default answer where you have one.
@@ -70,4 +70,4 @@ If the input was a Jira ticket, **offer** to post the audit (or just the clarify
 - **Never invent UI specifics** not present in the requirement.
 - **Never paper over a gap** — an empty "gaps" section on a thin requirement means you didn't look hard enough. Surface everything; let the PO decide what's out of scope.
 - **Anchor every finding** to the requirement's intent or a concrete platform behavior — no generic checklist padding.
-- **Cross-reference Known Platform Issues** for any requirement touching probes, collectors, metrics, or JetStream.
+- **Cross-reference Known Platform Issues** for any requirement touching workers, executors, run stats, or the message queue.
