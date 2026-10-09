@@ -19,7 +19,7 @@ Every recipe builds on the `api-testing` negative matrix — same `apiRequest`, 
 ## API1 — Broken Object Level Authorization (BOLA)  ✅ top priority
 - **Is:** an endpoint returns/mutates an object by id without checking the caller owns it. The most common, most damaging API flaw.
 - **Recipe:** seed object as principal A (`beforeAll`). Request `GET/PUT/PATCH/DELETE /resource/:id` with principal B's token (different tenant / lower role). Assert the deny status the contract documents — typically `404` across tenants (it hides that the object exists) and `403` for a lower role in the same tenant, with its error schema. A `200`/`204` is the finding.
-- **Test name:** `Verify GET /synthetics/{id} returns 404 for a cross-tenant caller`.
+- **Test name:** `Verify GET /jobs/{id} returns 404 for a cross-tenant caller`.
 - **Principal source:** a second tenant token, or `USER_ACCESS_TOKEN_ZERO`. If unprovisioned, comment out with a ticket.
 
 ## API2 — Broken Authentication  ✅ automatable
