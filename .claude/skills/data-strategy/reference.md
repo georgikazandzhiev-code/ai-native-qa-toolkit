@@ -165,7 +165,7 @@ Always paired: `createX` + `deleteX` (or equivalent cleanup). Body comes from a 
 
 - `helpers/app/jobs.ts`:
   - **CRUD**: `createJob` / `getJob` / `updateJob` / `deleteJob` / `listJobs`
-  - **Cleanup**: `cleanupUiCreatedJobs(apiRequest, token, refs)` — UI-friendly delete-by-name with retry; `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` — orchestrated cleanup respecting worker→job dependency
+  - **Cleanup**: `cleanupUiCreatedJobs(apiRequest, refs, token)` — UI-friendly delete-by-name with retry; `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` — orchestrated cleanup respecting worker→job dependency
 
 ### Workers
 

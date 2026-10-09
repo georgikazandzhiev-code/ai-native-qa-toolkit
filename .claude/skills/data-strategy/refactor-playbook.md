@@ -155,7 +155,7 @@ export async function setupTestWorker(
     apiRequest: ApiRequestFn,
     headers: string,
     overrides?: Partial<WorkerData>,
-): Promise<CreateWorkerResponse> {
+): Promise<Worker> {
     const { status, body } = await apiRequest<CreateWorkerResponse>({
         method: 'POST',
         url: appConfig.api.WORKERS,
@@ -164,7 +164,9 @@ export async function setupTestWorker(
         body: createWorkerData(overrides),
     });
     expect(status).toBe(201);
-    return CreateWorkerResponseSchema.parse(body);
+    const fetched = await getWorker(apiRequest, body.workerId, headers);
+    expect(fetched.status).toBe(200);
+    return WorkerSchema.parse(fetched.body.worker);
 }
 
 export async function teardownTestWorker(

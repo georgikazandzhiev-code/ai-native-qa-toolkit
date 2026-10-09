@@ -90,7 +90,7 @@ Anthropic + Cursor fundamentals the validator can't catch.
 Specific drift categories the Tier 1 audit caught. Every code example, every claim about the codebase, every cross-reference must be verified. These checks are the difference between "ships immediately" and "needs a rewrite in 3 weeks".
 
 - [ ] **No `Zod 4` syntax** (`z.uuid()`, `z.email()`, `z.url()`, `z.int()` top-level forms) when the codebase is Zod 3 (`^3.x.x`). Use chained forms (`z.string().uuid()`).
-- [ ] **No `field-field-` testid prefix** in any code example. The frontend emits `schema-field-<fieldName>` (verified at `src/components/schema-form/schema-form.tsx:100`).
+- [ ] **Every testid prefix in a code example matches what the frontend emits for that element.** In the example app: `schema-field-<fieldName>` on the field wrapper, `field-field-<fieldPath>` on the input, `error-<fieldName>` on the error (`GOVERNANCE.md` § Example domain). Verify against the frontend source with `frontend-cross-check`.
 - [ ] **No bare `process.env.X` propagation** in code examples. Canonical access is `process.env.X!` (matches upstream reference framework). Defaults belong in `config/util/<service>.ts`, not at call sites.
 - [ ] **No `??` / `||` defaulting at call sites** in helpers / specs / fixtures / pages. Allowed only inside `playwright.config.ts` at the config boundary.
 - [ ] **No `as string` casts on `process.env.X`** — lies to TypeScript, masks missing vars.

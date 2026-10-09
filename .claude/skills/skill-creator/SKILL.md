@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.4
+version: 1.1.5
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -25,7 +25,7 @@ Non-negotiable. Every rule below was learned from a real drift incident in this 
 - **BOUNDARY DISCIPLINE.** Rules / decisions / anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Copy-paste skeletons live in `templates.md`. Per-dimension playbooks (e.g. http-method-coverage) live in their own `<topic>.md`. **No code blocks longer than ~5 lines in `SKILL.md` unless the code IS the rule** (a single `expect(SchemaName.parse(body)).toBeTruthy()` line or a `process.env.X!` idiom is fine; a 30-line spec skeleton is not).
 - **NO PAIRED RULES — rule content lives in skills.** This repo retired the fat per-area glob rules — invariants and workflow live in the matching skill (`api-testing`, `selectors`, `page-objects`, `test-standards`, etc.). The always-on rule file is `~/.claude/CLAUDE.md` (orchestrator with MUST/SHOULD/WON'T tables and the Routed Skill Index); `api-tests.mdc` / `ui-tests.mdc` exist only as thin glob routers (folder maps + skill pointers). New skills must NOT introduce new paired glob rules with rule content; consolidate everything into the skill.
 - **CROSS-REFERENCES MUST BE VERIFIED AND BIDIRECTIONAL.** When you cite a sibling skill in `See Also`, confirm the sibling exists (not a TBD placeholder), and update that sibling's `See Also` to mention the new skill back when relevant. Stale TBD references and one-way cross-links are the #1 source of audit churn.
-- **NO DRIFT TRIGGERS in any code example.** No `Zod 4` syntax in a Zod 3 codebase. No `field-field-` when frontend emits `schema-field-`. No bare `process.env.X` propagation when the canonical access is `!`. No `??` defaulting at call sites when defaults belong in `config/util/<service>.ts`. Verify every snippet against `type-safety` skill conventions and the actual codebase.
+- **NO DRIFT TRIGGERS in any code example.** No `Zod 4` syntax in a Zod 3 codebase. No `schema-field-` as an input hook when the frontend puts it on the field wrapper. No bare `process.env.X` propagation when the canonical access is `!`. No `??` defaulting at call sites when defaults belong in `config/util/<service>.ts`. Verify every snippet against `type-safety` skill conventions and the actual codebase.
 - **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. `npm run validate` errors on an empty description and warns on a thin one; neither blocks a weak but present one — that's on the author.
 - **EVERY SKILL DECLARES A `version` IN FRONT MATTER, AND A CHANGE TO THE RULES MOVES IT.** `major` when a rule changes meaning or is removed — output that was previously correct may now be wrong. `minor` when a rule or section is added. `patch` for wording, examples and cross-references. The version is what an eval score is attributed to: `npm run eval:compare` compares scores across versions, and a version that no longer describes the file makes the history lie. `npm run check:bump` warns when a `SKILL.md` changed and the version did not.
 - **NEW SKILLS START FROM `assets/SKILL-template.md`.** The template encodes the standardized structure. Copying from another skill is acceptable but you must verify every section is present.
@@ -329,7 +329,7 @@ When the source is `.cursor/rules/<name>.mdc`:
 Each ❌ below was caught in real Tier 1 audits. The fix is named.
 
 - ❌ **Authoring a SKILL.md without `## Critical` block at top.** The model scans the rules in 30 seconds before reading the workflow; missing this block wastes that scan. Add it — 5-9 hard rules in `**ALWAYS**` / `**NEVER**` form.
-- ❌ **Writing claims about the codebase without grep verification.** Wrong file paths, wrong helper names, wrong testid prefixes (e.g. claiming `field-field-` when the frontend emits `schema-field-`). Verify by grep before writing.
+- ❌ **Writing claims about the codebase without grep verification.** Wrong file paths, wrong helper names, wrong testid prefixes (e.g. targeting `schema-field-` as the input when the frontend puts it on the field wrapper and emits `field-field-` on the input). Verify by grep before writing.
 - ❌ **Baking drift into the rule.** "Match the neighbor forever" perpetuates the legacy. Instead: name the canonical going-forward rule, mark the legacy as drift to migrate on next touch.
 - ❌ **Code blocks > 5 lines in SKILL.md.** Move to `templates.md`. SKILL.md is the rule layer; only ≤5-line code-IS-the-rule snippets stay (e.g. `expect(SchemaName.parse(body)).toBeTruthy()` or `process.env.X!`).
 - ❌ **Cross-reference to a TBD / empty placeholder skill** without the `(TBD)` marker and a fallback note. Models route based on the Skill Index; pointing at empty skills wastes their effort.
@@ -364,7 +364,7 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 - [ ] `## See Also` — paired rule, sibling skills (verified populated, not TBD), orchestration doc.
 - [ ] No code blocks > 5 lines in SKILL.md (boundary rule). Skeletons live in `templates.md` if needed.
 - [ ] Every codebase claim verified by grep (helpers, paths, testids, env vars, npm scripts, schemas).
-- [ ] Every code snippet matches `type-safety` conventions (`process.env.X!`, `z.strictObject()`, no Zod 4 in Zod 3 codebase, no `field-field-`).
+- [ ] Every code snippet matches `type-safety` conventions (`process.env.X!`, `z.strictObject()`, no Zod 4 in Zod 3 codebase, testid prefixes as the frontend emits them).
 - [ ] No drift baked in as the rule — drift is named explicitly with "fix on next touch".
 - [ ] `~/.claude/CLAUDE.md § Routed Skill Index` updated in same edit batch.
 - [ ] Cluster siblings' `See Also` updated to mention the new skill back (bidirectional cross-links).
@@ -422,7 +422,7 @@ User says: *"Move `run-stats-api-tests-context.mdc` (apply-intelligently rule) i
 | `~/.claude/CLAUDE.md` and the new skill disagree on a route or rule | Drift between orchestrator and skill | `~/.claude/CLAUDE.md` wins. Surface the disagreement; reconcile in the same edit. |
 | Sibling skill's `See Also` references the new skill but the new skill's `See Also` doesn't reciprocate | One-way cross-reference | Cross-references are bidirectional. Update the new skill's See Also too. |
 | Skill claims a helper / file / testid that doesn't exist | Author didn't grep before writing | Grep now: `grep -rn "<claim>" <sibling-repos>/automation/`. If absent, fix the skill. Future authoring: grep first, write second. |
-| Skill teaches `field-field-` (or `Zod 4` in Zod 3 codebase, or bare `process.env.X` propagation) | Drift trigger baked into a code example | Replace with the canonical pattern. Add a drift-callout if the legacy still exists in the codebase. |
+| Skill teaches a testid prefix the frontend doesn't emit for that element (or `Zod 4` in Zod 3 codebase, or bare `process.env.X` propagation) | Drift trigger baked into a code example | Replace with the canonical pattern. Add a drift-callout if the legacy still exists in the codebase. |
 
 ## See Also
 

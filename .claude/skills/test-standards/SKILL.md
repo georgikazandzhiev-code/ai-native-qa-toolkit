@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 2.0.3
+version: 2.0.4
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -336,7 +336,7 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
   test.afterAll(async ({ apiRequest }) => {
     for (const name of createdJobNames) {
-      const { body } = await listJobs(apiRequest, TENANT_TOKEN, { name });
+      const { body } = await listJobs(apiRequest, { name }, TENANT_TOKEN);
       for (const job of body.jobs) {
         await deleteJob(apiRequest, job.id, TENANT_TOKEN);
       }
