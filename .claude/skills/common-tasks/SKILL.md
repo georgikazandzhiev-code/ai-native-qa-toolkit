@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 2.1.0
+version: 2.1.1
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -18,7 +18,7 @@ These rules apply to **every** generated artifact in the framework — page obje
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
 - **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps — every tag is Title-case except lowercase `@App-regression`. **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
-- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the run is orphaned in Qase reporting otherwise.
+- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the test run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull URLs / credentials / env-driven values from `process.env.X!` (no defaults at call sites; defaults belong in `config/util/<service>.ts`). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`Messages.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
 - **ALWAYS** use `z.strictObject()` for new schemas (rejects extra keys — catches API drift). **ALWAYS** validate every API response with `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). **NEVER** stop at `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper. **NEVER** use `z.any()` to silence a `ZodError`. See the `api-testing` and `type-safety` skills.
@@ -158,7 +158,7 @@ npm run app-regression                                     # whole tag group
 npm run app-api
 npm run app-e2e
 npm run app-smoke
-npm run app-all                                            # full nightly union, single worker
+npm run app-all                                            # full nightly union, single Playwright worker
 ```
 
 For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns the failure-mode taxonomy and the right Playwright tool.
@@ -227,22 +227,22 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
 9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `Messages.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 
-### Example 2 — "Add complete API coverage for `POST /probes`"
+### Example 2 — "Add complete API coverage for `POST /workers`"
 
-User says: *"Add API tests for `POST /probes` covering 201, 400 (each required field omitted + invalid types), 401, 403, 405."*
+User says: *"Add API tests for `POST /workers` covering 201, 400 (each required field omitted + invalid types), 401, 403, 405."*
 
 1. **Step 1 — categorize.** API test → API tests + Zod schema + helper.
 2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod 3 chained validators).
-3. **Step 3 — precondition.** Read the OpenAPI for `POST /probes`. Map every documented status code to a planned test. Read `tests/app/api/monitoring-service/probes/probes.spec.ts` for the canonical shape.
+3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Read `tests/app/api/jobs-service/workers/workers.spec.ts` for the canonical shape.
 4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
-5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.PROBES`. `process.env.USER_ACCESS_TOKEN_FULL!`. `@App-API` tag.
-6. **Step 6 — generate.** `tests/app/api/monitoring-service/probes/probes.spec.ts` (extend if exists), `fixtures/api/schemas/app/probe.ts`, `helpers/app/probes.ts`.
+5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.WORKERS`. `process.env.USER_ACCESS_TOKEN_FULL!`. `@App-API` tag.
+6. **Step 6 — generate.** `tests/app/api/jobs-service/workers/workers.spec.ts` (extend if exists), `fixtures/api/schemas/app/worker.ts`, `helpers/app/workers.ts`.
 7. **Step 7 — self-review.** Coverage audit: every status code has a test. Auth matrix: 401 and 403. Path-param fuzz if endpoint has `:id`.
 8. **Step 8 — run.** `npm run app-api` → green.
 
-### Example 3 — "The HTTP/HTTPS monitor list test is flaky in CI"
+### Example 3 — "The list test for HTTP/HTTPS jobs is flaky in CI"
 
-User says: *"Tests/app/functional/http-create-edit-monitor.spec.ts is flaky in CI but passes locally. Investigate."*
+User says: *"Tests/app/functional/http-create-edit-job.spec.ts is flaky in CI but passes locally. Investigate."*
 
 1. **Step 1 — categorize.** Investigation, not creation → `debugging` skill, **not** generation.
 2. **Step 2 — load deep skill.** `debugging` (failure-mode taxonomy, Playwright tools).
