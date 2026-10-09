@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.3
+version: 1.1.4
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -145,7 +145,7 @@ Pick the **cluster** for cross-linking siblings:
 
 - **API authoring** — `scaffold-spec → api-testing → data-strategy → helpers → fixtures → type-safety`.
 - **UI authoring** — `scaffold-spec → selectors → page-objects → playwright-cli → frontend-cross-check → enums → fixtures`.
-- **Domain orientation** — `master-context → metrics-api-tests-context → test-case-generation`.
+- **Domain orientation** — `master-context → run-stats-api-tests-context → test-case-generation`.
 - **Failure investigation** — `debugging → playwright-cli → frontend-cross-check`.
 - **Repo hygiene** — `refactor-values → skill-creator → ai-native-workflow`.
 
@@ -168,7 +168,7 @@ Default is **single SKILL.md**. Bias is to keep skills as one file until length 
 |--------|----------|----------------|
 | `references/` | Body would exceed 380 lines, OR content is rarely-read background catalog (helper inventory, testid taxonomy, env var list). | Body fits and content is rule / decision / pattern. |
 | `templates.md` (sibling, not subdir) | Skill prescribes copy-paste skeletons (full spec, full schema file, full helper file). Pull the skeletons here so SKILL.md stays rules-only. | Skill is purely decisional with no skeleton output. |
-| `<topic>.md` (sibling, e.g. `http-method-coverage.md`) | One dimension of the skill grows large enough to dwarf the rest of SKILL.md (per-verb playbook, per-monitor-type recipe). | The dimension fits in a single SKILL.md table. |
+| `<topic>.md` (sibling, e.g. `http-method-coverage.md`) | One dimension of the skill grows large enough to dwarf the rest of SKILL.md (per-verb playbook, per-job-type recipe). | The dimension fits in a single SKILL.md table. |
 | `assets/` | The skill ships a literal file artifact (template, fixture, JSON sample). | The skill is purely procedural — no artifact to ship. |
 | `scripts/` | Deterministic CLI step (eval harness, repeatable command). | The agent already runs `npx playwright test` natively — no wrapper needed. |
 
@@ -381,8 +381,8 @@ User says: *"Populate the `page-objects` skill folder."*
 2. **Phase 2 (topology)** — Layer 2 (agent-decides). Cluster: UI authoring (siblings: `selectors`, `playwright-cli`, `frontend-cross-check`, `fixtures`).
 3. **Phase 3 (draft)** — copy `assets/SKILL-template.md`, fill frontmatter with disclaimers ("Do NOT use for selector strategy (use `selectors`). Do NOT use for fixture authoring (use `fixtures`). Do NOT use for UI exploration (use `playwright-cli`)."), apply description recipe with pushy verbs and trigger phrases.
 4. **Phase 4 (progressive disclosure)** — single SKILL.md to start. Add `references/method-standards.md` only if body exceeds 380 lines.
-5. **Phase 5 (author body)** — opener cites the always-on `~/.claude/CLAUDE.md` for framework invariants (no paired glob rule). `## Critical` block: 10 rules (PascalCase filename in `pages/app/`, extends `BasePage`, constructor takes `page: Page`, locator getters return `Locator` synchronously, action methods include post-condition assertion, JSDoc on action methods only, register in `page-object-fixture.ts`, never `new SyntheticsPage(page)` in spec, no `waitForTimeout`, exploration-first via `playwright-cli`). Pick patterns from `patterns.md`: Workflow (Adding a new POM), Conditional (when to use anchor + drill, sub-component scoping). Add `## Anti-patterns`, `## Self-review checklist`, `## Examples` (use REAL POM names: `SyntheticsPage`, `CreateMonitorPage`, `ProbesPage`), `## Troubleshooting`, `## See Also`.
-6. **Phase 6 (subagent test)** — three prompts: "Add a page object for the new alerts page" (direct → `selected`), "Wire up a POM for the dashboard" (paraphrased → `selected`), "Fix a flaky locator" (negative → `not_selected`, should route to `selectors` or `debugging`).
+5. **Phase 5 (author body)** — opener cites the always-on `~/.claude/CLAUDE.md` for framework invariants (no paired glob rule). `## Critical` block: 10 rules (PascalCase filename in `pages/app/`, extends `BasePage`, constructor takes `page: Page`, locator getters return `Locator` synchronously, action methods include post-condition assertion, JSDoc on action methods only, register in `page-object-fixture.ts`, never `new JobsPage(page)` in spec, no `waitForTimeout`, exploration-first via `playwright-cli`). Pick patterns from `patterns.md`: Workflow (Adding a new POM), Conditional (when to use anchor + drill, sub-component scoping). Add `## Anti-patterns`, `## Self-review checklist`, `## Examples` (use REAL POM names: `JobsPage`, `CreateJobPage`, `WorkersPage`), `## Troubleshooting`, `## See Also`.
+6. **Phase 6 (subagent test)** — three prompts: "Add a page object for the new notifications page" (direct → `selected`), "Wire up a POM for the dashboard" (paraphrased → `selected`), "Fix a flaky locator" (negative → `not_selected`, should route to `selectors` or `debugging`).
 7. **Phase 7 (cross-link)** — add the `page-objects` row to `~/.claude/CLAUDE.md § Routed Skill Index` with its routing signal. Update `selectors`, `playwright-cli`, `fixtures`, `frontend-cross-check`, `debugging`, `ai-native-workflow` See Also sections to mention `page-objects` (no longer TBD). 
 8. **Phase 8 (verify)** — run `references/checklist.md` end-to-end. Confirm `npm run validate` is green.
 
@@ -391,13 +391,13 @@ User says: *"Populate the `page-objects` skill folder."*
 User says: *"`enums/SKILL.md` is missing the `## Examples` section."*
 
 1. **Phase 1 (diagnose)** — checklist gate failing: project-fit (signature device may be present, but Examples section absent).
-2. **Phase 5 only** — open the skill, identify the right insertion point (after `## Self-review checklist`, before `## Troubleshooting`). Author 2-3 worked walkthroughs using REAL enum names from `enums/app/qase-suites.ts` (`SUITES.API_SYNTHETICS`) and `enums/util/statuses.ts` (`Status.ACTIVE`, `UserStatus.PENDING_VERIFICATION`).
+2. **Phase 5 only** — open the skill, identify the right insertion point (after `## Self-review checklist`, before `## Troubleshooting`). Author 2-3 worked walkthroughs using REAL enum names from `enums/app/qase-suites.ts` (`SUITES.API_JOBS`) and `enums/util/statuses.ts` (`Status.ACTIVE`, `UserStatus.PENDING_VERIFICATION`).
 3. **Phase 7 (cross-link)** — no orchestrator-level changes (the skill was already in the index). No sibling-See-Also updates needed (the skill name is unchanged).
 4. **Phase 8 (verify)** — re-run checklist; confirm `## Examples` is now present and `npm run validate` is green.
 
 ### Example 3 — Migrating an apply-intelligently rule to a skill
 
-User says: *"Move `metrics-api-tests-context.mdc` (apply-intelligently rule) into a skill."* (Historical example — this conversion has already happened. Use as a template for the next manual-only domain skill.)
+User says: *"Move `run-stats-api-tests-context.mdc` (apply-intelligently rule) into a skill."* (Historical example — this conversion has already happened. Use as a template for the next manual-only domain skill.)
 
 1. **Phase 1 (intent)** — confirm the rule is apply-intelligently (frontmatter shows no `globs:`, `alwaysApply: false`). Confirm via `head <sibling-repos>/automation/.cursor/rules/<rule>.mdc`.
 2. **Phase 2 (topology)** — Layer 2. Cluster: API authoring or domain orientation depending on scope.
