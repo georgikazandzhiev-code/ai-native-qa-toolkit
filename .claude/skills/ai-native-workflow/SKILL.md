@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.1
+version: 2.1.2
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -8,7 +8,7 @@ metadata:
 
 # AI-Native Workflow
 
-This skill is the **routing and onboarding layer** for AI-assisted work on this scaffold (Playwright v1.56 + TypeScript, multi-tenant network monitoring platform with Qase integration). It teaches you how the constitution (`~/.claude/CLAUDE.md`), the on-demand skills, and the manual personas fit together — and which one to load for which task. It does not own any rules itself; rules live in their respective files.
+This skill is the **routing and onboarding layer** for AI-assisted work on this scaffold (Playwright v1.56 + TypeScript, multi-tenant scheduled-jobs platform with Qase integration). It teaches you how the constitution (`~/.claude/CLAUDE.md`), the on-demand skills, and the manual personas fit together — and which one to load for which task. It does not own any rules itself; rules live in their respective files.
 
 ## Critical
 
@@ -35,7 +35,7 @@ Skills extend the constitution; conflict resolution is in `~/.claude/CLAUDE.md �
 
 - **Audit-then-edit (default).** For anything beyond a one-line fix: read the affected files from disk, propose scope (what changes, in which files, why), wait for approval, apply, report what landed.
 - **Direct mode (trivial work).** Obvious typos, single-line fixes, single-import additions: do it and report.
-- **When to ask vs do.** Clarify ambiguous prompts (which endpoint? create or edit? which monitor type?). Stop and ask before destructive actions, before silently picking between two valid architectural options, or when the matched skill's Critical conflicts with the request.
+- **When to ask vs do.** Clarify ambiguous prompts (which endpoint? create or edit? which job type?). Stop and ask before destructive actions, before silently picking between two valid architectural options, or when the matched skill's Critical conflicts with the request.
 - **When to refuse.** The `~/.claude/CLAUDE.md § WON'T` table is the refusal list. Forbidden patterns include: silent failures (`try/catch` on `expect`, raised timeouts, silent `.skip`), schema loosening to make a test pass, hardcoded secrets/IDs, XPath, `page.waitForTimeout`, `any`/`as any`/`@ts-ignore`, `--no-verify` to bypass hooks, IDE/Cursor browser tools or `npx playwright codegen` as substitutes for the sanctioned exploration workflow (see the `playwright-cli` skill — uses `npx playwright open`).
 - **Verification before "done".** Walk `~/.claude/CLAUDE.md § Verification Standard`: re-read from disk, lint, run the affected tests, report the actual result. A task with failing tests is not complete.
 
@@ -99,25 +99,25 @@ Before declaring a task done:
 
 ### Example 1 — Adding API tests for a new endpoint
 
-User: *"Add API tests for `POST /api/v1/synthetics/{id}/pause`."*
+User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 
 1. **Understand** — new artifact: API spec for one endpoint with a path parameter.
 2. **Locate** — `tests/app/api/**` → Routed Skill Index → load `api-testing` skill (carries the previous `api-tests.mdc` invariants + workflow).
-3. **Audit** — `ls config/app.ts`, `ls fixtures/api/schemas/app/`, `ls helpers/app/`. Confirm whether `SYNTHETICS_PAUSE` already exists as a route constant.
+3. **Audit** — `ls config/app.ts`, `ls fixtures/api/schemas/app/`, `ls helpers/app/`. Confirm whether `JOBS_PAUSE` already exists as a route constant.
 4. **Plan** — schema additions, helper need (likely none — single-spec call), coverage plan from OpenAPI (200/400/401/403/404/405/409), test-data needs.
-5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/synthetic.ts` as `z.strictObject`, re-export from the barrel. Spec follows `Verify <METHOD> <path> returns <status>` naming.
-6. **Verify** — `npx playwright test tests/app/api/monitoring-service/synthetics/synthetic-pause.spec.ts --grep "@App-API"` + `eslint .` + re-read from disk.
+5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`, re-export from the barrel. Spec follows `Verify <METHOD> <path> returns <status>` naming.
+6. **Verify** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@App-API"` + `eslint .` + re-read from disk.
 7. **Surface** — report files added, flag any drift caught (e.g. duplicated `APIErrorSchema`).
 
 ### Example 2 — Investigating a flaky UI test
 
-User: *"`tests/app/functional/monitoring-service/synthetics/dns-create-edit-monitor.spec.ts` flakes on CI but passes locally."*
+User: *"`tests/app/functional/jobs-service/jobs/email-create-edit-job.spec.ts` flakes on CI but passes locally."*
 
 1. **Understand** — debug task, suspected isolation or env drift.
 2. **Locate** — `tests/app/functional/**` → Routed Skill Index → load `debugging` skill (failure-mode taxonomy + Trace Viewer / UI Mode workflow), plus `selectors` + `playwright-cli` if a locator looks suspect after re-exploration. UI invariants live in `page-objects` + `selectors` + `test-standards`.
 3. **Audit** — read the spec from disk. Pull the CI artifact (`gh run download`), open the trace.
 4. **Plan** — root-cause first (env? race? isolation?), no scope creep into unrelated cleanup.
-5. **Generate** — fix at root cause (e.g. add a readiness probe in `auth.setup.ts`). Re-run `npx playwright open` (see the `playwright-cli` skill) if a locator looks suspect.
+5. **Generate** — fix at root cause (e.g. add a readiness check in `auth.setup.ts`). Re-run `npx playwright open` (see the `playwright-cli` skill) if a locator looks suspect.
 6. **Verify** — push, watch CI, re-run locally with `ENVIRONMENT=ci`.
 7. **Surface** — report root cause and the diagnostic path you walked (which Playwright tool, what the trace showed, why this fix is the minimal one).
 
@@ -151,6 +151,6 @@ User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 - **`~/.claude/CLAUDE.md`** — the always-on orchestrator. The **only rule file** in this repo. This skill teaches how to apply it.
 - **API authoring:** [`api-testing`](../api-testing/SKILL.md) — full per-area workflow + endpoint context (consolidated from the previous `api-tests.mdc`).
 - **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`test-standards`](../test-standards/SKILL.md) — class structure, locator strategy, spec conventions (consolidated from the previous `ui-tests.mdc`).
-- **Domain orientation:** `master-context` (project repo only — trimmed from this toolkit), `metrics-api-tests-context` (project repo only — trimmed from this toolkit), [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).
+- **Domain orientation:** `master-context` (project repo only — trimmed from this toolkit), `run-stats-api-tests-context` (project repo only — trimmed from this toolkit), [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).
 - **The skill list** — `~/.claude/CLAUDE.md § Routed Skill Index`. Not repeated here on purpose.
 - **`skill-creator`** — for authoring or refactoring a skill (manual invocation only). Use this when you catch a gap (e.g. when an empty placeholder needs to be authored).

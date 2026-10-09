@@ -57,7 +57,7 @@ Lifecycle, scoring and promotion rules: `qe-pattern-memory` skill.
 
 | Pattern | Tier | Domain | Claim |
 |---------|------|--------|-------|
-| [probe-delete-before-synthetic-409](patterns/probe-delete-before-synthetic-409.md) | canonical | api | A probe cannot be deleted while a synthetic references it — delete the synthetic first or the API returns 409. |
+| [worker-delete-before-job-409](patterns/worker-delete-before-job-409.md) | canonical | api | A worker cannot be deleted while a job references it — delete the job first or the API returns 409. |
 | [radix-dropdown-anchor-and-drill](patterns/radix-dropdown-anchor-and-drill.md) | active | ui | Radix dropdown items re-render after their data XHR; address the container first, then drill, or the click hits a stale node. |
 | [list-meta-total-absent-on-empty](patterns/list-meta-total-absent-on-empty.md) | candidate | api | `meta.total` is omitted rather than zero when a list endpoint returns no rows. |
 ```
@@ -71,7 +71,7 @@ Never overwrite an earlier entry. Append, and update the counters in frontmatter
 
 - **Expected:** `meta.total` present on every list response.
 - **Observed:** absent when the result set is empty.
-- **Artifact:** `GET /api/v1/synthetics?name=zzz-none` → `200 {"data":[]}` (no `meta`).
+- **Artifact:** `GET /api/v1/jobs?name=zzz-none` → `200 {"data":[]}` (no `meta`).
 - **Action:** demoted to `active`; filed <TICKET> against the API contract.
 - **Claim now reads:** `meta.total` is present whenever `data` is non-empty.
 ```
