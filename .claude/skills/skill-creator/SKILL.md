@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.6
+version: 1.1.7
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
@@ -67,7 +67,7 @@ Every skill in this repo follows this exact section order. The template encodes 
 |---------|-----------|---------|
 | **Frontmatter** (`name`, `description`, `metadata.category`, optional `disable-model-invocation`) | Yes | Discoverability gate. `description` includes WHAT + WHEN + 3-7 quoted trigger phrases + "Do NOT use for X" disclaimers. |
 | **Opener** (1 paragraph) | Yes | What surface this skill covers, who pairs with it, single sentence on the failure mode it prevents. |
-| **`## Critical`** | Yes | 5-9 hard rules in `**ALWAYS**` / `**NEVER**` form. Each rule is enforceable, not aspirational. Drawn from real incidents. |
+| **`## Critical`** | Yes | 5–9 hard rules is the target (several skills run 11–16 today — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form. Each rule is enforceable, not aspirational. Drawn from real incidents. |
 | **`## What's in each file`** | When multi-file | Mini-index table mapping `SKILL.md` / `reference.md` / `templates.md` / `<topic>.md` to purpose. Includes the "boundary rule" callout. |
 | **Workflow / phases / architecture / decision tree** | Usually | The skill's substance: numbered checklist (Workflow pattern), worked examples (Examples pattern), branched decision (Conditional pattern), or validate-loop (Feedback-loop pattern). Pick from `references/patterns.md`. |
 | **`## Anti-patterns`** | Yes | Bulleted ❌ list of mistakes that real authors hit. Each anti-pattern names what to do instead. |
@@ -139,7 +139,7 @@ If the user asks "what skills do we still need", route directly to the Routed Sk
 
 ### Phase 2: Position in topology
 
-Almost everything lands at **Layer 2** (agent-decides skill). Layer 0 is reserved for `~/.claude/CLAUDE.md` (the always-on orchestrator); Layer 1 for the glob-attached test rules.
+Almost everything lands at **Layer 2** (agent-decides skill). Layer 0 is the always-on constitution, `CLAUDE.md`. Layer 1 is glob-attached rules, for a repository that has them — this toolkit ships none.
 
 Pick the **cluster** for cross-linking siblings:
 
@@ -179,7 +179,7 @@ Anthropic constraints: each `references/<file>.md` is **one level deep**; refere
 **Mandatory structure** (see § Standardized SKILL.md structure for the rationale):
 
 1. Opener (1 paragraph)
-2. `## Critical` block (5-9 rules)
+2. `## Critical` block (5–9 rules is the target)
 3. `## What's in each file` table (when multi-file)
 4. Workflow / phases / decision tables
 5. `## Anti-patterns`
@@ -354,7 +354,7 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 
 - [ ] Frontmatter: `name` matches folder, `description` ≤ 1024 chars third-person pushy with WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers, `metadata.category` set.
 - [ ] Opener: one paragraph, paired-rule callout if applicable.
-- [ ] `## Critical` block present at top — 5-9 hard rules in `**ALWAYS**` / `**NEVER**` form.
+- [ ] `## Critical` block present at top — 5–9 hard rules is the target (several skills run 11–16 today — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form.
 - [ ] `## What's in each file` table present when the skill has reference / templates / topic siblings.
 - [ ] Workflow / decisions / patterns body — uses one or more of the four patterns from `references/patterns.md`. Project signature device (table / mermaid / numbered checklist) present.
 - [ ] `## Anti-patterns` section with ❌ list — each anti-pattern names the fix.

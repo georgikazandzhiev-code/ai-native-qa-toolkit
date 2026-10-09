@@ -59,7 +59,7 @@ orchestrates the full authoring workflow on top of it.
 ## Critical
 
 <!--
-REQUIRED. 5-9 hard rules in **ALWAYS** / **NEVER** form. Each rule must be
+REQUIRED. 5–9 hard rules (the target) in **ALWAYS** / **NEVER** form. Each rule must be
 enforceable, not aspirational. Drawn from real incidents, not theory.
 
 The Critical block is the #1 thing future authors of this skill rely on —

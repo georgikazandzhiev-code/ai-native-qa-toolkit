@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 2.1.0
+version: 2.1.1
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -21,7 +21,7 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 - **ALWAYS** clean up created resources via the matching helper in `helpers/app/<resource>.ts` inside `test.afterEach` or `test.afterAll`. UI tests delete via the API, not via the UI — the helper layer owns the canonical delete. Why: UI delete adds 5–10 seconds per test and amplifies flake when CI is busy.
 - **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway checks, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
 - **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
-- **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the test run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test`, so it fails the lint gate rather than depending on review.
+- **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the test run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test` for `if`, `switch`, a control-flow ternary and an in-body `test.skip()`; an `&&` short-circuit is a review point — the lint can't tell it from a legitimate boolean expression.
 - **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-regression` / `npm run app-api` etc. for whole tag groups. A test that fails locally is not complete.
 
 ## What's in each file (read this before reaching for another file)

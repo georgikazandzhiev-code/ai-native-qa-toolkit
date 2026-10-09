@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 1.0.3
+version: 1.0.4
 description: >-
   Generate requirements and test cases from a user story or acceptance criteria — 6-section package:
   story analysis, functional requirements, categorized test cases, security & compliance, k6

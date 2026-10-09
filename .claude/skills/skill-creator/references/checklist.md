@@ -60,7 +60,7 @@ The validator checks structure; the human validates *content*.
 The standardized SKILL.md structure mandates every section below. The validator checks that each section heading is present; review checks that its content earns its place. Skills missing any section are not ready to ship.
 
 - [ ] **Opener** — one paragraph, paired-rule callout (or "(none)" explicitly).
-- [ ] **`## Critical`** block at top — 5–9 hard rules in `**ALWAYS**` / `**NEVER**` form. Each rule enforceable, not aspirational. Drawn from real incidents.
+- [ ] **`## Critical`** block at top — 5–9 hard rules (the target; trim a longer block) in `**ALWAYS**` / `**NEVER**` form. Each rule enforceable, not aspirational. Drawn from real incidents.
 - [ ] **`## What's in each file`** table when the skill has supplementary files (`reference.md`, `templates.md`, `<topic>.md`, `assets/`). Skip when single-file.
 - [ ] **Workflow / phases / decision tables / architecture map** — the skill's substance. Use one or more body patterns from [`patterns.md`](patterns.md).
 - [ ] **`## Anti-patterns`** with bulleted ❌ list. Each anti-pattern names the fix.

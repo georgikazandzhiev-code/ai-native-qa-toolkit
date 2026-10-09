@@ -9,7 +9,7 @@ Skeletons only. Rules and lifecycle live in [`SKILL.md`](SKILL.md).
 id: <kebab-case-slug>              # must equal the filename
 domain: api | ui | flake | data | perf | security | build
 tier: candidate                    # candidate | active | canonical | retired
-evidence: EXECUTED                 # EXECUTED | STATIC | INFERRED | CONJECTURE
+evidence: EXECUTED                 # EXECUTED | STATIC | INFERRED
 uses: 1
 successes: 1
 failures: 0

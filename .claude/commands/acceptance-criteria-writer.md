@@ -1,5 +1,6 @@
 ---
 argument-hint: "[feature description | screenshot | @file | Jira key]"
+disable-model-invocation: true
 description: Act as a Business Analyst — transform informal text descriptions or screenshots into high-quality user stories and Gherkin (Given-When-Then) acceptance criteria, with bolded GIVEN/WHEN/THEN/AND keywords each on their own line. Precise, technical, developer-ready.
 ---
 
