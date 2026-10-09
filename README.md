@@ -1,6 +1,6 @@
 # AI-Native QA Toolkit
 
-A governance layer for AI-assisted quality engineering: **28 on-demand skills** and a written engineering constitution that define what "done" means *before* an agent writes a line of test code.
+A governance layer for AI-assisted quality engineering: **30 on-demand skills** and a written engineering constitution that define what "done" means *before* an agent writes a line of test code.
 
 Built for [Claude Code](https://claude.com/claude-code); the skills are plain Markdown and port to any agent harness that supports on-demand instruction loading.
 
@@ -71,7 +71,7 @@ Full per-case detail, every defect, and the remaining work: **[BENCHMARK.md](BEN
 
 **Effectiveness & risk** — `mutation-testing` · `defect-prediction` · `qe-pattern-memory` · `flakiness-triage` · `debugging`
 
-**Specialist** — `owasp-security-testing` · `accessibility-testing` · `k6-load-testing` · `playwright-cli` · `frontend-cross-check` · `pr-review`
+**Specialist** — `owasp-security-testing` · `quality-gate` · `message-queue-testing` · `accessibility-testing` · `k6-load-testing` · `playwright-cli` · `frontend-cross-check` · `pr-review`
 
 Four of these are worth calling out, because they are the parts most AI-QA tooling skips:
 
@@ -149,7 +149,7 @@ Verified by fault injection rather than assumption: a 13 → 6 drop across six c
 
 `npm run check:bump` is the advisory companion — it warns when a `SKILL.md` changed against the base ref while its `version` did not. Never blocking: failing CI over a forgotten patch bump trains people to bump meaninglessly. What it prevents is the version quietly ceasing to describe the file, which is the point at which eval history starts to lie.
 
-**Current coverage: 3 of 28 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
+**Current coverage: 3 of 30 skills have recorded history.** That is the honest limit on any claim about the toolkit as a whole.
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
