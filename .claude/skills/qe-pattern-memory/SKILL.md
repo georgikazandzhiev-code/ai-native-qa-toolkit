@@ -1,6 +1,6 @@
 ---
 name: qe-pattern-memory
-version: 1.1.1
+version: 1.1.2
 description: Persist and reuse what the agent learns about a codebase across sessions — a git-tracked, human-reviewed pattern store with confidence scoring, tier promotion, and falsification. Use when a session discovers a reusable fact (a recurring flake cause, a locator that survives re-renders, an endpoint quirk, a cleanup ordering rule), when starting work on a repo the team has touched before, or when the same discovery is being re-derived a second time. Trigger phrases — "remember this pattern", "we already learned this", "load what we know about this repo", "why did we do it this way last time", "promote this pattern", "this pattern is wrong". Do NOT use for repo-specific static catalogs that never change (keep those in the repository's own repo-context skill). Do NOT use for one-off session notes with no reuse value (leave them in the PR description). Do NOT use for framework conventions that belong in a rule (use the `skill-creator` skill to author a skill instead).
 metadata:
   category: cross-cutting
@@ -8,7 +8,7 @@ metadata:
 
 # QE Pattern Memory
 
-Cross-session memory for quality engineering. Every session an agent discovers things — that a given API returns `201` with an empty body, that a Radix dropdown needs anchor-and-drill, that deleting a synthetic before its probe throws `409`. Without a store, the next session re-derives all of it, badly. This skill defines **where** those learnings live, **how** they earn confidence, and **who** approves promotion — so the store becomes an asset instead of a pile of stale guesses.
+Cross-session memory for quality engineering. Every session an agent discovers things — that a given API returns `201` with an empty body, that a Radix dropdown needs anchor-and-drill, that deleting a job before its assigned worker throws `409`. Without a store, the next session re-derives all of it, badly. This skill defines **where** those learnings live, **how** they earn confidence, and **who** approves promotion — so the store becomes an asset instead of a pile of stale guesses.
 
 The failure mode this prevents: an agent that "remembers" something wrong and confidently applies it for six months.
 
@@ -111,7 +111,7 @@ Write a pattern only when all three hold. If any fails, the learning belongs in 
 Then:
 
 1. **Search first.** `grep -ri "<keyword>" .qe-memory/` — including `retired/`. An existing pattern gets its counters incremented, not a duplicate sibling. A retired pattern being rediscovered is itself a finding worth noting.
-2. **Create the file** from `templates.md` at `.qe-memory/patterns/<slug>.md`, slug in kebab-case, named for the claim not the symptom (`probe-delete-before-synthetic-409`, not `weird-409-bug`).
+2. **Create the file** from `templates.md` at `.qe-memory/patterns/<slug>.md`, slug in kebab-case, named for the claim not the symptom (`worker-delete-before-job-409`, not `weird-409-bug`).
 3. **Label the evidence** and attach the artifact — the command and its output for `EXECUTED`, the data source for `STATIC`.
 4. **Set `tier: candidate`**, `uses: 1`, and `successes`/`failures` to reflect what actually happened.
 5. **Add one line to `INDEX.md`.**
@@ -133,7 +133,7 @@ When a stored pattern is applied and does not hold, this is the highest-value pa
 - ❌ Storing a bug ("endpoint returns 500 on empty body"). A bug goes in Jira. Store the *pattern* if it teaches something durable about the system; otherwise file the ticket and move on.
 - ❌ Writing `tier: canonical` in the session that discovered the pattern. Promotion is a human act, in a PR.
 - ❌ Storing a pattern with `evidence: INFERRED` and then using it to gate a decision. Inferred is a lead; execute the check and upgrade the label, or do not rely on it.
-- ❌ An `INDEX.md` line that restates the slug (`probe-delete-order — about probe delete order`). The line must carry the *claim*, so the index is usable without opening files.
+- ❌ An `INDEX.md` line that restates the slug (`worker-delete-order — about worker delete order`). The line must carry the *claim*, so the index is usable without opening files.
 - ❌ Letting `uses` grow without ever touching `failures`. A store where nothing ever fails is not being maintained; it is being flattered.
 - ❌ Deleting a wrong pattern with `rm`. Retire it — the next agent must not re-derive a dead end.
 - ❌ One giant `patterns.md`. Per-file granularity is what makes PR review of a single pattern possible.
@@ -154,9 +154,9 @@ When a stored pattern is applied and does not hold, this is the highest-value pa
 
 ### Example 1 — A flake cause becomes an active pattern
 
-**Session 1.** A UI spec fails ~30% of CI runs. Triage (via `flakiness-triage`) finds the cause: a Radix dropdown re-renders after its data XHR, so a click on a directly-addressed item hits a stale node. Fix: anchor on the container, then drill.
+**Session 1.** A UI spec fails ~30% of CI test runs. Triage (via `flakiness-triage`) finds the cause: a Radix dropdown re-renders after its data XHR, so a click on a directly-addressed item hits a stale node. Fix: anchor on the container, then drill.
 
-Stored as `.qe-memory/patterns/radix-dropdown-anchor-and-drill.md`, `evidence: EXECUTED` (5× isolated runs before and after, output attached), `tier: candidate`, `uses: 1`, `successes: 1`.
+Stored as `.qe-memory/patterns/radix-dropdown-anchor-and-drill.md`, `evidence: EXECUTED` (5× isolated test runs before and after, output attached), `tier: candidate`, `uses: 1`, `successes: 1`.
 
 **Session 2 (three weeks later).** A different spec, same symptom. The agent reads `INDEX.md`, finds the line, applies anchor-and-drill directly — no re-diagnosis. Increments to `uses: 2`, `successes: 2`, `success_rate: 1.00` → crosses the threshold → `tier: active`.
 
