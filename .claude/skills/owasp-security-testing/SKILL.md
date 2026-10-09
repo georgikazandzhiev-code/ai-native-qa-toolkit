@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 2.0.2
+version: 2.1.0
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -16,6 +16,7 @@ Non-negotiable. Each rule below is what separates a real security test from secu
 
 - **ALWAYS test authorization from a second principal's point of view.** The single highest-value API test is: seed an object as principal A, request it as principal B (different tenant / lower role / `USER_ACCESS_TOKEN_ZERO`), and assert the deny status the contract documents — typically `404` across tenants (it hides that the object exists) and `403` for a lower role in the same tenant — never `200`, and never "either". Broken Object/Function Level Authorization (BOLA/BFLA) tops the API list precisely because functional suites only ever call as the owner.
 - **NEVER loosen a test, schema, or assertion to make a security check pass.** A security finding is a **bug to report**, not a test to fix. Write the test as the contract demands, comment out the `test(...)` block with `// TODO: FIXME: <TICKET>`, and file the finding (`bug-helper`). Mirrors `api-testing` § Skipping a test for a real backend bug.
+- **NEVER file a finding you did not prove — No Report Without Proof.** A filed security bug carries an **executed** reproduction: the test ran against the authorized environment and the response demonstrates the hole (the cross-tenant call returned `200` with the other tenant's data; the payload came back un-neutralised where it is rendered). A code smell read from the source ("this handler concatenates the id into SQL") is a **review note routed to verification**, never a filed vulnerability. Label every finding by its evidence — **EXECUTED** (ran it, attach request + response), **STATIC** (read from a schema/config/header, name the source), **INFERRED** (reasoned, not run) — the same classes `qe-pattern-memory` uses. Only EXECUTED and STATIC gate a release or open a bug; INFERRED goes to manual review and is upgraded by running the check, never filed as-is. This is what keeps the suite free of false positives, and it is reporting discipline, not a licence to exploit — the destructive/unauthorized boundary below is unchanged.
 - **NEVER run destructive, DoS, mass-enumeration, or unauthorized attacks.** QA security tests run only against an **authorized test environment** with **seeded** data. No credential stuffing against real accounts, no volumetric floods (that is `k6-load-testing` with explicit thresholds), no testing systems you were not asked to test.
 - **ALWAYS seed both a privileged and an under-privileged principal in setup.** Access-control tests need a real "should-not" identity — a second tenant's token, a lower-role token, or the no-scope `USER_ACCESS_TOKEN_ZERO`. If that identity is not provisioned, comment the test out with `// TODO: FIXME:` — do not fake the assertion or drop the row.
 - **NEVER assert on exact error text.** Assert **status + schema shape** (401 gateway shape, 403 empty body, 404 error envelope) per `api-testing` § Error envelopes. Leaked stack traces or verbose errors are themselves a finding — capture the leak, don't pin the wording.
@@ -76,6 +77,8 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 - ❌ **Volumetric / brute-force loops inside a Playwright spec** to "test rate limiting". That is a load test — use `k6-load-testing` with thresholds. Here, assert only that a documented limit returns `429`.
 - ❌ **Claiming crypto / dependency / logging coverage.** These are not black-box QA. Flag them as out-of-scope with the tooling that owns them; never write a hollow test to tick the box.
 - ❌ **Real credentials or PII in payloads/fixtures.** Use faker + synthetic data. This is both a framework rule and the leak the tests hunt for.
+- ❌ **Filing an unproven finding.** A SAST hit or a suspicious line is not a vulnerability until a test demonstrates it against the authorized environment. Report `EXECUTED`/`STATIC` findings as bugs; keep `INFERRED` ones as review notes that say what to run to confirm — never a ticket that claims a hole nobody reproduced.
+- ❌ **Chasing a finding past the QA boundary to "fully exploit" it.** Proving the deny fails (the cross-tenant `200`, the reflected payload) is the QA target. Extracting data, chaining to other hosts, or escalating is a pentest engagement with its own written authorization — out of scope here. Capture the proof that the control failed and stop.
 
 ## Self-review checklist
 
@@ -87,6 +90,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 - [ ] Auth tests cover missing token (`401`), wrong-issuer/expired token (`401`), and no-scope token (`403`) — status + schema shape only.
 - [ ] No exact-error-text assertions; verbose-error / stack-trace leaks captured as findings.
 - [ ] Findings are reported as bugs (commented-out test + `// TODO: FIXME: <TICKET>`), never assertion-massaged to green.
+- [ ] Every filed finding is `EXECUTED` or `STATIC` with the reproduction attached; `INFERRED` suspicions stay review notes that name the check to run, not bugs (No Report Without Proof).
 - [ ] No real secrets/PII/prod data anywhere; faker + synthetic only.
 - [ ] Out-of-QA-scope categories (crypto, components, logging) are explicitly flagged, not silently skipped.
 - [ ] Tests reuse the project fixtures, tag whitelist, and cleanup; no parallel suite.
@@ -102,7 +106,7 @@ User says: _"Make sure a tenant can't read another tenant's job."_
 3. **Risk** — API1 (BOLA), from `api-top10.md`.
 4. **Test** — `Verify GET /jobs/:id returns 404 for a cross-tenant caller`: call the endpoint with tenant B's token and A's `jobId`, assert status is `404` (existence hidden), and `APIErrorSchema.parse(body)`. A `200` with A's data is the bug.
 5. **Cleanup** — delete the job as tenant A in `afterAll`.
-6. **If it returns 200** — comment the test out with `// TODO: FIXME: PROJ-XXXX — cross-tenant read exposes job`, file via `bug-helper`.
+6. **If it returns 200** — the finding is `EXECUTED` (the request and the leaking response are the proof). Comment the test out with `// TODO: FIXME: PROJ-XXXX — cross-tenant read exposes job` and file via `bug-helper` with that request/response attached.
 
 ### Example 2 — BFLA on an admin-only operation
 
@@ -131,6 +135,7 @@ User says: _"Check the job-name field is safe against XSS."_
 | BFLA test can't run — no non-admin token | Under-privileged principal not provisioned | Comment out with `// TODO: FIXME: re-enable when a non-admin/no-scope token is added` (mirrors the `USER_ACCESS_TOKEN_ZERO` 403 caveat in `api-testing`). Never assert against the admin token instead. |
 | `Schema.parse(body)` throws on a 403 security test | 403 has an empty body; parsing `null` against an object schema fails | Assert `expect(body).toBeNull()` for 403/405; use `GatewayErrorSchema` for 401. See `api-testing` § Error envelopes. |
 | Injection test passes but you're unsure it proved anything | Only the input-reject branch was asserted | Add the safe-handling branch: assert the payload is neutralised where it is returned/rendered, not just rejected. |
+| SAST / scanner lists findings but no test reproduces them | They are `INFERRED` until run | Keep them as review notes, each naming the test to run. File a bug only once a test demonstrates it (`EXECUTED`). No Report Without Proof. |
 | Team asks for "OWASP crypto / dependency coverage" in Playwright | Category is not black-box QA-automatable | Route to SAST / dependency scanning / crypto review; document the gap in the review. Do not write a hollow test. |
 | Rate-limit test is flaky / hammers the API | Volumetric testing inside a functional spec | Move to `k6-load-testing` with explicit thresholds. Keep only a single "limit returns 429" functional assertion here. |
 

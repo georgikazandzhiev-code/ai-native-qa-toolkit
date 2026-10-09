@@ -14,7 +14,7 @@ A number in prose is a claim. A number a script recomputes is a fact. Where the 
 
 ```mermaid
 flowchart LR
-  A["AI-driven SDLC<br/>competency model"] --> B["QA AI toolkit<br/>constitution + 28 skills"]
+  A["AI-driven SDLC<br/>competency model"] --> B["QA AI toolkit<br/>constitution + 30 skills"]
   B --> C["Surfaces<br/>Cursor · Claude Code · MCP"]
   C --> D["QA engineers"]
   D --> E["Assessments<br/>merged artifacts, not quizzes"]
@@ -208,14 +208,14 @@ Out of band, immediately, on any of: a `canonical` pattern falsified; an eval re
 - **That a review happens at all.** `.github/CODEOWNERS` *requests* review; it requires it only behind a protected branch with "Require review from Code Owners" enabled. This repository is public, so that setting is available. As of 2026-10-01 GitHub's public API (`GET /repos/{owner}/{repo}/branches/main`) shows `main` protected, with the three CI jobs (Toolkit structure, Lint plugin rules, Skill eval regression) required for everyone, administrators included, so a red pipeline does block a merge. Whether code-owner review is also required is visible only to administrators. Until that is confirmed, treat the "one reviewer" and "owner" gates in § Change classes as conventions the owner keeps, not checks the platform runs.
 - **That a reviewer actually read the diff.** No mechanism proposed here distinguishes a considered approval from a fast one.
 - **The quality of a convention** — only that it is transmitted. The eval measures whether a skill teaches the house style, not whether the house style is right. Those are different questions and only the first is measured.
-- **Anything about the 24 skills with no recorded measurement.** They are governed by this document and evidenced by nothing.
+- **Anything about the 26 skills with no recorded measurement.** They are governed by this document and evidenced by nothing.
 
 ## Current state — 2026-08-11
 
 | | |
 |---|---|
-| Skills | 28 on-demand skills — 13 domain, 6 authoring, 4 running, 5 cross-cutting |
-| Measured | 3 of 28 skills have recorded history |
+| Skills | 30 on-demand skills — 14 domain, 6 authoring, 4 running, 6 cross-cutting |
+| Measured | 3 of 30 skills have recorded history |
 | Lint rules, blocking | **17 ESLint rules**, every one firing on the known-bad tree and silent on the compliant one |
 | Validator | 15 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
 | Reviewers with merge rights | **1** |

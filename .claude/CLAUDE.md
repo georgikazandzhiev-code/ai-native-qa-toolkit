@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 1.4.0 -->
+<!-- toolkit-version: 1.6.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -163,8 +163,10 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `qe-pattern-memory` | Cross-session learning — git-tracked pattern store with confidence, tier promotion and falsification |
 | `pr-review` | Pre-push self-review against MUSTs and WON'Ts |
 | `k6-load-testing` | Load / performance test work |
+| `message-queue-testing` | Async messaging / queue / event-bus tests — delivery guarantees, ordering, dead-letter routing, retry & poison messages, idempotency, schema-validated envelopes |
 | `accessibility-testing` | Accessibility (a11y) tests — axe scans per page state with `@axe-core/playwright`, WCAG A/AA tags, keyboard and focus checks, ARIA snapshots, known-violations policy |
 | `owasp-security-testing` | Security testing — OWASP Top 10 (web) + API Security Top 10 mapped to QA tests; access control / BOLA / BFLA / injection / XSS / SSRF; pre-release security review gate |
+| `quality-gate` | "Is this release-ready / can we ship / go-no-go" — synthesise coverage, security, flake, risk into one auditable verdict; thresholds from config, overrides need a named human |
 | `ai-native-workflow` | "How should I work with AI here?", multi-skill planning |
 | `build-alternatives` | About to ask the human to choose between ways of doing a clear task — build every way on `alt/` branches, then ask which to keep |
 | `skill-creator` | Authoring or refactoring a skill (manual) — owns the SKILL.md structure contract |
