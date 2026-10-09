@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 2.0.1
+version: 2.0.2
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -20,7 +20,7 @@ Every spec file in this project follows a strict structure: specific imports, ta
 
 This skill exists so that **every new spec starts identical** regardless of who (or what) creates it. The templates below are not suggestions — they're the canonical starting point. Deviation means bugs that slip past CI.
 
-The steps are ordered deliberately: determine type → read the rule → study a real example → generate → create supporting files → update the rule. Skipping "study an existing spec" (Step 3) is the #1 cause of specs that look right but violate project patterns in subtle ways.
+The steps are ordered deliberately: determine type → read the rule → study a real example → generate → create supporting files → update the routing section. Skipping "study an existing spec" (Step 3) is the #1 cause of specs that look right but violate project patterns in subtle ways.
 
 ## Critical
 
@@ -221,9 +221,9 @@ For a new resource/endpoint, you may also need:
 | `fixtures/pom/page-object-fixture.ts` | New page object — register fixture |
 | `test-data/app/<resource>.json` | Shared test data (validation rules, dropdown options) |
 
-## Step 7: Update the Rule File
+## Step 7: Update the Routing Section
 
-After creating the spec, update the matching router in the repository's repo-context skill (`api-router.md` or `ui-router.md`) with:
+After creating the spec, update the API or UI routing section of the repository's repo-context skill (in any other repo, its own `CLAUDE.md` / project rules) with:
 - New endpoint context section (if adding a new resource)
 - Test inventory (describe blocks + test count)
 - Helpers and schemas created

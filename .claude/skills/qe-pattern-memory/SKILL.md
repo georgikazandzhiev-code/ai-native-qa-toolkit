@@ -1,6 +1,6 @@
 ---
 name: qe-pattern-memory
-version: 1.2.0
+version: 1.2.1
 description: Persist and reuse what the agent learns about a codebase across sessions — a git-tracked, human-reviewed pattern store with confidence scoring, tier promotion, and falsification. Use when a session discovers a reusable fact (a recurring flake cause, a locator that survives re-renders, an endpoint quirk, a cleanup ordering rule), when starting work on a repo the team has touched before, or when the same discovery is being re-derived a second time. Trigger phrases — "remember this pattern", "we already learned this", "load what we know about this repo", "why did we do it this way last time", "promote this pattern", "this pattern is wrong". Do NOT use for repo-specific static catalogs that never change (keep those in the repository's own repo-context skill). Do NOT use for one-off session notes with no reuse value (leave them in the PR description). Do NOT use for framework conventions that belong in a rule (use the `skill-creator` skill to author a skill instead).
 metadata:
   category: cross-cutting
@@ -18,7 +18,7 @@ This skill has no paired rule (rule disposition: skill-only).
 
 ## Critical
 
-- **NEVER write a pattern without an evidence label.** Every pattern carries `evidence: EXECUTED | STATIC | INFERRED` — the constitution's three labels. `EXECUTED` means a command was run and its output is attached; `STATIC` means it was read from source or a contract. `INFERRED` may be stored but **must never gate a decision** — it is a lead, not a fact. A guess with no reasoning behind it is not stored at all. An unlabelled pattern is indistinguishable from a hallucination.
+- **NEVER write a pattern without an evidence label.** Every pattern carries `evidence: EXECUTED | STATIC | INFERRED` — the constitution's three labels. `EXECUTED` means a command was run and its output is attached; `STATIC` means it was read from source or a contract. `INFERRED` may be stored but **must never gate a decision** — it is a lead, not a fact. A guess with no reasoning behind it is not stored at all. An existing pattern stored as `evidence: CONJECTURE` (the earlier fourth label) is read as `INFERRED` — it may suggest, never gate — so older stores stay valid; relabel it the next time it is touched. An unlabelled pattern is indistinguishable from a hallucination.
 - **NEVER promote a pattern to `canonical` inside an agent session.** `candidate → active` may be automatic on evidence. `active → canonical` requires a human in a PR review. Canonical patterns steer future generation; unreviewed self-promotion is how a wrong belief becomes framework law.
 - **ALWAYS record failures, not just successes.** When a stored pattern is applied and does **not** hold, increment `failures` and append to `## Falsifications` in the same edit. A store that only counts wins converges on false confidence — the exact false-green problem the constitution forbids.
 - **NEVER delete a falsified pattern silently.** Set `tier: retired` with a `retired_reason`. The next agent needs to know the idea was tried and failed, or it will re-derive it.
