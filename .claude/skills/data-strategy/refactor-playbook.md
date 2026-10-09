@@ -266,6 +266,7 @@ Module-level aliases conceal the canonical name from `rg`, encourage copy-paste 
 1. `rg "process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/ helpers/ -l` to enumerate the files using tokens.
 2. Within each file, `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_"` finds the aliases.
 3. Replace each alias with the `tokens` accessor from `config/env.ts`, called at the call site (not re-aliased at module level — that runs before the setup project has written the token):
+   <!-- snippet-lint: skip — a diff of two separate places in a spec (the token alias and a call site), not one compilable unit -->
    ```typescript
    - const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
    - // ...

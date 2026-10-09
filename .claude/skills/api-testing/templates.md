@@ -1285,7 +1285,11 @@ test.describe("POST /jobs", () => {
     const createdJobIds: string[] = [];
 
     test("Verify POST /jobs returns 201", { tag: "@App-API" }, async ({ apiRequest }) => {
-        // ... POST worker, POST job, push ids ...
+        // ... POST worker, push its id into createdWorkerIds ...
+        const { status, body } = await createJob(apiRequest, buildCreateJobBody(createdWorkerIds), tokens.full());
+        expect(status).toBe(201);
+        expect(CreateJobResponseSchema.parse(body)).toBeTruthy();
+        createdJobIds.push(body.jobId);
     });
 
     test.afterAll(async ({ apiRequest }) => {
@@ -1378,7 +1382,9 @@ test(
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_JOBS);
         // qase.id(123);
-        // ...
+        const { status, body } = await listJobs(apiRequest, tokens.full());
+        expect(status).toBe(200);
+        expect(ListJobsResponseSchema.parse(body)).toBeTruthy();
     },
 );
 ```

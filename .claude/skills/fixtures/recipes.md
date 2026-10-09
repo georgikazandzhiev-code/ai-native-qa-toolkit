@@ -59,6 +59,7 @@ import { faker } from '@faker-js/faker';
 
 test.describe('Backup job detail view', () => {
     const createdJobIds: string[] = [];
+    const name = `qa-backup-view-${faker.string.alphanumeric(8).toLowerCase()}`;
     let workerId: string;
 
     test.beforeAll(async ({ apiRequest }) => {
@@ -70,7 +71,6 @@ test.describe('Backup job detail view', () => {
         expect(worker.status).toBe(201);
         workerId = worker.body.workerId;
 
-        const name = `qa-backup-view-${faker.string.alphanumeric(8).toLowerCase()}`;
         const { status, body } = await createJob(
             apiRequest,
             buildCreateBackupJobBody([workerId], { name }),
@@ -90,8 +90,11 @@ test.describe('Backup job detail view', () => {
         );
     });
 
-    test('detail view renders the seeded job', async ({ jobsPage }) => {
-        /* drive the UI via the POM */
+    test('detail view renders the seeded job', { tag: '@App-regression' }, async ({ jobsPage }) => {
+        await jobsPage.open();
+        await jobsPage.searchByName(name);
+        await jobsPage.openRowActionMenu(jobsPage.getRowByName(name), 'View details');
+        await expect(jobsPage.detailsSheet).toContainText(name);
     });
 });
 ```
@@ -117,7 +120,7 @@ test.describe('Invite email loop', () => {
         await mailpit.deleteEmailsForRecipient(recipient);
     });
 
-    test('user receives an invite email', async ({ mailpit /*, page objects */ }) => {
+    test('user receives an invite email', { tag: '@App-regression' }, async ({ mailpit /*, page objects */ }) => {
         /* trigger the flow that emails `recipient` */
         const email = await mailpit.getLastEmail(recipient);
         expect(email).not.toBeNull();
@@ -146,7 +149,7 @@ test.describe('Guest navigation', () => {
         await loginPage.open();
     });
 
-    test('guest sees the login form', async ({ loginPage }) => {
+    test('guest sees the login form', { tag: '@App-regression' }, async ({ loginPage }) => {
         await expect(loginPage.emailInput).toBeVisible();
     });
 });
@@ -164,8 +167,9 @@ Trigger: one block of tests needs a different persona than the project default.
 test.describe('Admin-only view', () => {
     test.use({ storageState: '.auth/app/appMainUserSession.json' });
 
-    test('renders admin controls', async ({ dashboardPage }) => {
-        /* ... */
+    test('admin session lands on the dashboard', { tag: '@App-regression' }, async ({ sideNavigation, dashboardPage }) => {
+        await sideNavigation.navigateToDashboard();
+        await dashboardPage.verifyPageLoaded();
     });
 });
 ```

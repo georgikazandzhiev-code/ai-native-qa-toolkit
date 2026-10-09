@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.8
+version: 2.0.9
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -222,6 +222,7 @@ Verification methods (the `xxxAndVerify()` pattern, e.g. `loginAndVerify`) may u
 
 Every new app POM is registered in `fixtures/pom/page-object-fixture.ts` in the same edit as the class file. The diff has exactly two parts:
 
+<!-- snippet-lint: skip — two parts of fixture registration in one block: the FrameworkFixtures type entry and the fixture body inside base.extend -->
 ```typescript
 // 1. Type entry on FrameworkFixtures
 export type FrameworkFixtures = {
@@ -263,6 +264,7 @@ test.describe("Settings — Profile", () => {
       qase.suite(SUITES.APP_SETTINGS);
       // qase.id(N);
       await settingsPage.saveProfile({ "profile.firstName": "Jordan" });
+      await expect(settingsPage.successToast).toBeVisible();
     },
   );
 });

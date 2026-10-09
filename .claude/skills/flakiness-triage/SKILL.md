@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 2.1.0
+version: 2.1.1
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -262,6 +262,7 @@ The most common per-test flake causes in this framework, most common first (roug
 2. Trace replay: the notifications XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/notifications` resolves.
 
 **Fix:** Give the page object a `refreshNotifications()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: `BasePage` already provides one, and redefining it would silently override the base behaviour.)
+<!-- snippet-lint: skip — two files in one block: the page-object method, then the spec lines that call it -->
 ```ts
 // NotificationsPage
 async refreshNotifications(): Promise<void> {

@@ -411,6 +411,7 @@ Invented testids like `notification-success` / `notification-error` must not be 
 
 ### Good
 
+<!-- snippet-lint: skip — two fragments in one block: a page-object method and a separate assertion line -->
 ```typescript
 async selectChartTimeframe(timeframe: string): Promise<void> {
     const button = this.getChartTimeframeButton(timeframe);

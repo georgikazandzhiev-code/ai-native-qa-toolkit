@@ -7,11 +7,10 @@ Side-by-side good/bad examples for every pattern in [SKILL.md](SKILL.md). All ex
 ### Good
 
 ```typescript
-test('rejects empty job name', async ({ page }) => {
+test('creates a job under a unique name', { tag: '@App-regression' }, async ({ createJobPage, jobsPage }) => {
     const jobName = `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`;
-    await page.getByLabel('Name').fill(jobName);
-    await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByText('Name is required')).toBeVisible();
+    await createJobPage.createJobFromSheet({ name: jobName });
+    await expect(jobsPage.getRowByName(jobName)).toBeVisible();
 });
 ```
 
@@ -163,8 +162,12 @@ Fix: `return createWorkerData({ region: 'EU', location: 'EU-Amsterdam' });`.
 import httpJobValidation from '../../../../test-data/app/httpJobValidation.json';
 
 for (const invalidName of httpJobValidation.invalidNames) {
-    test(`rejects invalid name: '${invalidName}'`, async ({ apiRequest }) => {
-        // ...
+    test(`rejects invalid name: '${invalidName}'`, { tag: '@App-API' }, async ({ apiRequest }) => {
+        // workerId is seeded in beforeAll
+        const body = buildCreateHTTPJobBody([workerId], { name: invalidName });
+        const { status, body: err } = await createJob(apiRequest, body, tokens.full());
+        expect(status).toBe(400);
+        expect(APIErrorSchema.parse(err)).toBeTruthy();
     });
 }
 ```
@@ -256,10 +259,12 @@ Test usage:
 ```typescript
 const workerIds: string[] = [];
 
-test('seeded worker path', async ({ apiRequest }) => {
+test('seeded worker path', { tag: '@App-API' }, async ({ apiRequest }) => {
     const worker = await setupTestWorker(apiRequest, tokens.full());
     workerIds.push(worker.id);
-    // ...
+    const { status, body } = await getWorker(apiRequest, worker.id, tokens.full());
+    expect(status).toBe(200);
+    expect(body.worker.name).toBe(worker.name);
 });
 
 test.afterAll(async ({ apiRequest }) => {
@@ -383,7 +388,7 @@ Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*` (t
 test.describe('POST /workers', () => {
     const workerIds: string[] = [];
 
-    test('creates a worker', async ({ apiRequest }) => {
+    test('creates a worker', { tag: '@App-API' }, async ({ apiRequest }) => {
         const { body, status } = await apiRequest<CreateWorkerResponse>({
             method: 'POST',
             url: appConfig.api.WORKERS,
