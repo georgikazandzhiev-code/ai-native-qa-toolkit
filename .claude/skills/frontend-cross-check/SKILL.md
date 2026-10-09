@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.3
+version: 1.0.4
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -58,7 +58,7 @@ Pick the right grep for the question. Examples:
 | What's the schema-form field emission pattern? | `grep -nE "data-testid" <sibling-repos>/frontend/src/components/schema-form/schema-form.tsx` |
 | What strings does `<component>.tsx` emit? | Read the file directly: `cat <sibling-repos>/frontend/src/components/<area>/<file>.tsx` |
 | What Paraglide message keys exist? | `cat <sibling-repos>/frontend/messages/en.json` |
-| What route file maps to URL `/synthetics/:id`? | `ls <sibling-repos>/frontend/src/routes/` (TanStack file-based — `synthetics.$syntheticId.tsx` → `/synthetics/:syntheticId`) |
+| What route file maps to URL `/jobs/:id`? | `ls <sibling-repos>/frontend/src/routes/` (TanStack file-based — `jobs.$jobId.tsx` → `/jobs/:jobId`) |
 | What Radix primitives are imported? | `grep -rn "from 'radix-ui'\|@radix-ui" <sibling-repos>/frontend/src/components/ui/` |
 | Does the app use Sonner? | `grep -rn "from 'sonner'" <sibling-repos>/frontend/src/` |
 
@@ -85,7 +85,7 @@ For things the source can't tell you (does the toast actually appear? what does 
 - ❌ Editing the frontend repo from here. This skill is read-only.
 - ❌ Treating the frontend's test files (`*.test.tsx`, `*.stories.tsx`) as the source of truth for production behavior. The component file (`<name>.tsx`) is canonical; tests and stories may use stub data.
 - ❌ Confirming a claim against `messages/en.json` only. Paraglide is set up but the codebase still has many inline English literals — both sources matter.
-- ❌ Treating routes as URLs. TanStack Router is file-based — `synthetics.$syntheticId.tsx` is the route file, **`/synthetics/:syntheticId`** is the URL. Translate carefully.
+- ❌ Treating routes as URLs. TanStack Router is file-based — `jobs.$jobId.tsx` is the route file, **`/jobs/:jobId`** is the URL. Translate carefully.
 - ❌ Assuming the QA orchestrator's claim about the frontend is correct without verification. The orchestrator was authored before this skill existed; cross-checks may catch drift.
 - ❌ Confirming a Radix primitive by checking `package.json` `@radix-ui/*` deps only. Many primitives are imported from the `radix-ui` umbrella package via shadcn components in `src/components/ui/` — check the import lines, not just the manifest.
 
@@ -103,7 +103,7 @@ For things the source can't tell you (does the toast actually appear? what does 
 
 ### Example 1 — Verify the schema-form testid pattern before authoring a page object
 
-User says: *"Add a page object for the new policy form."*
+User says: *"Add a page object for the new notification-rule form."*
 
 1. **`git pull` frontend.**
 2. **Grep:** `grep -nE "data-testid" <sibling-repos>/frontend/src/components/schema-form/schema-form.tsx`.
@@ -114,31 +114,31 @@ User says: *"Add a page object for the new policy form."*
 
 ### Example 2 — Capture an exact UI message before adding it to `enums/app/messages.ts`
 
-User says: *"Centralize the 'Probe registered successfully' toast text."*
+User says: *"Centralize the 'Worker registered successfully' toast text."*
 
 1. **`git pull` frontend.**
-2. **Grep:** `grep -rn "Probe registered" <sibling-repos>/frontend/src/`.
-3. Observe: `src/components/settings/probes/register-probe-sheet.tsx` calls `toast.success('Probe registered successfully')` with the inline literal — **not** a Paraglide key.
-4. **Decide source:** since this is an inline literal (not Paraglide), capture the exact string from the source: `"Probe registered successfully"`. No quotes, no period, exact case.
+2. **Grep:** `grep -rn "Worker registered" <sibling-repos>/frontend/src/`.
+3. Observe: `src/components/settings/workers/register-worker-sheet.tsx` calls `toast.success('Worker registered successfully')` with the inline literal — **not** a Paraglide key.
+4. **Decide source:** since this is an inline literal (not Paraglide), capture the exact string from the source: `"Worker registered successfully"`. No quotes, no period, exact case.
 5. Add to `enums/app/messages.ts` per the `enums` skill (when that file exists). Cross-reference the source path in the JSDoc so the next maintainer can verify.
 6. **Optional:** open the live app and trigger the action to confirm the rendered text matches the source — Paraglide may transform/format some strings, even when the codebase uses literals.
 
 ### Example 3 — Confirm a route exists before writing a UI test
 
-User says: *"Write an e2e for the alerts history page."*
+User says: *"Write an e2e for the notifications history page."*
 
 1. **`git pull` frontend.**
 2. **List routes:** `ls <sibling-repos>/frontend/src/routes/`.
-3. Observe: `alerts.history.tsx` exists → URL is `/alerts/history` (TanStack file-based: dot = path separator).
-4. Confirm by reading the route file: `cat <sibling-repos>/frontend/src/routes/alerts.history.tsx | head -20` — look for the `createFileRoute` call to verify the path string.
-5. Author the test using `/alerts/history` (or whatever the file confirms). Don't guess from the skill or the orchestrator — the route file is canonical.
+3. Observe: `notifications.history.tsx` exists → URL is `/notifications/history` (TanStack file-based: dot = path separator).
+4. Confirm by reading the route file: `cat <sibling-repos>/frontend/src/routes/notifications.history.tsx | head -20` — look for the `createFileRoute` call to verify the path string.
+5. Author the test using `/notifications/history` (or whatever the file confirms). Don't guess from the skill or the orchestrator — the route file is canonical.
 
 ### Example 4 — Cross-check a Radix primitive claim before writing a selector
 
-User says: *"The `selectors` skill says the create-monitor button is wrapped in a Radix `<Select>` — is that right, and does it change the locator?"*
+User says: *"The `selectors` skill says the create-job button is wrapped in a Radix `<Select>` — is that right, and does it change the locator?"*
 
 1. **`git pull` frontend.**
-2. **Grep:** `grep -rn "create-monitor-button" <sibling-repos>/frontend/src/`.
+2. **Grep:** `grep -rn "create-job-button" <sibling-repos>/frontend/src/`.
 3. Read the component file. Look for `import { Select as SelectPrimitive } from 'radix-ui'` (or `@/components/ui/select`) — that confirms a Radix primitive.
 4. Either way, start with Playwright's default order (`getByRole` first, test-id as fallback). Knowing it's Radix only tells you the accessible name *may* be nested or unstable. The `selectors` exception applies only if the role or label locator then fails for one of its two named reasons. A plain `<button>` from React makes that even less likely.
 
@@ -149,7 +149,7 @@ User says: *"The `selectors` skill says the create-monitor button is wrapped in 
 | `git pull` fails: "Your local changes to the following files would be overwritten" | Uncommitted local changes in the frontend clone | `cd <sibling-repos>/frontend && git status` — surface the dirty files to the human; do not stash or reset without asking. |
 | `git pull` fails: network / unreachable | Bitbucket / GitHub / VPN issue | Stop and notify the human. Working against a stale clone is not OK; do not "just proceed for now". |
 | `grep -rn` returns thousands of hits | Search term too broad (e.g. `data-testid`) | Scope by directory (`src/components/<area>/`) or by exact match (`'data-testid="schema-field-'`). |
-| The testid I'm looking for doesn't appear in source | Either testid was never added (FE didn't agree to it), OR it's dynamically composed (template literal) | Search for partial pattern (`monitor-actions-` for `monitor-actions-${id}`). If still nothing: the testid does not exist; ask FE to add one or pick a different selector strategy per the `selectors` skill priority hierarchy. |
+| The testid I'm looking for doesn't appear in source | Either testid was never added (FE didn't agree to it), OR it's dynamically composed (template literal) | Search for partial pattern (`job-actions-` for `job-actions-${id}`). If still nothing: the testid does not exist; ask FE to add one or pick a different selector strategy per the `selectors` skill priority hierarchy. |
 | The string in `messages/en.json` doesn't match the rendered UI | Paraglide may apply formatting / pluralization | Open the app via `npx playwright open` and capture the rendered text. Source is the starting point; live app is the final word for translated strings. |
 | The route file path doesn't translate cleanly to a URL | TanStack file-based routing has conventions (`.$param.tsx`, `_layout.tsx`, `index.tsx`) | Read the file's `createFileRoute('/<path>')` call — that string IS the URL. |
 | Frontend uses both inline literals AND Paraglide keys | Paraglide is set up but adoption is partial | Both are valid sources of truth at this point in the codebase. When the frontend team finishes Paraglide migration, this skill should be updated. |
