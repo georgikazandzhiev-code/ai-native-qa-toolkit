@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 2.0.6
+version: 2.0.7
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -21,8 +21,8 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, decisions, anti-patterns.** Teaches the model how to think about selectors and where they live. | **Always** — on any selector / page-object / locator task. |
 | **`reference.md`** | **Catalog of facts.** Locator API, ARIA role catalog, web-first assertion catalog, framework testid taxonomy, attribute filters / CSS hooks, FrameLocator API, POM file conventions. | **Load on lookup** — "What's the right `getByRole` for a Radix select?" / "Which testid prefix is used for job row actions?" / "What assertions auto-wait?" |
-| **`patterns.md`** | **Side-by-side good vs bad examples.** P1–P17, drawn from real page objects. | **Load During Review** — "Show me the right shape for anchor-and-drill" / "Is this `.first()` justified?" / "What does a good toast assertion look like?" |
-| **`recipes.md`** | **End-to-end recipes for full UI patterns.** Tables, sheets, Radix dropdowns, confirmation modals, Sonner toasts, iframes, navigation, pagination, downloads, tabs, OTP, hovers, network-confirmed actions, popups, search, async row creation. | **Load During Authoring** — building a new page object for a recurring UI shape; start in the matching recipe. |
+| **`patterns.md`** | **Side-by-side good vs bad examples.** P1–P18, drawn from real page objects. | **Load During Review** — "Show me the right shape for anchor-and-drill" / "Is this `.first()` justified?" / "What does a good toast assertion look like?" |
+| **`recipes.md`** | **End-to-end recipes for full UI patterns.** Tables, sheets, Radix dropdowns, confirmation modals, Sonner toasts, iframes, navigation, pagination, downloads, tabs, OTP, hovers, network-confirmed actions, popups, search, async row creation, POM-vs-spec placement, job expanded-view tests. | **Load During Authoring** — building a new page object for a recurring UI shape; start in the matching recipe. |
 
 **Boundary rule:** decisions, rules, and anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Good/bad pattern contrasts live in `patterns.md`. Full end-to-end skeletons live in `recipes.md`. **If you find rule content in a catalog file (or vice versa), it is drift — fix it before adding more.**
 
@@ -70,7 +70,7 @@ flowchart TD
 
 | Place | Rule | Example |
 |-------|------|---------|
-| **Page object getter (default)** | Any locator that is **interacted with**, or **referenced by 2+ tests/steps**, MUST live in a POM file under `pages/**`. | `jobsPage.createJobButton`, `loginPage.emailInput`, `sideNavigation.navJobsLink` |
+| **Page object getter (default)** | Any locator that is **interacted with**, or **referenced by 2+ tests/steps**, MUST live in a POM file under `pages/**`. | `jobsPage.createJobButton`, `loginPage.emailInput`, `sideNavigation.jobs` |
 | **Page object dynamic method** | Locators parameterized by data (`getRowByName(name)`, `getRunStatCardByLabel(label)`) live as POM methods returning `Locator` synchronously. | `jobsPage.getRowByName(name)` |
 | **Page object assertion method** | A short assertion expressed against a one-off element should be a **method on the POM**, not an inline locator. The framework convention is `verifyXxx()`. | `JobsPage.verifyNoResults()`, `NotificationRulesPage.verifyNoResults()` |
 | **Inline in spec — TOLERATED** | A locator used by a single test, only as an assertion target (not for interaction), where wrapping it in a POM method would inflate the POM with one-off members. | Sonner toast arrival (`page.getByText('Job "<name>" created successfully')`), empty-state markers (`expect(page.getByText('No Export Run Stats Available')).toBeVisible()`) |

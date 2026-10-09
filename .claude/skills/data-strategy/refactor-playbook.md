@@ -153,13 +153,14 @@ Update each resource helper to expose an assertion-style setup that consumes the
 // helpers/app/workers.ts
 export async function setupTestWorker(
     apiRequest: ApiRequestFn,
+    headers: string,
     overrides?: Partial<WorkerData>,
 ): Promise<CreateWorkerResponse> {
     const { status, body } = await apiRequest<CreateWorkerResponse>({
         method: 'POST',
         url: appConfig.api.WORKERS,
         baseUrl: appConfig.apiUrl,
-        headers: process.env.USER_ACCESS_TOKEN_FULL,
+        headers,
         body: createWorkerData(overrides),
     });
     expect(status).toBe(201);
@@ -169,12 +170,13 @@ export async function setupTestWorker(
 export async function teardownTestWorker(
     apiRequest: ApiRequestFn,
     id: string,
+    headers: string,
 ): Promise<void> {
     const { status } = await apiRequest<null>({
         method: 'DELETE',
         url: `${appConfig.api.WORKERS}/${id}`,
         baseUrl: appConfig.apiUrl,
-        headers: process.env.USER_ACCESS_TOKEN_FULL,
+        headers,
     });
     expect([200, 204, 404]).toContain(status);
 }

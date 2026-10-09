@@ -21,8 +21,9 @@ Cross-link from [SKILL.md](SKILL.md). For locator-by-locator API reference, see 
 13. [Network-confirmed actions](#13-network-confirmed-actions)
 14. [Multi-page (popup) flows — prescriptive](#14-multi-page-popup-flows--prescriptive)
 15. [Searching and filtering](#15-searching-and-filtering)
-16. [Async row creation (waiting for the new row)](#16-async-row-creation-waiting-for-the-new-row)
+16. [Async row creation (waiting for the new row)](#16-async-row-creation--waiting-for-the-new-row)
 17. [POM vs spec — the placement decision in one flow](#17-pom-vs-spec--the-placement-decision-in-one-flow)
+18. [Job expanded-view tests (HTTP / SFTP / stream / backup / email / webhook / `export`)](#18-job-expanded-view-tests-http--sftp--stream--backup--email--webhook--export)
 
 ---
 
@@ -591,7 +592,7 @@ async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll)
             const url = r.url();
             return (
                 (method === 'POST' || method === 'GET') &&
-                (url.includes('/_server') || url.includes('/api/run-stats'))
+                (url.includes('/_server') || url.includes('/api/v1/run-stats'))
             );
         },
         { timeout }
@@ -616,7 +617,7 @@ async createJobFromSheet(data: JobFormData): Promise<void> {
 ```
 
 Rules:
-- For server-function calls: predicate matches URL substring (`/_server` or `/api/run-stats`) + method. Swap `/_server` for the path segment your app's server-function calls carry (see the Network tab).
+- For server-function calls: predicate matches URL substring (`/_server` or `/api/v1/run-stats`) + method. Swap `/_server` for the path segment your app's server-function calls carry (see the Network tab).
 - Status codes vary in this codebase (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
 - For long-running async (the first run stats after creating an `export` job), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Job expanded-view tests below), not on the response wait.
 
