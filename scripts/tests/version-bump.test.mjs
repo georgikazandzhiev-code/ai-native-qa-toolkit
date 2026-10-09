@@ -30,6 +30,11 @@ const BASE = {
   gamma: skill('gamma', '1.0.0'),
 };
 
+// Rename cases need a body long enough for git's similarity check to pair the old and new path.
+// With the short default body, a renamed file reads as a delete plus an add, and the rename
+// branch of the script would never run.
+const LONG = Array.from({ length: 40 }, (_, i) => `Rule ${i + 1}: a line of skill text that stays the same.`).join('\n');
+
 /** Write each skill, or delete it when its content is null. */
 function apply(dir, skills) {
   for (const [name, content] of Object.entries(skills)) {
@@ -43,7 +48,7 @@ function apply(dir, skills) {
   }
 }
 
-function scaffold(after) {
+function scaffold(after, extraBase = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'version-bump-'));
   // Hermetic: the developer's global and system git config (hooks, autocrlf, default branch)
   // must not decide what the fixture repository looks like.
@@ -60,7 +65,7 @@ function scaffold(after) {
   };
 
   git('init', '-q');
-  apply(dir, BASE);
+  apply(dir, { ...BASE, ...extraBase });
   git('add', '-A', '.claude');
   git('commit', '-q', '-m', 'base');
   git('branch', 'base');
@@ -101,6 +106,24 @@ const CASES = [
     after: { delta: skill('delta', '1.0.0') },
     expect: 'every changed skill bumped its version',
   },
+  {
+    name: 'renamed and edited without a bump — warned under its new name',
+    base: { epsilon: skill('epsilon', '1.0.0', LONG) },
+    after: { epsilon: null, 'epsilon-renamed': skill('epsilon-renamed', '1.0.0', `${LONG}\nOne edited line.`) },
+    expect: 'epsilon-renamed (renamed from epsilon) still at v1.0.0',
+  },
+  {
+    name: 'renamed and edited with a bump',
+    base: { epsilon: skill('epsilon', '1.0.0', LONG) },
+    after: { epsilon: null, 'epsilon-renamed': skill('epsilon-renamed', '1.1.0', `${LONG}\nOne edited line.`) },
+    expect: 'every changed skill bumped its version',
+  },
+  {
+    name: 'moved without a byte changed — nothing to bump',
+    base: { zeta: skill('zeta', '1.0.0', LONG) },
+    after: { zeta: null, 'zeta-moved': skill('zeta', '1.0.0', LONG) },
+    expect: 'every changed skill bumped its version',
+  },
 ];
 
 console.log('');
@@ -109,16 +132,20 @@ console.log('');
 
 let failed = 0;
 for (const c of CASES) {
-  const repo = scaffold(c.after);
+  const repo = scaffold(c.after, c.base);
   const { code, out } = run(repo);
   rmSync(repo.dir, { recursive: true, force: true });
 
   // Advisory means exit 0 in every case, the warning cases included.
   const codeOk = code === 0;
   const textOk = out.includes(c.expect);
-  const ok = codeOk && textOk;
+  // A raw git error is not part of the report — it used to leak on every new or renamed skill.
+  const quiet = !out.includes('fatal:');
+  const ok = codeOk && textOk && quiet;
   if (!ok) failed++;
-  console.log(`  ${ok ? 'OK  ' : 'FAIL'} ${c.name.padEnd(68)} exit ${code} (want 0)  [${textOk ? 'msg ok' : 'MSG MISSING'}]`);
+  console.log(
+    `  ${ok ? 'OK  ' : 'FAIL'} ${c.name.padEnd(68)} exit ${code} (want 0)  [${textOk ? 'msg ok' : 'MSG MISSING'}${quiet ? '' : ', GIT ERROR LEAKED'}]`
+  );
   if (!ok) console.log(out.split('\n').map((l) => `         ${l}`).join('\n'));
 }
 
@@ -133,5 +160,5 @@ if (failed) {
   console.log(`  ${failed} case(s) did not behave as specified`);
   process.exit(1);
 }
-console.log(`  ${CASES.length} cases, ${warning} that warn — a deleted skill cannot silence the reminder`);
+console.log(`  ${CASES.length} cases, ${warning} that warn — a deleted or renamed skill cannot silence the reminder`);
 console.log('');
