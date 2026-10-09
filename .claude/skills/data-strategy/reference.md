@@ -307,26 +307,41 @@ This combines a base email with `faker.string.alphanumeric(8)` and produces a pl
 
 ## 7. Seeded preconditions for read tests
 
-For GET endpoints that need an existing entity, the convention is:
+For GET endpoints that need an existing entity, seed it — never borrow one from a list (`jobs[0]`), which may not exist after an environment reset. The convention is:
 
 ```typescript
+import { buildCreateJobBody, cleanupWorkersAndJobs, createJob } from '../../helpers/app/jobs';
+import { buildCreateWorkerBody, createWorker } from '../../helpers/app/workers';
+
+const createdWorkerIds: string[] = [];
+const createdJobIds: string[] = [];
 let seededId: string;
 
 test.beforeAll(async ({ apiRequest }) => {
-    const { body } = await apiRequest<ListJobsResponse>({
-        method: 'GET',
-        url: appConfig.api.JOBS,
-        baseUrl: appConfig.apiUrl,
-        headers: process.env.USER_ACCESS_TOKEN_FULL,
-    });
-    seededId = ListJobsResponseSchema.parse(body).jobs[0].id;
+    const worker = await createWorker(apiRequest, buildCreateWorkerBody(), process.env.USER_ACCESS_TOKEN_FULL!);
+    expect(worker.status).toBe(201);
+    createdWorkerIds.push(worker.body.workerId);
+
+    const { status, body } = await createJob(
+        apiRequest,
+        buildCreateJobBody([worker.body.workerId]),
+        process.env.USER_ACCESS_TOKEN_FULL!,
+    );
+    expect(status).toBe(201);
+    seededId = body.jobId;
+    createdJobIds.push(seededId);
+});
+
+// Jobs are deleted before workers (409 Conflict otherwise) — cleanupWorkersAndJobs enforces the order.
+test.afterAll(async ({ apiRequest }) => {
+    await cleanupWorkersAndJobs(apiRequest, createdWorkerIds, createdJobIds, process.env.USER_ACCESS_TOKEN_FULL!);
 });
 ```
 
 Rules:
-- Use the existing GET helper if there is one.
-- Don't pollute the system in `beforeAll` for read-only tests.
-- If the resource may be empty in fresh environments, seed via Pattern 6 in `beforeAll` and clean up in `afterAll`.
+- Seed via the Pattern 6 seeders (`createX` + its cleanup) in `beforeAll`; record every id you create and delete it in `afterAll`.
+- Seeding does not pollute the system: the environment is left exactly as found once `afterAll` runs.
+- The read tests only read the seeded entity; none of them depends on another test's side effects.
 
 ## 8. Cross-references
 

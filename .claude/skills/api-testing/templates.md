@@ -1110,7 +1110,7 @@ Existing per-type `target` shapes (from `helpers/app/jobs.ts`):
 | `http` | `` `https://${faker.internet.domainName()}` `` |
 | `stream` | `` `wss://${faker.internet.domainName()}` `` |
 | `sftp` | `faker.internet.ipv4()` (host only — port lives in `config.port`) |
-| `email` | `faker.internet.email({ provider: "<your-test-domain>" })` |
+| `email` | `getNextTestEmail(<base test email>)` from `helpers/util/mailpit.ts` — addresses must route to the test Mailpit domain (`@<your-test-domain>`) |
 | `backup` | `faker.internet.domainName()` |
 | `webhook` | `faker.internet.url()` |
 

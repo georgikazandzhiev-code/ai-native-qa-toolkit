@@ -173,20 +173,20 @@ For flows that require a brand new user. This project provisions users through t
 
 ```mermaid
 flowchart LR
-    BA[beforeAll] -->|"Read-only seed,<br/>shared by all tests<br/>e.g. first worker in list"| BodySeed
+    BA[beforeAll] -->|"Seed what the tests read,<br/>record its id<br/>e.g. create the worker a GET reads"| BodySeed
     BE[beforeEach] -->|"Mutable resource per test:<br/>worker, job, tenant<br/>OR per-test user"| BodyMut
     BodySeed --> Test
     BodyMut --> Test
     Test --> AE[afterEach]
     Test --> AA[afterAll]
     AE -->|"Mirrors beforeEach:<br/>delete the resource"| Done
-    AA -->|"Drain ids[] array<br/>from POST tests"| Done
+    AA -->|"Drain ids[] array<br/>from beforeAll + POST tests"| Done
 ```
 
 Rules:
-- `beforeAll` only for **read-only** seeds (e.g. fetching the first worker for GET-by-id tests). Never push to a shared array from `beforeAll`.
+- `beforeAll` **seeds** what the describe's tests only read (e.g. creates the worker a GET-by-id test reads), records each id it creates in the describe's cleanup array, and `afterAll` deletes them. Never borrow existing data ("the first worker in the list") — it may not exist after an environment reset. Pushing `beforeAll`'s own ids into the cleanup array is correct; what must not happen is a test depending on another test's side effects.
 - `beforeEach` for resources that the test mutates or that must be unique per test run.
-- `afterEach` mirrors `beforeEach`; `afterAll` mirrors a `workerIds: string[]` array filled inside POST tests.
+- `afterEach` mirrors `beforeEach`; `afterAll` drains a `workerIds: string[]` array filled by `beforeAll` and by POST tests.
 - The id-array pattern is the canonical leak guard for POST suites:
 
 ```typescript
@@ -310,11 +310,11 @@ Before finishing any data-related change, confirm:
 The instinct is a `test-data/app/projects.json` with a ready payload. That is the wrong default here, and the seven patterns say why:
 
 1. **`name` must be unique per test run.** Two Playwright workers, or one rerun before cleanup, and a fixed name collides on the 409 path. Faker, not JSON.
-2. **`ownerId` must reference a row that actually exists.** A hardcoded uuid is a hardcoded id — forbidden, and it rots the first time the environment is reset. Resolve it in `beforeAll` by listing users and taking the first, failing loudly if none exists.
+2. **`ownerId` must reference a row that actually exists.** A hardcoded uuid is a hardcoded id — forbidden, and it rots the first time the environment is reset. Borrowing one ("list users and take the first") fails the same way. Create the owner in `beforeAll` (e.g. `setupTestUser`), use its id, and delete it in `afterAll` (`teardownTestUser`).
 3. **`description` is genuinely fixed** — it is not asserted on and not unique. A constant is fine as the body builder's **default payload value** (overridable like any field), not in its own file. That is a builder default, not a test constant: once a test asserts on it, the expected value comes from `test-data/` per § Critical.
 4. **The token comes from `process.env.X!`**, never a file.
 
-The finished shape: a body builder in `helpers/app/` that takes the resolved `ownerId` and a faker name, plus one `beforeAll` that resolves the owner. No new JSON file — which is what § Search-before-write is for.
+The finished shape: a body builder in `helpers/app/` that takes the resolved `ownerId` and a faker name, plus one `beforeAll` that creates the owner and one `afterAll` that deletes it. No new JSON file — which is what § Search-before-write is for.
 
 ### Example 2 — two specs start failing on each other
 

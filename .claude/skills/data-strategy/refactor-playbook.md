@@ -221,7 +221,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 3. For (b), add a precondition:
    ```typescript
    test.beforeEach(async () => {
-       userEmail = getNextTestEmail();
+       userEmail = getNextTestEmail(process.env.APP_MAIN_EMAIL!);
        await createUserByEmail(userEmail);
        customerId = (await getCustomerByEmail(apiRequest, userEmail)).id;
    });
