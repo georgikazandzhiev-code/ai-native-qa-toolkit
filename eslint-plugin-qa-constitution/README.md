@@ -118,13 +118,15 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-17 rules, 23 `RuleTester` suites (including six regression suites, each locking in a defect found in the rules themselves), plus valid cases per rule:
+17 rules, 25 `RuleTester` suites (including eight regression suites, each locking in a defect found in the rules themselves), plus valid cases per rule:
 
 ```bash
 npm test
 ```
 
 The suite has been **fault-injected to prove it bites** — disabling a rule's report produces `Should have 1 error but had 0`, and corrupting the `require-strict-object` autofix produces `Output is incorrect`. A green run means the rules fire, not merely that the file parses.
+
+The rules also hold the toolkit's own teaching to account. `node tests/skill-snippets.test.mjs` lints every TypeScript example in `.claude/skills/` (about 180 blocks) with all 17 rules: an agent copies those examples, so an example that breaks a rule teaches every session to break it. Blocks labelled as counter-examples (a `// ❌ BAD` first line, a `### Bad` heading) are skipped, and a block that cannot parse on its own — two files side by side — carries `<!-- snippet-lint: skip — <reason> -->`, printed on every run. `node tests/skill-snippets.harness.test.mjs` tests that lint itself: a case per branch, a planted defect that must fail and a labelled one that must pass, and every branch mutated to confirm a case goes red.
 
 ## License
 

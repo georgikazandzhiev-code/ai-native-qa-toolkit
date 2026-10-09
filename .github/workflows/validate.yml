@@ -119,6 +119,17 @@ jobs:
       - name: Memory snippets — the memory file obeys the rules it teaches
         run: node tests/memory-snippets.test.mjs
 
+      # The skills teach far more code than the memory file, and an agent copies it. Every
+      # TypeScript example must parse and follow the plugin's rules; counter-examples labelled
+      # BAD / ❌ are skipped, and a reasoned `snippet-lint: skip` is printed on every run.
+      - name: Skill snippets — every skill example obeys the rules the skills teach
+        run: node tests/skill-snippets.test.mjs
+
+      # The snippet lint decides what is a counter-example, a placeholder, a diff or an opt-out.
+      # Each branch has a case, and a planted defect must fail the run while a labelled one passes.
+      - name: Skill snippets — the snippet lint itself bites and stays quiet where it should
+        run: node tests/skill-snippets.harness.test.mjs
+
   regression:
     name: Skill eval regression
     runs-on: ubuntu-latest
