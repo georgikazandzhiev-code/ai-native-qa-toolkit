@@ -1,6 +1,6 @@
 ---
 name: config
-version: 1.1.2
+version: 2.0.0
 description: Env-var and configuration conventions — env/.env.* layout, dotenv loading via ENVIRONMENT, the appConfig object in config/app.ts (URLs, api paths, UI routes, timeouts), and the config/util/ per-service convention (future — not yet created). Use when adding an env var, config property, environment file, or endpoint/route constant. Triggers — "env var", "appConfig", "config", "new URL". Not for static test data (data-strategy) or env access rules (type-safety).
 metadata:
   category: domain

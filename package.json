@@ -1,6 +1,6 @@
 {
   "name": "ai-native-qa-toolkit",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "private": true,
   "description": "AI-native QA toolkit \u2014 engineering constitution, on-demand skills, product-side testability constitutions, and a lint gate that enforces the checkable half.",
   "type": "module",

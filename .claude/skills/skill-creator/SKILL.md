@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 1.1.5
+version: 1.1.6
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
 metadata:
   category: authoring
