@@ -114,7 +114,7 @@ export class SettingsPage extends BasePage {
   }
 
   async open(): Promise<void> {
-    const base = process.env.APP_URL!.replace(/\/$/, "");
+    const base = appConfig.baseUrl.replace(/\/$/, "");
     await this.page.goto(`${base}${appConfig.paths.SETTINGS}`);
     await this.verifyPageLoaded();
   }

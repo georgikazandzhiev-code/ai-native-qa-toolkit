@@ -130,7 +130,7 @@ Routed skills: [`enums`](../enums/SKILL.md), [`config`](../config/SKILL.md), [`d
 
 - [ ] Repeated UI strings used in `getByText` come from `enums/app/*`. No hardcoded strings in specs/POMs.
 - [ ] Endpoint paths live in `config/app.ts` under `appConfig.api.*` (API) or `appConfig.paths.*` (UI routes) — not in `enums`.
-- [ ] Env values use `process.env.X!` (non-null assertion at every access). **No `??` / `||` defaulting at call sites.** Defaults belong in `config/util/<service>.ts`.
+- [ ] Env values are read through the config module — `env.X`, `tokens.full()` / `.admin()` / `.zero()` (called at the call site, never aliased at module level), or `appConfig`. **No `process.env` outside `config/env.ts`** (the setup project's token writes excepted), **no `!`, `as string`, `??` / `||` on env values.** Defaults live in the schema in `config/env.ts`. See `type-safety` § Environment variables.
 - [ ] Changing an existing enum value, key, or `test-data/*.json` value? You should have used the [`refactor-values`](../refactor-values/SKILL.md) skill — every consumer must be updated atomically.
 
 #### Skills / rules (`~/.claude/skills/**`, `.cursor/rules/**`, `CLAUDE.md`)
@@ -260,7 +260,7 @@ Push.
 - [`selectors`](../selectors/SKILL.md) — locator priority, Radix exception.
 - [`api-testing`](../api-testing/SKILL.md) — Zod validation idiom, negative-test matrix.
 - [`helpers`](../helpers/SKILL.md) — helper signature, cleanup discipline.
-- [`type-safety`](../type-safety/SKILL.md) — no `any`, `process.env.X!` pattern.
+- [`type-safety`](../type-safety/SKILL.md) — no `any`, env access through `config/env.ts` (never `process.env` at a call site).
 - [`flakiness-triage`](../flakiness-triage/SKILL.md) — when the test run is flaky, not red.
 - [`debugging`](../debugging/SKILL.md) — when the test run is red and you need to diagnose.
 - [`owasp-security-testing`](../owasp-security-testing/SKILL.md) — pair its `review-checklist.md` for a security pass on the diff (access control, auth, injection, misconfiguration).

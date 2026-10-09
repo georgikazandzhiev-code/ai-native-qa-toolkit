@@ -221,7 +221,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 3. For (b), add a precondition:
    ```typescript
    test.beforeEach(async () => {
-       userEmail = getNextTestEmail(process.env.APP_MAIN_EMAIL!);
+       userEmail = getNextTestEmail(env.APP_MAIN_EMAIL);
        await createUserByEmail(userEmail);
        customerId = (await getCustomerByEmail(apiRequest, userEmail)).id;
    });
@@ -259,25 +259,27 @@ const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
 
-Module-level aliases conceal the canonical name from `rg`, encourage copy-paste into other specs, and create N+1 places to update if a token rotates. This pattern is pervasive across `tests/app/api/**`, `tests/app/e2e/**`, and `tests/app/functional/**` — refactor playbook section dedicated.
+Module-level aliases conceal the canonical name from `rg`, encourage copy-paste into other specs, create N+1 places to update if a token rotates, and read `process.env` outside the config module (see `type-safety` § Environment variables). This pattern is pervasive across `tests/app/api/**`, `tests/app/e2e/**`, and `tests/app/functional/**` — refactor playbook section dedicated.
 
 ### Migration steps
 
 1. `rg "process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/ helpers/ -l` to enumerate the files using tokens.
 2. Within each file, `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_"` finds the aliases.
-3. Replace each alias with the canonical `process.env.<NAME>` at the call site:
+3. Replace each alias with the `tokens` accessor from `config/env.ts`, called at the call site (not re-aliased at module level — that runs before the setup project has written the token):
    ```typescript
    - const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
    - // ...
    - headers: TENANT_TOKEN,
-   + headers: process.env.USER_ACCESS_TOKEN_FULL,
+   + import { tokens } from "../../../../config/env";
+   + // ...
+   + headers: tokens.full(),
    ```
-4. Helpers that accept `headers: string` as a parameter are fine to keep (the boundary is explicit). The spec entry point still uses the canonical env var.
+4. Helpers that accept `headers: string` as a parameter are fine to keep (the boundary is explicit; helpers never read env). The spec entry point calls `tokens.full()` / `.admin()` / `.zero()`.
 5. Add a `data-strategy/aliasing` rule to [`api-testing/SKILL.md`](../api-testing/SKILL.md) if not already present.
 
 ### Verification
 
-- `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/app/` returns 0.
+- `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/app/` returns 0, and so does `rg "process\.env\.USER_ACCESS_TOKEN_" tests/app/ --glob '!login.setup.ts'`.
 - Specs still pass.
 - Grepping `USER_ACCESS_TOKEN_FULL` reveals every consumer.
 

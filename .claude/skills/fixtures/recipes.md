@@ -46,6 +46,7 @@ The most common UI-spec shape: seed a resource over the API, drive the UI agains
 ```typescript
 import { expect, test } from '../../../../fixtures/pom/test-options';
 import { appConfig } from '../../../../config/app';
+import { tokens } from '../../../../config/env';
 import {
     buildCreateBackupJobBody,
     createJob,
@@ -54,7 +55,7 @@ import {
 import { buildCreateWorkerBody, createWorker } from '../../../../helpers/app/workers';
 import { faker } from '@faker-js/faker';
 
-// No token aliases — use process.env.USER_ACCESS_TOKEN_* directly (see data-strategy §1.6).
+// No token aliases — call tokens.full() / .admin() / .zero() at each call site (see data-strategy §1.6).
 
 test.describe('Backup job detail view', () => {
     const createdJobIds: string[] = [];
@@ -64,7 +65,7 @@ test.describe('Backup job detail view', () => {
         const worker = await createWorker(
             apiRequest,
             buildCreateWorkerBody(),
-            process.env.USER_ACCESS_TOKEN_FULL!
+            tokens.full()!
         );
         expect(worker.status).toBe(201);
         workerId = worker.body.workerId;
@@ -73,7 +74,7 @@ test.describe('Backup job detail view', () => {
         const { status, body } = await createJob(
             apiRequest,
             buildCreateBackupJobBody([workerId], { name }),
-            process.env.USER_ACCESS_TOKEN_FULL!
+            tokens.full()!
         );
         expect(status).toBe(201);
         createdJobIds.push(body.jobId);
@@ -85,7 +86,7 @@ test.describe('Backup job detail view', () => {
             apiRequest,
             [workerId],
             createdJobIds,
-            process.env.USER_ACCESS_TOKEN_FULL!
+            tokens.full()!
         );
     });
 
@@ -98,7 +99,7 @@ test.describe('Backup job detail view', () => {
 Why this shape:
 - `apiRequest` is destructured in the hook signature, exactly as in test signatures — UI POM fixtures and `apiRequest` co-exist on the same surface.
 - Cleanup collects ids into an array and deletes unconditionally (no `if (id)` guard). `cleanupWorkersAndJobs` tolerates 404 and deletes jobs-before-workers to avoid 409.
-- Token is always `process.env.USER_ACCESS_TOKEN_FULL!` at the call site — no aliasing (see `data-strategy` §1.6).
+- Token is always `tokens.full()` at the call site — no aliasing, no `process.env` (see `data-strategy` §1.6 and `type-safety` § Environment variables).
 
 ---
 
@@ -182,12 +183,12 @@ Trigger: a test needs a user that doesn't exist yet.
 
 Decision:
 - **UI persona** → storage state: user logs into the UI, session JSON saved, a project attaches it.
-- **API persona** → env token: user authenticates via Keycloak, bearer token stored in `process.env.USER_ACCESS_TOKEN_<PERSONA>`, used as the `headers` value of `apiRequest`.
+- **API persona** → env token: user authenticates via Keycloak, the setup project writes the bearer token into `process.env.USER_ACCESS_TOKEN_<PERSONA>`, and specs read it through a `tokens.<persona>()` accessor from `config/env.ts` as the `headers` value of `apiRequest`.
 - **Both** → the persona appears in UI tests and seeds via API.
 
 Steps:
 
-1. Add credentials to `env/.env.example` and your local `env/.env.<environment>`.
+1. Add credentials to `env/.env.example`, your local `env/.env.<environment>`, and the schema in `config/env.ts`.
 2. For an **env token**, extend the `tenantTokens` block in `tests/app/login.setup.ts`:
 
 ```typescript
@@ -195,15 +196,15 @@ const tenantTokens = {
     full: { /* ...existing... */ },
     readonly: {
         name: 'READONLY',
-        email: process.env.APP_READONLY!,
-        password: process.env.APP_READONLY_PASSWORD!,
-        totpSecret: process.env.APP_READONLY_SECRET_KEY!,
-        realm: process.env.KEYCLOAK_REALM!,
+        email: env.APP_READONLY,
+        password: env.APP_READONLY_PASSWORD,
+        totpSecret: env.APP_READONLY_SECRET_KEY,
+        realm: env.KEYCLOAK_REALM,
     },
 };
 ```
 
-The existing loop populates `process.env.USER_ACCESS_TOKEN_READONLY`.
+The existing loop writes `process.env.USER_ACCESS_TOKEN_READONLY` — writing tokens is the setup project's one sanctioned touch of `process.env`; it reads its credentials from `env` like everything else. Add a `readonly: token("USER_ACCESS_TOKEN_READONLY")` accessor to `tokens` in `config/env.ts` so specs can call `tokens.readonly()`.
 
 3. For a **storage state**, extend the `users` block; the loop calls `createAppStorageState({...})` and writes the `storageStatePath`.
 4. Each setup test **must** call `qase.ignore()` (setup tests are not real test cases) and import `test` from `fixtures/pom/test-options`.
@@ -219,12 +220,13 @@ Trigger: a genuine cross-cutting concern owning a connection/client per test (ra
 // fixtures/services/myservice-fixture.ts
 import { test as base, request } from '@playwright/test';
 import { MyServiceClient } from '../../helpers/util/myService';
+import { env } from '../../config/env';
 
 export const test = base.extend<{ myService: MyServiceClient }>({
     myService: async ({}, use) => {
         const ctx = await request.newContext({
-            baseURL: process.env.MY_SERVICE_URL!,
-            extraHTTPHeaders: { 'X-Api-Key': process.env.MY_SERVICE_KEY! },
+            baseURL: env.MY_SERVICE_URL,
+            extraHTTPHeaders: { 'X-Api-Key': env.MY_SERVICE_KEY },
         });
         await use(new MyServiceClient(ctx));
         await ctx.dispose();          // teardown — runs even on failure
@@ -232,7 +234,7 @@ export const test = base.extend<{ myService: MyServiceClient }>({
 });
 ```
 
-Wire it into `test-options.ts`: add `import { test as myServiceFixture } from '../services/myservice-fixture';` and append `myServiceFixture` to `mergeTests(...)`. Declare the env vars in `env/.env.example` and add the fixture to `reference.md § 1.2`. This mirrors how `mailpit` builds and disposes its own context.
+Wire it into `test-options.ts`: add `import { test as myServiceFixture } from '../services/myservice-fixture';` and append `myServiceFixture` to `mergeTests(...)`. Declare the env vars in `env/.env.example` and the schema in `config/env.ts`, and add the fixture to `reference.md § 1.2`. This mirrors how `mailpit` builds and disposes its own context.
 
 ---
 
@@ -244,6 +246,8 @@ Trigger: a typed sub-API reused across many specs *and* helpers (rare — the fr
 // fixtures/services/somecall-fixture.ts
 import { test as baseApiRequestFixture } from '../api/api-request-fixture';
 import type { ApiRequestResponse, SomePayload } from '../api/api-types';
+import { appConfig } from '../../config/app';
+import { tokens } from '../../config/env';
 
 type SomeCallFn = (id: string) => Promise<ApiRequestResponse<SomePayload>>;
 
@@ -253,8 +257,8 @@ export const test = baseApiRequestFixture.extend<{ someCall: SomeCallFn }>({
             apiRequest<SomePayload>({
                 method: 'GET',
                 url: `some/${id}`,
-                baseUrl: process.env.API_URL as string,
-                headers: process.env.USER_ACCESS_TOKEN_FULL,
+                baseUrl: appConfig.apiUrl,
+                headers: tokens.full(),
             })
         );
     },
@@ -301,7 +305,7 @@ export async function seedJob(
 
 ```typescript
 let seeded: Awaited<ReturnType<typeof seedJob>>;
-test.beforeEach(async ({ apiRequest }) => { seeded = await seedJob(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!); });
+test.beforeEach(async ({ apiRequest }) => { seeded = await seedJob(apiRequest, tokens.full()); });
 test.afterEach(async () => { await seeded.cleanup(); });
 ```
 

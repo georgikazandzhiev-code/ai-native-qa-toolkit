@@ -43,7 +43,7 @@ The `enums/` tree is small and intentional. List every file before adding more.
 | Shared status / state string (`"passing"`, `"failing"`) | `enums/app/job-status.ts` → `JOB_STATUSES` (or a new `as const` file for a genuinely new domain) | Cross-resource. No `enums/util/` directory exists; status containers live in `enums/app/`, `as const` from the start. |
 | API endpoint path (`/jobs`, `/admin/tenants`) | `config/app.ts` → `appConfig.api.X` | **Not enums.** Paths live in `config/` — canonical, not temporary. |
 | UI route path (`/login`, `/dashboard`) | `config/app.ts` → `appConfig.paths.X` | Same — paths live in `config/`. |
-| Base URL, env-driven URL, token, credential | `process.env.*` via `config/app.ts` | Environment-dependent. See the `config` skill. |
+| Base URL, env-driven URL, token, credential | The config module — `env` / `tokens` from `config/env.ts`, URLs via `appConfig` in `config/app.ts` | Environment-dependent. See the `config` skill. |
 | Storage-state file path | Inline in `playwright.config.ts` | One-off; only Playwright config consumes it. Promote to an enum file only when 2+ non-config consumers appear. |
 | UI message the app defines (error, success, validation, label, page title) | Existing per-page catalogs (`enums/app/reports.ts` → `ReportMessages`, `enums/app/inventory.ts` labels) or a new `enums/app/<page>.ts` — always, even when used once | Capture exact text via the `playwright-cli` skill workflow (`npx playwright open`) first. App text is always a catalog entry, never an inline literal. |
 | Role / permission name (`"admin"`, `"user"`) | New `enums/app/roles.ts` (does not exist yet) — only when reused | Today no test asserts a role string. |
@@ -115,7 +115,7 @@ If the app is unavailable, do **not** ship the value. Stop and notify the human 
 - ❌ Creating `enums/app/messages.ts` with a placeholder entry "for completeness" that no test asserts. Create it when the first real, live-captured message needs a home.
 - ❌ Renaming a key or changing a value in place ("just a quick rename"). It cascades through every consumer. Use the `refactor-values` skill.
 - ❌ Adding an array (`[...invalidEmails]`) to `enums/`. Arrays of curated test inputs go in `test-data/app/*.json`.
-- ❌ Putting a URL like `https://staging.example.com` in an enum. URLs are environment-dependent and belong in `process.env.*` + `config/`.
+- ❌ Putting a URL like `https://staging.example.com` in an enum. URLs are environment-dependent and belong in the env file + `config/` (read via `appConfig` / `env`).
 - ❌ Adding a new file to `enums/app/` and forgetting to re-export it from `enums/app/index.ts`. The barrel is the single import surface; an un-exported file is dead code from the consumer's view.
 - ❌ Skipping the `qase-suites.ts` update when adding a new API resource. Every new spec needs a `SUITES.API_<RESOURCE>` constant; `qase.suite()` is a MUST per the orchestrator.
 
@@ -124,7 +124,7 @@ If the app is unavailable, do **not** ship the value. Stop and notify the human 
 - [ ] New files use `as const` (no TS `enum`). No accidental backward rewrites of `as const` to `enum`.
 - [ ] Container name is `SCREAMING_SNAKE_CASE` (`ReportMessages` is the one legacy drift case); keys / members are `SCREAMING_SNAKE_CASE`; file is `kebab-case.ts`.
 - [ ] Container has a JSDoc comment describing what it groups; new files carry top-level JSDoc.
-- [ ] No hardcoded path / URL / token / endpoint slipped into `enums/`. Paths went to `config/app.ts`. Env-driven values went to `process.env.*`.
+- [ ] No hardcoded path / URL / token / endpoint slipped into `enums/`. Paths went to `config/app.ts`. Env-driven values went to the config module (`config/env.ts` schema + `appConfig`).
 - [ ] No new arrays-of-test-inputs added to `enums/`. Curated test data went to `test-data/app/*.json`.
 - [ ] New file (if any) is re-exported through `enums/app/index.ts`.
 - [ ] Every consumer that previously hardcoded the same string now imports the constant.
@@ -188,7 +188,7 @@ User says: _"Two specs assert the login error 'Invalid email or password'. Centr
 |---------|-------|-----|
 | I'm about to hardcode `"API\tJobs"` in a `qase.suite()` call. | Constant not imported. | Use `SUITES.API_JOBS` from `enums/app/qase-suites.ts`. |
 | I'm about to hardcode `/jobs` as an endpoint path in a spec. | Wrong source of truth. Paths live in `config/app.ts` in this codebase, not `enums/`. | Use `appConfig.api.JOBS`. See the `config` skill. |
-| I want to put `process.env.APP_URL` in an enum. | Env-driven values are not enum candidates. | Keep it in `config/app.ts` (`appConfig.baseUrl`). See the `config` skill. |
+| I want to put the `APP_URL` value in an enum. | Env-driven values are not enum candidates. | Keep it in `config/app.ts` (`appConfig.baseUrl`). See the `config` skill. |
 | I want to add an array `INVALID_EMAILS = [...]` to `enums/`. | Arrays of curated test inputs are not enums. | Put it in `test-data/app/<resource>-validation.json` and import. See the `data-strategy` skill. |
 | I need to rename `SUITES.API_JOBS` to `SUITES.API_JOBS_V2`. | Cascades through every spec, page object, and Qase mapping. | Stop. Read the `refactor-values` skill — it owns the impact-analysis workflow. |
 | My test assertion `expect(text).toHaveText(MESSAGES.X)` fails — text drifted from the live UI. | Constant value diverged from the real app text. | Re-capture via the `playwright-cli` skill workflow (`npx playwright open`) and update via `refactor-values` (not a local find-and-replace that may miss other consumers). |

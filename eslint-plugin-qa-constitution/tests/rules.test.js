@@ -186,16 +186,24 @@ tester.run('no-pom-instantiation-in-test', plugin.rules['no-pom-instantiation-in
   ],
 });
 
-tester.run('require-env-non-null', plugin.rules['require-env-non-null'], {
+tester.run('no-process-env-outside-config', plugin.rules['no-process-env-outside-config'], {
   valid: [
-    `const token = process.env.API_TOKEN!;`,
-    `if ('CI' in process.env) {}`,
-    `if (typeof process.env.CI === 'string') {}`,
+    // the config module is the one reader
+    { code: `export const env = EnvSchema.parse(process.env);`, filename: 'config/env.ts' },
+    { code: `const v = process.env[name];`, filename: '/repo/config/env.ts' },
+    // the runner config reads ENVIRONMENT and CI from the shell
+    { code: `const ci = !!process.env.CI;`, filename: 'playwright.config.ts' },
+    // the setup project writes a run-time token: an assignment is not a read
+    { code: `process.env.USER_ACCESS_TOKEN_ADMIN = token;`, filename: 'tests/app/login.setup.ts' },
+    // everything else imports from config
+    { code: `const t = tokens.admin(); const u = env.API_URL;`, filename: 'tests/app/api/jobs/jobs.spec.ts' },
   ],
   invalid: [
-    { code: `const token = process.env.API_TOKEN;`, errors: [{ messageId: 'bare' }] },
-    { code: `const url = process.env.BASE_URL ?? 'http://localhost';`, errors: [{ messageId: 'defaulted' }] },
-    { code: `const url = process.env.BASE_URL || 'x';`, errors: [{ messageId: 'defaulted' }] },
+    { code: `const token = process.env.API_TOKEN!;`, filename: 'tests/app/api/jobs/jobs.spec.ts', errors: [{ messageId: 'outside' }] },
+    { code: `const token = process.env.API_TOKEN;`, filename: 'helpers/app/jobs.ts', errors: [{ messageId: 'outside' }] },
+    { code: `const url = process.env.BASE_URL ?? 'http://localhost';`, filename: 'pages/app/JobsPage.ts', errors: [{ messageId: 'outside' }] },
+    { code: `if (!process.env.X) throw new Error('x');`, filename: 'tests/app/api/jobs/jobs.spec.ts', errors: [{ messageId: 'outside' }] },
+    { code: `const all = process.env;`, filename: 'fixtures/api/x.ts', errors: [{ messageId: 'outside' }] },
   ],
 });
 

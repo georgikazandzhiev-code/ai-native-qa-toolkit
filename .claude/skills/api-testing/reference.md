@@ -193,22 +193,24 @@ The fixture parses `application/json` automatically; non-JSON returns the raw va
 
 ## Token catalog
 
-| Env var | Purpose | Typical 401 surface |
-|---------|---------|---------------------|
-| `process.env.USER_ACCESS_TOKEN_ADMIN` | Admin scope (admin/tenants, admin/realms, admin/users) | Tenant-scoped endpoints (returns 401, not 403) |
-| `process.env.USER_ACCESS_TOKEN_FULL` | Tenant-scoped full permissions (jobs, workers, users, run stats) | None — admin endpoints reject it with **403** (wrong scope, [http-method-coverage.md § 12.2](http-method-coverage.md#122-authentication-coverage-matrix)) |
-| `process.env.USER_ACCESS_TOKEN_ZERO` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat:** this env var is **not always provisioned** in the test environment; there's an open TODO to re-add it for RBAC/403 testing. Until it is re-added, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
-| `process.env.FRONT_MAIN_PASSWORD` | Default password for KC users created in E2E onboarding | n/a |
-| `process.env.MAILPIT_URL` | Mailpit base URL (default `http://localhost:8025`) | n/a |
-| `process.env.MAILPIT_USERNAME`, `MAILPIT_PASSWORD` | Optional Basic auth for protected Mailpit deployments | n/a |
-| `process.env.API_URL`, `APP_URL`, `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `TENANT_ID` | Surface via `appConfig.apiUrl` / `baseUrl` / `keycloakUrl` / `keycloakRealm` / `tenantId` | n/a |
-| `process.env.KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` | Used by `helpers/util/keyCloak.ts` for direct KC admin operations (see `setupTestUser`) | n/a |
-| `process.env.KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD` | Default `admin`/`admin`. Used by `getAuthenticatedKcAdminClient` | n/a |
+Every variable is read through `config/env.ts` — tokens via the `tokens` accessors, everything else as `env.X` (or through `appConfig`). Never `process.env` at a call site (see `type-safety` § Environment variables).
 
-Use `process.env.USER_ACCESS_TOKEN_*!` directly at every call site — **no aliasing** (see `data-strategy` §1.6 for rationale: grepability, no alias-name drift). The `!` (non-null assertion) is mandatory per the `type-safety` skill — required env vars must use `!` so the test crashes loudly at startup if missing. Never use `??` or `as string`.
+| Env var — read via | Purpose | Typical 401 surface |
+|---------|---------|---------------------|
+| `USER_ACCESS_TOKEN_ADMIN` — `tokens.admin()` | Admin scope (admin/tenants, admin/realms, admin/users) | Tenant-scoped endpoints (returns 401, not 403) |
+| `USER_ACCESS_TOKEN_FULL` — `tokens.full()` | Tenant-scoped full permissions (jobs, workers, users, run stats) | None — admin endpoints reject it with **403** (wrong scope, [http-method-coverage.md § 12.2](http-method-coverage.md#122-authentication-coverage-matrix)) |
+| `USER_ACCESS_TOKEN_ZERO` — `tokens.zero()` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat:** this env var is **not always provisioned** in the test environment; there's an open TODO to re-add it for RBAC/403 testing. Until it is re-added, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
+| `FRONT_MAIN_PASSWORD` — `env.FRONT_MAIN_PASSWORD` | Default password for KC users created in E2E onboarding | n/a |
+| `MAILPIT_URL` — `env.MAILPIT_URL` | Mailpit base URL (default `http://localhost:8025`, set in the schema) | n/a |
+| `MAILPIT_USERNAME`, `MAILPIT_PASSWORD` — `env.X` | Optional Basic auth for protected Mailpit deployments | n/a |
+| `API_URL`, `APP_URL`, `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `TENANT_ID` — via `appConfig` | Surface via `appConfig.apiUrl` / `baseUrl` / `keycloakUrl` / `keycloakRealm` / `tenantId` | n/a |
+| `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` — `env.X` | Used by `helpers/util/keyCloak.ts` for direct KC admin operations (see `setupTestUser`) | n/a |
+| `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD` — `env.X` | Default `admin`/`admin` (in the schema). Used by `getAuthenticatedKcAdminClient` | n/a |
+
+Call `tokens.full()` / `tokens.admin()` / `tokens.zero()` at every call site — **no aliasing** (see `data-strategy` §1.6 for rationale: grepability, no alias-name drift; a module-level alias also runs before the setup project has written the token). The accessor throws "`USER_ACCESS_TOKEN_FULL` is not set — did the setup project run?" when the token is missing; static variables are checked earlier, by the schema parse in `config/env.ts` at load. No `!`, `??` or `as string` (see `type-safety` § Environment variables).
 
 ```typescript
-headers: process.env.USER_ACCESS_TOKEN_FULL!,
+headers: tokens.full(),
 ```
 
 Existing specs with `const TENANT_TOKEN = ...` aliases are tech debt — normalize when next touching the file.
@@ -217,10 +219,10 @@ Existing specs with `const TENANT_TOKEN = ...` aliases are tech debt — normali
 
 `config/app.ts` exports `appConfig`:
 
-- `appConfig.apiUrl` (= `process.env.API_URL`) — base URL for all app API calls.
-- `appConfig.baseUrl` (= `process.env.APP_URL`) — base URL for UI tests, **never** for API.
-- `appConfig.tenantId` (= `process.env.TENANT_ID`) — default tenant for cross-tenant scoping tests.
-- `appConfig.keycloakUrl` (= `process.env.KEYCLOAK_URL`) — for direct token requests.
+- `appConfig.apiUrl` (= `env.API_URL`) — base URL for all app API calls.
+- `appConfig.baseUrl` (= `env.APP_URL`) — base URL for UI tests, **never** for API.
+- `appConfig.tenantId` (= `env.TENANT_ID`) — default tenant for cross-tenant scoping tests.
+- `appConfig.keycloakUrl` (= `env.KEYCLOAK_URL`) — for direct token requests.
 - `appConfig.api.X` — API path constants. Use these, never `appConfig.paths.X` (that's UI routes).
 - `appConfig.paths.X` — UI routes (e.g. `/jobs`, `/settings/workers`). **For UI specs only.**
 
@@ -453,7 +455,7 @@ await expect
             const { status, body } = await getJobRunStats(
                 apiRequest,
                 jobId,
-                process.env.USER_ACCESS_TOKEN_FULL,
+                tokens.full(),
             );
             return status === 200 && body.runStats.length > 0;
         },
@@ -497,7 +499,7 @@ const { status, body } = await getUser<APIError>(
     apiRequest,
     tenantB_Id,        // ask under Tenant B
     userA_Id,          // for a user that lives in Tenant A
-    process.env.USER_ACCESS_TOKEN_ADMIN!,
+    tokens.admin(),
 );
 
 expect(status).toBe(404);
@@ -561,7 +563,7 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Realm vs Tenant conceptual model:** **Realm** = Keycloak auth domain (one per realm). **Tenant** = organization within a realm (many). Order: Create realm → Create tenants → Create users.
 - **Schemas:** `TenantSchema` (no settings field), `TenantSettingsSchema`, `CreateRealmResponseSchema`, `UpdateRealmResponseSchema`.
 - **Helpers:** `helpers/app/adminTenants.ts` (`createTenant`, `getTenant`, `patchTenant`, `deleteTenant`); `helpers/app/adminRealms.ts` (`buildRealmSettings`, `getRealm`, `createRealm`, `patchRealm`).
-- **Auth:** Admin endpoints use `process.env.USER_ACCESS_TOKEN_ADMIN`.
+- **Auth:** Admin endpoints use `tokens.admin()`.
 - **Validation status:** realm-settings validation is largely enforced now — `admin-realms.spec.ts` has active 400 tests for empty body, `settings: null`, `settings` as string, unknown keys, missing `settings` key, and per-field invalid string/boolean/integer/object values; POST with `settings: {}` returns 400. The one unverified edge: no explicit PATCH `settings: {}` test exists.
 
 ### Jobs (`export` / HTTP / SFTP / email / backup / stream / webhook)
@@ -637,11 +639,11 @@ Use this pattern whenever tests touch settings, toggles, feature flags, or any s
 
 | Need | Snippet |
 |------|---------|
-| Tenant-scoped GET | `headers: process.env.USER_ACCESS_TOKEN_FULL` |
-| Admin GET | `headers: process.env.USER_ACCESS_TOKEN_ADMIN` |
-| Forbidden user (403) | `headers: process.env.USER_ACCESS_TOKEN_ZERO` — see caveat below |
+| Tenant-scoped GET | `headers: tokens.full()` |
+| Admin GET | `headers: tokens.admin()` |
+| Forbidden user (403) | `headers: tokens.zero()` — see caveat below |
 | Anonymous (401) | omit `headers` entirely |
-| Form-encoded body (Keycloak token) | `headers: 'form-urlencoded'`, `body: { grant_type, … }`, `baseUrl: process.env.KEYCLOAK_URL!` |
+| Form-encoded body (Keycloak token) | `headers: 'form-urlencoded'`, `body: { grant_type, … }`, `baseUrl: appConfig.keycloakUrl` |
 | Query string | Use a `buildList<X>Url(params)` helper (see `jobs.ts`, `workers.ts`) |
 | Path with id | `` url: `${appConfig.api.JOBS}/${id}` `` |
 | Sub-resource | `` url: appConfig.api.JOBS_RUN_STATS.replace(":id", id) `` (or build via template literal) |

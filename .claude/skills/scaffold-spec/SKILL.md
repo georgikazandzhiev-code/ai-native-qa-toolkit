@@ -80,6 +80,7 @@ import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
 import { SUITES } from "../../../../enums/app/qase-suites";
 import { appConfig } from "../../../../config/app";
+import { tokens } from "../../../../config/env";
 import { faker } from "@faker-js/faker";
 // Import Zod schemas from fixtures/api/schemas/app/<resource>
 // Import helpers from helpers/app/<resource>
@@ -94,9 +95,8 @@ import { faker } from "@faker-js/faker";
 // 405 — unsupported verbs (dedicated 405 block)
 // SKIP: 500 — cannot be produced on purpose
 
-const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
-// OR for tenant-scoped endpoints:
-// const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
+// Tokens: call tokens.admin() (admin endpoints) or tokens.full() (tenant-scoped endpoints)
+// at each call site — never alias them at module level (they are written by the setup project after load).
 
 // ═══════════════════════════════════════════════════════════════
 // METHOD /path — Description
@@ -117,7 +117,7 @@ test.describe("METHOD /path - Description", () => {
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
       // qase.id(N);
-      const { status, body } = await getResource(apiRequest, id, TOKEN);
+      const { status, body } = await getResource(apiRequest, id, tokens.admin());
       expect(status).toBe(200);
       expect(ResourceSchema.parse(body)).toBeTruthy();
       // assert business logic values only — Zod already proved the shape
@@ -136,9 +136,8 @@ import { appConfig } from "../../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
 import { SUITES } from "../../../../enums/app/qase-suites";
-// Import API helpers for cleanup
-
-const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
+import { tokens } from "../../../../config/env";
+// Import API helpers for cleanup — pass tokens.full() at each call
 
 test.describe("E2E — <Feature> CRUD", () => {
   test.setTimeout(appConfig.timeouts.e2eJourney); // explicit waits also come from appConfig.timeouts
@@ -247,9 +246,9 @@ After creating the spec, update the matching router in the repository's repo-con
 ```typescript
 // BAD — if the test fails before this line, the resource is never deleted
 test("Create resource", async ({ apiRequest }) => {
-  const { body } = await createResource(apiRequest, data, TOKEN);
+  const { body } = await createResource(apiRequest, data, tokens.full());
   // ... assertions ...
-  await deleteResource(apiRequest, body.id, TOKEN); // orphaned on failure
+  await deleteResource(apiRequest, body.id, tokens.full()); // orphaned on failure
 });
 ```
 
@@ -258,7 +257,7 @@ test("Create resource", async ({ apiRequest }) => {
 const createdIds: string[] = [];
 test.afterAll(async ({ apiRequest }) => {
   for (const id of createdIds) {
-    await deleteResource(apiRequest, id, TOKEN);
+    await deleteResource(apiRequest, id, tokens.full());
   }
 });
 ```
@@ -269,7 +268,7 @@ test.afterAll(async ({ apiRequest }) => {
 // BAD — if status is 500, this test passes silently
 test("Create resource", async ({ apiRequest }) => {
   try {
-    const { status, body } = await createResource(apiRequest, data, TOKEN);
+    const { status, body } = await createResource(apiRequest, data, tokens.full());
     expect(status).toBe(201);
   } catch {
     console.log("Request failed");
@@ -280,7 +279,7 @@ test("Create resource", async ({ apiRequest }) => {
 ```typescript
 // CORRECT — let it throw, Playwright reports the actual error
 test("Create resource", async ({ apiRequest }) => {
-  const { status, body } = await createResource(apiRequest, data, TOKEN);
+  const { status, body } = await createResource(apiRequest, data, tokens.full());
   expect(status).toBe(201);
   expect(ResourceSchema.parse(body)).toBeTruthy();
 });
@@ -288,7 +287,7 @@ test("Create resource", async ({ apiRequest }) => {
 // ACCEPTABLE — the one sanctioned try/catch: capturing the id of a resource a bug created, for teardown.
 // No `if` in the body (the constitution forbids it); the marker comment is what the lint accepts.
 test("Verify invalid payload returns 400", async ({ apiRequest }) => {
-  const { status, body } = await createResource(apiRequest, invalidData, TOKEN);
+  const { status, body } = await createResource(apiRequest, invalidData, tokens.full());
   let createdId: string | undefined;
   // eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
   try {
@@ -306,7 +305,7 @@ test("Verify invalid payload returns 400", async ({ apiRequest }) => {
 ```typescript
 // BAD — status 200 with garbage body passes
 test("Get resource", async ({ apiRequest }) => {
-  const { status } = await getResource(apiRequest, id, TOKEN);
+  const { status } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
 });
 ```
@@ -314,7 +313,7 @@ test("Get resource", async ({ apiRequest }) => {
 ```typescript
 // CORRECT — Zod proves the response shape is what we expect
 test("Get resource", async ({ apiRequest }) => {
-  const { status, body } = await getResource(apiRequest, id, TOKEN);
+  const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
   expect(body.name).toBe(expectedName);
@@ -337,10 +336,10 @@ test.afterAll(async ({ page, jobsPage }) => {
 ```typescript
 // CORRECT — fast, reliable, UI-independent
 test.afterAll(async ({ apiRequest }) => {
-  const { body } = await listJobs(apiRequest, TOKEN);
+  const { body } = await listJobs(apiRequest, tokens.full());
   for (const name of createdNames) {
     const match = body.items.find((j) => j.name === name);
-    if (match) await deleteJob(apiRequest, match.id, TOKEN);
+    if (match) await deleteJob(apiRequest, match.id, tokens.full());
   }
 });
 ```
@@ -350,7 +349,7 @@ test.afterAll(async ({ apiRequest }) => {
 ```typescript
 // BAD — Zod already proved all of this
 test("Verify GET returns resource", async ({ apiRequest }) => {
-  const { status, body } = await getResource(apiRequest, id, TOKEN);
+  const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
   expect(body.id).toBeTruthy();           // redundant — Zod proved id exists
@@ -363,7 +362,7 @@ test("Verify GET returns resource", async ({ apiRequest }) => {
 ```typescript
 // CORRECT — Zod validates shape, then assert only business logic values
 test("Verify GET returns resource", async ({ apiRequest }) => {
-  const { status, body } = await getResource(apiRequest, id, TOKEN);
+  const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
   expect(body.name).toBe(expectedName);     // business logic — expected value
@@ -376,7 +375,7 @@ test("Verify GET returns resource", async ({ apiRequest }) => {
 ```typescript
 // BAD — non-deterministic, hides branches that never execute
 test("Verify status", async ({ apiRequest }) => {
-  const { status, body } = await getResource(apiRequest, id, TOKEN);
+  const { status, body } = await getResource(apiRequest, id, tokens.full());
   if (status === 200) {
     expect(body.name).toBe(expectedName);
   } else {
@@ -388,13 +387,13 @@ test("Verify status", async ({ apiRequest }) => {
 ```typescript
 // CORRECT — separate tests for separate behaviors
 test("Verify GET returns 200 for existing resource", async ({ apiRequest }) => {
-  const { status, body } = await getResource(apiRequest, existingId, TOKEN);
+  const { status, body } = await getResource(apiRequest, existingId, tokens.full());
   expect(status).toBe(200);
   expect(body.name).toBe(expectedName);
 });
 
 test("Verify GET returns 404 for non-existent resource", async ({ apiRequest }) => {
-  const { status } = await getResource(apiRequest, nonExistentId, TOKEN);
+  const { status } = await getResource(apiRequest, nonExistentId, tokens.full());
   expect(status).toBe(404);
 });
 ```
@@ -412,7 +411,7 @@ for (const method of UNSUPPORTED) {
       method,
       url: appConfig.api.<RESOURCE>,
       baseUrl: appConfig.apiUrl,
-      headers: process.env.USER_ACCESS_TOKEN_FULL!,
+      headers: tokens.full(),
     });
     expect(status).toBe(405);
   });
@@ -436,7 +435,7 @@ test("Verify unsupported methods on /<resource>s return 405", { tag: "@App-API" 
         method,
         url: appConfig.api.<RESOURCE>,
         baseUrl: appConfig.apiUrl,
-        headers: process.env.USER_ACCESS_TOKEN_FULL!,
+        headers: tokens.full(),
         body: requestBody,
       });
       expect.soft(status, `${method} /<resource>s`).toBe(405);
@@ -470,7 +469,7 @@ Not every resource has a DELETE endpoint (e.g. realms). For these:
 When testing invalid input, the API might accept it due to a bug. If you don't capture the ID, you've created an orphan:
 
 ```typescript
-const { status, body } = await createResource(apiRequest, invalidData, TOKEN);
+const { status, body } = await createResource(apiRequest, invalidData, tokens.full());
 let createdId: string | undefined;
 // eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
 try {

@@ -126,7 +126,7 @@ test(
   async ({ apiRequest }) => {
     qase.suite(SUITES.API_<RESOURCE>);
     // qase.id(N);
-    const { status, body } = await list<Resource>s(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!);
+    const { status, body } = await list<Resource>s(apiRequest, tokens.full());
     expect(status).toBe(200);
     expect(List<Resource>sResponseSchema.parse(body)).toBeTruthy();
     expect(body.pageInfo.page).toBe(1);
@@ -374,7 +374,7 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
             method,
             url: appConfig.api.<RESOURCE>,
             baseUrl: appConfig.apiUrl,
-            headers: process.env.USER_ACCESS_TOKEN_FULL!,
+            headers: tokens.full(),
             body: requestBody,
           });
           expect.soft(status, `${method} /<resource>s`).toBe(405);
@@ -396,7 +396,7 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
             method,
             url: `${appConfig.api.<RESOURCE>}/${faker.string.uuid()}`,
             baseUrl: appConfig.apiUrl,
-            headers: process.env.USER_ACCESS_TOKEN_FULL!,
+            headers: tokens.full(),
             body: requestBody,
           });
           expect.soft(status, `${method} /<resource>s/{id}`).toBe(405);
@@ -452,9 +452,9 @@ The contract distinguishes **wrong realm** (401, gateway rejects) from **wrong s
 | Token | What it represents | Tenant-scoped path | Admin-scoped path |
 |-------|--------------------|-------------------|-------------------|
 | no `headers` | Unauthenticated | 401 + `APIErrorSchema` / `GatewayErrorSchema` | 401 + `APIErrorSchema` / `GatewayErrorSchema` |
-| `process.env.USER_ACCESS_TOKEN_FULL` | Valid tenant-scoped token | 2xx happy path | **403** (wrong scope — see `admin-tenants.spec.ts:348` `... returns 403 for tenant-scoped user`) |
-| `process.env.USER_ACCESS_TOKEN_ADMIN` | Admin / master-realm token | **401** (wrong realm — see `workers.spec.ts:549` `... returns 401 with admin token (tenant-scoped endpoint)`) | 2xx happy path |
-| `process.env.USER_ACCESS_TOKEN_ZERO` | Valid token, no permissions | 403 + `expect(body).toBeNull()` (where applicable) | 403 |
+| `tokens.full()` | Valid tenant-scoped token | 2xx happy path | **403** (wrong scope — see `admin-tenants.spec.ts:348` `... returns 403 for tenant-scoped user`) |
+| `tokens.admin()` | Admin / master-realm token | **401** (wrong realm — see `workers.spec.ts:549` `... returns 401 with admin token (tenant-scoped endpoint)`) | 2xx happy path |
+| `tokens.zero()` | Valid token, no permissions | 403 + `expect(body).toBeNull()` (where applicable) | 403 |
 | Wrong-realm / wrong-issuer | Real token, wrong issuer | 401 + `GatewayErrorSchema` | 401 + `GatewayErrorSchema` |
 
 **Required rows per spec:**

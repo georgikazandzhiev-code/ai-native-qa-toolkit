@@ -63,7 +63,7 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 - **`## Critical` block at the top of every `SKILL.md`.** The model can scan the hard rules in 30 seconds before reading the workflow.
 - **Layered topology.** Constitution → skills → personas. One source per concern; precedence is documented.
 - **Routed by area through one index, not by free text.** The Routed Skill Index makes skill selection deterministic — the model does not have to guess.
-- **One source of truth per concern.** URLs/credentials in `process.env.*` (declared in `env/.env.example`); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` (e.g. `job-status.ts`, `qase-suites.ts`); fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
+- **One source of truth per concern.** env-driven URLs/credentials/tokens read through `config/env.ts` — `env.X`, `tokens.full()`, or `appConfig` for URLs (declared in `env/.env.example`; never `process.env` at a call site); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` (e.g. `job-status.ts`, `qase-suites.ts`); fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
 - **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern but the codebase still has the legacy form, it says so (e.g. `api-testing` names legacy camelCase test-data files as drift and forbids new ones). The next person to touch the file converges; they don't perpetuate the drift.
 - **Hard-stop forbidden patterns.** `~/.claude/CLAUDE.md § WON'T` and each skill's `## Anti-patterns` list refusal triggers, not soft preferences.
 
@@ -126,12 +126,12 @@ User: *"`tests/app/functional/jobs-service/jobs/email-create-edit-job.spec.ts` f
 User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 
 1. **Understand** — add an env-driven config value.
-2. **Locate** — `config/**` → load `config` skill (env file layout, JSDoc-on-properties, deferral to `type-safety` for the access pattern). `enums/**` is **NOT** the right home — per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, not in `enums/`. Also load `type-safety` for the canonical `process.env.X!` access pattern.
-3. **Audit** — read `config/app.ts`, `config/util/mailpit.ts`, `env/.env.example`. Grep for any existing `MAILPIT_URL` reference.
-4. **Plan** — declare in `env/.env.example`, consume via `process.env.MAILPIT_URL!` (canonical `!` per `type-safety`; defaults belong in `config/util/mailpit.ts`, not at call sites), update `config/util/mailpit.ts`.
+2. **Locate** — `config/**` → load `config` skill (env file layout, JSDoc-on-properties, deferral to `type-safety` for the access pattern). `enums/**` is **NOT** the right home — per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, not in `enums/`. Also load `type-safety` (§ Environment variables) for the access rules — env values are read only through `config/env.ts`.
+3. **Audit** — read `config/env.ts`, `config/app.ts`, `env/.env.example`, and `helpers/util/mailpit.ts`. Grep for any existing `MAILPIT_URL` reference. (`config/util/mailpit.ts` does not exist — `config/util/` is a future convention.)
+4. **Plan** — declare in `env/.env.example`, add `MAILPIT_URL` to the schema in `config/env.ts` (with its local default as `.default(...)` there, the one home for defaults), and read it as `env.MAILPIT_URL` — replacing the direct `process.env.MAILPIT_URL` read in `helpers/util/mailpit.ts`, which is drift. No `!`, `??` or `||` at the call site.
 5. **Generate** — follow the `config` skill's pattern. Do NOT add the path to `enums/` — that's the legacy split that `~/.claude/CLAUDE.md` explicitly forbids.
 6. **Verify** — `tsc --noEmit`, `eslint .`, run the affected Mailpit-using tests.
-7. **Surface** — report: var declared, consumer updated, no `enums/` change.
+7. **Surface** — report: var declared and in the schema, consumer reads `env.MAILPIT_URL`, no `enums/` change.
 
 ## Troubleshooting
 

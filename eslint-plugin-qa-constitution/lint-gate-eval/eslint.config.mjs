@@ -40,7 +40,7 @@ const QA_RULES = [
   'no-pom-instantiation-in-test',
   'require-strict-object',
   'schema-parse-idiom',
-  'require-env-non-null',
+  'no-process-env-outside-config',
   'no-xpath',
   'no-hard-waits',
   'no-page-evaluate',

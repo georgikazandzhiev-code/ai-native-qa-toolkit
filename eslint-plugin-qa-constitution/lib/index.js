@@ -536,29 +536,42 @@ rules['no-pom-instantiation-in-test'] = {
   },
 };
 
-/** MUST — Sources of Truth: process.env access uses the non-null idiom. */
-rules['require-env-non-null'] = {
-  meta: meta('Access process.env.X with the project non-null idiom rather than defaulting at the call site.', {
+/**
+ * MUST — Sources of Truth: only the config module reads process.env.
+ *
+ * Replaces `require-env-non-null` (#5): the `process.env.X!` idiom it enforced only silenced the
+ * compiler — a missing variable still failed later, at the point of use — and its message claimed
+ * otherwise. The approved design is that `config/env.ts` reads process.env once and validates it
+ * with Zod at load, and everything else imports `env` / `tokens` / `appConfig`.
+ *
+ * Writes are not reads: the setup project assigns run-time tokens (`process.env.X = token`), so an
+ * assignment target is allowed. Files matching `allow` (the config module, playwright.config.ts,
+ * which must read ENVIRONMENT and CI from the shell) may read freely.
+ */
+rules['no-process-env-outside-config'] = {
+  meta: meta('Read environment variables only in the config module; everything else imports env / tokens / appConfig.', {
     messages: {
-      bare: "process.env.{{key}} is possibly undefined here. Use the project idiom process.env.{{key}}! so a missing variable fails loudly at startup.",
-      defaulted: "Do not default process.env.{{key}} at the call site with ?? or ||. Defaults belong in the config module; a silent fallback hides a misconfigured environment.",
+      outside:
+        'process.env{{key}} read outside the config module. Import it instead: env.X for a value known at start, tokens.x() for a run-time token, appConfig for URLs. config/env.ts reads process.env once and validates it at load, so a missing variable fails the run at startup.',
     },
+    schema: [{ type: 'object', properties: { allow: { type: 'string' } }, additionalProperties: false }],
   }),
   create(context) {
+    const opt = context.options[0] ?? {};
+    const allow = new RegExp(opt.allow ?? '(^|/)config/|(^|/)playwright\\.config\\.[cm]?[jt]s$');
+    const filename = (context.filename ?? context.getFilename()).replace(/\\/g, '/');
+    if (allow.test(filename)) return {};
     return {
       MemberExpression(node) {
-        if (memberPath(node.object) !== 'process.env') return;
-        const key = node.property.name ?? node.property.value ?? 'X';
+        if (memberPath(node) !== 'process.env') return;
+        // process.env.X = token — the setup project writing a run-time token is not a read.
         const p = node.parent;
-        if (!p) return;
-        if (p.type === 'TSNonNullExpression') return;
-        if (p.type === 'LogicalExpression' && ['??', '||'].includes(p.operator) && p.left === node) {
-          context.report({ node, messageId: 'defaulted', data: { key } });
-          return;
+        if (p && p.type === 'MemberExpression' && p.object === node) {
+          const gp = p.parent;
+          if (gp && gp.type === 'AssignmentExpression' && gp.left === p) return;
         }
-        // `in` checks and typeof guards are legitimate presence tests
-        if (p.type === 'BinaryExpression' || p.type === 'UnaryExpression') return;
-        context.report({ node, messageId: 'bare', data: { key } });
+        const key = p && p.type === 'MemberExpression' && p.object === node ? `.${p.property.name ?? p.property.value ?? 'X'}` : '';
+        context.report({ node, messageId: 'outside', data: { key } });
       },
     };
   },

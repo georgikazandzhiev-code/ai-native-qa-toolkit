@@ -52,7 +52,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Per-test user emails (Mailpit plus-addressing)** | `helpers/util/mailpit.ts` | Pattern 7 | `getNextTestEmail(baseEmail)`, `MailpitHelper` |
 | **Personas — UI session (storage state JSON)** | `.auth/app/<persona>Session.json` (generated; not committed) | Pattern (persona) | `.auth/app/appMainUserSession.json` |
 | **Personas — UI session generator** | `helpers/app/createStorageState.ts` | Pattern (persona) | `createAppStorageState({ email, password, totpSecret, storageStatePath })` |
-| **Personas — bearer tokens** | `process.env.USER_ACCESS_TOKEN_*`, populated by `tests/app/login.setup.ts` | Pattern (persona) | `USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN` |
+| **Personas — bearer tokens** | `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`, reading the `USER_ACCESS_TOKEN_*` values that `tests/app/login.setup.ts` writes into `process.env` | Pattern (persona) | `USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN` |
 | **Persona credentials (email/password/TOTP)** | `env/.env.<environment>` (shape in `env/.env.example`); read only inside `login.setup.ts` | Pattern (persona) | See [reference.md §1.3](reference.md#13-user-credentials-email--password--totp-secret-triplets) |
 | **URLs and endpoint paths** | `config/app.ts` (`appConfig.apiUrl`, `appConfig.api.JOBS`, `appConfig.api.WORKERS`, …) | n/a | `appConfig.api.ADMIN_TENANT`, `appConfig.api.JOBS`, `appConfig.api.WORKERS` |
 | **Reference enums (Qase suites, job types)** | `enums/app/<topic>.ts` | n/a | `enums/app/qase-suites.ts` |
@@ -158,7 +158,7 @@ Target shape (assertion-style `setupX`/`teardownX` pair); current passthrough `c
 - **Accepts `overrides?: Partial<T>` and forwards them to the factory** (`body: createXData(overrides)`). A seeder with no override parameter is a refactor target: a test that needs a specific field value (e.g. a fixed `name` to assert on, or a `status: 'disabled'` seed state) cannot use it without forking into a second seeder. Overrides are what make a single seeder reusable across scenarios.
 - Body is built by a Pattern-2 factory (`createXData`), never inline. If the factory does not exist, create it first.
 - Response is Zod-parsed before return.
-- Token comes from `process.env.USER_ACCESS_TOKEN_FULL` (or the documented persona) — never hardcoded, never aliased.
+- Token comes from `tokens.full()` (or the documented persona's accessor), called at the call site — never hardcoded, never aliased.
 - Used by tests in `beforeAll`/`beforeEach` and matched in `afterAll`/`afterEach`. See "Lifecycle map" below.
 
 ### Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
@@ -204,7 +204,7 @@ test.describe('POST /workers', () => {
                 method: 'DELETE',
                 url: `${appConfig.api.WORKERS}/${id}`,
                 baseUrl: appConfig.apiUrl,
-                headers: process.env.USER_ACCESS_TOKEN_FULL,
+                headers: tokens.full(),
             });
         }
     });
@@ -233,7 +233,7 @@ When the suite runs in parallel (`fullyParallel: true` in `playwright.config.ts`
 1. **Uniqueness sources** — `faker.string.uuid()`, `faker.string.alphanumeric(N)`, `Date.now()`, `getNextTestEmail(baseEmail)`. Module-level counters (`let counter = 0`) are forbidden.
 2. **No mutable module state** — factories and Object Mothers are pure functions of their inputs.
 3. **Faker seeding** — the framework does not globally seed faker. If you need a reproducible failure, seed at the start of the test with `faker.seed(testInfo.testId.split('').reduce((a, c) => a + c.charCodeAt(0), 0))`. Do not seed in factories themselves.
-4. **`process.env` writes** — only `tests/app/login.setup.ts` may write `process.env.USER_ACCESS_TOKEN_*`. Specs and helpers READ env vars; they never write them.
+4. **`process.env` writes** — only `tests/app/login.setup.ts` may write `process.env.USER_ACCESS_TOKEN_*` (the setup project is part of the config boundary for that one purpose). Specs and helpers never write env vars, and read them only through `config/env.ts` (`env.X`, `tokens.full()`).
 5. **Per-test user emails** are intrinsically parallel-safe via plus-addressing.
 6. **Storage states** are read-only files; multiple Playwright workers can share them. Personas that need to mutate user attributes during a test must use Pattern 7, not a shared storage state.
 7. **Don't share helper-returned objects** — if `createWorker` returns `body`, the consuming test owns it; don't cache it across describes.
@@ -258,7 +258,7 @@ rg "USER_ACCESS_TOKEN_|ADMIN_ACCESS_TOKEN_" env/.env.example tests/ helpers/
 
 Decision rules:
 - A hit on factory or seeder = consume it. Do NOT duplicate. If it lacks an override you need, ADD an override; do not fork.
-- A hit on env token = use the canonical name; never alias to `const token = process.env.X`.
+- A hit on env token = call its accessor (`tokens.full()`) at the call site; never alias it to `const token = tokens.full()` at module level (see `type-safety` § Environment variables).
 - A hit on JSON = add a key to the existing file; do not create a parallel file.
 
 For per-area scopes, see the catalogs in [reference.md](reference.md).
@@ -278,7 +278,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 | Inline `faker` payload in a spec for an entity that has a builder | Drift; rule changes hit one place but not others | Import the builder; if the builder lacks a field, add `Partial<T>` override |
 | Two near-identical generators (e.g. `createXData` + `createXDataForUI`) | Drift, more places to update | One factory + one Object Mother variant |
 | Module-level counter for uniqueness (`let n = 0`) | Parallel-unsafe; collides across Playwright workers | `faker.string.uuid()`, `faker.string.alphanumeric(N)` |
-| `const token = process.env.USER_ACCESS_TOKEN_X` aliased then passed around | Hides the canonical name; grep misses it | Use `process.env.USER_ACCESS_TOKEN_X` directly at the call site |
+| `const token = process.env.USER_ACCESS_TOKEN_X` aliased then passed around | Hides the canonical name; grep misses it; read outside `config/env.ts` | Call `tokens.full()` / `.admin()` / `.zero()` directly at the call site |
 | Hardcoded uuid in a spec for "non-existent" id | Magic value; can't be updated centrally | `test-data/app/<resource>.json` `nonExistentId` |
 | `await getNextTestEmail()` | The function is synchronous; await produces noise | Drop the `await` |
 | `Math.random()` based amount generators (`helpers/util/dataGenerator.ts` `generateRandomAmount`) | Bypasses the project's faker-everywhere convention | `faker.number.float({ min, max, multipleOf: 0.01 })` |
@@ -291,7 +291,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 Before finishing any data-related change, confirm:
 
 - [ ] Every faker call in a spec is for a value used in only that spec; reusable shapes live in a factory.
-- [ ] Every `process.env.*` token is the canonical name from [reference.md](reference.md), not aliased locally.
+- [ ] Every token is read through its `tokens` accessor (`tokens.full()` etc., see [reference.md](reference.md)) at the call site, not aliased locally.
 - [ ] Every entity created in the test has a matching delete in `afterEach` or `afterAll`.
 - [ ] Every JSON import points to `test-data/app/<resource>.json`; no JSON files live elsewhere.
 - [ ] No module-level mutable state (counters, caches, ids) outside of `describe`-scoped arrays drained in `afterAll`.
@@ -312,7 +312,7 @@ The instinct is a `test-data/app/projects.json` with a ready payload. That is th
 1. **`name` must be unique per test run.** Two Playwright workers, or one rerun before cleanup, and a fixed name collides on the 409 path. Faker, not JSON.
 2. **`ownerId` must reference a row that actually exists.** A hardcoded uuid is a hardcoded id — forbidden, and it rots the first time the environment is reset. Borrowing one ("list users and take the first") fails the same way. Create the owner in `beforeAll` (e.g. `setupTestUser`), use its id, and delete it in `afterAll` (`teardownTestUser`).
 3. **`description` is genuinely fixed** — it is not asserted on and not unique. A constant is fine as the body builder's **default payload value** (overridable like any field), not in its own file. That is a builder default, not a test constant: once a test asserts on it, the expected value comes from `test-data/` per § Critical.
-4. **The token comes from `process.env.X!`**, never a file.
+4. **The token comes from `tokens.x()`** (`config/env.ts`), never a file.
 
 The finished shape: a body builder in `helpers/app/` that takes the resolved `ownerId` and a faker name, plus one `beforeAll` that creates the owner and one `afterAll` that deletes it. No new JSON file — which is what § Search-before-write is for.
 
@@ -332,7 +332,7 @@ The finished shape: a body builder in `helpers/app/` that takes the resolved `ow
 |---------|-------|-----|
 | `409 Conflict` on create, only in CI or only at parallelism | A fixed name from JSON, shared across Playwright workers | Faker per test. Delete the JSON value so it cannot be reused. |
 | A hardcoded uuid stops resolving after an environment reset | An id was treated as fixed data; ids are environment state, not data | Resolve it at runtime in `beforeAll` and fail loudly when the lookup returns nothing. |
-| Test passes locally, `401` in CI | Credentials read from a file, or a storage state older than its token TTL | Tokens come from `process.env.X!`. Re-run the auth setup project before assuming a code bug. |
+| Test passes locally, `401` in CI | Credentials read from a file, or a storage state older than its token TTL | Tokens come from `tokens.x()` (`config/env.ts`). Re-run the auth setup project before assuming a code bug. |
 | Faker produced a value the API rejects | Unconstrained generator against a validated field — a name too long, an email shape the backend refuses | Constrain the generator to the contract, do not loosen the assertion. |
 | Two JSON files hold the same constant | § Search-before-write was skipped | Grep before adding. Consolidate into one, then update both consumers atomically per `refactor-values`. |
 | Cleanup deletes a row another spec is mid-read on | Data is shared where it should be per-test | Per-test data is the fix; ordering teardown around a shared row only moves the race. |

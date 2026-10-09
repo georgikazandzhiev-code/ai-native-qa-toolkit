@@ -228,7 +228,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - ❌ **E2E test deletes via the UI.** Slow + flaky. Fix: API-driven `test.afterAll` via `helpers/app/<resource>.ts`.
 - ❌ **Using `test.skip` for known bugs.** Skipped tests corrupt Qase ID mappings. Comment out the test instead and add `// TODO: FIXME: <TICKET> <description>` above. Grep for `// TODO: FIXME:` to find all deferred tests.
 - ❌ **No `test.step` — body is one big block.** Trace viewer becomes useless on failure. Fix: wrap each phase.
-- ❌ **Hardcoded URL / token / endpoint / UI string.** Fix: `process.env.*` (URLs, tokens), `appConfig.*` (endpoints, routes), `enums/app/*` (UI strings), `test-data/app/*` (fixed values).
+- ❌ **Hardcoded URL / token / endpoint / UI string.** Fix: the config module — `appConfig.*` (URLs, endpoints, routes), `env.X` / `tokens.full()` from `config/env.ts` (credentials, tokens) — `enums/app/*` (UI strings), `test-data/app/*` (fixed values).
 - ❌ **Committed `.only` / explore spec / `console.log(...)`.** Fix: delete before committing.
 - ❌ **Single-assertion test with full navigation overhead.** If a test contains one assertion and shares the same `beforeEach` navigation as its neighbors, merge it as an `AND:` step into the nearest structural test. A standalone `test()` is justified only when it has a distinct GIVEN/WHEN/THEN flow or tests an interaction (click, type, select).
 - ❌ **Back-to-back navigation calls where the second supersedes the first.** E.g., `await sideNavigation.navigateToApp(); await page.goto(notificationsUrl);` — the first navigation is wasted. Fix: remove the redundant navigation; keep only the one that lands on the target page.
@@ -243,7 +243,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.
 - [ ] E2E specs: `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
-- [ ] No hardcoded URLs / tokens / endpoints / strings — URLs and tokens from `process.env.*`, endpoints and routes only from `appConfig.*` (never enums), UI strings / suites / statuses from `enums/app/*`, fixed values from `test-data/app/*`.
+- [ ] No hardcoded URLs / tokens / endpoints / strings — URLs from `appConfig`, credentials and tokens from `env` / `tokens` in `config/env.ts` (never `process.env` at a call site), endpoints and routes only from `appConfig.*` (never enums), UI strings / suites / statuses from `enums/app/*`, fixed values from `test-data/app/*`.
 - [ ] No `.only`. No `test.skip` — comment out the test with `// TODO: FIXME: <TICKET> <description>` instead (Qase ID preservation).
 - [ ] When assertions reference strings from a `test-data/app/*.json` file, every relevant entry in that file has a corresponding assertion. Cross-reference the data file against the test to catch missing coverage.
 - [ ] Affected tests run green before declaring done.
@@ -329,8 +329,7 @@ import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
 import { SUITES } from "../../../../enums/app/qase-suites";
 import { deleteJob, listJobs } from "../../../../helpers/app/jobs";
-
-const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
+import { tokens } from "../../../../config/env";
 
 test.describe("E2E — HTTP Job CRUD (single method)", () => {
   test.setTimeout(appConfig.timeouts.e2eJourney);
@@ -338,9 +337,9 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
   test.afterAll(async ({ apiRequest }) => {
     for (const name of createdJobNames) {
-      const { body } = await listJobs(apiRequest, { name }, TENANT_TOKEN);
+      const { body } = await listJobs(apiRequest, { name }, tokens.full());
       for (const job of body.jobs) {
-        await deleteJob(apiRequest, job.id, TENANT_TOKEN);
+        await deleteJob(apiRequest, job.id, tokens.full());
       }
     }
   });
@@ -398,6 +397,6 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES
 ## See Also
 
 - **Paired skills:** [`api-testing`](../api-testing/SKILL.md) for API specs (schema validation, status-code matrix, per-field negative coverage), [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI specs (POM Method Standards, locator priority). Always-on framework invariants live in [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md).
-- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (`process.env.X!`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
+- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (env via `config/env.ts`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
 - **Failure investigation:** [`debugging`](../debugging/SKILL.md) — failure-mode taxonomy and the right Playwright tool (`npm run app-ui`, `npm run app-debug`, trace viewer) when Step 9 reports red.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.

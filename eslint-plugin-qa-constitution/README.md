@@ -1,6 +1,6 @@
 # eslint-plugin-qa-constitution
 
-Turns the mechanically checkable half of the [QA engineering constitution](../.claude/CLAUDE.md) into **16 enforceable ESLint rules**.
+Turns the mechanically checkable half of the [QA engineering constitution](../.claude/CLAUDE.md) into **17 enforceable ESLint rules**.
 
 The rest of this toolkit is prose that an agent is asked to follow. This is the part a pipeline can refuse to merge. Governance without an enforcement mechanism is advice.
 
@@ -31,7 +31,7 @@ export default [
 | `single-tag-on-test` | MUST Tags | Zero tags, two tags, a non-whitelisted tag, or a tag on `describe()` |
 | `require-strict-object` | MUST Schemas | `z.object(` — **autofixable** to `z.strictObject(` |
 | `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted, and `expect.soft(Schema.parse(body))`, which isn't soft (the loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`) |
-| `require-env-non-null` | MUST Sources of Truth | `process.env.X` without `!`, or defaulted at the call site with `??` / `\|\|` |
+| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/`, `playwright.config.*`). A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
 | `no-xpath` | WON'T No XPath | `locator('//…')`, `locator('xpath=…')`, `locator('(//…')` |
 | `no-hard-waits` | WON'T No hard waits | `waitForTimeout(…)` |
 | `no-page-evaluate` | WON'T No page.evaluate | `page.evaluate`, `$eval`, `$$eval` for DOM work |

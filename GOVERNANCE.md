@@ -114,7 +114,7 @@ Three jobs run on every push and every pull request (`.github/workflows/validate
 | Fails the CI run | Reported, never fails the run |
 |---|---|
 | `npm run validate` — front matter, required sections, semver, cross-reference integrity, `mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
-| `node tests/rules.test.js` — 23 `RuleTester` suites, 52 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
+| `node tests/rules.test.js` — 23 `RuleTester` suites, 54 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
 | `node tests/fault-injection.test.mjs` — every rule must fire on the known-bad tree, stay silent on the compliant tree, and stop reporting when its visitor is emptied | `description` under 120 chars, or missing a "Do NOT use for" disclaimer |
 | The known-bad fixture must still be rejected by the ESLint CLI, and the compliant one must still pass clean | Category outside the canonical four |
 | `npm run eval:compare` — a recorded score drop beyond the noise floor | A declared version disagreeing with the newest history entry |

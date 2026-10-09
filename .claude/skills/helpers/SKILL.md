@@ -13,7 +13,7 @@ This skill governs **how** to author a helper in this codebase: location, naming
 ## Critical
 
 - **ALWAYS** put resource-scoped helpers in `helpers/app/<resource>.ts` and cross-resource utilities in `helpers/util/<name>.ts`. Nothing else under `helpers/`.
-- **ALWAYS** make the first parameter `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`) and the last optional parameter `headers?: string` (the bearer token). Never read tokens from `process.env` inside a helper — the caller controls auth.
+- **ALWAYS** make the first parameter `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`) and the last optional parameter `headers?: string` (the bearer token). Never read tokens or other env values inside a helper (not `process.env`, not `tokens.x()`) — the caller controls auth and passes `tokens.full()` etc.
 - **NEVER** declare a Zod schema inside a helper. Schemas live only under `fixtures/api/schemas/app/` (and `fixtures/api/schemas/util/` for shared shapes). Helpers import the inferred response types from those files.
 - **The decision of WHEN to write a helper vs call `apiRequest({...})` directly vs build a fixture lives in the `api-testing` skill (§ Helpers — three callable shapes). This skill governs how to author the helper, not when.** Do not reproduce that decision tree here.
 - **ALWAYS** make cleanup helpers tolerate 404 via `Promise.allSettled` over the per-id deletes. A cleanup helper that throws on a missing resource breaks the next test's setup.
@@ -53,7 +53,7 @@ The **canonical** layout (per orchestrator File Naming Conventions, kebab-case f
 | File | Purpose |
 |------|---------|
 | `mailpit.ts` | `MailpitHelper` class (`getLastEmail`, `deleteAllEmails`, `deleteEmailsForRecipient`); `getInviteLinkFromEmail`, `extractLinkFromEmail`, `extractOtpFromEmail`, `getNextTestEmail`. Recipient must be `@<your-test-domain>`. |
-| `keyCloak.ts` | Auth bootstrap: `getAuthenticatedKcAdminClient`, `getAuthenticatedKcUserClient`, `getUserIdByEmail`, `resetUserPasswordById`, token retrieval. Reads Keycloak credentials from `process.env.KEYCLOAK_*` — this file is the **one sanctioned** place for direct env access in helpers (it is the auth boundary; everywhere else, the caller passes the token via `headers`). **camelCase legacy — canonical: `key-cloak.ts` (or fold into `keycloak.ts`).** |
+| `keyCloak.ts` | Auth bootstrap: `getAuthenticatedKcAdminClient`, `getAuthenticatedKcUserClient`, `getUserIdByEmail`, `resetUserPasswordById`, token retrieval. Reads Keycloak credentials as `env.KEYCLOAK_*` from `config/env.ts` — this file is the **one sanctioned** place for env access in helpers (it is the auth boundary; everywhere else, the caller passes the token via `headers`). **camelCase legacy — canonical: `key-cloak.ts` (or fold into `keycloak.ts`).** |
 | `dateTimeFormat.ts` | ISO → `MM/DD/YYYY h:mm:ss AM/PM` formatters with timezone offset. **camelCase legacy — canonical: `date-time-format.ts`.** |
 | `balanceFormat.ts` | Number → `1,234,567.89` formatter. **camelCase legacy — canonical: `balance-format.ts`.** |
 | `dataGenerator.ts` | `generateRandomAmount`, `generateTestEmail`, `generateUserData`. **camelCase legacy — canonical: `data-generator.ts`.** `generateTestEmail` is the legacy overlap with `mailpit.ts:getNextTestEmail` — use `getNextTestEmail(baseEmail)` for any email a test creates. `generateUserData` overlaps `users.ts:buildCreateUserBody` — consolidate when next touched. |
@@ -102,14 +102,14 @@ These are the project-specific cleanup invariants. Generic guidance lives in `ap
 
 ## Auth-bootstrap helpers
 
-- **The Keycloak admin client (`helpers/util/keyCloak.ts`) is the one sanctioned place for direct `process.env.*` reads in helpers.** It is the auth boundary — everywhere else, the caller passes the token via the `headers` parameter.
+- **The Keycloak admin client (`helpers/util/keyCloak.ts`) is the one sanctioned place for env reads in helpers** — and even it reads `env.KEYCLOAK_*` from `config/env.ts`, never `process.env` (see `type-safety` § Environment variables). It is the auth boundary — everywhere else, the caller passes the token via the `headers` parameter.
 - **The UI auth bootstrap (`helpers/app/createStorageState.ts`)** logs in via the Keycloak UI, optionally enters a TOTP, waits for the app sidebar, and writes the storage state to a path. It is consumed from `tests/app/login.setup.ts` (project setup hook), not from regular specs.
 - **`setupTestUser`** is the bridge between the admin API and Keycloak: it creates the user via the admin API, resets the password directly via the Keycloak admin client (bypassing the invite-link / email-reset UX), purges the Mailpit mailbox, and returns `{ email, userId }`. It does **not** mint or return access tokens, and it does **not** drive the invite-link flow end-to-end. For tests that need the invite-link UX, write the steps inline (purge → create user → `getInviteLinkFromEmail` → follow the link) — see `api-testing` § Multi-step & E2E API tests.
 
 ## Anti-patterns
 
 - ❌ Declaring a Zod schema (`z.object`, `z.strictObject`, …) inside a helper file. Move it to `fixtures/api/schemas/app/<resource>.ts` and import the inferred type back.
-- ❌ Reading credentials directly from `process.env` inside a helper (other than the sanctioned `helpers/util/keyCloak.ts` auth boundary). The caller controls the token via `headers`.
+- ❌ Reading credentials or tokens inside a helper — `process.env` anywhere, or `env` / `tokens` outside the sanctioned `helpers/util/keyCloak.ts` auth boundary. The caller controls the token via `headers`.
 - ❌ Hardcoding URLs, paths, or uuids inside a helper. Paths come from `appConfig.api.X`, base URL from `appConfig.apiUrl`, uuids from `test-data/app/*.json` or `faker.string.uuid()`.
 - ❌ A new helper file in camelCase. Use kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). Existing camelCase files are drift; rename when next touched.
 - ❌ A cleanup helper that throws on 404. Use `Promise.allSettled` and tolerate already-deleted ids.
@@ -130,7 +130,7 @@ Before declaring a helper change done, verify:
 - [ ] Filename is kebab-case (or you are matching one of the listed legacy camelCase files exactly).
 - [ ] First parameter is `apiRequest: ApiRequestFn`; last optional parameter is `headers?: string`.
 - [ ] No `z.object` / `z.strictObject` / `z.<anything>` inside the helper file. Response types are imported from `fixtures/api/schemas/app/`.
-- [ ] No `process.env.*` reads inside the helper (unless the file IS `helpers/util/keyCloak.ts`).
+- [ ] No `process.env` reads inside the helper, and no `env` / `tokens` reads either unless the file IS `helpers/util/keyCloak.ts` (which reads `env.KEYCLOAK_*`).
 - [ ] Endpoint paths come from `appConfig.api.X`; base URL is `appConfig.apiUrl`.
 - [ ] If the helper is a body builder, the name carries a `qa-` prefix + faker suffix and `...overrides` is splat last.
 - [ ] If the helper is a cleanup, it uses `Promise.allSettled` and tolerates 404.
@@ -188,13 +188,13 @@ Walk:
 | 401 test fails because `headers: ""` triggered a different error | Empty-string `headers` sends an `Authorization: Bearer ` request, not an unauthenticated request | **Omit the `headers` property entirely** in the helper call site. Never pass an empty string. |
 | I don't know whether to write a helper, call `apiRequest` directly, or build a fixture | Decision rule is not in this skill | Load `api-testing` § Helpers — three callable shapes / Two helper styles. This skill governs how to author the helper; that one governs whether you should. |
 | My new helper duplicates `generateTestEmail` / `generateUserData` / `getNextTestEmail` | The codebase has overlapping email/user generators across `dataGenerator.ts` and `mailpit.ts` | Search before creating and consolidate when next touched. For any email a test creates, use `getNextTestEmail(baseEmail)` (in `helpers/util/mailpit.ts`) — `generateTestEmail` is the legacy overlap; Mailpit plus-addressing makes every address unique and catchable. |
-| `process.env.KEYCLOAK_*` is undefined in a non-Keycloak helper | A helper read env directly that should not have | Move the call up to the spec or an auth-bootstrap helper. The only sanctioned `process.env.*` reader in `helpers/` is `helpers/util/keyCloak.ts` — every other helper takes the token via the `headers` parameter. |
+| A non-Keycloak helper reads `process.env.KEYCLOAK_*` (or `env.KEYCLOAK_*`) and gets `undefined` or the wrong value | A helper read env directly that should not have | Move the read up to the spec (`env.X` / `tokens.x()`) or an auth-bootstrap helper and pass the value in. The only sanctioned env reader in `helpers/` is `helpers/util/keyCloak.ts`, via `env.KEYCLOAK_*` from `config/env.ts` — every other helper takes the token via the `headers` parameter. |
 
 ## See Also
 
 - **`api-testing`** — owns the helper-vs-`apiRequest`-vs-fixture decision (§ Helpers — three callable shapes), the assertion-style vs passthrough decision (§ Two helper styles), the `apiRequest` contract, the `expect(Schema.parse(body)).toBeTruthy()` rule, the negative-matrix coverage, and full code skeletons in `templates.md` (§ 18 Helper styles).
 - **`fixtures`** — Playwright fixture authoring with `use()` lifecycle (`mailpit`, `loginUser`, `apiRequest`); the sibling category to helpers. See also `api-testing` § Helpers — three callable shapes for the helper-vs-fixture decision rule.
-- **`type-safety`** — Zod 3 schemas, `z.strictObject()`, `z.string().uuid()` defaults, type inference (`z.infer<typeof X>`), and the canonical `process.env.X!` access pattern. The strictness ladder for `.optional()` / `.nullable()` lives in `api-testing` § Zod schema conventions.
+- **`type-safety`** — Zod 3 schemas, `z.strictObject()`, `z.string().uuid()` defaults, type inference (`z.infer<typeof X>`), and env access through the config module (`env.X`, `tokens.full()` — never `process.env` outside `config/env.ts`). The strictness ladder for `.optional()` / `.nullable()` lives in `api-testing` § Zod schema conventions.
 - **`data-strategy`** — when to use JSON vs faker vs env vs API seeding; the three-tier rule for invalid-value arrays. Body builders in this skill seed from faker per § 8 of that skill.
 - **`enums`** — `SUITES.API_*`, statuses, message constants. Suites and messages are caller-side concerns; a helper may import a domain value it needs (e.g. a `JOB_STATUSES` member), but never a path or URL — resource path constants (`appConfig.api.X`) live in `config/app.ts` per the orchestrator's Sources of Truth rule.
 - **`config`** — `appConfig.api.X` for endpoint paths, `appConfig.apiUrl` for base URL, `appConfig.paths.X` for UI routes.
