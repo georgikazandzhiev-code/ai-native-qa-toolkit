@@ -355,6 +355,10 @@ The default stack in the examples is Playwright + TypeScript + Zod, with Qase fo
 
 This is the **generic layer**. Client-specific repository context and internal integrations are intentionally excluded, so nothing here is tied to a particular employer or customer. The skills reference a "repo-context skill" as an extension point where that per-project detail belongs.
 
+## Contributing
+
+Changing a rule here changes every session that loads it, so the bar is high and the gates are explicit. [`CONTRIBUTING.md`](CONTRIBUTING.md) is the entry point: the precedence of constitution over skills, the one-change-per-PR rule, the gates to run before a PR, and the contract for adding a skill. The law is [`GOVERNANCE.md`](GOVERNANCE.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Use it, fork it, adapt it.
