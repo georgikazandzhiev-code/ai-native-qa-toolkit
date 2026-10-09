@@ -94,7 +94,7 @@ test('Creates worker', async ({ apiRequest }) => {
 });
 ```
 
-Fix: `import { buildCreateWorkerBody } from '../../../helpers/app/workers';` and call `buildCreateWorkerBody({ region: 'EU' })`.
+Fix: `import { buildCreateWorkerBody } from '../../../../helpers/app/workers';` and call `buildCreateWorkerBody({ region: 'EU' })`.
 
 ### Bad — Forking the builder instead of adding overrides
 
@@ -160,7 +160,7 @@ Fix: `return createWorkerData({ region: 'EU', location: 'EU-Amsterdam' });`.
 ```
 
 ```typescript
-import httpJobValidation from '../../../test-data/app/httpJobValidation.json';
+import httpJobValidation from '../../../../test-data/app/httpJobValidation.json';
 
 for (const invalidName of httpJobValidation.invalidNames) {
     test(`rejects invalid name: '${invalidName}'`, async ({ apiRequest }) => {
@@ -191,7 +191,7 @@ Fix: move to `test-data/app/<resource>-validation.json` and import. The JSON is 
 ```
 
 ```typescript
-import workerData from '../../../test-data/app/worker.json';
+import workerData from '../../../../test-data/app/worker.json';
 
 await apiRequest({
     url: `${appConfig.api.WORKERS}/${workerData.nonExistentId}`,
@@ -212,7 +212,7 @@ Fix: every "non-existent" or "invalid" sentinel lives in `test-data/app/<resourc
 ### Good (the shape we want — assertion-style)
 
 ```typescript
-// helpers/app/testDataGenerators.ts (factory — Pattern 2)
+// helpers/app/test-data-generators.ts (factory — Pattern 2)
 export type WorkerData = { name: string; location: string; region: string };
 export function createWorkerData(overrides: Partial<WorkerData> = {}): WorkerData {
     return {
@@ -257,13 +257,13 @@ Test usage:
 const workerIds: string[] = [];
 
 test('seeded worker path', async ({ apiRequest }) => {
-    const worker = await setupTestWorker(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!);
+    const worker = await setupTestWorker(apiRequest, tokens.full());
     workerIds.push(worker.id);
     // ...
 });
 
 test.afterAll(async ({ apiRequest }) => {
-    for (const id of workerIds) await teardownTestWorker(apiRequest, id, process.env.USER_ACCESS_TOKEN_FULL!);
+    for (const id of workerIds) await teardownTestWorker(apiRequest, id, tokens.full());
 });
 ```
 
@@ -299,23 +299,20 @@ const { body } = await apiRequest({
     method: 'POST',
     url: appConfig.api.WORKERS,
     baseUrl: appConfig.apiUrl,
-    headers: process.env.USER_ACCESS_TOKEN_FULL,
+    headers: tokens.full(),
     body: { /* worker payload */ },
 });
 ```
 
-Fix: `import { createWorker, buildCreateWorkerBody } from '../../../helpers/app/workers';` then `await createWorker(apiRequest, buildCreateWorkerBody(), process.env.USER_ACCESS_TOKEN_FULL);`.
+Fix: `import { createWorker, buildCreateWorkerBody } from '../../../../helpers/app/workers';` then `await createWorker(apiRequest, buildCreateWorkerBody(), tokens.full());`.
 
 ## Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
 
 ### Good (`helpers/app/adminUsers.ts` shape)
 
 ```typescript
-import { setupTestUser, teardownTestUser } from '../../../helpers/app/adminUsers';
-
-const adminToken = process.env.USER_ACCESS_TOKEN_ADMIN!;
-const tenantId = process.env.TENANT_ID!;
-const password = process.env.APP_RESET_PASSWORD!;
+import { setupTestUser, teardownTestUser } from '../../../../helpers/app/adminUsers';
+import { env, tokens } from '../../../../config/env';
 
 let userEmail: string;
 let userId: string;
@@ -324,10 +321,10 @@ test.beforeEach(async ({ apiRequest, mailpit }) => {
     ({ email: userEmail, userId } = await setupTestUser(
         apiRequest,
         mailpit,
-        tenantId,
-        password,
+        env.TENANT_ID,
+        env.APP_RESET_PASSWORD,
         'QA',
-        adminToken,
+        tokens.admin(),
     ));
 });
 
@@ -336,10 +333,10 @@ test.afterEach(async ({ apiRequest, mailpit }) => {
         await teardownTestUser(
             apiRequest,
             mailpit,
-            tenantId,
+            env.TENANT_ID,
             userEmail,
             userId,
-            adminToken,
+            tokens.admin(),
         );
     }
 });
@@ -352,7 +349,7 @@ test.afterEach(async ({ apiRequest, mailpit }) => {
 ```typescript
 let userEmail: string;
 test.beforeAll(async () => {
-    userEmail = getNextTestEmail(process.env.APP_MAIN_EMAIL!); // created once
+    userEmail = getNextTestEmail(env.APP_MAIN_EMAIL); // created once
     // setupTestUser(...)
 });
 test('A', async () => { /* mutates userEmail's state */ });
@@ -376,7 +373,7 @@ Fix: drop the `await`.
 process.env.USER_ACCESS_TOKEN_TEMP = await getClientToken(kcClient); // forbidden in specs
 ```
 
-Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*`. Specs READ.
+Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*` (the setup project is part of the config boundary for that purpose). Specs read tokens through `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`.
 
 ## Lifecycle: id-array drain (the canonical leak guard)
 
@@ -391,7 +388,7 @@ test.describe('POST /workers', () => {
             method: 'POST',
             url: appConfig.api.WORKERS,
             baseUrl: appConfig.apiUrl,
-            headers: process.env.USER_ACCESS_TOKEN_FULL,
+            headers: tokens.full(),
             body: buildCreateWorkerBody(),
         });
         expect(status).toBe(201);
@@ -405,7 +402,7 @@ test.describe('POST /workers', () => {
                 method: 'DELETE',
                 url: `${appConfig.api.WORKERS}/${id}`,
                 baseUrl: appConfig.apiUrl,
-                headers: process.env.USER_ACCESS_TOKEN_FULL,
+                headers: tokens.full(),
             });
         }
     });
@@ -429,7 +426,7 @@ Fix: push the id to `workerIds` immediately after the POST. Cleanup runs in `aft
 ### Good
 
 ```typescript
-headers: process.env.USER_ACCESS_TOKEN_FULL,
+headers: tokens.full(),
 ```
 
 ### Bad — Aliased
@@ -443,15 +440,16 @@ headers: TENANT_TOKEN,
 Why it's wrong:
 - Hides the canonical name. `rg USER_ACCESS_TOKEN_FULL` no longer reveals every consumer.
 - Easy to copy-paste into a different spec and silently use the wrong token.
+- Reads `process.env` outside the config module; and even as `const TENANT_TOKEN = tokens.full()`, a module-level alias runs before the setup project has written the token.
 
-Fix: drop the alias; use `process.env.USER_ACCESS_TOKEN_FULL` directly. See [refactor-playbook §5](refactor-playbook.md#5-remove-token-aliasing).
+Fix: drop the alias; call `tokens.full()` at each call site (see `type-safety` § Environment variables). See [refactor-playbook §5](refactor-playbook.md#5-remove-token-aliasing).
 
 ## Mock JSON vs real seeding
 
 ### Good — purely-frontend assertion against a stub response
 
 ```typescript
-import workerStub from '../../../test-data/app/worker.json';
+import workerStub from '../../../../test-data/app/worker.json';
 await page.route('**/api/v1/workers/123', (route) =>
     route.fulfill({ status: 200, body: JSON.stringify(workerStub) })
 );
@@ -460,7 +458,7 @@ await page.route('**/api/v1/workers/123', (route) =>
 ### Bad — using a mock JSON as if it described a real backend resource
 
 ```typescript
-import workerStub from '../../../test-data/app/worker.json';
+import workerStub from '../../../../test-data/app/worker.json';
 const { body } = await apiRequest({ url: `${path}/${workerStub.nonExistentId}`, /* ... */ });
 expect(body.name).toBe(workerStub.name); // backend may have drifted
 ```

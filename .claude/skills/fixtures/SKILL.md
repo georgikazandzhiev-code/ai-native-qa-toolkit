@@ -1,6 +1,6 @@
 ---
 name: fixtures
-version: 1.0.3
+version: 1.1.0
 description: Playwright fixture authoring — POM dependency injection, the test-options.ts merge point, apiRequest/mailpit/loginUser fixtures, scoping (test vs Playwright worker), and kebab-case naming. Use when adding a fixture, registering a page object for DI, or extending FrameworkFixtures. Triggers — "fixture", "test-options", "register page object", "Playwright worker scope". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or plain helpers (helpers).
 metadata:
   category: domain
@@ -44,7 +44,8 @@ flowchart TD
     B -->|Yes| POM[Register in page-object-fixture.ts<br/>FrameworkFixtures + base.extend]
     B -->|No| C{Is it a single API call<br/>or short setup?}
     C -->|Yes, used in 1 spec| Inline[apiRequest direct in the hook]
-    C -->|Reused in 2+ specs| D{Needs cleanup that MUST<br/>run on test failure?}
+    C -->|Reused in 2 specs| Helper
+    C -->|Reused in 3+ specs| D{Needs cleanup that MUST<br/>run on test failure?}
     D -->|No| Helper[Plain helper, or helper<br/>returning a cleanup callback]
     D -->|Yes| E{Owns a long-lived resource<br/>context / client / session?}
     E -->|Yes| Fixture[Author a fixture:<br/>setup, await use, dispose]
@@ -62,7 +63,7 @@ The full, current inventory (every registered POM, `apiRequest` / `loginUser` / 
 
 ## test-options.ts — the merge point
 
-`fixtures/pom/test-options.ts` is the single source of truth for `test` and `expect` in every spec. It calls Playwright's `mergeTests(...)` to combine four fixture layers (page objects, `apiRequest`, login, mailpit) into one `test` export, and re-exports `expect` from `@playwright/test`. Specs always import `{ expect, test }` from this file (relative path varies by spec depth — e.g. `../../../fixtures/pom/test-options` for `tests/app/api/*.spec.ts`).
+`fixtures/pom/test-options.ts` is the single source of truth for `test` and `expect` in every spec. It calls Playwright's `mergeTests(...)` to combine four fixture layers (page objects, `apiRequest`, login, mailpit) into one `test` export, and re-exports `expect` from `@playwright/test`. Specs always import `{ expect, test }` from this file (relative path varies by spec depth — e.g. `../../../../fixtures/pom/test-options` for `tests/app/api/<domain>/*.spec.ts`).
 
 When you add a new fixture, you append it to the `mergeTests(...)` call here. That is the only step that makes the fixture visible to specs — without it, the file might exist on disk but specs cannot destructure it.
 
@@ -166,11 +167,11 @@ User says: *"Every job-mutation test needs a worker seeded first. Should I write
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| TypeScript: `Property 'jobsPage' does not exist on type 'TestArgs'` (or fixture is `undefined` at runtime) | Spec imports `test` / `expect` from `@playwright/test` instead of `fixtures/pom/test-options` | Replace the import: `import { expect, test } from "../../../fixtures/pom/test-options";` (relative path varies by spec depth) |
+| TypeScript: `Property 'jobsPage' does not exist on type 'TestArgs'` (or fixture is `undefined` at runtime) | Spec imports `test` / `expect` from `@playwright/test` instead of `fixtures/pom/test-options` | Replace the import: `import { expect, test } from "../../../../fixtures/pom/test-options";` (relative path varies by spec depth) |
 | New fixture file exists on disk but specs cannot see it | Forgot to merge into `fixtures/pom/test-options.ts` | Append the import and add the fixture to the `mergeTests(...)` call. That is the only step that wires it through |
 | Tests share mutable state mid-suite (a record one test created appears in the next test) | Fixture is `{ scope: 'worker' }` when it should be `{ scope: 'test' }` | Switch to `test` scope. Use Playwright worker scope only for read-only, expensive, shareable setup |
 | Teardown didn't run after a test failure | Teardown code is placed **before** `await use(...)`, OR `await use(...)` was omitted, OR the fixture itself threw before reaching `use()` | Restructure as `setup → await use(value) → teardown`. If setup can throw, wrap it so the failure is reported but resources you did create still get cleaned up |
-| Fixture bound to env vars works locally but fails in CI | Env var is missing or differently-named in the CI runner (`MAILPIT_USERNAME`, `API_URL`, `APP_MAIN_PASSWORD`) | Verify against `env/.env.example`; surface the missing variable. Do not hardcode the value in the fixture — env values stay in `process.env.*` per the orchestrator's MUST table |
+| Fixture bound to env vars works locally but fails in CI | Env var is missing or differently-named in the CI runner (`MAILPIT_USERNAME`, `API_URL`, `APP_MAIN_PASSWORD`) — `config/env.ts` fails at load with a `ZodError` naming it (if the variable is in the schema) | Verify against `env/.env.example` and the schema in `config/env.ts`; surface the missing variable. Do not hardcode the value in the fixture — the fixture reads `env.X` / `appConfig` from the config module (see `type-safety` § Environment variables) |
 | `apiRequest` returns 401 from inside a fixture even with a valid token in the spec | Fixture forgot to thread the token through, or the token belongs to a different realm than the endpoint expects | Re-read `api-testing` § Common request recipes for the right token (`USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN`, etc.). Anonymous calls **omit** the `headers` property — never pass an empty string |
 | New page-object fixture isn't picked up even after editing `page-object-fixture.ts` | Forgot to add it to BOTH the `FrameworkFixtures` type alias AND the `base.extend(...)` block | Add the property to the type, then add the fixture body. TypeScript's type-completion on the test args is the verification |
 
@@ -182,6 +183,6 @@ User says: *"Every job-mutation test needs a worker seeded first. Should I write
 - **`selectors`** skill — selectors-vs-POM placement; page-object registration through this skill's `page-object-fixture.ts` is what makes locators reachable from specs.
 - **`page-objects`** skill — POM class structure (constructor, getters, action methods). Pairs with this skill on every "add a new page object" task.
 - **`helpers`** skill — plain utility functions that are NOT fixtures (no `use()` lifecycle). The helper-vs-fixture decision lives in `api-testing` § Three callable shapes.
-- **`type-safety`** skill — typing rules for fixture function signatures and yielded values; the canonical `process.env.X!` access pattern (no `??` defaulting at call sites).
+- **`type-safety`** skill — typing rules for fixture function signatures and yielded values; env access through the config module (`env.X`, `tokens.full()`; never `process.env`, `!` or `??` at a call site).
 - **`scaffold-spec`** skill — when scaffolding a new spec, the fixture import line comes from this skill.
 - **`~/.claude/CLAUDE.md`** — orchestrator. Dependency Injection (MUST), Imports (MUST), Fixture scoping (SHOULD) rows are the contract this skill implements.

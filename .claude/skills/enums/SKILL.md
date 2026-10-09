@@ -1,6 +1,6 @@
 ---
 name: enums
-version: 1.0.3
+version: 2.0.0
 description: Conventions for enums/app/ — where repeated string constants live (SUITES in qase-suites.ts, job statuses, inventory labels, report messages), the `as const` pattern, naming, and barrel exports. Use when adding a Qase suite, status value, or any repeated string constant. Triggers — "enum", "SUITES", "status value", "message string". Not for changing existing values (refactor-values) or endpoint paths (config — paths live in appConfig).
 metadata:
   category: domain
@@ -12,7 +12,7 @@ metadata:
 
 - **`as const` is the convention** for every enum container. Reasons: tree-shakable, no runtime artifacts, no numeric/string-enum footguns, plays cleanly with `strict` mode and Zod. No TypeScript `enum` exists anywhere in `enums/` today — do not introduce one. (Known drift: `SUITES` in `qase-suites.ts` is a plain object literal without `as const`; add the assertion when the file is next touched for another reason.)
 - **NEVER** put endpoint paths, route strings, base URLs, or env-driven URLs in `enums/`. **Paths live in `config/app.ts`** under `appConfig.api.X` (API paths) and `appConfig.paths.X` (UI route paths) — this is the canonical home for paths in this codebase, not a temporary state. See the `config` skill. (The orchestrator at `~/.claude/CLAUDE.md` has been updated to reflect this.)
-- **NEVER** invent a new file in `enums/` for a single value. Extend an existing file (e.g. add a new `SUITES.<KEY>` to `qase-suites.ts`) before creating a new module. New files require ≥ 2 related constants and a domain that does not fit any existing file.
+- **NEVER** invent a new file in `enums/` for a single value. Extend an existing file (e.g. add a new `SUITES.<KEY>` to `qase-suites.ts`) before creating a new module. New files require ≥ 2 related constants and a domain that does not fit any existing file — except app UI text, which always lives in an enum, so the first message of a page with no catalog opens its `enums/app/<page>.ts`.
 - **ALWAYS** name containers in `SCREAMING_SNAKE_CASE` (`SUITES`, `JOB_STATUSES`, `INVENTORY_COLUMNS`) — the dominant pattern; `ReportMessages` (PascalCase) is the one drift case. Keys are `SCREAMING_SNAKE_CASE` in `SUITES` and `ReportMessages`; the inventory catalogs use camelCase keys (existing drift — don't propagate to new files). File names are `kebab-case.ts` (`qase-suites.ts`, `chart-export.ts`).
 - **ALWAYS** add a JSDoc comment above the container (the `as const` declaration) that says what the constants group. `qase-suites.ts` and `reports.ts` carry top-level JSDoc — match that pattern (the other files currently lack it; backfill when touched).
 - **ALWAYS** re-export new files through the area barrel — `enums/app/index.ts` re-exports every `enums/app/*.ts`. A new file that is not in the barrel is invisible to barrel imports.
@@ -43,14 +43,14 @@ The `enums/` tree is small and intentional. List every file before adding more.
 | Shared status / state string (`"passing"`, `"failing"`) | `enums/app/job-status.ts` → `JOB_STATUSES` (or a new `as const` file for a genuinely new domain) | Cross-resource. No `enums/util/` directory exists; status containers live in `enums/app/`, `as const` from the start. |
 | API endpoint path (`/jobs`, `/admin/tenants`) | `config/app.ts` → `appConfig.api.X` | **Not enums.** Paths live in `config/` — canonical, not temporary. |
 | UI route path (`/login`, `/dashboard`) | `config/app.ts` → `appConfig.paths.X` | Same — paths live in `config/`. |
-| Base URL, env-driven URL, token, credential | `process.env.*` via `config/app.ts` | Environment-dependent. See the `config` skill. |
+| Base URL, env-driven URL, token, credential | The config module — `env` / `tokens` from `config/env.ts`, URLs via `appConfig` in `config/app.ts` | Environment-dependent. See the `config` skill. |
 | Storage-state file path | Inline in `playwright.config.ts` | One-off; only Playwright config consumes it. Promote to an enum file only when 2+ non-config consumers appear. |
-| UI message the app defines (error, success, validation, label, page title) | Existing per-page catalogs (`enums/app/reports.ts` → `ReportMessages`, `enums/app/inventory.ts` labels) or a new `enums/app/<page>.ts` — only when reused in 2+ specs | Capture exact text via the `playwright-cli` skill workflow (`npx playwright open`) first. Single-use messages stay inline at the assertion. |
+| UI message the app defines (error, success, validation, label, page title) | Existing per-page catalogs (`enums/app/reports.ts` → `ReportMessages`, `enums/app/inventory.ts` labels) or a new `enums/app/<page>.ts` — always, even when used once | Capture exact text via the `playwright-cli` skill workflow (`npx playwright open`) first. App text is always a catalog entry, never an inline literal. |
 | Role / permission name (`"admin"`, `"user"`) | New `enums/app/roles.ts` (does not exist yet) — only when reused | Today no test asserts a role string. |
 | HTTP status code, well-known cross-app constant | Inline numeric literal at the call site | Not an enum candidate today. |
 | Curated test inputs (invalid emails, weak passwords, boundary numerics) | `test-data/app/*.json` | Not enums. See the `data-strategy` skill. |
 | Timeouts, retries, Playwright workers, project-wide tuning | `playwright.config.ts` or `appConfig.timeouts` | Not enums. |
-| String literal used in exactly one place | Inline | Single-use does not justify an enum. |
+| Single-use literal that is NOT app content (a `test.step` label, a test-only name) | Inline | Single-use does not justify an enum. Text the app shows always goes to an enum (row above). |
 
 If the value fits none of these rows, stop and ask. Do not invent a new top-level folder or stuff a value in the wrong file.
 
@@ -64,7 +64,7 @@ If the value fits none of these rows, stop and ask. Do not invent a new top-leve
 | Key / member | `SCREAMING_SNAKE_CASE` | `API_JOBS`, `APP_LOGIN`, `EMPTY_HEADING` | `qase-suites.ts`, `reports.ts` — the inventory catalogs use camelCase keys (drift; don't propagate) |
 | Value | Exact wire / display string the app uses | `"API\tJobs"`, `"No widgets yet"` | all files |
 
-Note on container casing: this codebase treats `as const` containers as constant catalogs and uses `SCREAMING_SNAKE_CASE` for them (`SUITES`, `JOB_STATUSES`). New `as const` containers in `enums/app/` follow the same pattern (`MESSAGES`, `ROLES`, `API_ENDPOINTS`). `ReportMessages` predates this rule; leave it as-is until a `refactor-values`-driven rename is warranted.
+Note on container casing: this codebase treats `as const` containers as constant catalogs and uses `SCREAMING_SNAKE_CASE` for them (`SUITES`, `JOB_STATUSES`). New `as const` containers in `enums/app/` follow the same pattern (`MESSAGES`, `ROLES`). `ReportMessages` predates this rule; leave it as-is until a `refactor-values`-driven rename is warranted.
 
 ## Adding a new enum or member
 
@@ -81,7 +81,7 @@ Note on container casing: this codebase treats `as const` containers as constant
 ## Adding a new enum file
 
 A new file is only justified when:
-- ≥ 2 related constants are needed (single-value files are noise), AND
+- ≥ 2 related constants are needed (single-value files are noise) or the value is app UI text with no existing catalog, AND
 - No existing file (`qase-suites.ts`, `chart-export.ts`, `job-status.ts`, `inventory.ts`, `reports.ts`) covers the domain.
 
 Steps:
@@ -110,21 +110,21 @@ If the app is unavailable, do **not** ship the value. Stop and notify the human 
 - ❌ Authoring a new file with TypeScript `enum`. New files use `as const`, no exceptions.
 - ❌ Pre-emptive standalone rewrite of a drift case (e.g. adding `as const` to `SUITES`, renaming `ReportMessages`) with no other change. Wait for a legitimate edit (member rename, new value, JSDoc change) and fix the drift as part of it.
 - ❌ Hardcoding `"API\tJobs"` in a spec instead of `SUITES.API_JOBS`. Any string used in 2+ places must come from the constant.
-- ❌ Hardcoding an expected UI message in `expect(...).toHaveText("Successfully logged in")` when the same string appears in a sibling spec. Promote to a `messages.ts` file (and capture via the `playwright-cli` skill workflow).
+- ❌ Hardcoding an expected UI message in `expect(...).toHaveText("Successfully logged in")`, even in a single spec. Put it in a catalog (e.g. `messages.ts`), capturing it via the `playwright-cli` skill workflow.
 - ❌ Adding a new key directly to `qase-suites.ts` without checking whether the existing nesting prefix (`UI\t...` vs `API\t...`) covers it. Keep the section grouping intact.
-- ❌ Creating `enums/app/messages.ts` with one entry "for completeness". Wait until 2+ messages need a home.
+- ❌ Creating `enums/app/messages.ts` with a placeholder entry "for completeness" that no test asserts. Create it when the first real, live-captured message needs a home.
 - ❌ Renaming a key or changing a value in place ("just a quick rename"). It cascades through every consumer. Use the `refactor-values` skill.
 - ❌ Adding an array (`[...invalidEmails]`) to `enums/`. Arrays of curated test inputs go in `test-data/app/*.json`.
-- ❌ Putting a URL like `https://staging.example.com` in an enum. URLs are environment-dependent and belong in `process.env.*` + `config/`.
+- ❌ Putting a URL like `https://staging.example.com` in an enum. URLs are environment-dependent and belong in the env file + `config/` (read via `appConfig` / `env`).
 - ❌ Adding a new file to `enums/app/` and forgetting to re-export it from `enums/app/index.ts`. The barrel is the single import surface; an un-exported file is dead code from the consumer's view.
 - ❌ Skipping the `qase-suites.ts` update when adding a new API resource. Every new spec needs a `SUITES.API_<RESOURCE>` constant; `qase.suite()` is a MUST per the orchestrator.
 
 ## Self-review checklist
 
 - [ ] New files use `as const` (no TS `enum`). No accidental backward rewrites of `as const` to `enum`.
-- [ ] Container name is `PascalCase` (or `SCREAMING_SNAKE_CASE` for `SUITES`-style catalogs); keys / members are `SCREAMING_SNAKE_CASE`; file is `kebab-case.ts`.
+- [ ] Container name is `SCREAMING_SNAKE_CASE` (`ReportMessages` is the one legacy drift case); keys / members are `SCREAMING_SNAKE_CASE`; file is `kebab-case.ts`.
 - [ ] Container has a JSDoc comment describing what it groups; new files carry top-level JSDoc.
-- [ ] No hardcoded path / URL / token / endpoint slipped into `enums/`. Paths went to `config/app.ts`. Env-driven values went to `process.env.*`.
+- [ ] No hardcoded path / URL / token / endpoint slipped into `enums/`. Paths went to `config/app.ts`. Env-driven values went to the config module (`config/env.ts` schema + `appConfig`).
 - [ ] No new arrays-of-test-inputs added to `enums/`. Curated test data went to `test-data/app/*.json`.
 - [ ] New file (if any) is re-exported through `enums/app/index.ts`.
 - [ ] Every consumer that previously hardcoded the same string now imports the constant.
@@ -146,7 +146,7 @@ User says: _"Add API tests for `/admin/sessions`."_ (Real example: `SUITES.API_A
    `API_ADMIN_SESSIONS: "API\tAdmin-Sessions",`
    Pattern matches the existing entries: `SCREAMING_SNAKE_CASE` key, `"API\t<HumanReadable>"` value with a tab separator for Qase nesting.
 5. **Barrel** — `qase-suites.ts` is already re-exported by `enums/app/index.ts`; nothing more to do.
-6. **Consumer** — in the new spec, `import { SUITES } from "../../../enums/app/qase-suites";` then `qase.suite(SUITES.API_ADMIN_SESSIONS);` as the first body line of every test (per the `api-testing` skill's MUST rules).
+6. **Consumer** — in the new spec, `import { SUITES } from "../../../../enums/app/qase-suites";` then `qase.suite(SUITES.API_ADMIN_SESSIONS);` as the first body line of every test (per the `api-testing` skill's MUST rules).
 7. **Run** — `npx playwright test tests/app/api/tenant-service/admin-sessions.spec.ts --grep "@App-API"`.
 
 ### Example 2 — Adding a new shared job status
@@ -164,7 +164,7 @@ User says: _"The app now reports an `'archived'` job status for jobs."_
 
 User says: _"Two specs assert the login error 'Invalid email or password'. Centralize it."_
 
-1. **Search** — `grep -rn "Invalid email or password" tests/ pages/`. Confirm 2+ consumers (the threshold for promotion).
+1. **Search** — `grep -rn "Invalid email or password" tests/ pages/ enums/`. Look for an existing constant first, so you extend rather than duplicate; list every consumer that hardcodes the literal. (A UI string belongs in an enum even with one consumer — there is no reuse threshold.)
 2. **Capture from live app** — read the `playwright-cli` skill, run `npx playwright open --load-storage <path> https://<app-host>/login`, trigger a wrong-credentials submit, copy the **exact** rendered text including punctuation and case.
 3. **Decide the home** — UI message the app defines → `enums/app/`. No `messages.ts` exists yet, so this creates one.
 4. **Pick the pattern** — UI messages are a catalog of arbitrary string values, mirroring `SUITES`. Use `as const`:
@@ -188,11 +188,11 @@ User says: _"Two specs assert the login error 'Invalid email or password'. Centr
 |---------|-------|-----|
 | I'm about to hardcode `"API\tJobs"` in a `qase.suite()` call. | Constant not imported. | Use `SUITES.API_JOBS` from `enums/app/qase-suites.ts`. |
 | I'm about to hardcode `/jobs` as an endpoint path in a spec. | Wrong source of truth. Paths live in `config/app.ts` in this codebase, not `enums/`. | Use `appConfig.api.JOBS`. See the `config` skill. |
-| I want to put `process.env.APP_URL` in an enum. | Env-driven values are not enum candidates. | Keep it in `config/app.ts` (`appConfig.baseUrl`). See the `config` skill. |
+| I want to put the `APP_URL` value in an enum. | Env-driven values are not enum candidates. | Keep it in `config/app.ts` (`appConfig.baseUrl`). See the `config` skill. |
 | I want to add an array `INVALID_EMAILS = [...]` to `enums/`. | Arrays of curated test inputs are not enums. | Put it in `test-data/app/<resource>-validation.json` and import. See the `data-strategy` skill. |
 | I need to rename `SUITES.API_JOBS` to `SUITES.API_JOBS_V2`. | Cascades through every spec, page object, and Qase mapping. | Stop. Read the `refactor-values` skill — it owns the impact-analysis workflow. |
 | My test assertion `expect(text).toHaveText(MESSAGES.X)` fails — text drifted from the live UI. | Constant value diverged from the real app text. | Re-capture via the `playwright-cli` skill workflow (`npx playwright open`) and update via `refactor-values` (not a local find-and-replace that may miss other consumers). |
-| The new file I added to `enums/app/` is not picked up when consumers `import { X } from "../../../enums/app";`. | Forgot to re-export through the barrel. | Add `export * from './<new-file>';` to `enums/app/index.ts`. |
+| The new file I added to `enums/app/` is not picked up when consumers `import { X } from "../../../../enums/app";`. | Forgot to re-export through the barrel. | Add `export * from './<new-file>';` to `enums/app/index.ts`. |
 | Should I convert an `as const` container to a TypeScript `enum` for consistency with other TS projects? | The codebase rule is `as const`; no TS `enum` exists anywhere in `enums/`. | Do **not** introduce `enum`. Keep `as const` everywhere. |
 | I'm authoring a brand-new file in `enums/`. Which pattern? | The going-forward rule is `as const`. | `as const` only. TypeScript `enum` is not an option for new files. |
 

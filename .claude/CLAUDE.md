@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 1.6.0 -->
+<!-- toolkit-version: 2.0.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -47,7 +47,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Selectors** | Priority: `getByRole()` > `getByLabel()` > `getByPlaceholder()` > `getByText()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
 | **Schemas** | Validate every API response against a Zod schema. New schemas use `z.strictObject()`. Never loosen a schema to make a test pass |
 | **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();`. **Carve-out for negative-matrix loops** (one test iterating invalid values): `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` per value — `parse` throws and would stop the loop |
-| **Sources of Truth** | Tokens/URLs from `process.env.*`. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |
+| **Sources of Truth** | Tokens/URLs from the config module, which alone reads `process.env` and validates it with Zod once, at load — never `process.env` in a spec, helper, fixture or page object. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |
 | **Tags** | Exactly **one** tag per `test()` — never on `test.describe()`. Match the project's tag whitelist and casing exactly. See `test-standards` skill |
 | **Qase (when used)** | Every new test gets `qase.suite(...)` as its first body line; `qase.id(N)` commented out until mapped |
 | **Assertions** | Web-first only. Prefer strict (`toBe`, `toEqual`) over loose. Exception: `toBeTruthy()` for `Schema.parse(body)` |
@@ -66,6 +66,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 |------|----------------|
 | **Faker for dynamics** | Use a faker library for unique-per-run values; JSON for fixed constants |
 | **Test isolation** | Each `test()` independently runnable. Setup in `beforeEach`/`beforeAll`, never side effects of prior tests |
+| **Parallel-safe suites** | Write suites so they can run in parallel: unique data per test, no shared mutable state, setup and teardown per describe. Each repository's own CLAUDE.md states whether its suite is parallel-safe; a suite on a shared environment that isn't yet runs with `--workers=1` |
 | **Step structure** | `test.step("GIVEN/WHEN/THEN ...")` for readability and report clarity |
 | **Fixture scoping** | Default `{ scope: 'test' }`. Worker scope only for genuinely expensive shared setup (auth storage) |
 | **JSDoc** | On action methods only — never on locator getters |
@@ -80,12 +81,12 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **No hard waits** | Never `page.waitForTimeout(...)` — web-first assertions auto-retry |
 | **No `page.evaluate()` for DOM work** | Playwright locators only |
 | **No `any`** | No `any`, `as any`, `@ts-ignore` |
-| **No hardcoded secrets / IDs / content** | Tokens from `process.env`; constants from test-data; faker for unique values |
+| **No hardcoded secrets / IDs / content** | Tokens and secrets through the config module (`env.X`, `tokens.x()`); constants from test-data; faker for unique values |
 | **No conditional test logic** | No `if/else`, ternary, or `test.skip()` in test bodies. Seed preconditions in setup. Skips give false green and corrupt test-management signal |
 | **No `try/catch` in tests** | Let assertions throw. Only exception: capturing an accidentally-created resource ID for cleanup |
 | **No `await expect(...).not.toThrow()`** | Just call the function |
 | **No tags on `describe` / no multi-tag** | Exactly one tag, on `test()` only |
-| **No magic numbers** | Timeouts and constants live in config or enums |
+| **No magic numbers** | Timeouts live in config (named budgets on `appConfig.timeouts`); fixed test values in test-data files; named sets of app strings and statuses in enums |
 | **No JSDoc on locator getters** | Action methods only |
 | **No commented-out code** | Delete dead code. `// TODO:` / `// FIXME:` / `// BUG:` annotations only, with context. The two sanctioned exceptions: a disabled `test(...)` block under `// TODO: FIXME: <TICKET>` (see No silent coverage drops), and the `// qase.id(N);` placeholder |
 | **No silent coverage drops** | API doesn't match docs → write the test, comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>`, report the bug. Never `test.skip` |
@@ -149,7 +150,7 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `fixtures` | Fixtures — DI, scoping, lifecycle, merge into `test-options` |
 | `helpers` | Helpers — CRUD wrappers, body builders, cleanup ordering |
 | `data-strategy` | Test data — JSON vs faker vs env vs API seeding |
-| `type-safety` | Any `.ts` — Zod patterns, no-`any`, `process.env.X!` idiom |
+| `type-safety` | Any `.ts` — Zod patterns, no-`any`, env read only through the config module |
 | `enums` | Enums — naming and organization |
 | `config` | Config — env-driven configuration |
 | `playwright-cli` | UI exploration before any POM / UI test / UI-derived schema |

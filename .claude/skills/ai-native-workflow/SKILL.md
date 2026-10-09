@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.3
+version: 2.1.4
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -63,7 +63,7 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 - **`## Critical` block at the top of every `SKILL.md`.** The model can scan the hard rules in 30 seconds before reading the workflow.
 - **Layered topology.** Constitution → skills → personas. One source per concern; precedence is documented.
 - **Routed by area through one index, not by free text.** The Routed Skill Index makes skill selection deterministic — the model does not have to guess.
-- **One source of truth per concern.** URLs/credentials in `process.env.*` (declared in `env/.env.example`); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` and `enums/util/*`; fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
+- **One source of truth per concern.** env-driven URLs/credentials/tokens read through `config/env.ts` — `env.X`, `tokens.full()`, or `appConfig` for URLs (declared in `env/.env.example`; never `process.env` at a call site); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` (e.g. `job-status.ts`, `qase-suites.ts`); fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
 - **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern but the codebase still has the legacy form, it says so (e.g. `api-testing` names legacy camelCase test-data files as drift and forbids new ones). The next person to touch the file converges; they don't perpetuate the drift.
 - **Hard-stop forbidden patterns.** `~/.claude/CLAUDE.md § WON'T` and each skill's `## Anti-patterns` list refusal triggers, not soft preferences.
 
@@ -105,7 +105,7 @@ User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 2. **Locate** — `tests/app/api/**` → Routed Skill Index → load `api-testing` skill (carries the previous `api-tests.mdc` invariants + workflow).
 3. **Audit** — `ls config/app.ts`, `ls fixtures/api/schemas/app/`, `ls helpers/app/`. Confirm whether `JOBS_PAUSE` already exists as a route constant.
 4. **Plan** — schema additions, helper need (likely none — single-spec call), coverage plan from OpenAPI (200/400/401/403/404/405/409), test-data needs.
-5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`, re-export from the barrel. Spec follows `Verify <METHOD> <path> returns <status>` naming.
+5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`; the spec imports it from that file (there is no `app/` schema barrel). Spec follows `Verify <METHOD> <path> returns <status>` naming.
 6. **Verify** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@App-API"` + `eslint .` + re-read from disk.
 7. **Surface** — report files added, flag any drift caught (e.g. duplicated `APIErrorSchema`).
 
@@ -113,12 +113,12 @@ User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 
 User: *"`tests/app/functional/jobs-service/jobs/email-create-edit-job.spec.ts` flakes on CI but passes locally."*
 
-1. **Understand** — debug task, suspected isolation or env drift.
-2. **Locate** — `tests/app/functional/**` → Routed Skill Index → load `debugging` skill (failure-mode taxonomy + Trace Viewer / UI Mode workflow), plus `selectors` + `playwright-cli` if a locator looks suspect after re-exploration. UI invariants live in `page-objects` + `selectors` + `test-standards`.
+1. **Understand** — debug task on an intermittent failure, suspected isolation or env drift.
+2. **Locate** — `tests/app/functional/**` → Routed Skill Index → load `flakiness-triage` first to classify the failure (isolation experiment: real bug, cross-test interference, or per-test flake), then `debugging` to fix it (failure-mode taxonomy + Trace Viewer / UI Mode workflow), plus `selectors` + `playwright-cli` if a locator looks suspect after re-exploration. UI invariants live in `page-objects` + `selectors` + `test-standards`.
 3. **Audit** — read the spec from disk. Pull the CI artifact (`gh run download`), open the trace.
 4. **Plan** — root-cause first (env? race? isolation?), no scope creep into unrelated cleanup.
 5. **Generate** — fix at root cause (e.g. add a readiness check in `auth.setup.ts`). Re-run `npx playwright open` (see the `playwright-cli` skill) if a locator looks suspect.
-6. **Verify** — push, watch CI, re-run locally with `ENVIRONMENT=ci`.
+6. **Verify** — 5 consecutive isolated runs plus one in-suite run (`flakiness-triage` § Step 5), re-run locally with `ENVIRONMENT=ci`, then push and watch CI.
 7. **Surface** — report root cause and the diagnostic path you walked (which Playwright tool, what the trace showed, why this fix is the minimal one).
 
 ### Example 3 — Adding a new env variable
@@ -126,12 +126,12 @@ User: *"`tests/app/functional/jobs-service/jobs/email-create-edit-job.spec.ts` f
 User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 
 1. **Understand** — add an env-driven config value.
-2. **Locate** — `config/**` → load `config` skill (env file layout, JSDoc-on-properties, deferral to `type-safety` for the access pattern). `enums/**` is **NOT** the right home — per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, not in `enums/`. Also load `type-safety` for the canonical `process.env.X!` access pattern.
-3. **Audit** — read `config/app.ts`, `config/util/mailpit.ts`, `env/.env.example`. Grep for any existing `MAILPIT_URL` reference.
-4. **Plan** — declare in `env/.env.example`, consume via `process.env.MAILPIT_URL!` (canonical `!` per `type-safety`; defaults belong in `config/util/mailpit.ts`, not at call sites), update `config/util/mailpit.ts`.
+2. **Locate** — `config/**` → load `config` skill (env file layout, JSDoc-on-properties, deferral to `type-safety` for the access pattern). `enums/**` is **NOT** the right home — per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, not in `enums/`. Also load `type-safety` (§ Environment variables) for the access rules — env values are read only through `config/env.ts`.
+3. **Audit** — read `config/env.ts`, `config/app.ts`, `env/.env.example`, and `helpers/util/mailpit.ts`. Grep for any existing `MAILPIT_URL` reference. (`config/util/mailpit.ts` does not exist — `config/util/` is a future convention.)
+4. **Plan** — declare in `env/.env.example`, add `MAILPIT_URL` to the schema in `config/env.ts` (with its local default as `.default(...)` there, the one home for defaults), and read it as `env.MAILPIT_URL` — replacing the direct `process.env.MAILPIT_URL` read in `helpers/util/mailpit.ts`, which is drift. No `!`, `??` or `||` at the call site.
 5. **Generate** — follow the `config` skill's pattern. Do NOT add the path to `enums/` — that's the legacy split that `~/.claude/CLAUDE.md` explicitly forbids.
 6. **Verify** — `tsc --noEmit`, `eslint .`, run the affected Mailpit-using tests.
-7. **Surface** — report: var declared, consumer updated, no `enums/` change.
+7. **Surface** — report: var declared and in the schema, consumer reads `env.MAILPIT_URL`, no `enums/` change.
 
 ## Troubleshooting
 

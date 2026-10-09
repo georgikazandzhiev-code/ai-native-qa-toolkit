@@ -16,7 +16,7 @@ Six numbered cleanups for the duplication and inconsistency hot spots already in
 
 ### Migration steps
 
-1. `rg "faker\." tests/app/api/<resource>.spec.ts tests/app/e2e/<resource>.spec.ts tests/app/functional/<resource>.spec.ts` to enumerate offending blocks for each resource.
+1. `rg "faker\." tests/app/api/<domain>/<resource>.spec.ts tests/app/e2e/<domain>/<resource>.spec.ts tests/app/functional/<domain>/<resource>.spec.ts` to enumerate offending blocks for each resource.
 2. For each inline block, replace with `buildCreateWorkerBody({ /* only fields the test cares about */ })` or the matching job-type builder. Drop `faker` import if it becomes unused.
 3. For pairing tests, prefer an Object Mother that delegates to the base builder (planned).
 4. If a test needs a field the builder doesn't randomize (e.g., a specific run interval or region), pass it via overrides — do NOT add a new builder.
@@ -127,10 +127,10 @@ Consequences:
 
 ### Target
 
-Introduce paired typed factories + assertion-style setup helpers in `helpers/app/testDataGenerators.ts` and the resource helpers:
+Introduce paired typed factories + assertion-style setup helpers in `helpers/app/test-data-generators.ts` and the resource helpers:
 
 ```typescript
-// helpers/app/testDataGenerators.ts (factory — Pattern 2)
+// helpers/app/test-data-generators.ts (factory — Pattern 2)
 export type WorkerData = {
     name: string;
     location: string;
@@ -188,7 +188,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 
 ### Migration steps
 
-1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to `helpers/app/testDataGenerators.ts` (create the file).
+1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to `helpers/app/test-data-generators.ts` (create the file).
 2. Replace each `buildCreate<X>Body` body with a delegation to the new factory; keep the existing function as a thin wrapper for backward compatibility, marked `@deprecated`.
 3. Add assertion-style `setup<X>` / `teardown<X>` to each resource helper file. The existing passthrough `create<X>` / `delete<X>` stays for advanced specs that need to assert non-2xx outcomes (negative tests).
 4. Migrate specs one resource at a time: every `beforeAll`/`beforeEach` that does `await create<X>(...)` followed by status + parse becomes `await setup<X>(...)`. Every `afterAll`/`afterEach` cleanup becomes `await teardown<X>(...)`.
@@ -197,7 +197,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 
 ### Verification
 
-- `rg "create(Worker|Job|Tenant|User)Data" helpers/` returns hits only in `helpers/app/testDataGenerators.ts`.
+- `rg "create(Worker|Job|Tenant|User)Data" helpers/` returns hits only in `helpers/app/test-data-generators.ts`.
 - `rg "expect\(status\)\.toBe\(201\)" tests/app/api/` count drops as setup helpers absorb the assertion.
 - `rg "Schema\.parse\(body\)" tests/app/api/` count drops as setup helpers absorb the parse.
 - Worker / job / tenant / user CRUD specs still pass.
@@ -221,7 +221,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 3. For (b), add a precondition:
    ```typescript
    test.beforeEach(async () => {
-       userEmail = getNextTestEmail();
+       userEmail = getNextTestEmail(env.APP_MAIN_EMAIL);
        await createUserByEmail(userEmail);
        customerId = (await getCustomerByEmail(apiRequest, userEmail)).id;
    });
@@ -259,25 +259,27 @@ const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
 
-Module-level aliases conceal the canonical name from `rg`, encourage copy-paste into other specs, and create N+1 places to update if a token rotates. This pattern is pervasive across `tests/app/api/**`, `tests/app/e2e/**`, and `tests/app/functional/**` — refactor playbook section dedicated.
+Module-level aliases conceal the canonical name from `rg`, encourage copy-paste into other specs, create N+1 places to update if a token rotates, and read `process.env` outside the config module (see `type-safety` § Environment variables). This pattern is pervasive across `tests/app/api/**`, `tests/app/e2e/**`, and `tests/app/functional/**` — refactor playbook section dedicated.
 
 ### Migration steps
 
 1. `rg "process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/ helpers/ -l` to enumerate the files using tokens.
 2. Within each file, `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_"` finds the aliases.
-3. Replace each alias with the canonical `process.env.<NAME>` at the call site:
+3. Replace each alias with the `tokens` accessor from `config/env.ts`, called at the call site (not re-aliased at module level — that runs before the setup project has written the token):
    ```typescript
    - const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
    - // ...
    - headers: TENANT_TOKEN,
-   + headers: process.env.USER_ACCESS_TOKEN_FULL,
+   + import { tokens } from "../../../../config/env";
+   + // ...
+   + headers: tokens.full(),
    ```
-4. Helpers that accept `headers: string` as a parameter are fine to keep (the boundary is explicit). The spec entry point still uses the canonical env var.
+4. Helpers that accept `headers: string` as a parameter are fine to keep (the boundary is explicit; helpers never read env). The spec entry point calls `tokens.full()` / `.admin()` / `.zero()`.
 5. Add a `data-strategy/aliasing` rule to [`api-testing/SKILL.md`](../api-testing/SKILL.md) if not already present.
 
 ### Verification
 
-- `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/app/` returns 0.
+- `rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" tests/app/` returns 0, and so does `rg "process\.env\.USER_ACCESS_TOKEN_" tests/app/ --glob '!login.setup.ts'`.
 - Specs still pass.
 - Grepping `USER_ACCESS_TOKEN_FULL` reveals every consumer.
 

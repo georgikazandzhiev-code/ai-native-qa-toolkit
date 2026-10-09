@@ -1,7 +1,7 @@
 ---
 name: type-safety
-version: 1.1.1
-description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and the process.env.X! access rule. Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
+version: 2.0.0
+description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
 ---
@@ -17,79 +17,64 @@ This skill teaches the going-forward TypeScript and Zod conventions for the fram
 - **ALWAYS** define new API schemas with `z.strictObject({...})`. `z.object()` silently strips unknown keys and hides contract drift; the strict migration is essentially complete (the few remaining lax schemas are intentional — see § Zod schema patterns), so a new lax `z.object` schema is a regression (per `api-testing` § Zod schema conventions).
 - **ALWAYS** assert API responses with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). Type generics on `apiRequest<T>()` alone are insufficient (no runtime check). A bare `Schema.parse(body)` with no `expect(...).toBeTruthy()` wrapper is also insufficient.
 - **ALWAYS** specify explicit return types on exported and public functions (`Promise<void>`, `Promise<UserResponse>`, `Locator`, `string`). Parameter types are mandatory — `noImplicitAny` enforces it; never silence it.
-- **`process.env.X` access — canonical pattern is `!` at every access point.** Matches the upstream reference framework (162 occurrences, zero `??` defaulting). `??` and `||` defaulting at call sites are **forbidden**; defaults belong in `config/util/<service>.ts`, not at call sites. `as string` is **forbidden**. Bare `string | undefined` past the call site is **forbidden**. See § process.env access patterns.
+- **NEVER** read `process.env` outside the config module. `config/env.ts` reads it once and validates it with Zod when it loads, so a missing variable stops the run at startup; everything else imports `env.X`, `tokens.admin()` or `appConfig`. No `!`, no `as string`, no `??` / `||` defaults at call sites — defaults live in the schema. See § Environment variables.
 - **NEVER** use `z.any()` to make a parse error go away — that's hiding contract drift. Investigate the divergence, write the test as the contract says, and comment it out with `// TODO: FIXME: <TICKET>` per the `api-testing` skill — never `test.skip`.
 - **This codebase uses Zod 3** (`^3.25.23`). Use chained string-format validators (`z.string().uuid()`, `z.string().email()`, `z.string().url()`). The Zod 4 top-level forms (`z.uuid()`, `z.email()`) do not apply here.
 
-## process.env access patterns
+## Environment variables — read once, through the config module
 
-`process.env.X` is typed `string | undefined` by Node. The **canonical pattern in this framework is `!` (non-null assertion) at the access point** — matching the reference framework `the upstream reference framework`, which uses `!` for ~162 access points and zero `??` defaulting at call sites. Everything else is forbidden.
+`process.env.X` is `string | undefined`, and nothing checks it until something uses it. The framework's rule is that **only the config module reads `process.env`**, and it validates what it reads **once, when it loads** — so a missing variable stops the run at startup with every missing name listed, instead of failing deep inside a request three specs later.
 
-### Canonical — `!` at the access point
+### The shape
 
-Use for every required env var. The test cannot run without the value (URLs, tokens, credentials, realm names, tenant ids), so crashing loudly at startup with a clear "Cannot read properties of undefined" is the desired behaviour — better than masking a missing var with a fake default.
-
-```typescript
-const apiUrl = process.env.API_URL!;
-const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD!;
-```
-
-Existing precedent (38 occurrences): `helpers/util/keyCloak.ts` (`keycloakURL`, `realmName`, `keycloakClientId`, `keycloakClientSecret`), `tests/app/login.setup.ts` (`APP_MAIN_EMAIL`, `KEYCLOAK_REALM`, `APP_FULL_PERMISSIONS_*`, etc.). This is also upstream's pattern across `tests/`, `helpers/`, and `fixtures/` — the framework convention.
-
-### Forbidden — `??` defaulting at the call site
+`config/env.ts` is the one file that reads `process.env`. It parses it with a Zod schema at import time and exports two things:
 
 ```typescript
-// ❌ FORBIDDEN — defaulting belongs in the config object, not at the call site
-const mailpitUrl = process.env.MAILPIT_URL ?? "http://localhost:8025";
+// config/env.ts — the only module that reads process.env
+const EnvSchema = z.object({
+  API_URL: z.string().url(),
+  APP_MAIN_EMAIL: z.string().email(),
+  MAILPIT_URL: z.string().url().default("http://localhost:8025"),
+  // …every variable the suite needs, required unless it has a real default
+});
+export const env = EnvSchema.parse(process.env); // throws at load, naming every missing variable
+
+/** Tokens are written into process.env by the setup project at run time, after load. */
+const token = (name: string) => (): string => {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not set — did the setup project run?`);
+  return value;
+};
+export const tokens = {
+  admin: token("USER_ACCESS_TOKEN_ADMIN"),
+  full: token("USER_ACCESS_TOKEN_FULL"),
+  zero: token("USER_ACCESS_TOKEN_ZERO"),
+};
 ```
 
-If a default genuinely makes sense for a service (e.g. local Mailpit), it lives in **`config/util/<service>.ts`** as the property's fallback — not at every call site. The call site reads `mailpitConfig.url` and trusts the config object to have resolved the default once. This matches upstream (zero `??` defaulting at call sites) and keeps the env-resolution boundary in one place.
+(`z.object`, not `z.strictObject`, on purpose: `process.env` carries every variable of the shell, and only the suite's own keys are picked out.)
 
-Existing `??` instances (6, all in `playwright.config.ts`) are bordering-on-acceptable because that file IS the config boundary. New code does not add `??` at call sites in `helpers/`, `tests/`, `fixtures/`, or `pages/`.
+Everything else imports from it: `env.APP_MAIN_EMAIL`, `tokens.admin()`, and `appConfig` (which builds its URLs from `env`). Specs, helpers, fixtures and page objects never touch `process.env`.
 
-### Forbidden — `||` defaulting
+### Two kinds of variable
 
-```typescript
-// ❌ FORBIDDEN — same problem as ??, plus empty-string footgun
-const mailpitUrl = process.env.MAILPIT_URL || "http://localhost:8025";
-```
+| Kind | Examples | Read as | Why |
+|---|---|---|---|
+| **Static** — known when the run starts | URLs, realm, client id/secret, test-user emails and passwords, Mailpit | `env.X` | Validated at load: a missing one fails the run before any test starts |
+| **Run-time** — written by the setup project | `USER_ACCESS_TOKEN_ADMIN`, `_FULL`, `_ZERO` | `tokens.admin()` / `.full()` / `.zero()`, called where the token is used | They don't exist yet when config loads, so they're checked when used, with a message that names the cause |
 
-`||` falls through on every falsy value including `""` — surprising for env vars where empty-string is a deliberate "set to nothing" signal. 9 instances exist in the codebase today (`helpers/util/mailpit.ts`, `config/util/mailpit.ts`, `helpers/util/keyCloak.ts:29-30`, `fixtures/api/mailpit-fixture.ts:8-9`) — drift; remove the defaulting and move the fallback into `config/util/<service>.ts` on next touch. Upstream has only 1 `||` instance.
+### Rules
 
-### Forbidden — `as string`
-
-```typescript
-// ❌ FORBIDDEN — lies to TypeScript, masks a missing var
-const baseURL = process.env.API_URL as string;
-```
-
-The cast pretends the value is always a string when it's actually `string | undefined`. Downstream code crashes with a confusing `undefined`-shaped error instead of a clear "var missing" failure at the boundary. Existing instance: `fixtures/services/login-fixture.ts:4` — drift; replace with `!` on next touch.
-
-### Forbidden — bare `string | undefined` past the call site
-
-```typescript
-// ❌ FORBIDDEN — propagates uncertainty to every consumer
-export const apiUrl = process.env.API_URL;
-```
-
-Once a `string | undefined` leaves the access point, every downstream consumer must re-guard. Force the resolution at the boundary with `!`:
-
-```typescript
-// ✅ correct
-export const apiUrl = process.env.API_URL!;
-```
-
-Existing instance: `config/app.ts` (every `appConfig` property is bare `process.env.X`, propagating `string | undefined` into `appConfig.baseUrl`, `appConfig.apiUrl`, etc.) — drift; tighten with `!` on next touch.
-
-### Bare `process.env.X` at config-time
-
-The one place bare `process.env.X` is acceptable is **inside `playwright.config.ts`** when a tool consumes the value directly (e.g. `process.env.QASE_API_TOKEN` passed straight into the Qase reporter, or `process.env.ENVIRONMENT == undefined` checked before resolving the dotenv path). Upstream uses bare access in this file too (789 occurrences, almost all in similar config-time spots). Outside `playwright.config.ts`, force resolution with `!`.
+- **Defaults live in the schema** (`.default(...)` in `config/env.ts`) — the one home. Never `??` or `||` at a call site.
+- **No `!` and no `as string`** on env values. `!` only silences the compiler: a missing variable still fails later, at the point of use, with an unrelated error. The schema is the check.
+- **No aliases at module level** (`const ADMIN_TOKEN = tokens.admin()` at the top of a spec runs before the setup project has written the token). Call `tokens.x()` where the token is used.
+- **One more reader: `playwright.config.ts`.** It runs before the config module and must read `ENVIRONMENT` (which env file to load) and `CI` from the shell. Nothing else does.
+- **Writes are not reads.** The setup project stores run-time tokens with `process.env.USER_ACCESS_TOKEN_X = token`; that is how `tokens.x()` finds them.
+- **Presence checks belong to config too.** `if (!process.env.X) throw …` in a `beforeAll` is the schema's job (static) or the accessor's (tokens).
 
 ### Migration policy
 
-Codebase today: `!` (38 — canonical), `||` (9 — drift), `??` (6 — drift outside `playwright.config.ts`), bare propagation (≥ 5 in `config/app.ts` — drift), `as string` (1 — drift).
-
-Going-forward rule: **`!` at every access point.** Existing `??`, `||`, `as string`, and bare-propagation instances are legacy drift — migrate to `!` when the file is next touched. Do **not** open a standalone "fix env access" PR. Do **not** introduce new `??` or `||` defaulting at call sites — if you need a default, put it in `config/util/<service>.ts`.
+Existing code that reads `process.env.X!` at call sites is drift — migrate a file to `env` / `tokens` when you next touch it. The lint rule `no-process-env-outside-config` reports every `process.env` access outside `config/`.
 
 ## Zod schema patterns
 
@@ -165,10 +150,10 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 - ❌ `: any` typed parameters or returns. Use `unknown` at boundaries, concrete types inside.
 - ❌ `as T` or `as unknown as T` to silence the type-checker. Parse the value with Zod and let the schema produce the type.
 - ❌ `@ts-ignore` / `@ts-expect-error` without a linked tracking comment AND a real plan to remove. None should exist in the codebase today (`grep` returns zero); keep it that way.
-- ❌ `process.env.X as string` — lies to TypeScript; use `!`. Sole instance today: `fixtures/services/login-fixture.ts:4`.
-- ❌ `process.env.X` propagated bare as `string | undefined` past the access point. Sole hotspot today: `config/app.ts` (every `appConfig` property).
-- ❌ `process.env.X ?? "default"` defaulting at the call site — defaults belong in `config/util/<service>.ts`, not at call sites. Existing instances in `playwright.config.ts` are bordering-on-acceptable (config-boundary file); new code does not add `??` defaulting elsewhere.
-- ❌ `process.env.X || "default"` — same problem as `??`, plus empty-string footgun. Use `!` and put the default (if any) in the config object.
+- ❌ `process.env.X` anywhere outside `config/` — in a spec, helper, fixture or page object. Import `env.X` or `tokens.x()` from the config module.
+- ❌ `process.env.X!` or `process.env.X as string`. Both silence the compiler without checking anything; the schema in `config/env.ts` is the check.
+- ❌ `process.env.X ?? "default"` / `|| "default"` at a call site. Defaults live in the schema (`.default(...)`); `||` also swallows an explicit empty string.
+- ❌ `const ADMIN_TOKEN = tokens.admin()` at module level. It runs before the setup project writes the token; call the accessor where it's used.
 - ❌ `z.object()` for **new** schemas. Use `z.strictObject()`.
 - ❌ `id: z.string()` defaulting where the API returns a UUID. Use `z.string().uuid()`.
 - ❌ Bare `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper. The wrapper is the assertion shape Playwright recognizes.
@@ -187,8 +172,8 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 - [ ] `id` fields default to `z.string().uuid()` unless the API has been verified to return non-UUIDs (documented inline).
 - [ ] API responses on the happy path are asserted with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` plus a `status` assertion (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). No bare `Schema.parse(body)`.
 - [ ] Empty-body 204/403/405 responses use `expect(body).toBeNull()` instead of calling `.parse()` on `null`.
-- [ ] Every `process.env.X` access uses `!`. No `??` / `||` defaulting at the call site (defaults belong in `config/util/<service>.ts`). No `as string`. No bare `string | undefined` past the call site.
-- [ ] If the file already had `as string` or bare propagation that I did not touch, I left it alone (legacy drift; migrates on next touch).
+- [ ] No `process.env` outside `config/`. Static values come from `env.X`, tokens from `tokens.x()` called where they're used, URLs and paths from `appConfig`. No `!`, `as string`, `??` or `||` on env values; any default is in the schema.
+- [ ] If the file already read `process.env` in a part I did not touch, I left it (legacy drift; migrate the file when you next touch it).
 - [ ] No `z.any()` added to silence a `ZodError`. Real divergences route through `api-testing` § Skipping a test for a real backend bug.
 - [ ] No `prettier/prettier` errors remain (4-space indent, single quotes, trailing commas). Run `npx eslint --fix <file>` if the file shows formatting errors — never commit with wrong Prettier settings.
 - [ ] Linter (`npx eslint`) and `tsc --noEmit` clean for changed files.
@@ -199,22 +184,16 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 
 User says: *"Add a `GRAFANA_API_TOKEN` for a perf-test-run annotation helper."*
 
-1. **Use `!` at the access point** — the canonical pattern. Crashing loudly at startup if the var is missing is the desired behaviour, matching the framework convention (and upstream).
-2. **Declare the env var** per the `config` skill (`env/.env.example` blank entry, real value in `env/.env.${ENVIRONMENT}`).
-3. **Consume at the call site:**
-
-   ```typescript
-   const grafanaToken = process.env.GRAFANA_API_TOKEN!;
-   ```
-
-4. **Do not propagate bare.** Do not write `export const grafanaToken = process.env.GRAFANA_API_TOKEN` and let `string | undefined` flow into the helper — that forces every consumer to re-guard.
-5. **What about a default URL** (e.g. local Grafana)? **The default belongs in `config/util/grafana.ts`**, not at the call site. Author `grafanaConfig.url = process.env.GRAFANA_URL!` plus the dotenv loading; if a default is genuinely needed for local dev, it's an env-file `.env.dev` value, not a `??` fallback at the call site. Forbidden: `process.env.GRAFANA_URL ?? "http://localhost:3000"`.
+1. **Declare it** per the `config` skill: a blank entry in `env/.env.example`, the real value in `env/.env.${ENVIRONMENT}`.
+2. **Add it to the schema** in `config/env.ts`: `GRAFANA_API_TOKEN: z.string().min(1)`. It's static (known when the run starts), so it's validated at load — a missing token stops the run before any test, naming the variable.
+3. **Pass it in, don't read it inside.** The helper takes the token as its last parameter (`headers`, per the `helpers` skill); the caller passes `env.GRAFANA_API_TOKEN`. The helper never reads env.
+4. **A default URL** (e.g. local Grafana) goes in the schema: `GRAFANA_URL: z.string().url().default("http://localhost:3000")`. Never `?? "http://localhost:3000"` at a call site.
 
 ### Example 2 — Authoring a new Zod schema for a new endpoint
 
 User says: *"Add `POST /jobs/:id/pause` and validate the response."*
 
-1. **Where the schema lives.** `fixtures/api/schemas/app/job.ts` — one file per resource, no factory. Re-export from `fixtures/api/schemas/app/index.ts` (per `api-testing` § Zod schema conventions).
+1. **Where the schema lives.** `fixtures/api/schemas/app/job.ts` — one file per resource, no factory. Specs import it from that resource file directly — there is no `fixtures/api/schemas/app/index.ts` barrel (per `api-testing` § Zod schema conventions).
 2. **Use `z.strictObject()`** for the new schema. Match the existing response shape catalog: `{ <resource>Id: string, status: ... }`.
 
    ```typescript
@@ -241,33 +220,28 @@ User says: *"Add `POST /jobs/:id/pause` and validate the response."*
 User says: *"`appConfig.apiUrl` is typed `string | undefined` and downstream callers all guard. Tighten it."*
 
 1. **Open `config/app.ts`.** Today: `apiUrl: process.env.API_URL`.
-2. **Apply the canonical pattern — `!`.** Required env var; crash loudly at startup if missing.
-
-   ```typescript
-   apiUrl: process.env.API_URL!,
-   ```
-
-3. **JSDoc the property** in the same edit (per the `config` skill — touching the file is the trigger to backfill JSDoc on the surrounding properties too).
-4. **Remove downstream guards** that existed only to handle the `undefined` case. They become dead code once the property is `string`.
-5. **What I did *not* do:** I did not write `process.env.API_URL as string`. The cast pretends the value is always a string but does not actually check; if `API_URL` is missing, the test now crashes deep in a request handler with a confusing URL-construction error instead of clearly at startup.
+2. **Read it from the validated env:** `apiUrl: env.API_URL`. `API_URL` is in the schema as `z.string().url()`, so the property is a `string`, and a missing or malformed value fails the run at load.
+3. **JSDoc the property** in the same edit (per the `config` skill), naming the backing variable.
+4. **Remove downstream guards** that only handled `undefined`; they're dead code now.
+5. **What I did *not* do:** `process.env.API_URL!` or `as string`. Both make the type checker quiet without checking anything: a missing `API_URL` would fail deep in a request with a confusing URL error.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| TypeScript: `Type 'string \| undefined' is not assignable to type 'string'` on a `process.env.X` value | Wrong access pattern at the boundary | Use `!` at the access point (the canonical pattern, matching upstream). Do **not** `as string`. Do **not** bare-propagate. Do **not** add `??` defaulting at the call site — if a default is genuinely needed, put it in `config/util/<service>.ts`. |
+| TypeScript: `Type 'string \| undefined' is not assignable to type 'string'` on a `process.env.X` value | `process.env` read outside the config module | Add the variable to the schema in `config/env.ts` and import `env.X` (or `tokens.x()` for a run-time token). Not `!`, not `as string`, not `??`. |
 | `expect(Schema.parse(body)).toBeTruthy()` throws `ZodError` | API response disagrees with the schema (extra/missing field, wrong type, wrong nullability) | Treat as a contract violation. Keep the schema strict; comment out the whole `test(...)` block with `// TODO: FIXME: <TICKET>` directly above — never `test.skip`. **Do not** loosen the schema or replace fields with `z.any()`. Route through `api-testing` § Skipping a test for a real backend bug. |
 | `Schema.parse(body)` throws `ZodError` on a 401 / 403 test | 401 has a body (`{ error: string }`); 403/405 have empty bodies (`null`) | Use `GatewayErrorSchema` for 401, `expect(body).toBeNull()` for 403/405. See `api-testing` § Error envelopes. |
 | "I need to silence a compile error with `as unknown as T`" | The value's real shape isn't known — that's why the cast was tempting | Replace with `Schema.parse(raw)`. You get runtime validation + a real type, instead of a lie. If no schema exists, author one (it's contract documentation). |
 | "I need `any` to make this generic helper compile" | The generic constraint is too loose | Use `unknown` at the input, narrow with a type guard or `Schema.parse(...)`, return a concrete type. `any` poisons every consumer. |
 | `z.object()` schema accepts a body that's missing fields the API actually returns | `z.object()` strips unknown keys silently; the missing-field side may also be from a separate cause, but `z.object()` masks the additive case | Convert the schema to `z.strictObject()`. Re-run; if a `ZodError` surfaces, you have evidence of contract drift to file. |
-| `process.env.X || "default"` returns the default when `X=""` is set explicitly | `||` falls through on every falsy value, including empty string and `0` — and defaulting at the call site is wrong shape regardless | Replace with `process.env.X!` at the call site. If a default is genuinely needed, put it in `config/util/<service>.ts` as the property's fallback (or in the env file for the relevant environment). Do **not** "fix" `||` by switching to `??`; both patterns are forbidden at call sites. |
+| `process.env.X || "default"` returns the default when `X=""` is set explicitly | `||` falls through on every falsy value, including an empty string — and a call-site default is the wrong place regardless | Move the variable into the schema in `config/env.ts`, with `.default(...)` if a default is genuinely right, and import `env.X`. |
 | Persistent "ESLint errors in modified files" Cursor notification after every agent turn | Cursor's "Iterate on Lints" feature auto-sends lint errors. Files may already be clean (`npx eslint` exits 0). | Disable in Cursor Settings: `Cmd+,` → Features → Chat → "Iterate on Lints" → OFF. If files genuinely have `prettier/prettier` errors, run `npx eslint --fix <file>` once. |
 
 ## See Also
 
 - **`api-testing`** — schema conventions by resource (where each schema lives, the strictness ladder for `.optional()` / `.nullable()`, the response-shape catalog, the no-factory rule, the response-validation idiom in spec context).
-- **`config`** — env var declaration (`env/.env.example`, dotenv loading, `appConfig` shape). This skill owns the `process.env.X` *access* pattern; `config` defers to it.
+- **`config`** — env var declaration (`env/.env.example`, dotenv loading, `appConfig` shape). This skill owns the *access* rule (only the config module reads `process.env`); `config` owns the module's shape and the env files.
 - **`enums`** — the `as const` going-forward rule (this skill aligns with it; new constants use `as const`, legacy TS `enum` migrates on next touch).
 - **`data-strategy`** — Faker usage for unique-per-test-run values; static JSON for fixed constants.
 - **`refactor-values`** — workflow when an enum value, route constant, or static `test-data/` value needs to change across the codebase.

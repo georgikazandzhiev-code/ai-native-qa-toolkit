@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 2.0.4
+version: 2.1.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -58,6 +58,8 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 | **Smoke (UI)** | `tests/app/e2e/` | `@App-Smoke` | Critical-path login + landing-page sanity | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
 | **Setup** | `tests/app/` | (no tag) | Storage-state generation, token bootstrap | `tests/app/login.setup.ts` |
 
+A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is still an API test: `tests/app/api/`, `@App-API`.
+
 **Functional vs E2E** is a frequent decision point:
 
 - A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@App-regression`.**
@@ -110,18 +112,18 @@ If the user request is ambiguous, decide using this ladder:
 Every UI spec opens with this exact import block:
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 ```
 
 Every API spec opens with that block plus schema and helper imports:
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
-import { appConfig } from "../../../config/app";
+import { SUITES } from "../../../../enums/app/qase-suites";
+import { appConfig } from "../../../../config/app";
 import { faker } from "@faker-js/faker";
 // + Zod schemas from fixtures/api/schemas/app/<resource>
 // + Helpers from helpers/app/<resource>
@@ -189,7 +191,7 @@ E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take ever
 
 > **Drift to converge — test data.** Today, `test-data/` holds only `test-data/app/*.json` files (no factories, no tiered static). The planned three-tier shape — `test-data/factories/<area>/`, `test-data/static/util/`, `test-data/static/<area>/` — is the canonical pattern that the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. New tests authored through this skill should:
 > - Use `faker.<...>` directly inline for happy-path values until factories exist (mirrors `http-job-crud.spec.ts`'s `faker.string.alphanumeric(6)`).
-> - Import existing JSON via `import workerData from "../../../test-data/app/worker.json";` (mirrors current api-spec usage).
+> - Import existing JSON via `import workerData from "../../../../test-data/app/worker.json";` (mirrors current api-spec usage).
 > - Avoid creating *new* JSON files — open an issue to add the matching tiered TS file when the planned migration lands.
 
 ### Locale / i18n tests
@@ -216,7 +218,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 ## Anti-patterns
 
-- ❌ **`import { test, expect } from "@playwright/test"`.** Strips every merged fixture; `apiRequest`, page objects become `undefined`. Fix: import from `../../../fixtures/pom/test-options`.
+- ❌ **`import { test, expect } from "@playwright/test"`.** Strips every merged fixture; `apiRequest`, page objects become `undefined`. Fix: import from `../../../../fixtures/pom/test-options`.
 - ❌ **Title-case `@App-Regression` tag.** Doesn't match `--grep @App-regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: lowercase `@App-regression`.
 - ❌ **Combined tags (`["@App-regression", "@App-E2E"]`) or non-whitelisted (`@functional`, `@destructive`, `@regression`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
@@ -226,7 +228,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - ❌ **E2E test deletes via the UI.** Slow + flaky. Fix: API-driven `test.afterAll` via `helpers/app/<resource>.ts`.
 - ❌ **Using `test.skip` for known bugs.** Skipped tests corrupt Qase ID mappings. Comment out the test instead and add `// TODO: FIXME: <TICKET> <description>` above. Grep for `// TODO: FIXME:` to find all deferred tests.
 - ❌ **No `test.step` — body is one big block.** Trace viewer becomes useless on failure. Fix: wrap each phase.
-- ❌ **Hardcoded URL / token / endpoint / UI string.** Fix: `process.env.*`, `appConfig.*`, `enums/app/*`, `test-data/app/*`.
+- ❌ **Hardcoded URL / token / endpoint / UI string.** Fix: the config module — `appConfig.*` (URLs, endpoints, routes), `env.X` / `tokens.full()` from `config/env.ts` (credentials, tokens) — `enums/app/*` (UI strings), `test-data/app/*` (fixed values).
 - ❌ **Committed `.only` / explore spec / `console.log(...)`.** Fix: delete before committing.
 - ❌ **Single-assertion test with full navigation overhead.** If a test contains one assertion and shares the same `beforeEach` navigation as its neighbors, merge it as an `AND:` step into the nearest structural test. A standalone `test()` is justified only when it has a distinct GIVEN/WHEN/THEN flow or tests an interaction (click, type, select).
 - ❌ **Back-to-back navigation calls where the second supersedes the first.** E.g., `await sideNavigation.navigateToApp(); await page.goto(notificationsUrl);` — the first navigation is wasted. Fix: remove the redundant navigation; keep only the one that lands on the target page.
@@ -241,7 +243,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.
 - [ ] E2E specs: `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
-- [ ] No hardcoded URLs / tokens / endpoints / strings — all from `process.env.*`, `appConfig.*`, `enums/app/*`, `test-data/app/*`.
+- [ ] No hardcoded URLs / tokens / endpoints / strings — URLs from `appConfig`, credentials and tokens from `env` / `tokens` in `config/env.ts` (never `process.env` at a call site), endpoints and routes only from `appConfig.*` (never enums), UI strings / suites / statuses from `enums/app/*`, fixed values from `test-data/app/*`.
 - [ ] No `.only`. No `test.skip` — comment out the test with `// TODO: FIXME: <TICKET> <description>` instead (Qase ID preservation).
 - [ ] When assertions reference strings from a `test-data/app/*.json` file, every relevant entry in that file has a corresponding assertion. Cross-reference the data file against the test to catch missing coverage.
 - [ ] Affected tests run green before declaring done.
@@ -260,9 +262,9 @@ User says: *"Verify the Dashboard renders all four sections (Jobs, Workers, Type
 6. **Step 6.** Structure: `GIVEN: I am on Dashboard` → `THEN: All four sections visible`. Use `dashboardPage.verifyAllSectionsVisible()`.
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 
 test.describe("Dashboard Page — Page Structure & Navigation", () => {
   test.beforeEach(async ({ sideNavigation, dashboardPage }) => {
@@ -321,14 +323,13 @@ User says: *"E2E test for HTTP job: create via UI → verify in grid → edit �
 2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdJobNames` array, `test.afterAll` cleanup via `listJobs` + `deleteJob`. Mirror `http-job-crud.spec.ts` verbatim.
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
-import { appConfig } from "../../../config/app";
+import { expect, test } from "../../../../fixtures/pom/test-options";
+import { appConfig } from "../../../../config/app";
 import { qase } from "playwright-qase-reporter";
 import { faker } from "@faker-js/faker";
-import { SUITES } from "../../../enums/app/qase-suites";
-import { deleteJob, listJobs } from "../../../helpers/app/jobs";
-
-const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!;
+import { SUITES } from "../../../../enums/app/qase-suites";
+import { deleteJob, listJobs } from "../../../../helpers/app/jobs";
+import { tokens } from "../../../../config/env";
 
 test.describe("E2E — HTTP Job CRUD (single method)", () => {
   test.setTimeout(appConfig.timeouts.e2eJourney);
@@ -336,9 +337,9 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
   test.afterAll(async ({ apiRequest }) => {
     for (const name of createdJobNames) {
-      const { body } = await listJobs(apiRequest, { name }, TENANT_TOKEN);
+      const { body } = await listJobs(apiRequest, { name }, tokens.full());
       for (const job of body.jobs) {
-        await deleteJob(apiRequest, job.id, TENANT_TOKEN);
+        await deleteJob(apiRequest, job.id, tokens.full());
       }
     }
   });
@@ -381,7 +382,7 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Test runs locally, doesn't run in CI under `npm run app-regression`. | Tag is mis-cased (e.g. Title-case `@App-Regression`) but `package.json` greps lowercase `@App-regression`. | Flip to lowercase `@App-regression`. |
-| `Cannot find name 'apiRequest'` (or `dashboardPage`, `loginUser`, etc.) on the test context. | Spec imported `test` from `@playwright/test` instead of `fixtures/pom/test-options.ts`. | Change the import to `from "../../../fixtures/pom/test-options"`. |
+| `Cannot find name 'apiRequest'` (or `dashboardPage`, `loginUser`, etc.) on the test context. | Spec imported `test` from `@playwright/test` instead of `fixtures/pom/test-options.ts`. | Change the import to `from "../../../../fixtures/pom/test-options"`. |
 | Qase shows the test run as orphaned / "Uncategorized". | Missing `qase.suite(SUITES.X);` as the first body line. | Add it immediately after `async (...) => {`. Extend `enums/app/qase-suites.ts` if `SUITES.X` doesn't exist. |
 | `test.describe` tag not picked up by the npm script. | Tag belongs on the test, not on the describe. | Move the `{ tag: "..." }` argument onto each individual `test(...)`. |
 | Spec passes alone, fails in parallel under `npm run app-all`. | Spec mutates shared state without cleanup, or uses hardcoded names that collide. | Track names with `faker.string.alphanumeric(6)` for uniqueness, and delete via API in `test.afterAll`. |
@@ -396,6 +397,6 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES
 ## See Also
 
 - **Paired skills:** [`api-testing`](../api-testing/SKILL.md) for API specs (schema validation, status-code matrix, per-field negative coverage), [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI specs (POM Method Standards, locator priority). Always-on framework invariants live in [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md).
-- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `Messages.X`, `ApiEndpoints.X`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (`process.env.X!`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
+- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (env via `config/env.ts`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
 - **Failure investigation:** [`debugging`](../debugging/SKILL.md) — failure-mode taxonomy and the right Playwright tool (`npm run app-ui`, `npm run app-debug`, trace viewer) when Step 9 reports red.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](~/.claude/CLAUDE.md) — § Routed Skill Index lists this skill.

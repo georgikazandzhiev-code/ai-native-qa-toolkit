@@ -91,9 +91,9 @@ Specific drift categories the Tier 1 audit caught. Every code example, every cla
 
 - [ ] **No `Zod 4` syntax** (`z.uuid()`, `z.email()`, `z.url()`, `z.int()` top-level forms) when the codebase is Zod 3 (`^3.x.x`). Use chained forms (`z.string().uuid()`).
 - [ ] **Every testid prefix in a code example matches what the frontend emits for that element.** In the example app: `schema-field-<fieldName>` on the field wrapper, `field-field-<fieldPath>` on the input, `error-<fieldName>` on the error (`GOVERNANCE.md` § Example domain). Verify against the frontend source with `frontend-cross-check`.
-- [ ] **No bare `process.env.X` propagation** in code examples. Canonical access is `process.env.X!` (matches upstream reference framework). Defaults belong in `config/util/<service>.ts`, not at call sites.
+- [ ] **No `process.env` read outside the config module** in code examples. Code reads `env.X` / `tokens.full()` from `config/env.ts` (see `type-safety` § Environment variables). Defaults belong in the schema in `config/env.ts`, not at call sites.
 - [ ] **No `??` / `||` defaulting at call sites** in helpers / specs / fixtures / pages. Allowed only inside `playwright.config.ts` at the config boundary.
-- [ ] **No `as string` casts on `process.env.X`** — lies to TypeScript, masks missing vars.
+- [ ] **No `as string` casts or `!` on env values** — they lie to TypeScript and mask missing vars; the schema parse in `config/env.ts` is the check.
 - [ ] **No `z.object()` for new schemas** — use `z.strictObject()`. Existing `z.object` is legacy drift; do not perpetuate.
 - [ ] **No `z.any()`** to silence ZodError on `Schema.parse(body)`. Real divergences: comment out the test with `// TODO: FIXME: <TICKET>` (api-testing § Skipping). Never `test.skip` — corrupts Qase IDs.
 - [ ] **No XPath selectors** in any UI code example.

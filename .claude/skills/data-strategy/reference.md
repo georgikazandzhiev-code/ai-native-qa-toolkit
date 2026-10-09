@@ -57,21 +57,22 @@ Side credentials: `APP_RESET_EMAIL` / `APP_RESET_PASSWORD` (per-test reset-passw
 
 ### 1.6 Aliasing rule (mandatory)
 
-Specs and helpers MUST read `process.env.<NAME>` directly:
+Specs read env values only through the config module (`config/env.ts`, see `type-safety` § Environment variables) and call the token accessor at each call site:
 
 ```typescript
-headers: process.env.USER_ACCESS_TOKEN_FULL,
+headers: tokens.full(),
 ```
 
 Forbidden:
 
 ```typescript
-const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!; // hides the canonical name from grep
+const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!; // ❌ reads process.env outside config, hides the canonical name from grep
+const ADMIN_TOKEN = tokens.admin(); // ❌ module-level alias runs before the setup project has written the token
 // ...
 headers: TENANT_TOKEN,
 ```
 
-Exception: when a spec passes the same token through multiple helper calls AND grepping is preserved by the helper signature (i.e. `headers: accessToken` parameter), the alias is acceptable inside that helper boundary. The spec entry point still uses the env var directly.
+Exception: inside a helper, the token arrives as the `headers` parameter (`headers: accessToken`) — that parameter is not an alias, and helpers never read env themselves. The spec entry point still calls `tokens.full()` directly.
 
 ## 2. JSON file catalog
 
@@ -238,7 +239,7 @@ Storage state factory:
 
 - `helpers/app/createStorageState.ts` — `createAppStorageState({ email, password, totpSecret, storageStatePath })` opens the app, completes Keycloak login (with optional TOTP), waits for the app sidebar, and saves the browser storage state to the supplied path.
 
-`tests/app/login.setup.ts` ALSO populates `process.env.USER_ACCESS_TOKEN_*` for personas that need bearer tokens for API specs. UI projects in `playwright.config.ts` reference the JSON file via `use.storageState`; API specs read the env var.
+`tests/app/login.setup.ts` ALSO writes `process.env.USER_ACCESS_TOKEN_*` for personas that need bearer tokens for API specs — the setup project is the one place outside `config/env.ts` that touches `process.env`, and only to write. UI projects in `playwright.config.ts` reference the JSON file via `use.storageState`; API specs read the token through `tokens.full()` / `.admin()` / `.zero()`.
 
 Rule: never mutate a stored session at runtime (e.g., changing the user's password). If the test needs to mutate user state, switch to Pattern 7 (per-test user).
 
@@ -299,7 +300,8 @@ Do not seed in factories — that would make every test using the factory produc
 
 ```typescript
 import { getNextTestEmail } from '../../helpers/util/mailpit';
-const userEmail = getNextTestEmail(process.env.APP_MAIN_EMAIL!);
+import { env } from '../../config/env';
+const userEmail = getNextTestEmail(env.APP_MAIN_EMAIL);
 // → "qa-test-main+aBc12345@<your-test-domain>"
 ```
 
@@ -307,26 +309,42 @@ This combines a base email with `faker.string.alphanumeric(8)` and produces a pl
 
 ## 7. Seeded preconditions for read tests
 
-For GET endpoints that need an existing entity, the convention is:
+For GET endpoints that need an existing entity, seed it — never borrow one from a list (`jobs[0]`), which may not exist after an environment reset. The convention is:
 
 ```typescript
+import { buildCreateJobBody, cleanupWorkersAndJobs, createJob } from '../../helpers/app/jobs';
+import { buildCreateWorkerBody, createWorker } from '../../helpers/app/workers';
+import { tokens } from '../../config/env';
+
+const createdWorkerIds: string[] = [];
+const createdJobIds: string[] = [];
 let seededId: string;
 
 test.beforeAll(async ({ apiRequest }) => {
-    const { body } = await apiRequest<ListJobsResponse>({
-        method: 'GET',
-        url: appConfig.api.JOBS,
-        baseUrl: appConfig.apiUrl,
-        headers: process.env.USER_ACCESS_TOKEN_FULL,
-    });
-    seededId = ListJobsResponseSchema.parse(body).jobs[0].id;
+    const worker = await createWorker(apiRequest, buildCreateWorkerBody(), tokens.full());
+    expect(worker.status).toBe(201);
+    createdWorkerIds.push(worker.body.workerId);
+
+    const { status, body } = await createJob(
+        apiRequest,
+        buildCreateJobBody([worker.body.workerId]),
+        tokens.full(),
+    );
+    expect(status).toBe(201);
+    seededId = body.jobId;
+    createdJobIds.push(seededId);
+});
+
+// Jobs are deleted before workers (409 Conflict otherwise) — cleanupWorkersAndJobs enforces the order.
+test.afterAll(async ({ apiRequest }) => {
+    await cleanupWorkersAndJobs(apiRequest, createdWorkerIds, createdJobIds, tokens.full());
 });
 ```
 
 Rules:
-- Use the existing GET helper if there is one.
-- Don't pollute the system in `beforeAll` for read-only tests.
-- If the resource may be empty in fresh environments, seed via Pattern 6 in `beforeAll` and clean up in `afterAll`.
+- Seed via the Pattern 6 seeders (`createX` + its cleanup) in `beforeAll`; record every id you create and delete it in `afterAll`.
+- Seeding does not pollute the system: the environment is left exactly as found once `afterAll` runs.
+- The read tests only read the seeded entity; none of them depends on another test's side effects.
 
 ## 8. Cross-references
 

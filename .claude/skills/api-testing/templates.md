@@ -10,15 +10,17 @@ Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase
 
 ## 1. Full CRUD spec
 
-Drop into `tests/app/api/<resource>.spec.ts`.
+Drop into `tests/app/api/<domain>/<resource>.spec.ts`.
 
 > **Helper vs direct `apiRequest` — pick per test.** The template below uses helpers because most CRUD specs are large and helpers de-duplicate the URL/headers boilerplate. **For single-spec one-shot calls, prefer direct `apiRequest({...})` inline** — it surfaces the request shape next to the assertion (upstream-style; see `tests/app/api/tenant-service/admin-realms.spec.ts` and `tests/app/api/shared/cross-tenant-isolation.spec.ts`). Mix freely within one file: helpers for repeated CRUD, inline `apiRequest` for one-off calls.
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
-import { appConfig } from "../../../config/app";
+import { SUITES } from "../../../../enums/app/qase-suites";
+import { appConfig } from "../../../../config/app";
+import { tokens } from "../../../../config/env";
 import { faker } from "@faker-js/faker";
 import {
     <Resource>Schema,
@@ -37,14 +39,14 @@ import {
     type List<Resource>sResponse,
     type APIError,
     type GatewayError,
-} from "../../../fixtures/api/schemas/app/<resource>";
+} from "../../../../fixtures/api/schemas/app/<resource>";
 // There is no fixtures/api/schemas/app/index.ts barrel — specs deep-import
 // from the resource file directly.
 import {
     invalidString,
     invalidIntegerTypes,
     // specialChars, boundaryString, invalidObjectTypes — add as needed; remove unused imports.
-} from "../../../fixtures/api/invalid-types";
+} from "../../../../fixtures/api/invalid-types";
 import {
     list<Resource>s,
     create<Resource>,
@@ -54,8 +56,8 @@ import {
     cleanup<Resource>s,
     buildCreate<Resource>Body,
     buildUpdate<Resource>Body,
-} from "../../../helpers/app/<resource>";
-import resourceData from "../../../test-data/app/<resource>.json";
+} from "../../../../helpers/app/<resource>";
+import resourceData from "../../../../test-data/app/<resource>.json";
 
 // Coverage plan — <METHOD> <path>, every status code in the OpenAPI contract:
 // 200 — happy path, schema + business values
@@ -66,7 +68,7 @@ import resourceData from "../../../test-data/app/<resource>.json";
 // 405 — unsupported verbs (dedicated 405 block)
 // SKIP: 500 — cannot be produced on purpose
 
-// No token aliases — use process.env.USER_ACCESS_TOKEN_* directly at every call site.
+// No token aliases — call tokens.full() / tokens.admin() / tokens.zero() at every call site.
 // See data-strategy/reference.md §1.6 for rationale (grepability, no alias-name drift).
 // Existing specs with aliases are tech debt; normalize when next touching the file.
 
@@ -89,7 +91,7 @@ test.describe("GET /<resource>s — List", () => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(<id>);
 
-            const { status, body } = await list<Resource>s(apiRequest, process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await list<Resource>s(apiRequest, tokens.full());
 
             expect(status).toBe(200);
             expect(List<Resource>sResponseSchema.parse(body)).toBeTruthy();
@@ -121,7 +123,7 @@ test.describe("GET /<resource>s — List", () => {
             // qase.id(N);
 
             // Cast generic to `null` because at 403 the body is null, not List<Resource>sResponse.
-            const { status, body } = await list<Resource>s<null>(apiRequest, process.env.USER_ACCESS_TOKEN_ZERO!);
+            const { status, body } = await list<Resource>s<null>(apiRequest, tokens.zero());
 
             expect(status).toBe(403);
             expect(body).toBeNull();
@@ -146,7 +148,7 @@ test.describe("POST /<resource>s — Create", () => {
             const { status, body } = await create<Resource>(
                 apiRequest,
                 buildCreate<Resource>Body(),
-                process.env.USER_ACCESS_TOKEN_FULL!,
+                tokens.full(),
             );
 
             expect(status).toBe(201); // adjust to 200 if the endpoint actually returns 200
@@ -168,7 +170,7 @@ test.describe("POST /<resource>s — Create", () => {
                 const { status, body } = await create<Resource>(
                     apiRequest,
                     { ...baseBody, name: invalid },
-                    process.env.USER_ACCESS_TOKEN_FULL!,
+                    tokens.full(),
                 );
                 expect(status, `name=${JSON.stringify(invalid)}`).toBe(400);
                 expect(APIErrorSchema.parse(body)).toBeTruthy();
@@ -203,7 +205,7 @@ test.describe("POST /<resource>s — Create", () => {
             const { status, body } = await create<Resource><null>(
                 apiRequest,
                 buildCreate<Resource>Body(),
-                process.env.USER_ACCESS_TOKEN_ZERO!,
+                tokens.zero(),
             );
 
             expect(status).toBe(403);
@@ -212,7 +214,7 @@ test.describe("POST /<resource>s — Create", () => {
     );
 
     test.afterAll(async ({ apiRequest }) => {
-        await cleanup<Resource>s(apiRequest, createdIds, process.env.USER_ACCESS_TOKEN_FULL!);
+        await cleanup<Resource>s(apiRequest, createdIds, tokens.full());
     });
 });
 
@@ -229,10 +231,10 @@ test.describe("GET /<resource>s/:id — Single", () => {
         const { status, body } = await create<Resource>(
             apiRequest,
             buildCreate<Resource>Body(),
-            process.env.USER_ACCESS_TOKEN_FULL!,
+            tokens.full(),
         );
         expect(status).toBe(201);
-        const fetched = await get<Resource>(apiRequest, body.<resource>Id, process.env.USER_ACCESS_TOKEN_FULL!);
+        const fetched = await get<Resource>(apiRequest, body.<resource>Id, tokens.full());
         expect(fetched.status).toBe(200);
         seeded = fetched.body.<resource>;
         createdIds.push(seeded.id);
@@ -245,7 +247,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
 
-            const { status, body } = await get<Resource>(apiRequest, seeded.id, process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await get<Resource>(apiRequest, seeded.id, tokens.full());
 
             expect(status).toBe(200);
             expect(Get<Resource>ResponseSchema.parse(body)).toBeTruthy();
@@ -261,7 +263,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
             // qase.id(N);
 
             const { invalidId } = resourceData;
-            const { status, body } = await get<Resource><APIError>(apiRequest, invalidId, process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await get<Resource><APIError>(apiRequest, invalidId, tokens.full());
 
             expect(status).toBe(400);
             expect(APIErrorSchema.parse(body)).toBeTruthy();
@@ -276,7 +278,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
             // qase.id(N);
 
             const { nonExistentId } = resourceData;
-            const { status, body } = await get<Resource><APIError>(apiRequest, nonExistentId, process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await get<Resource><APIError>(apiRequest, nonExistentId, tokens.full());
 
             expect(status).toBe(404);
             expect(APIErrorSchema.parse(body)).toBeTruthy();
@@ -284,7 +286,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
     );
 
     test.afterAll(async ({ apiRequest }) => {
-        await cleanup<Resource>s(apiRequest, createdIds, process.env.USER_ACCESS_TOKEN_FULL!);
+        await cleanup<Resource>s(apiRequest, createdIds, tokens.full());
     });
 });
 
@@ -303,10 +305,10 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
         const { status, body } = await create<Resource>(
             apiRequest,
             buildCreate<Resource>Body(),
-            process.env.USER_ACCESS_TOKEN_FULL!,
+            tokens.full(),
         );
         expect(status).toBe(201);
-        const fetched = await get<Resource>(apiRequest, body.<resource>Id, process.env.USER_ACCESS_TOKEN_FULL!);
+        const fetched = await get<Resource>(apiRequest, body.<resource>Id, tokens.full());
         expect(fetched.status).toBe(200);
         resource = fetched.body.<resource>;
         createdIds.push(resource.id);
@@ -324,7 +326,7 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
             let before!: <Resource>;
 
             await test.step("GIVEN: the <resource> as it is before the PATCH", async () => {
-                const { status, body } = await get<Resource>(apiRequest, resource.id, process.env.USER_ACCESS_TOKEN_FULL!);
+                const { status, body } = await get<Resource>(apiRequest, resource.id, tokens.full());
                 expect(status).toBe(200);
                 before = body.<resource>;
             });
@@ -334,14 +336,14 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
                     apiRequest,
                     resource.id,
                     { name: newName },
-                    process.env.USER_ACCESS_TOKEN_FULL!,
+                    tokens.full(),
                 );
                 expect(status).toBe(200);
                 expect(Update<Resource>ResponseSchema.parse(body)).toBeTruthy();
             });
 
             await test.step("THEN: name changed and every other field is preserved", async () => {
-                const { status, body } = await get<Resource>(apiRequest, resource.id, process.env.USER_ACCESS_TOKEN_FULL!);
+                const { status, body } = await get<Resource>(apiRequest, resource.id, tokens.full());
                 expect(status).toBe(200);
                 expect(body.<resource>.name).toBe(newName);
                 // Assert every other field matches `before` — repeat per project field list:
@@ -356,7 +358,7 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
     // Repeat the test above for: target, runInterval, timeout, status, config (one per updatable field).
 
     test.afterEach(async ({ apiRequest }) => {
-        await cleanup<Resource>s(apiRequest, createdIds, process.env.USER_ACCESS_TOKEN_FULL!);
+        await cleanup<Resource>s(apiRequest, createdIds, tokens.full());
         createdIds.length = 0;
     });
 });
@@ -376,10 +378,10 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
         const { status, body } = await create<Resource>(
             apiRequest,
             buildCreate<Resource>Body(),
-            process.env.USER_ACCESS_TOKEN_FULL!,
+            tokens.full(),
         );
         expect(status).toBe(201);
-        const fetched = await get<Resource>(apiRequest, body.<resource>Id, process.env.USER_ACCESS_TOKEN_FULL!);
+        const fetched = await get<Resource>(apiRequest, body.<resource>Id, tokens.full());
         expect(fetched.status).toBe(200);
         resource = fetched.body.<resource>;
         createdIds.push(resource.id);
@@ -405,7 +407,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
                         apiRequest,
                         resource.id,
                         { [field]: invalid },
-                        process.env.USER_ACCESS_TOKEN_FULL!,
+                        tokens.full(),
                     );
 
                     expect(status).toBe(400);
@@ -426,7 +428,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
                 apiRequest,
                 resource.id,
                 {},
-                process.env.USER_ACCESS_TOKEN_FULL!,
+                tokens.full(),
             );
 
             expect(status).toBe(400);
@@ -435,7 +437,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
     );
 
     test.afterAll(async ({ apiRequest }) => {
-        await cleanup<Resource>s(apiRequest, createdIds, process.env.USER_ACCESS_TOKEN_FULL!);
+        await cleanup<Resource>s(apiRequest, createdIds, tokens.full());
     });
 });
 
@@ -454,7 +456,7 @@ test.describe("DELETE /<resource>s/:id", () => {
             const created = await create<Resource>(
                 apiRequest,
                 buildCreate<Resource>Body(),
-                process.env.USER_ACCESS_TOKEN_FULL!,
+                tokens.full(),
             );
             // Fail loudly here so the DELETE assertion below never debugs a phantom id.
             expect(created.status).toBe(201);
@@ -462,7 +464,7 @@ test.describe("DELETE /<resource>s/:id", () => {
             const { status, body } = await delete<Resource>(
                 apiRequest,
                 created.body.<resource>Id,
-                process.env.USER_ACCESS_TOKEN_FULL!,
+                tokens.full(),
             );
 
             expect(status).toBe(200);
@@ -481,7 +483,7 @@ test.describe("DELETE /<resource>s/:id", () => {
             const { status, body } = await delete<Resource><APIError>(
                 apiRequest,
                 nonExistentId,
-                process.env.USER_ACCESS_TOKEN_FULL!,
+                tokens.full(),
             );
 
             expect(status).toBe(404);
@@ -507,7 +509,7 @@ test(
                 method,
                 url: appConfig.api.<RESOURCE>,
                 baseUrl: appConfig.apiUrl,
-                headers: process.env.USER_ACCESS_TOKEN_FULL!,
+                headers: tokens.full(),
             });
             expect(status, `${method} should return 405`).toBe(405);
             expect(body).toBeNull();
@@ -528,8 +530,9 @@ import {
     buildCreateJobBody, // swap to buildCreate<Type>JobBody for HTTP/SFTP/email/backup/stream/webhook
     createJob,
     deleteJob,
-} from "../../../helpers/app/jobs";
-import { buildCreateWorkerBody, createWorker } from "../../../helpers/app/workers";
+} from "../../../../helpers/app/jobs";
+import { buildCreateWorkerBody, createWorker } from "../../../../helpers/app/workers";
+import { tokens } from "../../../../config/env";
 
 // `!` (definite assignment): set in test.beforeAll. Mirrors tests/app/api/jobs-service/jobs/export-job.spec.ts.
 let workerId!: string;
@@ -537,11 +540,9 @@ const createdWorkerIds: string[] = [];
 const createdJobIds: string[] = [];
 
 test.beforeAll(async ({ apiRequest }) => {
-    if (!process.env.USER_ACCESS_TOKEN_FULL) {
-        throw new Error("USER_ACCESS_TOKEN_FULL is required for job API tests.");
-    }
+    // tokens.full() throws a named error if the setup project didn't write the token — no presence check here.
     const workerBody = buildCreateWorkerBody();
-    const { status, body } = await createWorker(apiRequest, workerBody, process.env.USER_ACCESS_TOKEN_FULL!);
+    const { status, body } = await createWorker(apiRequest, workerBody, tokens.full());
     if (status !== 201) {
         throw new Error(`Seeded worker POST /workers expected 201, got ${status}: ${JSON.stringify(body)}`);
     }
@@ -557,7 +558,7 @@ test.afterAll(async ({ apiRequest }) => {
         apiRequest,
         createdWorkerIds,
         createdJobIds,
-        process.env.USER_ACCESS_TOKEN_FULL!,
+        tokens.full(),
     );
 });
 ```
@@ -911,28 +912,30 @@ export async function setup<Resource>(
 }
 ```
 
-## 6. E2E API flow (`tests/app/api/e2e-<flow>.spec.ts`)
+## 6. Multi-endpoint API flow (`tests/app/api/<domain>/<flow>.spec.ts`)
 
-For multi-endpoint flows that touch Mailpit. Use `@App-E2E` tag, explicit timeout. **Note**: `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
+For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@App-API` tag, explicit timeout. **Note**: `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
 
 ```typescript
-import { expect, test } from "../../../fixtures/pom/test-options";
-import { appConfig } from "../../../config/app";
+// Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
+import { expect, test } from "../../../../fixtures/pom/test-options";
+import { appConfig } from "../../../../config/app";
+import { tokens } from "../../../../config/env";
 import { qase } from "playwright-qase-reporter";
-import { SUITES } from "../../../enums/app/qase-suites";
+import { SUITES } from "../../../../enums/app/qase-suites";
 import { faker } from "@faker-js/faker";
 import {
     createTenant,
     deleteTenant,
-} from "../../../helpers/app/adminTenants";
+} from "../../../../helpers/app/adminTenants";
 import {
     createUser,
     deleteUser,
-} from "../../../helpers/app/adminUsers";
+} from "../../../../helpers/app/adminUsers";
 import {
     extractLinkFromEmail,
     getInviteLinkFromEmail,
-} from "../../../helpers/util/mailpit";
+} from "../../../../helpers/util/mailpit";
 
 function generateE2EUserPayload() {
     // E2E variant — uses @<your-test-domain> domain (Mailpit-catchable on test infra).
@@ -954,15 +957,15 @@ test.afterAll(async ({ apiRequest, mailpit }) => {
     if (tenantId) {
         for (const id of userIds) {
             // adminUsers.deleteUser signature: (apiRequest, tenantId, userId, headers)
-            await deleteUser(apiRequest, tenantId, id, process.env.USER_ACCESS_TOKEN_ADMIN!);
+            await deleteUser(apiRequest, tenantId, id, tokens.admin());
         }
-        await deleteTenant(apiRequest, tenantId, process.env.USER_ACCESS_TOKEN_ADMIN!);
+        await deleteTenant(apiRequest, tenantId, tokens.admin());
     }
 });
 
 test(
     "Verify tenant onboarding sends invitation email and link is extractable",
-    { tag: "@App-E2E" },
+    { tag: "@App-API" },
     async ({ apiRequest, mailpit }) => {
         qase.suite(SUITES.API_E2E_TENANT_ONBOARDING);
         // qase.id(<id>);
@@ -976,7 +979,7 @@ test(
             const { status, body } = await createTenant(
                 apiRequest,
                 `qa-onboard-${faker.string.alphanumeric(8).toLowerCase()}`,
-                process.env.USER_ACCESS_TOKEN_ADMIN!,
+                tokens.admin(),
             );
             expect(status).toBe(200);
             tenantId = body.tenantId;
@@ -988,7 +991,7 @@ test(
                 apiRequest,
                 tenantId!,
                 user,
-                process.env.USER_ACCESS_TOKEN_ADMIN!,
+                tokens.admin(),
             );
             expect(status).toBe(200);
             userIds.push(body.userId);
@@ -1045,13 +1048,14 @@ test(
 ### Admin-scoped resource (admin user) — tenantId-in-path enforces isolation
 
 ```typescript
-import { getUser } from "../../../helpers/app/adminUsers";
-import { APIErrorSchema, type APIError } from "../../../fixtures/api/schemas/app/tenant";
+import { getUser } from "../../../../helpers/app/adminUsers";
+import { APIErrorSchema, type APIError } from "../../../../fixtures/api/schemas/app/tenant";
+import { tokens } from "../../../../config/env";
 
 // Module-scope state populated in test.beforeAll:
 // - tenantA_Id, tenantB_Id: ids of two tenants created via createTenant
 // - userA_Id: id of a user created under tenantA via adminUsers.createUser
-// - process.env.USER_ACCESS_TOKEN_ADMIN!: process.env.USER_ACCESS_TOKEN_ADMIN (master-realm scope)
+// - tokens.admin(): master-realm scope
 
 test(
     "Verify admin GET user with mismatched tenantId returns 404",
@@ -1065,7 +1069,7 @@ test(
             apiRequest,
             tenantB_Id,        // wrong tenant — gateway returns 404, not 403
             userA_Id,
-            process.env.USER_ACCESS_TOKEN_ADMIN!,
+            tokens.admin(),
         );
 
         expect(status).toBe(404);
@@ -1108,7 +1112,7 @@ Existing per-type `target` shapes (from `helpers/app/jobs.ts`):
 | `http` | `` `https://${faker.internet.domainName()}` `` |
 | `stream` | `` `wss://${faker.internet.domainName()}` `` |
 | `sftp` | `faker.internet.ipv4()` (host only — port lives in `config.port`) |
-| `email` | `faker.internet.email({ provider: "<your-test-domain>" })` |
+| `email` | `getNextTestEmail(<base test email>)` from `helpers/util/mailpit.ts` — addresses must route to the test Mailpit domain (`@<your-test-domain>`) |
 | `backup` | `faker.internet.domainName()` |
 | `webhook` | `faker.internet.url()` |
 
@@ -1131,7 +1135,8 @@ Job-type config shapes already in use:
 One `test()` per field. The loop runs **inside** the test, iterating the universal invalid-value array. Use `expect.soft()` for the inner assertions so a single test reports every failing value, not just the first. Wrap each iteration in `test.step()` so the trace shows which value broke.
 
 ```typescript
-import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invalid-types";
+import { invalidString, invalidIntegerTypes } from "../../../../fixtures/api/invalid-types";
+import { tokens } from "../../../../config/env";
 
 test.describe("POST /jobs — field validation", () => {
     test.beforeEach(async ({ apiRequest }) => { /* seed worker */ });
@@ -1142,7 +1147,7 @@ test.describe("POST /jobs — field validation", () => {
         for (const value of invalidString) {
             await test.step(`name = ${JSON.stringify(value)}`, async () => {
                 const body = { ...buildCreateJobBody(workerIds), name: value };
-                const { status, body: err } = await createJob(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
+                const { status, body: err } = await createJob(apiRequest, body, tokens.full());
                 expect.soft(status, `name = ${JSON.stringify(value)}`).toBe(400);
                 expect.soft(APIErrorSchema.safeParse(err).success, `name = ${JSON.stringify(value)}`).toBe(true);
             });
@@ -1155,7 +1160,7 @@ test.describe("POST /jobs — field validation", () => {
         for (const value of invalidIntegerTypes) {
             await test.step(`runInterval = ${JSON.stringify(value)}`, async () => {
                 const body = { ...buildCreateJobBody(workerIds), runInterval: value };
-                const { status, body: err } = await createJob(apiRequest, body, process.env.USER_ACCESS_TOKEN_FULL!);
+                const { status, body: err } = await createJob(apiRequest, body, tokens.full());
                 expect.soft(status, `runInterval = ${JSON.stringify(value)}`).toBe(400);
                 expect.soft(APIErrorSchema.safeParse(err).success, `runInterval = ${JSON.stringify(value)}`).toBe(true);
             });
@@ -1171,7 +1176,8 @@ test.describe("POST /jobs — field validation", () => {
 Same coverage as § 9, denser source. One `test()` covers every (field × invalid value) combination. Both loops are **inside** the test; each iteration is a `test.step` and uses `expect.soft`. Reach for this when 4+ fields share the same per-type validation pattern.
 
 ```typescript
-import { invalidString, invalidIntegerTypes } from "../../../fixtures/api/invalid-types";
+import { invalidString, invalidIntegerTypes } from "../../../../fixtures/api/invalid-types";
+import { tokens } from "../../../../config/env";
 
 test("Verify POST /jobs returns 400 for invalid field values", { tag: "@App-API" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_JOBS);
@@ -1191,7 +1197,7 @@ test("Verify POST /jobs returns 400 for invalid field values", { tag: "@App-API"
                 const { status, body } = await createJob(
                     apiRequest,
                     { ...validBody, [field]: invalid },
-                    process.env.USER_ACCESS_TOKEN_FULL!,
+                    tokens.full(),
                 );
                 expect.soft(status, `${field} = ${JSON.stringify(invalid)}`).toBe(400);
                 expect.soft(APIErrorSchema.safeParse(body).success, `${field} = ${JSON.stringify(invalid)}`).toBe(true);
@@ -1217,7 +1223,7 @@ test("Verify POST /jobs returns 400 when required fields are missing", { tag: "@
     for (const field of requiredFields) {
         await test.step(`omit ${field}`, async () => {
             const { [field]: _, ...payloadWithoutField } = validBody;
-            const { status, body } = await createJob(apiRequest, payloadWithoutField, process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await createJob(apiRequest, payloadWithoutField, tokens.full());
             expect.soft(status, `omit ${field}`).toBe(400);
             expect.soft(APIErrorSchema.safeParse(body).success, `omit ${field}`).toBe(true);
         });
@@ -1244,7 +1250,7 @@ test("Verify GET /jobs/{id} returns 400 for invalid id formats", { tag: "@App-AP
 
     for (const { description, value } of invalidIds) {
         await test.step(`id = ${description}`, async () => {
-            const { status, body } = await getJob(apiRequest, encodeURIComponent(value), process.env.USER_ACCESS_TOKEN_FULL!);
+            const { status, body } = await getJob(apiRequest, encodeURIComponent(value), tokens.full());
             expect.soft(status, `id = ${description}`).toBe(400);
             expect.soft(APIErrorSchema.safeParse(body).success, `id = ${description}`).toBe(true);
         });
@@ -1266,7 +1272,7 @@ When API behavior diverges from the documented contract, write the test as the c
 //     async ({ apiRequest }) => {
 //         qase.suite(SUITES.API_JOBS);
 //         // qase.id(N);
-//         const { status, body } = await createJob(apiRequest, buildCreateJobBody([workerId], { name: "" }), process.env.USER_ACCESS_TOKEN_FULL!);
+//         const { status, body } = await createJob(apiRequest, buildCreateJobBody([workerId], { name: "" }), tokens.full());
 //         expect(status).toBe(400);
 //         expect(APIErrorSchema.parse(body)).toBeTruthy();
 //     },
@@ -1291,7 +1297,7 @@ test.describe("POST /jobs", () => {
             apiRequest,
             createdWorkerIds,
             createdJobIds,
-            process.env.USER_ACCESS_TOKEN_FULL!,
+            tokens.full(),
         );
     });
 });
@@ -1330,14 +1336,14 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
     let tenantId: string;
 
     await test.step("WHEN: POST /admin/tenants creates a tenant", async () => {
-        const { status, body: created } = await createTenant(apiRequest, body.name, process.env.USER_ACCESS_TOKEN_ADMIN!);
+        const { status, body: created } = await createTenant(apiRequest, body.name, tokens.admin());
         expect(status).toBe(200);
         expect(CreateTenantResponseSchema.parse(created)).toBeTruthy();
         tenantId = created.tenantId;
     });
 
     await test.step("THEN: GET /admin/tenants/{id} echoes it", async () => {
-        const { status, body: fetched } = await getTenant(apiRequest, tenantId, process.env.USER_ACCESS_TOKEN_ADMIN!);
+        const { status, body: fetched } = await getTenant(apiRequest, tenantId, tokens.admin());
         expect(status).toBe(200);
         expect(GetTenantResponseSchema.parse(fetched)).toBeTruthy();
         expect(fetched.tenant.name).toBe(body.name);
@@ -1354,11 +1360,11 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
     // qase.id(N);
     const body = buildCreateTenantBody();
 
-    const { status: createStatus, body: created } = await createTenant(apiRequest, body.name, process.env.USER_ACCESS_TOKEN_ADMIN!);
+    const { status: createStatus, body: created } = await createTenant(apiRequest, body.name, tokens.admin());
     expect(createStatus).toBe(200);
     expect(CreateTenantResponseSchema.parse(created)).toBeTruthy();
 
-    const { status: getStatus, body: fetched } = await getTenant(apiRequest, created.tenantId, process.env.USER_ACCESS_TOKEN_ADMIN!);
+    const { status: getStatus, body: fetched } = await getTenant(apiRequest, created.tenantId, tokens.admin());
     expect(getStatus).toBe(200);
     expect(GetTenantResponseSchema.parse(fetched)).toBeTruthy();
     expect(fetched.tenant.name).toBe(body.name);

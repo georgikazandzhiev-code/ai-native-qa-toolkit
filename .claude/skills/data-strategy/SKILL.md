@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 1.2.3
+version: 2.0.0
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -22,11 +22,11 @@ Single source of truth for **where test data comes from** in this framework. Sis
 ## Critical
 
 - **NEVER** redefine universal type-mismatch arrays (`[123, true, null, undefined]`, etc.) inline in a spec, helper, or schema. Import from `fixtures/api/invalid-types.ts` (`invalidString`, `invalidStringTypes`, `invalidNumber`, etc.). Why: every API spec needs the same negative coverage; inlining duplicates the contract and produces drift across resources.
-- **NEVER** re-declare an array or constant that already exists in `test-data/app/*.json`. Import it (`import notificationsData from "../../../test-data/app/notifications.json"`) and reference the property (e.g. `notificationsData.severities`). Before adding a local constant, search `test-data/app/` for the value. Why: duplicated constants diverge silently when only one copy is updated.
+- **NEVER** re-declare an array or constant that already exists in `test-data/app/*.json`. Import it (`import notificationsData from "../../../../test-data/app/notifications.json"`) and reference the property (e.g. `notificationsData.severities`). Before adding a local constant, search `test-data/app/` for the value. Why: duplicated constants diverge silently when only one copy is updated.
 - **NEVER** generate app-defined strings with Faker — error messages, button labels, toast text, page headings, validation messages all live in `enums/app/*`. Why: Faker output is random; app-defined strings are contracts the UI emits verbatim. Encoding them in `enums/` keeps spec assertions in sync with the running UI.
-- **NEVER** hardcode test content strings (names, emails, todo text, job names, descriptions) in a spec. Generate with `faker.<...>` (e.g., `faker.string.alphanumeric(6)`) for uniqueness — required for parallel safety. Why: hardcoded names collide under `fullyParallel: true`; the framework runs every spec concurrently.
-- **NEVER** store fixed expected values used in a single assertion in a `test-data/app/*.json` file. Keep them inline in the test. Why: single-use sentinels in JSON force readers to jump files for one literal; only multi-use sentinels (`invalidId`, `nonExistentId`, boundary matrices) earn a JSON home.
-- **NEVER** introduce magic numbers (timeouts, retry counts, page-size limits, polling intervals) inline in helpers or specs. Route through `playwright.config.ts` for test-suite tuning, an enum in `enums/app/*` for domain-level limits, or `appConfig.timeouts.X` from `config/app.ts`. Why: scattered magic numbers can't be tuned centrally and rot independently.
+- **NEVER** hardcode test content strings (names, emails, todo text, job names, descriptions) in a spec. Generate with `faker.<...>` (e.g., `faker.string.alphanumeric(6)`) for uniqueness — required for parallel safety. Why: hardcoded names collide when specs run concurrently (`fullyParallel: true`) and with a previous run's leftovers.
+- **NEVER** hardcode a fixed expected value in a test, even one used in a single assertion. Fixed values come from the resource's `test-data/app/*.json` file (constitution: never hardcode). Why: an inline literal cannot be found, reviewed or updated with its siblings (`invalidId`, `nonExistentId`, boundary matrices), and drifts silently when the contract changes.
+- **NEVER** introduce magic numbers (timeouts, retry counts, page-size limits, polling intervals) inline in helpers or specs. Route through `playwright.config.ts` for test-suite tuning, test-data JSON for domain-level limits (e.g. `test-data/app/worker.json` `defaultPageSize`), or `appConfig.timeouts.X` from `config/app.ts`. Why: scattered magic numbers can't be tuned centrally and rot independently.
 - **ALWAYS** validate factory output with `Schema.parse(...)` and return the Zod-inferred type. Why: a factory that drifts from the API contract produces happy-path data that fails request validation in CI but passes locally — the worst kind of flake.
 - **ALWAYS** load the [`refactor-values`](../refactor-values/SKILL.md) skill **before** editing any existing static-data file (`test-data/app/*.json`) or enum value. Why: these edits cascade through every assertion and data-driven loop that consumes them; an uncoordinated edit can silently invalidate dozens of tests.
 
@@ -44,15 +44,15 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Static — sentinels & lookup ids** | `test-data/app/<resource>.json` (keys: `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, etc.) | Pattern 5 | `test-data/app/worker.json`, `test-data/app/job-common.json`, `test-data/app/http-job.json`, `test-data/app/email-job.json` |
 | **Static — frontend mock payloads** | `test-data/app/<resource>.json` (used in `route.fulfill`) | Pattern 5 (route stub) | No mock-JSON fixtures in this project today; reserved for future use — see `refactor-playbook.md §4` |
 | **Static loader (JSON + transformation)** | `helpers/app/<topic>Loader.ts` (or `testDataLoader.ts`) | Pattern 5 wrapper | No loader helpers in this project today; reserved for future use |
-| **Dynamic — typed factory (`createXData`)** | `helpers/app/testDataGenerators.ts` (planned), OR co-located in `helpers/app/<topic>.ts` for topic-specific data today | Pattern 2 | `helpers/app/workers.ts` (`buildCreateWorkerBody`, `buildUpdateWorkerBody`), `helpers/app/jobs.ts` (`buildCreateJobBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
-| **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | Planned alongside the centralized `testDataGenerators.ts` (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`); none today |
+| **Dynamic — typed factory (`createXData`)** | `helpers/app/test-data-generators.ts` (planned), OR co-located in `helpers/app/<topic>.ts` for topic-specific data today | Pattern 2 | `helpers/app/workers.ts` (`buildCreateWorkerBody`, `buildUpdateWorkerBody`), `helpers/app/jobs.ts` (`buildCreateJobBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
+| **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | Planned alongside the centralized `test-data-generators.ts` (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`); none today |
 | **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | `helpers/app/workers.ts` (`buildListWorkersUrl`), `helpers/app/jobs.ts` (`buildListJobsUrl`) |
 | **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | `helpers/app/workers.ts`, `helpers/app/jobs.ts`, `helpers/app/adminTenants.ts`, `helpers/app/adminUsers.ts` |
 | **Per-test user lifecycle (admin-API + Keycloak)** | `helpers/app/adminUsers.ts` (`setupTestUser` / `teardownTestUser`); password reset via `helpers/util/keyCloak.ts` (`getAuthenticatedKcAdminClient`, `getUserIdByEmail`, `resetUserPasswordById`) | Pattern 7 | `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` |
 | **Per-test user emails (Mailpit plus-addressing)** | `helpers/util/mailpit.ts` | Pattern 7 | `getNextTestEmail(baseEmail)`, `MailpitHelper` |
 | **Personas — UI session (storage state JSON)** | `.auth/app/<persona>Session.json` (generated; not committed) | Pattern (persona) | `.auth/app/appMainUserSession.json` |
 | **Personas — UI session generator** | `helpers/app/createStorageState.ts` | Pattern (persona) | `createAppStorageState({ email, password, totpSecret, storageStatePath })` |
-| **Personas — bearer tokens** | `process.env.USER_ACCESS_TOKEN_*`, populated by `tests/app/login.setup.ts` | Pattern (persona) | `USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN` |
+| **Personas — bearer tokens** | `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`, reading the `USER_ACCESS_TOKEN_*` values that `tests/app/login.setup.ts` writes into `process.env` | Pattern (persona) | `USER_ACCESS_TOKEN_FULL`, `USER_ACCESS_TOKEN_ADMIN` |
 | **Persona credentials (email/password/TOTP)** | `env/.env.<environment>` (shape in `env/.env.example`); read only inside `login.setup.ts` | Pattern (persona) | See [reference.md §1.3](reference.md#13-user-credentials-email--password--totp-secret-triplets) |
 | **URLs and endpoint paths** | `config/app.ts` (`appConfig.apiUrl`, `appConfig.api.JOBS`, `appConfig.api.WORKERS`, …) | n/a | `appConfig.api.ADMIN_TENANT`, `appConfig.api.JOBS`, `appConfig.api.WORKERS` |
 | **Reference enums (Qase suites, job types)** | `enums/app/<topic>.ts` | n/a | `enums/app/qase-suites.ts` |
@@ -124,7 +124,7 @@ Target shape — code in [patterns.md § Pattern 2](patterns.md). Mandatory shap
 - Function returns the type, takes `Partial<T> = {}` last.
 - Defaults are realistic and pass server validation.
 - `...options` spread must be the LAST property (overrides win).
-- One factory per entity. Per-entity files in `helpers/app/testDataGenerators.ts` (target) or in the topic-specific helper today (e.g. `buildCreateWorkerBody` in `helpers/app/workers.ts`, `buildCreateJobBody` + 6 sibling per-type builders in `helpers/app/jobs.ts`).
+- One factory per entity. Per-entity files in `helpers/app/test-data-generators.ts` (target) or in the topic-specific helper today (e.g. `buildCreateWorkerBody` in `helpers/app/workers.ts`, `buildCreateJobBody` + 6 sibling per-type builders in `helpers/app/jobs.ts`).
 
 > Drift today: existing `buildCreate<X>Body` builders return `Record<string, unknown>` instead of an exported `XData` type. Refactor playbook §§ 1 + 3 cover the migration.
 
@@ -158,7 +158,7 @@ Target shape (assertion-style `setupX`/`teardownX` pair); current passthrough `c
 - **Accepts `overrides?: Partial<T>` and forwards them to the factory** (`body: createXData(overrides)`). A seeder with no override parameter is a refactor target: a test that needs a specific field value (e.g. a fixed `name` to assert on, or a `status: 'disabled'` seed state) cannot use it without forking into a second seeder. Overrides are what make a single seeder reusable across scenarios.
 - Body is built by a Pattern-2 factory (`createXData`), never inline. If the factory does not exist, create it first.
 - Response is Zod-parsed before return.
-- Token comes from `process.env.USER_ACCESS_TOKEN_FULL` (or the documented persona) — never hardcoded, never aliased.
+- Token comes from `tokens.full()` (or the documented persona's accessor), called at the call site — never hardcoded, never aliased.
 - Used by tests in `beforeAll`/`beforeEach` and matched in `afterAll`/`afterEach`. See "Lifecycle map" below.
 
 ### Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
@@ -173,20 +173,20 @@ For flows that require a brand new user. This project provisions users through t
 
 ```mermaid
 flowchart LR
-    BA[beforeAll] -->|"Read-only seed,<br/>shared by all tests<br/>e.g. first worker in list"| BodySeed
+    BA[beforeAll] -->|"Seed what the tests read,<br/>record its id<br/>e.g. create the worker a GET reads"| BodySeed
     BE[beforeEach] -->|"Mutable resource per test:<br/>worker, job, tenant<br/>OR per-test user"| BodyMut
     BodySeed --> Test
     BodyMut --> Test
     Test --> AE[afterEach]
     Test --> AA[afterAll]
     AE -->|"Mirrors beforeEach:<br/>delete the resource"| Done
-    AA -->|"Drain ids[] array<br/>from POST tests"| Done
+    AA -->|"Drain ids[] array<br/>from beforeAll + POST tests"| Done
 ```
 
 Rules:
-- `beforeAll` only for **read-only** seeds (e.g. fetching the first worker for GET-by-id tests). Never push to a shared array from `beforeAll`.
+- `beforeAll` **seeds** what the describe's tests only read (e.g. creates the worker a GET-by-id test reads), records each id it creates in the describe's cleanup array, and `afterAll` deletes them. Never borrow existing data ("the first worker in the list") — it may not exist after an environment reset. Pushing `beforeAll`'s own ids into the cleanup array is correct; what must not happen is a test depending on another test's side effects.
 - `beforeEach` for resources that the test mutates or that must be unique per test run.
-- `afterEach` mirrors `beforeEach`; `afterAll` mirrors a `workerIds: string[]` array filled inside POST tests.
+- `afterEach` mirrors `beforeEach`; `afterAll` drains a `workerIds: string[]` array filled by `beforeAll` and by POST tests.
 - The id-array pattern is the canonical leak guard for POST suites:
 
 ```typescript
@@ -204,7 +204,7 @@ test.describe('POST /workers', () => {
                 method: 'DELETE',
                 url: `${appConfig.api.WORKERS}/${id}`,
                 baseUrl: appConfig.apiUrl,
-                headers: process.env.USER_ACCESS_TOKEN_FULL,
+                headers: tokens.full(),
             });
         }
     });
@@ -228,12 +228,12 @@ flowchart LR
 
 ## Parallel-safety rules
 
-The framework runs `fullyParallel: true` (see `playwright.config.ts`). Data must be independent per Playwright worker AND per test.
+When the suite runs in parallel (`fullyParallel: true` in `playwright.config.ts` — the repository's own `CLAUDE.md` states whether its suite is parallel-safe), data must be independent per Playwright worker AND per test. Write it that way even on a suite that still runs with `--workers=1`, so it can move to parallel without a rewrite.
 
 1. **Uniqueness sources** — `faker.string.uuid()`, `faker.string.alphanumeric(N)`, `Date.now()`, `getNextTestEmail(baseEmail)`. Module-level counters (`let counter = 0`) are forbidden.
 2. **No mutable module state** — factories and Object Mothers are pure functions of their inputs.
 3. **Faker seeding** — the framework does not globally seed faker. If you need a reproducible failure, seed at the start of the test with `faker.seed(testInfo.testId.split('').reduce((a, c) => a + c.charCodeAt(0), 0))`. Do not seed in factories themselves.
-4. **`process.env` writes** — only `tests/app/login.setup.ts` may write `process.env.USER_ACCESS_TOKEN_*`. Specs and helpers READ env vars; they never write them.
+4. **`process.env` writes** — only `tests/app/login.setup.ts` may write `process.env.USER_ACCESS_TOKEN_*` (the setup project is part of the config boundary for that one purpose). Specs and helpers never write env vars, and read them only through `config/env.ts` (`env.X`, `tokens.full()`).
 5. **Per-test user emails** are intrinsically parallel-safe via plus-addressing.
 6. **Storage states** are read-only files; multiple Playwright workers can share them. Personas that need to mutate user attributes during a test must use Pattern 7, not a shared storage state.
 7. **Don't share helper-returned objects** — if `createWorker` returns `body`, the consuming test owns it; don't cache it across describes.
@@ -258,7 +258,7 @@ rg "USER_ACCESS_TOKEN_|ADMIN_ACCESS_TOKEN_" env/.env.example tests/ helpers/
 
 Decision rules:
 - A hit on factory or seeder = consume it. Do NOT duplicate. If it lacks an override you need, ADD an override; do not fork.
-- A hit on env token = use the canonical name; never alias to `const token = process.env.X`.
+- A hit on env token = call its accessor (`tokens.full()`) at the call site; never alias it to `const token = tokens.full()` at module level (see `type-safety` § Environment variables).
 - A hit on JSON = add a key to the existing file; do not create a parallel file.
 
 For per-area scopes, see the catalogs in [reference.md](reference.md).
@@ -278,7 +278,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 | Inline `faker` payload in a spec for an entity that has a builder | Drift; rule changes hit one place but not others | Import the builder; if the builder lacks a field, add `Partial<T>` override |
 | Two near-identical generators (e.g. `createXData` + `createXDataForUI`) | Drift, more places to update | One factory + one Object Mother variant |
 | Module-level counter for uniqueness (`let n = 0`) | Parallel-unsafe; collides across Playwright workers | `faker.string.uuid()`, `faker.string.alphanumeric(N)` |
-| `const token = process.env.USER_ACCESS_TOKEN_X` aliased then passed around | Hides the canonical name; grep misses it | Use `process.env.USER_ACCESS_TOKEN_X` directly at the call site |
+| `const token = process.env.USER_ACCESS_TOKEN_X` aliased then passed around | Hides the canonical name; grep misses it; read outside `config/env.ts` | Call `tokens.full()` / `.admin()` / `.zero()` directly at the call site |
 | Hardcoded uuid in a spec for "non-existent" id | Magic value; can't be updated centrally | `test-data/app/<resource>.json` `nonExistentId` |
 | `await getNextTestEmail()` | The function is synchronous; await produces noise | Drop the `await` |
 | `Math.random()` based amount generators (`helpers/util/dataGenerator.ts` `generateRandomAmount`) | Bypasses the project's faker-everywhere convention | `faker.number.float({ min, max, multipleOf: 0.01 })` |
@@ -291,7 +291,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 Before finishing any data-related change, confirm:
 
 - [ ] Every faker call in a spec is for a value used in only that spec; reusable shapes live in a factory.
-- [ ] Every `process.env.*` token is the canonical name from [reference.md](reference.md), not aliased locally.
+- [ ] Every token is read through its `tokens` accessor (`tokens.full()` etc., see [reference.md](reference.md)) at the call site, not aliased locally.
 - [ ] Every entity created in the test has a matching delete in `afterEach` or `afterAll`.
 - [ ] Every JSON import points to `test-data/app/<resource>.json`; no JSON files live elsewhere.
 - [ ] No module-level mutable state (counters, caches, ids) outside of `describe`-scoped arrays drained in `afterAll`.
@@ -310,11 +310,11 @@ Before finishing any data-related change, confirm:
 The instinct is a `test-data/app/projects.json` with a ready payload. That is the wrong default here, and the seven patterns say why:
 
 1. **`name` must be unique per test run.** Two Playwright workers, or one rerun before cleanup, and a fixed name collides on the 409 path. Faker, not JSON.
-2. **`ownerId` must reference a row that actually exists.** A hardcoded uuid is a hardcoded id — forbidden, and it rots the first time the environment is reset. Resolve it in `beforeAll` by listing users and taking the first, failing loudly if none exists.
-3. **`description` is genuinely fixed** — it is not asserted on and not unique. A constant is fine; it belongs with the body builder, not in its own file.
-4. **The token comes from `process.env.X!`**, never a file.
+2. **`ownerId` must reference a row that actually exists.** A hardcoded uuid is a hardcoded id — forbidden, and it rots the first time the environment is reset. Borrowing one ("list users and take the first") fails the same way. Create the owner in `beforeAll` (e.g. `setupTestUser`), use its id, and delete it in `afterAll` (`teardownTestUser`).
+3. **`description` is genuinely fixed** — it is not asserted on and not unique. A constant is fine as the body builder's **default payload value** (overridable like any field), not in its own file. That is a builder default, not a test constant: once a test asserts on it, the expected value comes from `test-data/` per § Critical.
+4. **The token comes from `tokens.x()`** (`config/env.ts`), never a file.
 
-The finished shape: a body builder in `helpers/app/` that takes the resolved `ownerId` and a faker name, plus one `beforeAll` that resolves the owner. No new JSON file — which is what § Search-before-write is for.
+The finished shape: a body builder in `helpers/app/` that takes the resolved `ownerId` and a faker name, plus one `beforeAll` that creates the owner and one `afterAll` that deletes it. No new JSON file — which is what § Search-before-write is for.
 
 ### Example 2 — two specs start failing on each other
 
@@ -332,7 +332,7 @@ The finished shape: a body builder in `helpers/app/` that takes the resolved `ow
 |---------|-------|-----|
 | `409 Conflict` on create, only in CI or only at parallelism | A fixed name from JSON, shared across Playwright workers | Faker per test. Delete the JSON value so it cannot be reused. |
 | A hardcoded uuid stops resolving after an environment reset | An id was treated as fixed data; ids are environment state, not data | Resolve it at runtime in `beforeAll` and fail loudly when the lookup returns nothing. |
-| Test passes locally, `401` in CI | Credentials read from a file, or a storage state older than its token TTL | Tokens come from `process.env.X!`. Re-run the auth setup project before assuming a code bug. |
+| Test passes locally, `401` in CI | Credentials read from a file, or a storage state older than its token TTL | Tokens come from `tokens.x()` (`config/env.ts`). Re-run the auth setup project before assuming a code bug. |
 | Faker produced a value the API rejects | Unconstrained generator against a validated field — a name too long, an email shape the backend refuses | Constrain the generator to the contract, do not loosen the assertion. |
 | Two JSON files hold the same constant | § Search-before-write was skipped | Grep before adding. Consolidate into one, then update both consumers atomically per `refactor-values`. |
 | Cleanup deletes a row another spec is mid-read on | Data is shared where it should be per-test | Per-test data is the fix; ordering teardown around a shared row only moves the race. |

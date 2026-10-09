@@ -33,6 +33,17 @@
       "baseline": 12,
       "verdict": "held",
       "note": "machine-graded, skill arm only. Case 1 of the lint gate (POST /api/v1/projects) re-run after #5 PR 3 aligned the templates and http-method-coverage with SKILL.md: 360 lines, zero violations, and the output uses the new forms (expect.soft(safeParse(...).success) in negative loops, the coverage-plan block, the // qase.id(N) placeholder, the dedicated 405 block). Baseline 12 is the 2026-08-11 run, not re-run. Case 3's prompt was not recorded, so it could not be repeated identically. Limits: one case, one run, today's model, subagent generator."
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-10-09",
+      "metric": "lint-gate-violations",
+      "cases": 1,
+      "max": null,
+      "score": 0,
+      "baseline": 12,
+      "verdict": "held",
+      "note": "machine-graded, skill arm only. Lint-gate case 1 (POST /api/v1/projects) re-run for the 2.0.0 bump (#5 PR 4: env through the config module, API flows tagged @App-API, domain-subfolder paths). 334 lines, zero violations under the plugin's smoke config including the new no-process-env-outside-config rule; the output imports tokens from config/env at the 4-level depth and tags every test @App-API. Baseline 12 is the 2026-08-11 run, not re-run. Limits: one case, one run, today's model, subagent generator."
     }
   ]
 }

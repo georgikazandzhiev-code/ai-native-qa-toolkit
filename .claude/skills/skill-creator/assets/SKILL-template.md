@@ -80,8 +80,8 @@ Examples to model:
   cleanup, coverage)
 - selectors/SKILL.md § Critical (9 rules — locator priority, Radix
   exception, anchor-and-drill, no codegen)
-- type-safety/SKILL.md § Critical (7 rules — no any, strictObject, ! for
-  process.env, etc.)
+- type-safety/SKILL.md § Critical (7 rules — no any, strictObject, env
+  read only through config/env.ts, etc.)
 -->
 
 - **ALWAYS** <rule 1>. <Why / what breaks.>

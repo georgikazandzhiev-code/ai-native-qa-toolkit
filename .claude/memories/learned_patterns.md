@@ -57,6 +57,7 @@ await modal.getByRole('button', { name: 'Confirm' }).click();
 - **Issue:** options asserted before the fetch that fills them resolved.
 - **Root cause:** the wait was registered *after* the action that triggers the request, so the response could land in between and never be seen.
 - **Evidence:** INFERRED — reference example.
+- **Corrected 2026-10-09:** the snippet used an `ApiRoute` enum; paths live in config (`appConfig.api.X`), never in enums — see the `enums` and `config` skills.
 - **Learned fix:**
 
 ```ts
@@ -66,7 +67,7 @@ await modal.getByRole('button', { name: 'Confirm' }).click();
 
 // ✅ Arm the wait BEFORE the action, then await both.
 const optionsLoaded = page.waitForResponse(
-  (r) => r.url().includes(ApiRoute.Options) && r.ok(),
+  (r) => r.url().includes(appConfig.api.OPTIONS) && r.ok(),
 );
 await page.getByRole('button', { name: 'Open' }).click();
 await optionsLoaded;

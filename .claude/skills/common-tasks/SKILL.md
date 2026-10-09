@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 2.1.1
+version: 3.0.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -19,7 +19,7 @@ These rules apply to **every** generated artifact in the framework — page obje
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
 - **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps — every tag is Title-case except lowercase `@App-regression`. **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the test run is orphaned in Qase reporting otherwise.
-- **ALWAYS** pull URLs / credentials / env-driven values from `process.env.X!` (no defaults at call sites; defaults belong in `config/util/<service>.ts`). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`Messages.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
+- **ALWAYS** pull env-driven values through the config module — `env.X` and `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`, URLs from `appConfig` — never `process.env` at a call site, and no `!` / `??` / `||` on env values (defaults live in the schema in `config/env.ts`; see `type-safety` § Environment variables). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`MESSAGES.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
 - **ALWAYS** use `z.strictObject()` for new schemas (rejects extra keys — catches API drift). **ALWAYS** validate every API response with `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). **NEVER** stop at `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper. **NEVER** use `z.any()` to silence a `ZodError`. See the `api-testing` and `type-safety` skills.
 - **ALWAYS** explore the live UI with `npx playwright open` before writing any locator (the `playwright-cli` skill). **ALWAYS** read OpenAPI / Swagger before writing any API test (the `api-testing` skill, Phase 1). **NEVER** guess from wireframes or screenshots. Verify stable facts against the frontend source (the `frontend-cross-check` skill) and behaviour on the live app.
@@ -65,7 +65,7 @@ flowchart TD
     Q4 -->|"Test fixture JSON"| LegacyJson["data-strategy (drift entry —<br/>existing test-data/app/*.json)"]
     Q4 -->|"No"| Q5{Is it routing infrastructure?}
 
-    Q5 -->|"Enum constant - SUITES, Messages, ApiEndpoints, etc."| Enums["enums (where the constant lives,<br/>extension workflow)"]
+    Q5 -->|"Enum constant - SUITES, MESSAGES, statuses, etc."| Enums["enums (where the constant lives,<br/>extension workflow)"]
     Q5 -->|"Env var or appConfig path"| ConfigSkill["config (envconfig, util/<service>.ts)"]
     Q5 -->|"Refactoring an existing constant value"| Refactor["refactor-values (safe-rename<br/>workflow with grep + dry run)"]
     Q5 -->|"Test failed — investigate"| Debug["debugging (failure-mode taxonomy,<br/>UI Mode / Trace Viewer / Inspector)"]
@@ -77,16 +77,17 @@ flowchart TD
 
 | User intent | First skill to load | Companion skills | File location |
 |-------------|--------------------|-------------------|---------------|
-| Add a UI functional / E2E / smoke test | `test-standards` | `page-objects`, `selectors`, `scaffold-spec`, `playwright-cli` (exploration) | `tests/app/{functional,e2e}/<name>.spec.ts` |
-| Add an API test | `api-testing` | `test-standards`, `scaffold-spec`, `helpers`, `type-safety` | `tests/app/api/<resource>.spec.ts` |
+| Add a UI functional / E2E / smoke test | `test-standards` | `page-objects`, `selectors`, `scaffold-spec`, `playwright-cli` (exploration) | `tests/app/{functional,e2e}/<domain>/<name>.spec.ts` |
+| Add an API test | `api-testing` | `test-standards`, `scaffold-spec`, `helpers`, `type-safety` | `tests/app/api/<domain>/<resource>.spec.ts` |
 | Add a Zod schema | `api-testing` | `type-safety` | `fixtures/api/schemas/app/<resource>.ts` |
 | Add a page object class | `page-objects` | `selectors`, `playwright-cli`, `fixtures` (registration) | `pages/app/<Name>.ts` |
 | Add a reusable component | `page-objects` (§ component composition) | `selectors` | `pages/baseClasses/<Name>.ts` |
 | Add an API helper (per-resource) | `helpers` | `api-testing` | `helpers/app/<resource>.ts` |
-| Add a helper fixture (3+-files setup/teardown) | `fixtures` | `helpers` | `fixtures/helper/<name>-fixture.ts` |
+| Add a helper fixture (3+ specs + guaranteed teardown) | `fixtures` | `helpers` | `fixtures/api/<name>-fixture.ts` (or `fixtures/services/` per the `fixtures` skill) |
 | Add a Faker factory | `data-strategy` | `type-safety` | `test-data/factories/<area>/<name>.factory.ts` *(planned — see drift note)* |
 | Add static test data | `data-strategy` | — | `test-data/static/{util,<area>}/<name>.ts` *(planned — see drift note)* |
-| Add an endpoint enum / SUITES key | `enums` | `api-testing` (if API endpoint) | `enums/app/{index,qase-suites}.ts` |
+| Add an endpoint path | `config` | `api-testing` | `config/app.ts` (`appConfig.api.X`) — never an enum |
+| Add a SUITES key / UI string / status | `enums` | — | `enums/app/{index,qase-suites}.ts` |
 | Add an env var / `appConfig` path | `config` | `type-safety` | `config/{app,util/<service>}.ts` |
 | Refactor an enum value or static data value | `refactor-values` | `enums`, `type-safety` | (varies) |
 | Investigate a failing test | `debugging` | `playwright-cli`, `frontend-cross-check` | (varies) |
@@ -128,7 +129,7 @@ Every deep skill in this framework starts with a precondition:
 | `page-objects`, `selectors`, `test-standards` (UI) | `npx playwright open` exploration of the live page (`playwright-cli` skill). |
 | `api-testing`, `test-standards` (API) | OpenAPI / Swagger pull (or live exploration as fallback for undocumented endpoints). |
 | `helpers`, `fixtures` | DRY-search before adding — does the helper already exist? |
-| `enums` | Verify the UI text / endpoint path on the live app via `playwright-cli` before encoding. |
+| `enums` | Verify the UI text on the live app via `playwright-cli` before encoding. |
 | `data-strategy` | Identify which tier the new data belongs to (factory / universal / domain / inline). |
 | `config` | Verify the env var actually exists in `.env` / CI; verify the path actually resolves. |
 
@@ -153,7 +154,7 @@ Walk the [Self-review checklist](#self-review-checklist) below. Tick every box.
 ### Step 8 — run
 
 ```bash
-npx playwright test tests/app/functional/<name>.spec.ts   # one file
+npx playwright test tests/app/functional/<domain>/<name>.spec.ts   # one file
 npm run app-regression                                     # whole tag group
 npm run app-api
 npm run app-e2e
@@ -170,9 +171,9 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 | New POM under `pages/app/` | `fixtures/pom/page-object-fixture.ts` (type entry + fixture body) |
 | New `SUITES.<RESOURCE>` | `enums/app/qase-suites.ts` |
 | New endpoint or path | `config/app.ts` `appConfig.api.X` or `appConfig.paths.X` |
-| New `Messages.X` UI string | `enums/app/<file>.ts` (verified via `playwright-cli` first) |
-| New helper that's reused 3+ times | Promote to `fixtures/helper/<name>-fixture.ts` (see the `fixtures` skill) |
-| New Zod schema with shared shapes | Re-export through the barrel `fixtures/api/schemas/app/index.ts` |
+| New `MESSAGES.X` UI string | `enums/app/<file>.ts` (verified via `playwright-cli` first) |
+| New helper used by 3+ specs that owns a resource whose teardown must be guaranteed | Promote to `fixtures/api/<name>-fixture.ts` (or `fixtures/services/`) — see the `fixtures` skill |
+| New Zod schema with shared shapes | Export from the resource file `fixtures/api/schemas/app/<resource>.ts`; specs import from it directly (there is no `app/` schema barrel) |
 | New skill | `~/.claude/CLAUDE.md` § Routed Skill Index + the cluster siblings' `See Also` (bidirectional) |
 
 ## Anti-patterns
@@ -180,9 +181,9 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 - ❌ **Reimplementing a deep skill's rules inline in this skill.** This skill is a router. Fix: link to the deep skill.
 - ❌ **Skipping the precondition step.** Generates code against an imagined API or UI. Fix: always run `npx playwright open` (UI) or read OpenAPI (API) first.
 - ❌ **Loading multiple skills speculatively without categorizing.** Bloats context. Fix: walk the decision tree, load one deep skill, expand only when its workflow points at a sibling.
-- ❌ **Generated code uses `import { test, expect } from "@playwright/test"`.** Strips merged fixtures. Fix: `from "../../../fixtures/pom/test-options"`.
+- ❌ **Generated code uses `import { test, expect } from "@playwright/test"`.** Strips merged fixtures. Fix: `from "../../../../fixtures/pom/test-options"` (depth for `tests/app/<type>/<domain>/`).
 - ❌ **Generated test uses a non-whitelisted tag (`@functional`, `@destructive`, generic `@regression`) or wrong casing (`@App-Regression`, `@App-e2e`).** Misses CI greps. Fix: pick from the `test-standards` whitelist, exactly as cased.
-- ❌ **Generated artifact hardcodes a URL / endpoint / token / UI string.** Sources of truth are `process.env.X!`, `appConfig.api.X` / `appConfig.paths.X`, `enums/app/*`, `test-data/app/*`. Fix: route to the `config` / `enums` / `type-safety` skills.
+- ❌ **Generated artifact hardcodes a URL / endpoint / token / UI string.** Sources of truth are `env` / `tokens` (`config/env.ts`), `appConfig.api.X` / `appConfig.paths.X`, `enums/app/*`, `test-data/app/*`. Fix: route to the `config` / `enums` / `type-safety` skills.
 - ❌ **Generated schema uses `z.object()` instead of `z.strictObject()`.** Silently strips unknown keys → hides API drift. Fix: `z.strictObject()` for new schemas (the `api-testing` skill's Critical rule).
 - ❌ **Generated API test omits `expect(SchemaName.parse(body)).toBeTruthy();`.** Type generics alone don't validate. Fix: every API response asserted with the exact pattern (the `api-testing` skill).
 - ❌ **Generated POM has JSDoc on locator getters.** Names are self-documenting. Fix: JSDoc on action methods only (the `page-objects` skill).
@@ -195,7 +196,7 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 For **every** generated artifact, regardless of category:
 
 - [ ] Imports are correct — `test` / `expect` from `fixtures/pom/test-options.ts` (specs only); `expect, type Locator, type Page` from `@playwright/test` (page objects only).
-- [ ] Path / credentials / endpoints come from `process.env.X!`, `appConfig.api.*` / `appConfig.paths.*`, `enums/app/*`, `test-data/app/*` — nothing hardcoded.
+- [ ] Credentials and tokens come from `env` / `tokens` in `config/env.ts`, URLs from `appConfig`; paths / endpoints only from `appConfig.api.*` / `appConfig.paths.*`; UI strings, suites and statuses from `enums/app/*`; fixed values from `test-data/app/*` — nothing hardcoded.
 - [ ] Locators follow the `selectors` skill priority order (default + Radix exception). No XPath. No top-level CSS class / id selectors.
 - [ ] No `any`, `as any`, `@ts-ignore`, `@ts-expect-error`. Use Zod-inferred types or explicit interfaces.
 - [ ] No `page.waitForTimeout(...)`. Web-first assertions only.
@@ -221,11 +222,11 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 2. **Step 2 — load deep skills.** `page-objects` (POM class structure), `selectors` (locator priority), `playwright-cli` (exploration), `test-standards` (spec structure + tag).
 3. **Step 3 — precondition.** Run `npx playwright open` against `/settings`. Capture form-field testids, dark-mode toggle role, success/error toast strings.
 4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `@App-regression` and `qase.suite(SUITES.APP_SETTINGS)`.
-5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend `Messages` enum). No `waitForTimeout`.
+5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend the `MESSAGES` enum). No `waitForTimeout`.
 6. **Step 6 — generate.** Both files produced.
 7. **Step 7 — self-review.** Tag is `@App-regression`, lowercase `r` as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
-9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `Messages.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
+9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `MESSAGES.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 
 ### Example 2 — "Add complete API coverage for `POST /workers`"
 
@@ -235,7 +236,7 @@ User says: *"Add API tests for `POST /workers` covering 201, 400 (each required 
 2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod 3 chained validators).
 3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Read `tests/app/api/jobs-service/workers/workers.spec.ts` for the canonical shape.
 4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
-5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.WORKERS`. `process.env.USER_ACCESS_TOKEN_FULL!`. `@App-API` tag.
+5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.WORKERS`. `tokens.full()`. `@App-API` tag.
 6. **Step 6 — generate.** `tests/app/api/jobs-service/workers/workers.spec.ts` (extend if exists), `fixtures/api/schemas/app/worker.ts`, `helpers/app/workers.ts`.
 7. **Step 7 — self-review.** Coverage audit: every status code has a test. Auth matrix: 401 and 403. Path-param fuzz if endpoint has `:id`.
 8. **Step 8 — run.** `npm run app-api` → green.
@@ -244,13 +245,13 @@ User says: *"Add API tests for `POST /workers` covering 201, 400 (each required 
 
 User says: *"Tests/app/functional/http-create-edit-job.spec.ts is flaky in CI but passes locally. Investigate."*
 
-1. **Step 1 — categorize.** Investigation, not creation → `debugging` skill, **not** generation.
-2. **Step 2 — load deep skill.** `debugging` (failure-mode taxonomy, Playwright tools).
-3. **Step 3 — precondition.** Pull the CI artifacts — trace, video, error message. Identify the exact failing assertion.
-4. **Step 4 — walk workflow.** `debugging` decision tree: TimeoutError on a locator → narrow / anchor-and-drill (the `selectors` skill) OR add a missing `page.waitForResponse(...)` to the POM action method (the `page-objects` skill). ZodError → schema vs API drift (the `api-testing` skill). Strict-mode violation → narrow with `getByRole`'s `name`.
-5. **Step 5 — Critical block.** Do NOT raise the timeout. Do NOT wrap in `try/catch`. Do NOT loosen the schema.
+1. **Step 1 — categorize.** Investigation, not creation. The failure is intermittent → classify it first with the `flakiness-triage` skill, then fix it with the `debugging` skill — **not** generation.
+2. **Step 2 — classify.** `flakiness-triage` § Workflow: capture the failure rate and mode, run the isolation experiment (5× isolated, once in-suite) and read the § Step 2 table — real bug, cross-test interference, or per-test flake.
+3. **Step 3 — load the fixing skill.** `debugging` (failure-mode taxonomy, Playwright tools). Pull the CI artifacts — trace, video, error message. Identify the exact failing assertion.
+4. **Step 4 — walk workflow.** `debugging` decision tree: TimeoutError on a locator → narrow / anchor-and-drill (the `selectors` skill) OR add a missing `page.waitForResponse(...)` to the POM action method (the `page-objects` skill). ZodError → schema vs API drift (the `api-testing` skill). Strict-mode violation → narrow with `getByRole`'s `name`. Cross-test interference → bisect the polluting spec (`flakiness-triage` § Step 3).
+5. **Step 5 — Critical block.** Do NOT raise the timeout. Do NOT wrap in `try/catch`. Do NOT loosen the schema. Do NOT add retries.
 6. **Step 6 — fix.** Apply the root-cause fix (e.g., move the missing wait into the POM action method).
-7. **Step 8 — re-run.** `npx playwright test <spec>` 5 times consecutively to confirm flake fix.
+7. **Step 7 — re-run.** 5 consecutive isolated runs plus one in-suite run (`flakiness-triage` § Step 5) to confirm the flake fix.
 
 ## Troubleshooting
 

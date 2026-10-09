@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-version: 1.0.4
+version: 2.0.0
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
 metadata:
   category: running
@@ -106,7 +106,7 @@ This matches how the reference framework (`the upstream reference framework`) wo
 - ❌ Using `npx playwright codegen` to generate "starter selectors" and committing them. Even if you intend to clean up later, the generated CSS chains corrode the codebase.
 - ❌ Inventing selector names from a Figma mock without ever opening the live app.
 - ❌ Falling back to "guess from a screenshot" when `npx playwright open` failed to start. Stop and notify the human instead.
-- ❌ Hardcoding text observed during exploration in a spec without routing through `enums/app/*` (when the string is reused in 2+ specs).
+- ❌ Hardcoding text observed during exploration in a spec without routing through `enums/app/*` — app text always goes to an enum, even when used once.
 - ❌ Running `npx playwright open` without `--load-storage` against an authenticated route, then "improvising" credentials. Storage state is the sanctioned auth path; if it's missing, surface that to the human.
 - ❌ Using `--save-storage` against the same path the test suite uses. That overwrites the suite's authenticated state. Save to a sibling path if you need a snapshot.
 - ❌ Committing exploration artifacts (HAR files, screenshots, saved storage from `--save-storage`).

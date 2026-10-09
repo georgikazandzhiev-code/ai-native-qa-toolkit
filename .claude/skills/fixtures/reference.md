@@ -41,7 +41,7 @@ Plus one non-POM helper registered in the same file:
 | Fixture | File | Yielded type | Depends on | Teardown |
 |---------|------|--------------|------------|----------|
 | `apiRequest` | `fixtures/api/api-request-fixture.ts` | `ApiRequestFn` — `<T>({ method, url, baseUrl, body?, headers? }) => Promise<{ status, body: T }>` | Playwright's built-in `request` (`APIRequestContext`) | none (no owned resource) |
-| `loginUser` | `fixtures/services/login-fixture.ts` | `(username, password) => Promise<ApiRequestResponse<LoginUser>>` | extends `apiRequestFixture` (inherits `apiRequest`); `process.env.API_URL` | none. **Currently unused** — helpers are preferred; kept as the canonical "fixture that extends `apiRequest`" example |
+| `loginUser` | `fixtures/services/login-fixture.ts` | `(username, password) => Promise<ApiRequestResponse<LoginUser>>` | extends `apiRequestFixture` (inherits `apiRequest`); `API_URL` (via `appConfig.apiUrl` — the current direct `process.env` read is drift) | none. **Currently unused** — helpers are preferred; kept as the canonical "fixture that extends `apiRequest`" example |
 | `mailpit` | `fixtures/api/mailpit-fixture.ts` | `MailpitHelper` | builds its **own** `APIRequestContext` with `Basic` auth from `MAILPIT_USERNAME` / `MAILPIT_PASSWORD` | `await context.dispose()` after `use` |
 
 ---
@@ -86,8 +86,8 @@ Produced by `tests/app/login.setup.ts` (the `app-setup` project). Every setup te
 | Artifact | Kind | Produced by | Consumed by |
 |----------|------|-------------|-------------|
 | `.auth/app/appMainUserSession.json` | UI storage state | `createAppStorageState({ ...users.main })` via Keycloak UI login | Playwright projects that attach `storageState` (chromium project); `test.use({ storageState })` overrides |
-| `process.env.USER_ACCESS_TOKEN_ADMIN` | API token (master realm) | Keycloak admin client (`getAuthenticatedKcUserClient` + `getClientToken`) | Admin-endpoint specs; passed as the `headers` value of `apiRequest` directly — no aliasing |
-| `process.env.USER_ACCESS_TOKEN_FULL` | API token (`<realm>`/tenant realm) | Keycloak user client for the FULL-permission user | Tenant-scoped specs; used directly at call sites. Legacy alias drift (`TENANT_TOKEN`, `API_TOKEN`) in ~40 existing specs — normalize when next touching |
+| `USER_ACCESS_TOKEN_ADMIN` (written into `process.env`) | API token (master realm) | Keycloak admin client (`getAuthenticatedKcUserClient` + `getClientToken`) | Admin-endpoint specs; read as `tokens.admin()` and passed as the `headers` value of `apiRequest` directly — no aliasing |
+| `USER_ACCESS_TOKEN_FULL` (written into `process.env`) | API token (`<realm>`/tenant realm) | Keycloak user client for the FULL-permission user | Tenant-scoped specs; `tokens.full()` called at call sites. Legacy alias drift (`TENANT_TOKEN`, `API_TOKEN`) in ~40 existing specs — normalize when next touching |
 
 Notes:
 - Token env keys follow `USER_ACCESS_TOKEN_<PERSONA>` (`ADMIN`, `FULL`). ZERO is intentionally absent until RBAC ships (see `<PROJ>-484` note in the setup file).
@@ -109,7 +109,7 @@ Deliberate omissions. If you're about to add one of these, re-read `SKILL.md` fi
 
 ## 6. Env-var dependency map
 
-Fixtures/setup read these directly from `process.env` (declared in `env/.env.example`):
+Fixtures and the setup project read these through `config/env.ts` (`env.X`, or `appConfig` for URLs) — declared in `env/.env.example` and in the schema. Existing direct `process.env` reads in these files are drift; migrate on next touch (see `type-safety` § Environment variables):
 
 | Consumer | Env vars |
 |----------|----------|
@@ -118,7 +118,7 @@ Fixtures/setup read these directly from `process.env` (declared in `env/.env.exa
 | `loginUser` fixture | `API_URL` |
 | `mailpit` fixture | `MAILPIT_USERNAME`, `MAILPIT_PASSWORD` (and `MAILPIT_URL` read by `MailpitHelper`) |
 
-**Drift to be aware of:** `MAILPIT_USERNAME` / `MAILPIT_PASSWORD` are read by `mailpit-fixture.ts` but are **not** declared in `env/.env.example` (only `MAILPIT_URL` is). Add them when next touching the env template.
+**Drift to be aware of:** `MAILPIT_USERNAME` / `MAILPIT_PASSWORD` are read by `mailpit-fixture.ts` but are **not** declared in `env/.env.example` (only `MAILPIT_URL` is). Add them (to the template and the schema in `config/env.ts`) when next touching the env template.
 
 ---
 

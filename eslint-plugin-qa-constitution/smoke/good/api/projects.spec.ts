@@ -6,13 +6,13 @@
 // An escape hatch that has never been exercised through the CLI is a claim, not a feature.
 import { expect, test } from 'fixtures/pom/test-options';
 import { z } from 'zod';
+import { tokens } from 'config/env';
 
 const Project = z.strictObject({
   id: z.string(),
   name: z.string(),
 });
 
-const token = process.env.API_TOKEN!;
 
 async function assertProjectListShape(body: unknown): Promise<void> {
   expect(z.array(Project).parse(body)).toBeTruthy();
@@ -26,7 +26,7 @@ async function assertProjectListShape(body: unknown): Promise<void> {
 
 test('@App-API creates a project and returns the created record', async ({ request }) => {
   const response = await request.post('/api/v1/projects', {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${tokens.full()}` },
     data: { name: 'contract check' },
   });
 
@@ -37,7 +37,7 @@ test('@App-API creates a project and returns the created record', async ({ reque
 test('@App-API rejects each required field when it is omitted', async ({ request }) => {
   for (const field of ['name'] as const) {
     const response = await request.post('/api/v1/projects', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${tokens.full()}` },
       data: {},
     });
     // expect.soft keeps the loop running so every field is reported, not just the first.
@@ -51,7 +51,7 @@ test('@App-Integration keeps the id of a project whose creation response failed'
   // eslint-allow-cleanup-capture — the id is needed for teardown even when the call throws.
   try {
     const response = await request.post('/api/v1/projects', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${tokens.full()}` },
       data: { name: 'aborted' },
     });
     createdId = Project.parse(await response.json()).id;

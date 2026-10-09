@@ -1,6 +1,6 @@
 # API Testability Constitution — Schema-First Backends
 
-<!-- toolkit-version: 1.6.0 -->
+<!-- toolkit-version: 2.0.0 -->
 
 > **Audience: the engineer or coding agent writing the backend / API.** Not the QA automation repo.
 > Drop this in a **backend service repo** as its `CLAUDE.md` (or merge it into an existing one) so every

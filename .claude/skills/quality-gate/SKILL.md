@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-version: 1.0.0
+version: 1.0.1
 description: Turn measured quality signals into an auditable go/no-go verdict at a commit, PR, release, or hotfix gate — thresholds from config, evidence-classed inputs, and overrides that need a named human, not the agent. Use when deciding whether a change is ready to merge or a build is ready to ship, when wiring a CI gate that passes or fails a pipeline, or when asked "is this release-ready / can we deploy / does this pass the bar". It synthesises what other skills measure (coverage, security, flake rate, risk, suite strength) into one verdict with a per-criterion breakdown. Trigger phrases — "quality gate", "release ready", "can we ship", "go/no-go", "deploy decision", "merge bar", "pass the gate". Do NOT use for the pre-push self-review of one diff against the framework rules (use the `pr-review` skill). Do NOT use for ranking what to test first (use the `defect-prediction` skill). Do NOT use for whether the suite actually catches defects (use the `mutation-testing` skill).
 metadata:
   category: cross-cutting
@@ -35,7 +35,7 @@ Pick the tier by what the change is about to affect. Each tier adds criteria to 
 | Gate | Trigger | Blocks on (all EXECUTED/STATIC) | Typical action on FAIL |
 |------|---------|----------------------------------|------------------------|
 | **Commit** | pre-commit / push | lint clean; the affected spec(s) green | Block the commit; fix before pushing |
-| **PR** | PR open / update | coverage delta not negative; changed specs pass `--workers=1` (flake check, `flakiness-triage`); `pr-review` found no MUST/WON'T violation; review approved | Block the merge; comment the blocking criterion |
+| **PR** | PR open / update | coverage delta not negative; changed specs pass the `flakiness-triage` merge bar (5 consecutive isolated runs plus 1 in-suite run); `pr-review` found no MUST/WON'T violation; review approved | Block the merge; comment the blocking criterion |
 | **Release** | release branch / tag | full regression green; 0 unresolved critical bugs; `owasp-security-testing` review clean (EXECUTED findings only); perf within budget; no quarantined test on the shipped path | Block the deploy; the verdict is the release note's blocker |
 | **Hotfix** | emergency fix | minimal viable: the fix's own spec green **and** no critical regression in the affected area | Fast-track only under a logged override with expiry + enhanced monitoring |
 
@@ -128,7 +128,7 @@ User says: _"Is the jobs-service release ready?"_
 User says: _"Can this PR merge? `defect-prediction` flagged the worker-assignment file as high risk."_
 
 1. **Tier** — PR. The high-risk flag is **INFERRED** — it raises review attention, it does not block.
-2. **Collect** — coverage delta `+0.4%` (EXECUTED); changed specs pass `--workers=1`, no flake (EXECUTED, `flakiness-triage`); `pr-review` found no MUST/WON'T violation; review approved.
+2. **Collect** — coverage delta `+0.4%` (EXECUTED); changed specs pass the `flakiness-triage` merge bar, 5 + 1 runs, no flake (EXECUTED); `pr-review` found no MUST/WON'T violation; review approved.
 3. **Evaluate** — every blocking criterion passes on EXECUTED evidence; the risk flag annotates the verdict ("high-risk area — reviewer focus here").
 4. **Verdict** — `PASS`, with the note that the risk rank steered the review, exit code `0`.
 5. **Lesson** — if this file keeps landing clean despite a high rank, that calibration note belongs in `qe-pattern-memory` (and feeds `defect-prediction`).

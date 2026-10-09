@@ -725,10 +725,10 @@ Rules:
 A typical `export`-job CRUD test illustrating where each locator should live. The shape below mirrors the actual flow in `tests/app/e2e/jobs-service/jobs/export-job.spec.ts`:
 
 ```typescript
-import { expect, test } from '../../../fixtures/pom/test-options';
+import { expect, test } from '../../../../fixtures/pom/test-options';
 import { qase } from 'playwright-qase-reporter';
 import { faker } from '@faker-js/faker';
-import { SUITES } from '../../../enums/app/qase-suites';
+import { SUITES } from '../../../../enums/app/qase-suites';
 
 test('Create, verify in grid, view details, edit, and delete `export` job',
     { tag: '@App-E2E' },
@@ -822,7 +822,7 @@ See [SKILL.md → "Where selectors live"](SKILL.md#where-selectors-live--pom-vs-
 
 The expanded-row UI for every job type follows the same shape: header controls (worker selector, refresh, auto-refresh), run-stat cards, a timing-breakdown card (stacked bar + legend), and type-specific cards. The test strategy is a **two-layer split** — keep the expensive UI-creation flow in the E2E CRUD spec, do the structural / behavioural assertions in a dedicated functional detail-view spec that seeds via API.
 
-### Layer 1 — E2E CRUD spec (`tests/app/e2e/{type}-job-crud.spec.ts`)
+### Layer 1 — E2E CRUD spec (`tests/app/e2e/<domain>/{type}-job-crud.spec.ts`)
 
 Inside the existing CRUD flow, add **one** small `test.step("Expand row and verify {type} detail view loads", ...)` of roughly 20 lines that:
 
@@ -833,7 +833,7 @@ Inside the existing CRUD flow, add **one** small `test.step("Expand row and veri
 
 Do **not** assert run-stat cards, timing breakdowns, tooltips, tabs, or section cards here — that's the functional spec's job. This step is a smoke check that the route from creation → list → expanded view works at all.
 
-### Layer 2 — Functional detail-view spec (`tests/app/functional/{type}-job-detail-view.spec.ts`)
+### Layer 2 — Functional detail-view spec (`tests/app/functional/<domain>/{type}-job-detail-view.spec.ts`)
 
 Single source of truth for view structure and behaviour:
 
@@ -858,7 +858,7 @@ Use the parameterized `verifyInlineMsLabels` helper on `JobsPage` — works for 
 
 ### Do NOT
 
-- ❌ **Create a separate `tests/app/e2e/{type}-job-view.spec.ts`.** The CRUD stub + functional detail-view already cover that ground; a third layer duplicates UI-creation setup (~60s) and slows CI without adding unique coverage.
+- ❌ **Create a separate `tests/app/e2e/<domain>/{type}-job-view.spec.ts`.** The CRUD stub + functional detail-view already cover that ground; a third layer duplicates UI-creation setup (~60s) and slows CI without adding unique coverage.
 - ❌ **Split the mega-test into one-test-per-section without keeping a shared `beforeAll` job.** The 90 s wait for the job's first run is too expensive to repeat per test. If you split, annotate each sub-test with its own `qase.id()`.
 - ❌ **Use UI creation (`createJobPage`) inside the detail-view functional spec.** API seeding is mandatory for speed and determinism.
 
