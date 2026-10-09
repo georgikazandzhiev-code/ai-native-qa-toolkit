@@ -79,7 +79,7 @@ Use when the task is a multi-step procedure where the agent benefits from tracki
 - [ ] 5. Add SUITES.API_<RESOURCE> to enums/app/qase-suites.ts if missing.
 - [ ] 6. Author the spec from templates.md.
 - [ ] 7. Cover the negative matrix (400, 401, 403, 404, 405, 409).
-- [ ] 8. Wire cleanup in afterEach/afterAll. Synthetics before probes.
+- [ ] 8. Wire cleanup in afterEach/afterAll. Jobs before workers.
 - [ ] 9. Run: npx playwright test <spec> --grep "@App-API"; read lints.
 ```
 
@@ -138,12 +138,12 @@ page.getByLabel('Email');
 
 Bad:
 ```typescript
-page.locator('div.metric-tile:nth-child(3)');
+page.locator('div.run-stat-tile:nth-child(3)');
 ```
 
 Good:
 ```typescript
-page.getByTestId('synthetic-uptime-tile');
+page.getByTestId('job-next-run-tile');
 ```
 
 **The rule:** prefer `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId`. Never use raw CSS or XPath when one of the semantic locators applies.
@@ -208,7 +208,7 @@ flowchart TD
 
 `data-strategy/SKILL.md` uses this exact device.
 
-**When this pattern wins:** any skill with multiple input shapes (test types, monitor types, entity kinds).
+**When this pattern wins:** any skill with multiple input shapes (test types, job types, entity kinds).
 
 **When to skip:** if there are only 2 branches and one is the obvious default — write the default first, then a single "Exception:" callout.
 

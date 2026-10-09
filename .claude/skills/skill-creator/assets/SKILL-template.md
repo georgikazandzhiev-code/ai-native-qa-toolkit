@@ -258,7 +258,7 @@ REQUIRED. Cross-skill links. Must be VERIFIED:
 Cluster siblings (pick the cluster from skill-creator Phase 2):
 - API authoring: scaffold-spec, api-testing, data-strategy, helpers, fixtures, type-safety
 - UI authoring: scaffold-spec, selectors, page-objects, playwright-cli, frontend-cross-check, enums, fixtures
-- Domain orientation: master-context, metrics-api-tests-context, test-case-generation
+- Domain orientation: master-context, run-stats-api-tests-context, test-case-generation
 - Failure investigation: debugging, playwright-cli, frontend-cross-check
 - Repo hygiene: refactor-values, skill-creator, ai-native-workflow
 -->
