@@ -68,8 +68,8 @@ Forbidden:
 ```typescript
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL!; // ❌ reads process.env outside config, hides the canonical name from grep
 const ADMIN_TOKEN = tokens.admin(); // ❌ module-level alias runs before the setup project has written the token
-// ...
-headers: TENANT_TOKEN,
+// ... later, at a call site
+const { status } = await apiRequest({ method: 'GET', url: appConfig.api.WORKERS, baseUrl: appConfig.apiUrl, headers: TENANT_TOKEN });
 ```
 
 Exception: inside a helper, the token arrives as the `headers` parameter (`headers: accessToken`) — that parameter is not an alias, and helpers never read env themselves. The spec entry point still calls `tokens.full()` directly.

@@ -164,15 +164,18 @@ test.describe('Guest navigation', () => {
 Trigger: one block of tests needs a different persona than the project default.
 
 ```typescript
-test.describe('Admin-only view', () => {
-    test.use({ storageState: '.auth/app/appMainUserSession.json' });
+test.describe('<persona> view', () => {
+    test.use({ storageState: '.auth/app/<persona>Session.json' });
 
-    test('admin session lands on the dashboard', { tag: '@App-regression' }, async ({ sideNavigation, dashboardPage }) => {
-        await sideNavigation.navigateToDashboard();
-        await dashboardPage.verifyPageLoaded();
+    test('<persona> sees the persona-only view of the jobs page', { tag: '@App-regression' }, async ({ sideNavigation, jobsPage }) => {
+        await sideNavigation.navigateToJobs();
+        await jobsPage.verifyPageLoaded();
+        await expect(jobsPage.<personaOnlyLocator>).toBeVisible();
     });
 });
 ```
+
+`.auth/app/<persona>Session.json` is a placeholder for the session file that Recipe 6 step 3 writes for the persona you add; it is not the project default. Re-attaching `.auth/app/appMainUserSession.json` here would change nothing, because the chromium project already uses it. `<personaOnlyLocator>` is a placeholder for something only the overridden persona produces, so the test fails if the override is dropped. Confirm with the `playwright-cli` skill what the persona actually sees, and with the `frontend-cross-check` skill that the locator matches the frontend source.
 
 Rules:
 - The override applies to the whole `describe`. The storage-state file must already exist (produced by `tests/app/login.setup.ts` — see Recipe 6).

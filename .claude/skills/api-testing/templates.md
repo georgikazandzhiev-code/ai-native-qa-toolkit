@@ -1284,8 +1284,14 @@ test.describe("POST /jobs", () => {
     const createdWorkerIds: string[] = [];
     const createdJobIds: string[] = [];
 
+    test.beforeAll(async ({ apiRequest }) => {
+        const { status, body } = await createWorker(apiRequest, buildCreateWorkerBody(), tokens.full());
+        expect(status).toBe(201);
+        expect(CreateWorkerResponseSchema.parse(body)).toBeTruthy();
+        createdWorkerIds.push(body.workerId);
+    });
+
     test("Verify POST /jobs returns 201", { tag: "@App-API" }, async ({ apiRequest }) => {
-        // ... POST worker, push its id into createdWorkerIds ...
         const { status, body } = await createJob(apiRequest, buildCreateJobBody(createdWorkerIds), tokens.full());
         expect(status).toBe(201);
         expect(CreateJobResponseSchema.parse(body)).toBeTruthy();

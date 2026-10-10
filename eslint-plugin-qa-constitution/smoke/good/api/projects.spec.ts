@@ -84,3 +84,28 @@ test.describe('profile journey', () => {
     await settingsPage.expectSaved();
   });
 });
+
+// A test.step in a hook groups setup or teardown. It declares no test, so it needs no tag and no
+// assertion. Steps inside the test still count toward that test's assertion.
+test.describe('archiving a seeded project', () => {
+  let projectId: string;
+
+  test.beforeAll(async ({ api }) => {
+    await test.step('GIVEN: a seeded project', async () => {
+      projectId = (await api.createProject('seeded')).id;
+    });
+  });
+
+  test.afterAll(async ({ api }) => {
+    await test.step('cleanup: delete the seeded project', async () => {
+      await api.deleteProject(projectId);
+    });
+  });
+
+  test('@App-API archives the seeded project', async ({ api }) => {
+    const response = await test.step('WHEN: the project is archived', async () => api.archive(projectId));
+    await test.step('THEN: the archive is accepted', async () => {
+      expect(response.status()).toBe(200);
+    });
+  });
+});

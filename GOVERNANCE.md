@@ -114,8 +114,11 @@ Three jobs run on every push and every pull request (`.github/workflows/validate
 | Fails the CI run | Reported, never fails the run |
 |---|---|
 | `npm run validate` — front matter, required sections, semver, cross-reference integrity, `mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
-| `node tests/rules.test.js` — 25 `RuleTester` suites, 55 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
-| `node tests/fault-injection.test.mjs` — every rule must fire on the known-bad tree, stay silent on the compliant tree, and stop reporting when its visitor is emptied | `description` under 120 chars, or missing a "Do NOT use for" disclaimer |
+| `node tests/rules.test.js` — 27 `RuleTester` suites, 57 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
+| `node tests/fault-injection.test.mjs` — every rule must fire on the known-bad tree, stay silent on the compliant tree, and stop reporting when its visitor is emptied; the pinned files must draw exactly their listed reports, rule and line | `description` under 120 chars, or missing a "Do NOT use for" disclaimer |
+| `node tests/skill-snippets.test.mjs` — every TypeScript block under `.claude/skills/` must parse and pass all 17 rules. Labelled counter-examples and reasoned `snippet-lint: skip` blocks are parsed but not linted; an `eslint-disable` without a `-- reason`, or any inline rule configuration, fails the run | |
+| `node tests/skill-snippets.harness.test.mjs` — the snippet lint's own cases: planted defects must fail the run, labelled counter-examples must pass | |
+| `node tests/skill-snippets.mutation.test.mjs` — every listed mutant of the snippet lint must be killed by the harness; a survivor, or a mutant whose target text is gone, fails the run | |
 | The known-bad fixture must still be rejected by the ESLint CLI, and the compliant one must still pass clean | Category outside the canonical four |
 | `npm run eval:compare` — a recorded score drop beyond the noise floor | A declared version disagreeing with the newest history entry |
 
