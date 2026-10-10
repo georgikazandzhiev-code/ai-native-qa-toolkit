@@ -21,7 +21,7 @@ test('creates a job under a unique name', { tag: '@App-regression' }, async ({ c
 });
 ```
 
-- Single test usage, faker for uniqueness, no shared state.
+- Single test usage, faker for uniqueness. The only module-level state is the cleanup list (`createdJobNames`), which each worker drains in its own `afterAll`, so it stays parallel-safe, unlike a module-level counter used to generate values.
 
 ### Bad
 
@@ -267,12 +267,18 @@ Test usage:
 const workerIds: string[] = [];
 
 test('seeded worker path', { tag: '@App-API' }, async ({ apiRequest }) => {
-    const worker = await setupTestWorker(apiRequest, tokens.full());
-    workerIds.push(worker.id);
-    const { status, body } = await getWorker(apiRequest, worker.id, tokens.full());
-    expect(status).toBe(200);
-    expect(GetWorkerResponseSchema.parse(body)).toBeTruthy();
-    expect(body.worker.id).toBe(worker.id);
+    const worker = await test.step('GIVEN: a seeded worker', async () => {
+        const seeded = await setupTestWorker(apiRequest, tokens.full());
+        workerIds.push(seeded.id);
+        return seeded;
+    });
+
+    await test.step('THEN: GET /workers/{id} returns it', async () => {
+        const { status, body } = await getWorker(apiRequest, worker.id, tokens.full());
+        expect(status).toBe(200);
+        expect(GetWorkerResponseSchema.parse(body)).toBeTruthy();
+        expect(body.worker.id).toBe(worker.id);
+    });
 });
 
 test.afterAll(async ({ apiRequest }) => {
@@ -405,8 +411,8 @@ test.describe('POST /workers', () => {
             body: buildCreateWorkerBody(),
         });
         expect(status).toBe(201);
-        const parsed = CreateWorkerResponseSchema.parse(body);
-        workerIds.push(parsed.workerId);
+        expect(CreateWorkerResponseSchema.parse(body)).toBeTruthy();
+        workerIds.push(body.workerId);
     });
 
     test.afterAll(async ({ apiRequest }) => {
@@ -426,9 +432,9 @@ test.describe('POST /workers', () => {
 
 ```typescript
 test('creates a worker', async ({ apiRequest }) => {
-    const created = await createWorker(...);
+    const { body } = await createWorker(apiRequest, buildCreateWorkerBody(), tokens.full());
     /* assertions */
-    await deleteWorker(apiRequest, created.workerId);   // skipped if assertion fails earlier
+    await deleteWorker(apiRequest, body.workerId, tokens.full());   // skipped if assertion fails earlier
 });
 ```
 
@@ -446,8 +452,8 @@ headers: tokens.full(),
 
 ```typescript
 const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
-// ...
-headers: TENANT_TOKEN,
+// ... later, at a call site
+const { status } = await apiRequest({ method: 'GET', url: appConfig.api.WORKERS, baseUrl: appConfig.apiUrl, headers: TENANT_TOKEN });
 ```
 
 Why it's wrong:

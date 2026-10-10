@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 2.0.3
+version: 2.0.4
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -189,7 +189,10 @@ test.describe("<Feature> — Form Validation", () => {
         await page.goto("/");
         await sideNavigation.navigateToJobs();
         await jobsPage.verifyPageLoaded();
-        // navigate to form
+        await jobsPage.openCreateJob();
+        await createJobPage.waitForTypeSelection();
+        await createJobPage.jobTypeCard("<Type>").click();
+        await createJobPage.waitForConfigureForm();
       });
     },
   );
@@ -200,10 +203,13 @@ test.describe("<Feature> — Form Validation", () => {
     async ({ createJobPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
-      // validation test body: fill the field with the invalid value, then click submit.
-      // Not createJobPage.submit(): that action waits for the API and asserts the success toast.
-      await createJobPage.submitButton.click();
+      // validation test body: enter the invalid value, blur to trigger schema-form validation.
+      // The create button stays disabled while any required field is invalid, so do not click it.
+      await createJobPage.fieldInput("<fieldPath>").fill("<invalidValue>");
+      await expect(createJobPage.fieldInput("<fieldPath>")).toHaveValue("<invalidValue>");
+      await createJobPage.fieldInput("<fieldPath>").blur();
       await expect(createJobPage.fieldError("<field>")).toBeVisible();
+      await expect(createJobPage.createJobSubmitButton).toBeDisabled();
       // close sheet at end to leave clean state
     },
   );
@@ -258,9 +264,9 @@ test("Create resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — afterAll always runs, even if tests fail
-const createdIds: string[] = [];
+const createdIds: Array<string | undefined> = [];
 test.afterAll(async ({ apiRequest }) => {
-  for (const id of createdIds) {
+  for (const id of createdIds.filter((x): x is string => x !== undefined)) {
     await deleteResource(apiRequest, id, tokens.full());
   }
 });
@@ -301,6 +307,7 @@ test("Verify invalid payload returns 400", { tag: "@App-API" }, async ({ apiRequ
   }
   createdIds.push(createdId);
   expect(status).toBe(400);
+  expect(APIErrorSchema.parse(body)).toBeTruthy();
 });
 ```
 
@@ -485,6 +492,7 @@ try {
 }
 createdIds.push(createdId);
 expect(status).toBe(400);
+expect(APIErrorSchema.parse(body)).toBeTruthy();
 ```
 
 Add this capture to validation tests for POST endpoints. It is the constitution's one `try/catch` exception, marked with `eslint-allow-cleanup-capture` so the lint accepts it, and it needs no `if` in the test body: `createdIds` holds `undefined` when nothing was created, and the teardown hook skips those.

@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.9
+version: 2.0.10
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -156,7 +156,7 @@ export class SettingsPage extends BasePage {
   // ═══════════════════════════════════════════════════════════════
 
   /**
-   * Saves the profile form and waits for the PUT response and the success toast.
+   * Saves the profile form and waits for the PATCH /api/v1/user response and the success toast.
    * @param overrides - Partial profile field overrides; missing fields are left untouched.
    * @returns Promise<void>
    */
@@ -252,11 +252,18 @@ import { SUITES } from "../../../../enums/app/qase-suites";
 import { faker } from "@faker-js/faker";
 
 test.describe("Settings — Profile", () => {
+  let originalFirstName: string;
+
   test.beforeEach(async ({ sideNavigation, settingsPage }) => {
     await test.step("GIVEN: I am on the Settings page", async () => {
       await sideNavigation.navigateToSettings();
       await settingsPage.verifyPageLoaded();
+      originalFirstName = await settingsPage.fieldInput("profile.firstName").inputValue();
     });
+  });
+
+  test.afterEach(async ({ settingsPage }) => {
+    await settingsPage.saveProfile({ "profile.firstName": originalFirstName });
   });
 
   test(
@@ -274,6 +281,8 @@ test.describe("Settings — Profile", () => {
   );
 });
 ```
+
+`saveProfile()` persists through `PATCH /api/v1/user` on the main session user, and every spec under `appMainUserSession` shares that user. So the spec reads the first name before each test and writes it back in `afterEach`. `settingsPage` is test-scoped, so the capture and the restore live in `beforeEach` / `afterEach`, not in `beforeAll` / `afterAll`. To leave the shared user untouched altogether, run the spec under a per-test user (`data-strategy` Pattern 7, `setupTestUser` / `teardownTestUser`).
 
 For tag rules (lowercase `@App-regression` for functional specs — this exact casing matches the `package.json` grep; single-tag rule; never on `describe`), `test.step` structure, fixture imports, and Qase wiring, read the [`test-standards`](../test-standards/SKILL.md) skill. **Never** `new SettingsPage(page)` inside a test — that bypasses every other merged fixture.
 

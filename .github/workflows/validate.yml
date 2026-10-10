@@ -123,20 +123,22 @@ jobs:
         run: node tests/memory-snippets.test.mjs
 
       # The skills teach far more code than the memory file, and an agent copies it. Every
-      # TypeScript example must parse and follow the plugin's rules; counter-examples labelled
-      # BAD / ❌ are skipped, and a reasoned `snippet-lint: skip` is printed on every run.
-      - name: Skill snippets — every skill example obeys the rules the skills teach
+      # TypeScript example must parse and follow the plugin's rules. Counter-examples labelled
+      # BAD / ❌ are parsed but not linted. Every reasoned `snippet-lint: skip`, and every finding a reasoned
+      # eslint-disable suppresses, is printed on every run; an inline rule config comment fails the run.
+      - name: Skill snippets — every skill example parses and obeys the rules the skills teach
         run: node tests/skill-snippets.test.mjs
 
       # The snippet lint decides what is a counter-example, a placeholder, a diff or an opt-out.
-      # Each branch has a case, and a planted defect must fail the run while a labelled one passes.
-      - name: Skill snippets — the snippet lint itself bites and stays quiet where it should
+      # Each listed condition has a case: a planted defect must fail the run, and a labelled
+      # counter-example or reasoned opt-out must pass.
+      - name: Skill snippets — each listed condition of the snippet lint has a harness case
         run: node tests/skill-snippets.harness.test.mjs
 
-      # The claim "every branch of the lint has a case" is recomputed, not trusted: each mutant
-      # breaks one condition, and the harness must fail against it. A survivor or a stale mutant
-      # fails the build.
-      - name: Skill snippets — mutation sweep, every mutant of the lint is killed
+      # The claim "each listed condition has a case" is recomputed, not trusted: each listed
+      # mutant breaks one condition, and the harness must fail against it. A survivor or a stale
+      # mutant fails the build.
+      - name: Skill snippets — mutation sweep, every listed mutant of the lint is killed
         run: node tests/skill-snippets.mutation.test.mjs
 
   regression:

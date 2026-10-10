@@ -118,7 +118,7 @@ What closing that gap involved, because none of it was cosmetic:
 - The validator supports **declared exemptions, never silent ones.** A skill that is genuinely a catalog (a folder map, a test-id inventory) or a pointer into another project may declare `metadata.structure: catalog|pointer`. It is still required to carry `See Also`, must state in its body why the full structure does not apply, and is **listed in every validation run** so the exemption cannot hide. The two skills using it in the internal toolkit are client-specific and are not shipped here.
 - The validator found two bugs in itself along the way: it read `description: >-` as the literal two-character value `>-` and reported a good three-line description as "only 2 chars", and it needed to be pointed at the synced repo copy rather than the live `~/.claude/skills`.
 
-Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 21 rule suites, the fault-injection harness, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
+Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 27 rule suites, the fault-injection harness, the skill-snippet lint with its harness and mutation sweep, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
 
 ## Skill versions and regression tracking
 
@@ -168,7 +168,7 @@ Roughly half the constitution is mechanically checkable. The plugin claims exact
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 25 `RuleTester` suites and 55 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other sixteen rules loaded alongside it.
+The rules ship with 27 `RuleTester` suites and 57 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other sixteen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 
@@ -219,7 +219,7 @@ Two things keep it from rotting, and both are checks rather than intentions:
 npm run test:memory
 ```
 
-The skills are held to the same rules, by `npm run test:snippets`: every TypeScript example in `.claude/skills/` must parse and pass all 17 lint rules, except counter-examples labelled as such and blocks that carry a reasoned `snippet-lint: skip`.
+The skills are held to the same rules, by `npm run test:snippets`: every TypeScript example in `.claude/skills/` must parse, and must pass all 17 lint rules except in three cases. A counter-example labelled as such is parsed but not linted. A block that carries `<!-- snippet-lint: skip — <reason> -->` with a real reason is parsed but not linted. A line suppressed by an inline `eslint-disable` with a `-- reason` is linted, and the finding it hides is printed. Every counter-example, skip and suppressed finding is printed on every run. Inline rule configuration such as `/* eslint <rule>: off */` fails the run, because it would switch a rule off without leaving a trace.
 
 **Every code snippet in the file is linted against the same 17 rules as the test suite.** A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
 

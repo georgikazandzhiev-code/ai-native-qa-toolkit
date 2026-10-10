@@ -432,6 +432,19 @@ tester.run('regression/steps-are-not-tests (assertions)', plugin.rules['require-
     { code: `test('@App-API a', async () => { await test.step('act', async () => { await act(); }); });`, errors: [{ messageId: 'none' }] },
   ],
 });
+tester.run('regression/steps-are-not-tests (conditionals)', plugin.rules['no-conditional-in-test'], {
+  valid: [`test.beforeAll(async () => { await test.step('seed', async () => { if (!seeded) await seed(); }); });`],
+  invalid: [
+    // a step inside a test is still part of the test body
+    { code: `test('@App-API a', async () => { await test.step('act', async () => { if (x) await act(); }); });`, errors: [{ messageId: 'conditional' }] },
+  ],
+});
+tester.run('regression/steps-are-not-tests (try/catch)', plugin.rules['no-try-catch-in-test'], {
+  valid: [`test.beforeAll(async () => { await test.step('seed', async () => { try { await seed(); } catch {} }); });`],
+  invalid: [
+    { code: `test('@App-API a', async () => { await test.step('act', async () => { try { await act(); } catch {} }); });`, errors: [{ messageId: 'tryCatch' }] },
+  ],
+});
 
 /**
  * Found linting the #5 PR 2 templates, 2026-10-07: a describe-level test.fixme(true, '...') was

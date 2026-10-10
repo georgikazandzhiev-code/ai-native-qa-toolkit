@@ -375,8 +375,8 @@ Forbidden:
 
 ```typescript
 // CSS that tracks layout, not semantics
-.locator('.text-muted-foreground')
-.locator('.h-10.w-full.overflow-hidden')   // tolerated only deep in a chain when no testid exists; never at the top
+this.page.locator('.text-muted-foreground');
+this.tableRows.first().locator('.h-10.w-full.overflow-hidden');   // tolerated only deep in a chain when no testid exists; never at the top
 ```
 
 ## 6. FrameLocator API

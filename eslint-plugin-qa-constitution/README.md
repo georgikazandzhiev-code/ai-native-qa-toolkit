@@ -118,7 +118,7 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-17 rules, 25 `RuleTester` suites (including eight regression suites, each locking in a defect found in the rules themselves), plus valid cases per rule:
+17 rules, 27 `RuleTester` suites, plus valid cases per rule. Ten of the suites are regression suites, each holding code that a rule once got wrong. Four of them lock in the same `test.step` fix, one each for `single-tag-on-test`, `require-assertion-in-test`, `no-conditional-in-test` and `no-try-catch-in-test`.
 
 ```bash
 npm test
@@ -126,7 +126,18 @@ npm test
 
 The suite has been **fault-injected to prove it bites** — disabling a rule's report produces `Should have 1 error but had 0`, and corrupting the `require-strict-object` autofix produces `Output is incorrect`. A green run means the rules fire, not merely that the file parses.
 
-The rules also hold the toolkit's own teaching to account. `node tests/skill-snippets.test.mjs` lints every TypeScript example in `.claude/skills/` (about 180 blocks) with all 17 rules: an agent copies those examples, so an example that breaks a rule teaches every session to break it. Counter-examples are skipped when they are labelled: a first comment line with ❌ / BAD / WRONG / FORBIDDEN (a GOOD / CORRECT / FIX line wins), the prose line just above, or a heading or bold label that starts with Bad / Wrong / Forbidden / Anti-pattern — "Bad request (400)" does not count. A block that genuinely cannot parse on its own carries `<!-- snippet-lint: skip — <reason> -->`, and an inline `eslint-disable` needs a `-- reason`; both are printed on every run. Fences follow CommonMark, an unclosed fence fails the run, and so does a run that finds no block at all. `node tests/skill-snippets.harness.test.mjs` tests that lint itself: a case per branch, and planted defects that must fail next to labelled ones that must pass. `node tests/skill-snippets.mutation.test.mjs` checks that claim instead of trusting it: a list of mutants, each breaking one condition of the lint, and the harness must fail against every one. A surviving mutant, or one whose target text no longer exists, fails the run — so "every branch is tested" is a number CI recomputes.
+`node tests/fault-injection.test.mjs` repeats that through the real ESLint CLI on every push: each rule must fire on the known-bad tree (`smoke/tests/`), stay silent on the compliant tree (`smoke/good/`), and stop reporting when its visitor is emptied. It also pins the exact reports, rule and line, on `smoke/tests/app/ui/steps.spec.ts`: a `test.step` inside a hook must draw no report, the untagged, assertion-free test around a step must draw both test-level reports, and an `if` and a `try`/`catch` in a step inside a test must each still be reported.
+
+The rules also hold the toolkit's own teaching to account. `node tests/skill-snippets.test.mjs` checks every TypeScript example in `.claude/skills/` against all 17 rules: an agent copies those examples, so an example that breaks a rule teaches every session to break it. At the time of writing it finds 244 blocks and lints 194 of them; the first line of each run prints the current counts.
+
+- **Every block must parse**, including the ones that are not linted.
+- **Counter-examples are parsed, not linted.** A block is one when its first comment line, the prose line just above it, or the heading or bold label it sits under starts with a wrong-label: ❌, BAD, WRONG, FORBIDDEN or ANTI-PATTERN, followed by the end of the line or a delimiter such as `:` or `—`. "Bad request (400)" and "Forbidden: 403" do not count, and a first comment line that starts with GOOD / CORRECT / FIX wins. Every counter-example is printed with the line that labelled it.
+- **A block that cannot be linted on its own** carries `<!-- snippet-lint: skip — <reason> -->`. The reason must be a real one, not a placeholder, and it is printed on every run.
+- **An inline `eslint-disable` needs a `-- reason`**, and each finding it suppresses is printed on every run. Inline rule configuration (`/* eslint <rule>: off */` with the rule name bare or quoted, `/* eslint-env */`, `/* global */`) fails the run, because it would switch a rule off without leaving a trace.
+- **A test-body fragment** (a block that calls `expect()`, declares no function, class or export, and declares no test or hook — `test.step(...)` calls are allowed, because a step is not a test) is linted a second time inside a tagged `test()`, so the rules that need an enclosing test (no conditionals, no try/catch, no page-object instantiation) apply to it. A fragment that also declares a function is linted as a helper module, so those rules do not reach its body.
+- Fences follow CommonMark. An unclosed fence fails the run, and so does a run that finds no block at all.
+
+`node tests/skill-snippets.harness.test.mjs` tests that lint itself: 124 cases at the time of writing, with planted defects that must fail next to labelled ones that must pass. `node tests/skill-snippets.mutation.test.mjs` measures how strong those cases are instead of trusting them: 75 mutants at the time of writing, each breaking one condition of the lint, and the harness must fail against every one. A surviving mutant, or one whose target text no longer exists, fails the run. A pass means every listed mutant is killed. It does not prove that every branch of the lint is tested, only the conditions on the list.
 
 ## License
 

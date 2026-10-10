@@ -146,7 +146,7 @@ names a file and a line number, and the line, when opened, said the opposite.
 
 **A report is not evidence. The line is.**
 
-All six are fixed. Defects 3–6 are locked in with regression suites: 25 `RuleTester` suites now,
+All six are fixed. Defects 3–6 are locked in with regression suites: 27 `RuleTester` suites now,
 including one per false positive, each carrying the code that was wrongly flagged.
 
 ### One change to the skill, and it was not a fix

@@ -33,10 +33,16 @@
  * A rule with no case in either tree FAILS here rather than being skipped, so a new rule cannot
  * reach main without something to catch and something to leave alone. GOVERNANCE.md § Change
  * classes makes that a requirement; this is where it is enforced.
+ *
+ * After the three per-rule assertions, a PINNED check lints chosen files of the known-bad tree
+ * with the full smoke config and compares every report, rule and line, to a fixed list. "At least
+ * one error" cannot tell a fix that holds from one that went too far; a pinned list can. A report
+ * that appears, disappears or moves to another line fails the run.
  */
 
 import { ESLint } from 'eslint';
 import tsParser from '@typescript-eslint/parser';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import plugin from '../lib/index.js';
 
@@ -145,6 +151,58 @@ for (const id of ids) {
   rows.push({ id, status: 'OK', detail: `bites ${bites.length} (${bites.join(', ')}), silent on good` });
 }
 
+/**
+ * Pinned files: path -> the exact reports expected on it, as { rule, at }, where `at` is text that
+ * starts the reported line. Lines are found from that text, so editing the file's header comment
+ * does not break the pin.
+ */
+const PINNED = {
+  // test.step declares no test (lib/index.js, CONFIG_CALLS). Steps in hooks are setup and stay
+  // silent under all four rules that ask "which test is this in?"; the untagged, assertion-free
+  // test around a step is still reported by both test-level rules; and an if or a try/catch in a
+  // step inside a test is still reported by the two in-test rules.
+  'smoke/tests/app/ui/steps.spec.ts': [
+    { rule: 'single-tag-on-test', at: "test('opens the seeded project'" },
+    { rule: 'require-assertion-in-test', at: "test('opens the seeded project'" },
+    { rule: 'no-conditional-in-test', at: '    if (response.status() === 409)' },
+    { rule: 'no-try-catch-in-test', at: '    try { expect(response.status())' },
+  ],
+};
+
+async function pinnedReports(file) {
+  const eslint = new ESLint({ cwd: CWD, overrideConfigFile: 'smoke/eslint.config.mjs' });
+  const [result] = await eslint.lintFiles([file]);
+  if (!result) throw new Error(`${file} is gone — restore it or remove its pin`);
+  return result.messages.map((m) => {
+    if (m.fatal) throw new Error(`parse error in ${file}:${m.line} — ${m.message}`);
+    // ruleId is null for a report from ESLint itself, such as an unused disable directive.
+    return `${(m.ruleId ?? 'eslint').replace('qa-constitution/', '')}@${m.line}`;
+  });
+}
+
+for (const [file, expected] of Object.entries(PINNED)) {
+  const lines = readFileSync(`${CWD}${file}`, 'utf8').split(/\r?\n/);
+  const want = expected.map(({ rule, at }) => {
+    const hits = lines.flatMap((l, i) => (l.startsWith(at) ? [i + 1] : []));
+    if (hits.length !== 1) throw new Error(`${file}: "${at}" starts ${hits.length} lines, expected exactly 1`);
+    return `${rule}@${hits[0]}`;
+  });
+  const got = await pinnedReports(file);
+  const missing = want.filter((w) => !got.includes(w));
+  const extra = got.filter((g) => !want.includes(g));
+  const name = file.split('/').pop();
+  if (missing.length || extra.length) {
+    failures.push(
+      `${file}: the pinned reports changed.` +
+        (missing.length ? ` Missing: ${missing.join(', ')}.` : '') +
+        (extra.length ? ` Unexpected: ${extra.join(', ')}.` : '')
+    );
+    rows.push({ id: name, status: 'PIN FAIL', detail: `expected ${want.join(', ')}; got ${got.join(', ') || 'nothing'}` });
+    continue;
+  }
+  rows.push({ id: name, status: 'PINNED', detail: `exactly ${got.join(', ')}` });
+}
+
 const pad = Math.max(...rows.map((r) => r.id.length));
 console.log('');
 console.log('Fault injection — each rule must bite the bad tree, stay silent on the good one,');
@@ -156,9 +214,12 @@ for (const r of rows) {
 console.log('');
 
 const verified = rows.filter((r) => r.status === 'OK').length;
+const pinned = Object.keys(PINNED).length;
 const exempted = rows.filter((r) => r.status === 'EXEMPT').length;
 console.log(
-  `  ${ids.length} rules, ${verified} verified` + (exempted ? `, ${exempted} declared exemption(s)` : '')
+  `  ${ids.length} rules, ${verified} verified` +
+    (exempted ? `, ${exempted} declared exemption(s)` : '') +
+    `; ${pinned} pinned file(s)`
 );
 
 if (failures.length) {
