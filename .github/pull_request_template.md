@@ -26,6 +26,17 @@
 - [ ] **new lint rule only:** it has a `RuleTester` suite **and** a fault-injection case
 - [ ] Every number this PR states in prose is either recomputed by a validator check or labelled in its own sentence as unverified
 
+## Independent review
+
+<!-- Before asking for review, have the change reviewed by someone — or an agent — that did not
+     write it: several angles (does a new check misfire in either direction; is every claim in this
+     description true; do the doc or example edits break a rule the lint can't see), then a skeptic
+     pass that tries to refute each finding. The author is the worst-placed person to see their own
+     blind spots; the numbers below make a skipped review visible instead of silent. -->
+
+- [ ] Independent review run before review was requested — **N** findings confirmed, **M** fixed, **K** refuted. Paste the confirmed list or link it; say why any confirmed finding was not fixed
+- [ ] **new or changed check** (validator check, lint rule, test harness): run against a reference implementation on inputs chosen to break it, and every branch mutated — kill ratio **x / y**, survivors named. "Every branch is tested" is a number here, not a sentence
+
 ## If this PR touches a pattern in `.qe-memory/`
 
 - [ ] Nothing was promoted to `tier: canonical` by an agent — promotion is a human act, in review
