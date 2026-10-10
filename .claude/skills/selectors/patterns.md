@@ -264,6 +264,7 @@ if (await this.createJobButton.isVisible()) {
 `isVisible()` is a snapshot — the element can disappear before the click. Worse: if it's truly invisible the test silently passes without doing anything.
 
 ```typescript
+// ❌ BAD — a hard wait before an assertion that already waits
 await this.page.waitForTimeout(2000);
 await expect(this.something).toBeVisible();
 ```
@@ -417,7 +418,9 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
     await button.click();
     await expect(button).toHaveAttribute('data-state', 'on');
 }
+```
 
+```typescript
 await expect(this.autoRefreshSwitch).toHaveAttribute('aria-checked', 'true');
 ```
 

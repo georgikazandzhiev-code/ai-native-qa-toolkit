@@ -168,7 +168,7 @@ Roughly half the constitution is mechanically checkable. The plugin claims exact
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 23 `RuleTester` suites and 54 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other sixteen rules loaded alongside it.
+The rules ship with 25 `RuleTester` suites and 55 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other sixteen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 
@@ -218,6 +218,8 @@ Two things keep it from rotting, and both are checks rather than intentions:
 ```bash
 npm run test:memory
 ```
+
+The skills are held to the same rules, by `npm run test:snippets`: every TypeScript example in `.claude/skills/` must parse and pass all 17 lint rules, except counter-examples labelled as such and blocks that carry a reasoned `snippet-lint: skip`.
 
 **Every code snippet in the file is linted against the same 17 rules as the test suite.** A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
 

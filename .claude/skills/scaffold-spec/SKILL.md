@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 2.0.2
+version: 2.0.3
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -200,7 +200,10 @@ test.describe("<Feature> — Form Validation", () => {
     async ({ createJobPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
-      // validation test body
+      // validation test body: fill the field with the invalid value, then click submit.
+      // Not createJobPage.submit(): that action waits for the API and asserts the success toast.
+      await createJobPage.submitButton.click();
+      await expect(createJobPage.fieldError("<field>")).toBeVisible();
       // close sheet at end to leave clean state
     },
   );
@@ -279,7 +282,7 @@ test("Create resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — let it throw, Playwright reports the actual error
-test("Create resource", async ({ apiRequest }) => {
+test("Create resource", { tag: "@App-API" }, async ({ apiRequest }) => {
   const { status, body } = await createResource(apiRequest, data, tokens.full());
   expect(status).toBe(201);
   expect(ResourceSchema.parse(body)).toBeTruthy();
@@ -287,7 +290,7 @@ test("Create resource", async ({ apiRequest }) => {
 
 // ACCEPTABLE — the one sanctioned try/catch: capturing the id of a resource a bug created, for teardown.
 // No `if` in the body (the constitution forbids it); the marker comment is what the lint accepts.
-test("Verify invalid payload returns 400", async ({ apiRequest }) => {
+test("Verify invalid payload returns 400", { tag: "@App-API" }, async ({ apiRequest }) => {
   const { status, body } = await createResource(apiRequest, invalidData, tokens.full());
   let createdId: string | undefined;
   // eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
@@ -313,7 +316,7 @@ test("Get resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — Zod proves the response shape is what we expect
-test("Get resource", async ({ apiRequest }) => {
+test("Get resource", { tag: "@App-API" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
@@ -362,7 +365,7 @@ test("Verify GET returns resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — Zod validates shape, then assert only business logic values
-test("Verify GET returns resource", async ({ apiRequest }) => {
+test("Verify GET returns resource", { tag: "@App-API" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
@@ -387,15 +390,17 @@ test("Verify status", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — separate tests for separate behaviors
-test("Verify GET returns 200 for existing resource", async ({ apiRequest }) => {
+test("Verify GET returns 200 for existing resource", { tag: "@App-API" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, existingId, tokens.full());
   expect(status).toBe(200);
+  expect(ResourceSchema.parse(body)).toBeTruthy();
   expect(body.name).toBe(expectedName);
 });
 
-test("Verify GET returns 404 for non-existent resource", async ({ apiRequest }) => {
-  const { status } = await getResource(apiRequest, nonExistentId, tokens.full());
+test("Verify GET returns 404 for non-existent resource", { tag: "@App-API" }, async ({ apiRequest }) => {
+  const { status, body } = await getResource(apiRequest, nonExistentId, tokens.full());
   expect(status).toBe(404);
+  expect(APIErrorSchema.parse(body)).toBeTruthy();
 });
 ```
 

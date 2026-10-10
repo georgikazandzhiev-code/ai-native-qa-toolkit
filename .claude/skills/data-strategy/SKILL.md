@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 2.0.1
+version: 2.0.2
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -193,8 +193,10 @@ Rules:
 test.describe('POST /workers', () => {
     const workerIds: string[] = [];
 
-    test('Create worker', async ({ apiRequest }) => {
-        const { body } = await apiRequest<CreateWorkerResponse>({ /* ... */ });
+    test('Create worker', { tag: '@App-API' }, async ({ apiRequest }) => {
+        const { status, body } = await apiRequest<CreateWorkerResponse>({ /* ... */ });
+        expect(status).toBe(201);
+        expect(CreateWorkerResponseSchema.parse(body)).toBeTruthy();
         workerIds.push(body.workerId);
     });
 

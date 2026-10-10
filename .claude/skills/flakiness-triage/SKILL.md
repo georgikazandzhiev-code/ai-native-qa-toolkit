@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 2.1.0
+version: 2.1.1
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -269,7 +269,9 @@ async refreshNotifications(): Promise<void> {
   await this.refreshButton.click();
   await loaded;
 }
+```
 
+```ts
 // spec
 await notificationsPage.refreshNotifications();
 await expect(notificationsPage.firstNotificationRow).toBeVisible();

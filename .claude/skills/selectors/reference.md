@@ -308,7 +308,9 @@ Acceptable for sets of repeating elements. Always pair with a follow-up assertio
 get tableHeaders(): Locator {
     return this.page.getByTestId(/columnheader/);
 }
+```
 
+```typescript
 await expect(this.tableHeaders).toHaveCount(expectedColumnCount);
 ```
 

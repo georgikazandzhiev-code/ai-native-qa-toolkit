@@ -549,7 +549,9 @@ The framework today does **not** include OTP inputs. Email-based flows (`forgot-
 get codeInput(): Locator {
     return this.page.getByTestId('otp-input-0');
 }
+```
 
+```typescript
 // Caller — click() already waits for the input to be visible and enabled
 await loginPage.codeInput.click();
 await expect(loginPage.codeInput).toBeFocused();
@@ -632,7 +634,9 @@ async openExternalBillingPortal(): Promise<Page> {
     const popup = await popupPromise;
     return popup;
 }
+```
 
+```typescript
 // Caller
 const popup = await tenantSettings.openExternalBillingPortal();
 await expect(popup.getByRole('heading', { name: 'Billing Portal' })).toBeVisible();

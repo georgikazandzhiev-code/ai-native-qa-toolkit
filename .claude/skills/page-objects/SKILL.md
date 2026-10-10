@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.8
+version: 2.0.9
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -232,7 +232,9 @@ export type FrameworkFixtures = {
   settingsPage: SettingsPage; // NEW
   resetStorageState: () => Promise<void>;
 };
+```
 
+```typescript
 // 2. Fixture body inside base.extend<FrameworkFixtures>({...})
 settingsPage: async ({ page }, use) => {
   await use(new SettingsPage(page));
@@ -247,6 +249,7 @@ No `mergeTests` change is needed — the page-object fixture is already merged i
 import { expect, test } from "../../../../fixtures/pom/test-options";
 import { qase } from "playwright-qase-reporter";
 import { SUITES } from "../../../../enums/app/qase-suites";
+import { faker } from "@faker-js/faker";
 
 test.describe("Settings — Profile", () => {
   test.beforeEach(async ({ sideNavigation, settingsPage }) => {
@@ -257,12 +260,16 @@ test.describe("Settings — Profile", () => {
   });
 
   test(
-    "Verify profile save shows success toast",
+    "Verify a saved first name survives a reload",
     { tag: "@App-regression" },
-    async ({ settingsPage }) => {
+    async ({ page, settingsPage }) => {
       qase.suite(SUITES.APP_SETTINGS);
       // qase.id(N);
-      await settingsPage.saveProfile({ "profile.firstName": "Jordan" });
+      const firstName = faker.person.firstName();
+      // saveProfile() already asserts the success toast; the test asserts what the toast can't: persistence
+      await settingsPage.saveProfile({ "profile.firstName": firstName });
+      await page.reload();
+      await expect(settingsPage.fieldInput("profile.firstName")).toHaveValue(firstName);
     },
   );
 });

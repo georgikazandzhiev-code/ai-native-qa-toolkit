@@ -1,6 +1,6 @@
 ---
 name: fixtures
-version: 1.1.0
+version: 1.1.1
 description: Playwright fixture authoring — POM dependency injection, the test-options.ts merge point, apiRequest/mailpit/loginUser fixtures, scoping (test vs Playwright worker), and kebab-case naming. Use when adding a fixture, registering a page object for DI, or extending FrameworkFixtures. Triggers — "fixture", "test-options", "register page object", "Playwright worker scope". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or plain helpers (helpers).
 metadata:
   category: domain

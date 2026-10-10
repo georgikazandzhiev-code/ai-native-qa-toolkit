@@ -118,13 +118,15 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-17 rules, 23 `RuleTester` suites (including six regression suites, each locking in a defect found in the rules themselves), plus valid cases per rule:
+17 rules, 25 `RuleTester` suites (including eight regression suites, each locking in a defect found in the rules themselves), plus valid cases per rule:
 
 ```bash
 npm test
 ```
 
 The suite has been **fault-injected to prove it bites** — disabling a rule's report produces `Should have 1 error but had 0`, and corrupting the `require-strict-object` autofix produces `Output is incorrect`. A green run means the rules fire, not merely that the file parses.
+
+The rules also hold the toolkit's own teaching to account. `node tests/skill-snippets.test.mjs` lints every TypeScript example in `.claude/skills/` (about 180 blocks) with all 17 rules: an agent copies those examples, so an example that breaks a rule teaches every session to break it. Counter-examples are skipped when they are labelled: a first comment line with ❌ / BAD / WRONG / FORBIDDEN (a GOOD / CORRECT / FIX line wins), the prose line just above, or a heading or bold label that starts with Bad / Wrong / Forbidden / Anti-pattern — "Bad request (400)" does not count. A block that genuinely cannot parse on its own carries `<!-- snippet-lint: skip — <reason> -->`, and an inline `eslint-disable` needs a `-- reason`; both are printed on every run. Fences follow CommonMark, an unclosed fence fails the run, and so does a run that finds no block at all. `node tests/skill-snippets.harness.test.mjs` tests that lint itself: a case per branch, and planted defects that must fail next to labelled ones that must pass. `node tests/skill-snippets.mutation.test.mjs` checks that claim instead of trusting it: a list of mutants, each breaking one condition of the lint, and the harness must fail against every one. A surviving mutant, or one whose target text no longer exists, fails the run — so "every branch is tested" is a number CI recomputes.
 
 ## License
 
