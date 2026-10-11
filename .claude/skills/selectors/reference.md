@@ -275,7 +275,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | `run-stat-card`, `run-stat-card-label`, `run-stat-card-value` | Per-job-type run-stat cards (shared testids; scope by `filter({ hasText: label })`) |
 | `sftp-expanded-view`, `sftp-timing-breakdown-card` | SFTP-specific expanded view + transfer-timing card |
 | `stream-expanded-view`, `stream-timing-breakdown-card`, `stream-message-stats-card`, `stream-throughput-card` | stream-job expanded view sections |
-| `http-expanded-view`, `timing-breakdown-card`, `response-time-history-card`, `chart-timeframe-selector`, `response-time-legend`, `chart` | HTTP expanded view sections + the FusionCharts wrapper |
+| `http-expanded-view`, `timing-breakdown-card`, `response-time-history-card`, `chart-timeframe-selector`, `response-time-legend`, `chart` | HTTP expanded view sections + the chart library wrapper |
 | `email-expanded-view`, `email-delivery-card` | email-job expanded view |
 | `backup-expanded-view`, `backup-integrity-card`, `backup-retention-card`, `backup-timing-card`, `backup-size-card`, `backup-insights-card` | backup-job expanded view sections |
 | `export-expanded-view`, `export-run-stats-cards`, `record-statistics-card` | `export` expanded view (Tabs root + run-stat container + record stats) |

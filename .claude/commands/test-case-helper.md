@@ -32,7 +32,7 @@ After generating the package, if the input was a Jira ticket, **offer** to post 
 
 ## Guardrails
 
-- **Never generate Playwright / Go / k6 code** — this command produces requirements and descriptive test cases only. Code authoring belongs to the `api-testing` / `test-standards` / `page-objects` / `scaffold-spec` skills.
+- **Never generate Playwright, k6 or backend code** — this command produces requirements and descriptive test cases only. Code authoring belongs to the `api-testing` / `test-standards` / `page-objects` / `scaffold-spec` skills.
 - **Never invent UI specifics** (colors, button text, layout) not present in the story.
 - **Never skip Section 4** (Security & Compliance) for any story touching tenant data, auth, or worker communication.
 - **Surface ambiguities in Section 6** rather than guessing — the user wants gaps flagged, not papered over.

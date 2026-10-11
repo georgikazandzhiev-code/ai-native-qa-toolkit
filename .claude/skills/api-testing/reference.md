@@ -574,7 +574,7 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Helpers:** `helpers/app/jobs.ts` (`buildCreateJobBody`, `createJob`, `getJob`, `updateJob`, `deleteJob`); `helpers/app/workers.ts` (`createWorker`, `deleteWorker`, `cleanupWorkers`); plus the combined `cleanupWorkersAndJobs`.
 - **Schemas:** `JobSchema` (`assignments` field is nullable), `ListJobsResponseSchema`, `CreateJobResponseSchema`, etc.
 - **Auth pattern:** `401` (no token), `401` (admin token on a tenant endpoint — unlike `/users` which returns `404` for the same case).
-- **Sort-test guidance:** verify endpoint accepts `sort`/`direction` params and returns valid results — **do NOT assert exact order** because PostgreSQL collation differs from JS `Array.sort` and produces non-deterministic test results across environments.
+- **Sort-test guidance:** verify endpoint accepts `sort`/`direction` params and returns valid results — **do NOT assert exact order** because the database collation can differ from JS `Array.sort` and produces non-deterministic test results across environments.
 - **Type coercion:** API coerces non-string `name` / `target` to strings. Confirmed desired behavior — don't write tests that expect `400` for `name: 123`.
 - **400 vs 404 on PATCH:** an invalid body fails validation before the resource lookup (400); a valid body with a non-existent UUID returns 404. Both branches are covered by an active test in `export-job.spec.ts`.
 

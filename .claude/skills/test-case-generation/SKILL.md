@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 1.0.4
+version: 1.0.5
 description: >-
   Generate requirements and test cases from a user story or acceptance criteria — 6-section package:
   story analysis, functional requirements, categorized test cases, security & compliance, k6
@@ -20,7 +20,7 @@ The skill turns the user story into something an Automation Engineer can execute
 
 ## Critical
 
-- **NEVER** generate implementation code — this skill produces requirements and descriptive test cases, not Playwright / Go / k6 code. Code generation belongs in [`api-testing`](../api-testing/SKILL.md) / [`test-standards`](../test-standards/SKILL.md) / [`page-objects`](../page-objects/SKILL.md). Why: mixing requirements with code couples them — when the requirement evolves the code drifts; when the code drifts the requirement is no longer the contract.
+- **NEVER** generate implementation code — this skill produces requirements and descriptive test cases, not Playwright, k6 or backend code. Code generation belongs in [`api-testing`](../api-testing/SKILL.md) / [`test-standards`](../test-standards/SKILL.md) / [`page-objects`](../page-objects/SKILL.md). Why: mixing requirements with code couples them — when the requirement evolves the code drifts; when the code drifts the requirement is no longer the contract.
 - **NEVER** invent UI design elements (colors, layouts, button text) unless they appear in the user story. Why: the requirement layer must remain technology-agnostic so it survives a UI redesign.
 - **ALWAYS** use precise terminology from `master-context` (worker, executor, scheduler, job type, queue stream, tenant_id, realm). Why: drift between the test-case package and the platform vocabulary causes downstream misinterpretation.
 - **ALWAYS** trace every functional requirement back to the user story's intent. Why: requirements that aren't anchored to the story produce gold-plating; the test cases over-cover and under-test what the user actually asked for.
@@ -184,7 +184,7 @@ If no candidates: "No performance testing candidates identified for this user st
 
 ## Anti-patterns
 
-- ❌ **Generating Playwright / Go / k6 code in the test-case package.** This skill produces requirements + descriptive cases. Code belongs in the per-area authoring skills.
+- ❌ **Generating Playwright, k6 or backend code in the test-case package.** This skill produces requirements + descriptive cases. Code belongs in the per-area authoring skills.
 - ❌ **Inventing UI specifics not in the story (colors, button positions, layout).** The requirement layer must survive a redesign.
 - ❌ **Skipping Section 5 because "performance feels like overkill".** If the story touches an endpoint or flow matching a Performance Testing Trigger, k6 candidates must be flagged — the platform's 10K-worker / 1M-run-stat-events-per-second targets demand it.
 - ❌ **Section 3 covering only happy path + one error case.** The bar is "exhaustive edge cases" — distributed failure modes, multi-tenant concurrency, race conditions, run-stat accuracy under load.
@@ -207,7 +207,7 @@ If no candidates: "No performance testing candidates identified for this user st
 - [ ] Section 5 flags every endpoint / flow matching a Performance Testing Trigger; each candidate has Endpoint, Trigger, k6 type, thresholds, risk.
 - [ ] Section 6 lists ambiguities + dependencies + cross-referenced Known Platform Issues, OR explicitly states "All requirements are well-defined".
 - [ ] Terminology aligns with § System & Domain Context (worker, executor, scheduler, message queue, tenant_id, realm).
-- [ ] No Playwright / Go / k6 implementation code in the package.
+- [ ] No Playwright, k6 or backend implementation code in the package.
 - [ ] No invented UI specifics absent from the user story.
 
 ## Examples
