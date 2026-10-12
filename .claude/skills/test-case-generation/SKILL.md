@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 1.1.0
+version: 2.0.0
 description: >-
   Generate requirements and test cases from a user story or acceptance criteria — 6-section package:
   story analysis, functional requirements, categorized test cases, security & compliance, k6
@@ -23,7 +23,7 @@ The skill turns the user story into something an Automation Engineer can execute
 - **NEVER** generate implementation code — this skill produces requirements and descriptive test cases, not Playwright, k6 or backend code. Code generation belongs in [`api-testing`](../api-testing/SKILL.md) / [`test-standards`](../test-standards/SKILL.md) / [`page-objects`](../page-objects/SKILL.md). Why: mixing requirements with code couples them — when the requirement evolves the code drifts; when the code drifts the requirement is no longer the contract.
 - **NEVER** invent UI design elements (colors, layouts, button text) unless they appear in the user story. Why: the requirement layer must remain technology-agnostic so it survives a UI redesign.
 - **ALWAYS** use the precise vocabulary of the system under test, as its project context defines it (in the example context below: worker, executor, scheduler, job type, queue stream, tenant_id, realm). Why: drift between the test-case package and the system's vocabulary causes downstream misinterpretation.
-- **NEVER** generate test cases against the example context in this skill as if it were the system under test. If the project context is missing, ask for it and list the gap in Section 6. Why: the example describes the toolkit's invented scheduled-jobs platform; a package written against it names services, limits and failure modes the real system doesn't have.
+- **NEVER** generate test cases against the example context in this skill as if it were the system under test. If the project context is missing, stop after Sections 1–2 and ask for it; if the user says to go on without it, write the cases from the story alone and list every missing context item in Section 6. Why: the example describes the toolkit's invented scheduled-jobs platform; a package written against it names services, limits and failure modes the real system doesn't have.
 - **ALWAYS** trace every functional requirement back to the user story's intent. Why: requirements that aren't anchored to the story produce gold-plating; the test cases over-cover and under-test what the user actually asked for.
 - **ALWAYS** consider the project's known issues — the list in its project context, or the open bugs in its tracker — when generating edge cases. If the project keeps no such list, say so in Section 6 instead of assuming there are none. Why: edge cases that ignore the bugs already in production produce false-positive coverage.
 - **ALWAYS** verify the project context against the actual repos (`git pull` first) before a critical test case relies on it. Why: the context is a snapshot — services evolve, and a test case anchored to a stale default or an already-fixed issue produces wrong coverage.
@@ -52,7 +52,7 @@ Analyze the provided user story and generate a comprehensive set of software req
 The generator needs a picture of the system under test before it writes a case, and it comes from the project, not from this skill:
 
 1. The adopting repository's `CLAUDE.md`, or a platform-context skill that `CLAUDE.md` names.
-2. If neither exists, ask the user for the context before generating Section 3, and list what is still missing in Section 6.
+2. If neither exists, stop after Sections 1–2 and ask the user for the context. If the user says to go on without it, write the cases from the story alone and list every missing context item in Section 6.
 
 The context covers: the core business concepts and their vocabulary; the architecture and how components communicate; data stores and retention; the auth model; data pipelines and message limits; result structures; performance targets; known production issues.
 
@@ -85,7 +85,7 @@ Backend → Remote message queue → Proxy → schedules.dispatch queue stream �
 
 #### Queue Streams
 
-- `schedules` — a work-queue stream for schedule entries, with a retention policy and size limits.
+- `schedules` — a work-queue stream for schedule entries, with a retention policy, 10MB max queue-stream size, 50KB max msg size.
 - `results`, `run-stats`, `run-steps` — retained, 1M msgs, 1GB, 7d max age, 50KB max msg size.
 
 #### Result Structures
@@ -113,7 +113,7 @@ Flag an API or data flow as a k6 candidate when ANY of these apply (the examples
 2. **Write-heavy operations** — Endpoints that create/update at scale (bulk job creation, job assignment pushes to multiple workers, user provisioning).
 3. **Multi-tenant contention** — Endpoints where multiple tenants hit the same service concurrently (tenant CRUD, user listing, shared infrastructure queries).
 4. **Data pipeline bottlenecks** — Flows where message throughput matters (message-queue publish/subscribe, event-bus consumer lag, queue-stream write rates, run-stats store ingestion).
-5. **Auth-gated endpoints** — Keycloak token issuance, JWT validation overhead at API Gateway, JWKS cache refresh under concurrent requests.
+5. **Auth-gated endpoints** — token issuance, token-validation overhead at the gateway, key-set cache refresh under concurrent requests (Keycloak, JWT validation at the API gateway, JWKS cache).
 6. **Database-heavy queries** — relational-database queries with joins, aggregations, or large result sets — especially across tenant-scoped data.
 7. **Cascade-prone operations** — Actions that fan out downstream (updating a worker's job assignments triggers scheduler updates across job executors).
 8. **Real-time / WebSocket** — Live data feeds (live run-stat feeds, worker status, dashboard WebSocket connections).
@@ -141,7 +141,7 @@ Flag an API or data flow as a k6 candidate when ANY of these apply (the examples
 
 ```
 - [ ] 1. Read the user story carefully. If anything is ambiguous, list it for Section 6 — do not guess.
-- [ ] 2. Load the project context (§ System & Domain Context) and cross-reference the story against it — which services / data flows / resource types does the story touch? No project context → ask for it; never fall back to the example.
+- [ ] 2. Load the project context (§ System & Domain Context) and cross-reference the story against it — which services / data flows / resource types does the story touch? No project context → stop after Sections 1–2 and ask for it (§ System & Domain Context); never fall back to the example.
 - [ ] 3. Cross-reference against the project's known issues — does any issue affect this story's surface? If yes, name it in Section 6.
 - [ ] 4. Generate Section 1 (Story Analysis) — summary in 1-2 sentences.
 - [ ] 5. Generate Section 2 (Functional Requirements) — clear, testable, R1/R2/R3 numbered.
@@ -206,7 +206,7 @@ If no candidates: "No performance testing candidates identified for this user st
 - ❌ **Skipping Section 5 because "performance feels like overkill".** If the story touches an endpoint or flow matching a Performance Testing Trigger, k6 candidates must be flagged — the project's performance targets demand it.
 - ❌ **Generating against the example context.** A package that names workers, queue streams and a 50KB message limit for a system that has none of them was written from this skill's example, not from the project. Load the project context, or ask for it.
 - ❌ **Section 3 covering only happy path + one error case.** The bar is "exhaustive edge cases" — distributed failure modes, multi-tenant concurrency, race conditions, run-stat accuracy under load.
-- ❌ **Treating Section 4 as optional for stories that touch tenant data or auth.** Tenant isolation, JWT/JWKS, IDOR are platform invariants every story must check.
+- ❌ **Treating Section 4 as optional for stories that touch tenant data or auth.** Tenant isolation, token validation, IDOR are system invariants every story must check.
 - ❌ **Ignoring the project's known issues when listing edge cases.** Unfixed production behaviour is still behaviour — edge cases that don't account for them produce false-positive coverage.
 - ❌ **Tagging a test case as `[E2E]` when it's actually direct service-to-service communication.** `[Integration]` is the right tag for service-to-service traffic (in the example: worker ↔ backend message-queue, event-bus, queue-stream operations). `[E2E]` is reserved for the user's perspective via Playwright.
 - ❌ **Delivering an unranked, untraceable case dump.** 25 cases with no priority and no requirement mapping forces the Automation Engineer to re-derive both. Every case: priority + covered requirements.
@@ -240,7 +240,7 @@ User story: *"As a platform admin, I want to upload a CSV of HTTP jobs so that I
 The generator produces:
 
 - **Section 1** — story summary names the bulk-onboarding objective.
-- **Section 2** — R1 CSV upload accepted, R2 job entities created with `tenant_id`, R3 each job enters the scheduler via `schedules.dispatch`, R4 partial-failure handling (some rows fail validation, others succeed), R5 admin sees per-row result.
+- **Section 2** — R1 CSV upload accepted, R2 job entities created with `tenant_id`, R3 each job's schedule entry reaches the scheduler via `schedules.dispatch`, R4 partial-failure handling (some rows fail validation, others succeed), R5 admin sees per-row result.
 - **Section 3** — `[API] (P1, covers R1, R2)` happy path (`POST /admin/tenant/{tenant}/jobs/bulk`), `[API] (P2, covers R4)` malformed CSV row, `[API] (P2, covers R1)` >200 row payload, `[API] (P1, covers R1)` 401 / 403, `[Integration] (P1, covers R3)` scheduler picks up bulk batch from `schedules.dispatch`, `[Integration] (P2, covers R3)` `schedules` queue stream behavior when bulk batch exceeds 10MB, `[Integration] (P1, covers R4)` partial failure publishes a per-row error event on the event bus — no silent drops, `[E2E] (P1, covers R5)` admin uploads CSV via UI, sees per-row result, `[E2E] (P2, covers R4, R5)` retry partial-failure rows.
 - **Section 4** — tenant isolation (admin can only target tenants in their realm), CSV injection / formula attacks, oversized payload (>50KB queue max message size), IDOR on `tenant` path param.
 - **Section 5** — `POST /admin/tenant/{tenant}/jobs/bulk` flagged for **Stress test** (write-heavy, cascade-prone — fan-out to scheduler) + **Spike test** (admin uploads 200 rows in a burst). Thresholds: p95 < 5s for 200-row payload, error rate < 1%, `schedules` queue stream depth < 5K. Risk if untested: bulk batch overwhelms scheduler, state-store corruption, partial onboarding leaves orphan jobs.
@@ -260,7 +260,7 @@ User story: *"As a tenant user, I want to update my own profile name."*
 | Test case tagged `[E2E]` describes worker-to-backend message-queue communication. | `[E2E]` is the user-perspective tag (UI). Worker ↔ backend is data-flow → `[Integration]`. | Re-tag. |
 | Section 3 has 5 test cases for a complex story. | Coverage too thin — missed edge cases. | Re-walk the project's known issues, distributed failure modes, multi-tenant concurrency, race conditions. Aim for 15+ cases for a story touching asynchronous or distributed surfaces. |
 | The package names services or limits the project doesn't have (workers, queue streams, a 50KB message cap). | The project context was missing, and the generator filled the gap from this skill's example. | Load the project context or ask for it, then regenerate. |
-| Section 5 says "No performance testing candidates" for a story that fans out to all workers. | Cascade-prone trigger missed. | Re-read the trigger list — fan-out (assignment updates → scheduler → all job executors) always matches Trigger 7. |
+| Section 5 says "No performance testing candidates" for a story that fans out to all workers. | Cascade-prone trigger missed. | Re-read the trigger list — fan-out to many downstream components always matches Trigger 7 (in the example: assignment updates → scheduler → all job executors). |
 | Generated package contains code samples. | Skill-boundary violation — this skill produces requirements, not code. | Strip the code; route the user to `api-testing` / `test-standards` / `page-objects` for the implementation phase. |
 | Story is unclear and Section 6 is empty. | The generator guessed instead of flagging the gap. | Re-read the story; explicitly list ambiguities in Section 6. The user wants the gaps surfaced, not papered over. |
 

@@ -596,6 +596,7 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Spec:** `tests/app/api/jobs-service/run-stats/job-run-stats.spec.ts` — covers per-type run-stat definitions (`export`, HTTP, SFTP, email, stream, backup, webhook), `export`/HTTP run-step-recording variants, PATCH `recordRunSteps` toggle, 400/401/404/405, error message content.
 - **Auth pattern:** same as other job endpoints — `401` (no token), `401` (admin token on tenant endpoint).
 - **Key behavior:** Run-stat definitions are **type-specific** (an `export` job returns `export` run-stat definitions, an HTTP job returns HTTP run-stat definitions). Run-step stats appear only when `config.recordRunSteps: true`.
+
 ---
 
 ## Setup-Restore pattern (for tests touching shared mutable state)
