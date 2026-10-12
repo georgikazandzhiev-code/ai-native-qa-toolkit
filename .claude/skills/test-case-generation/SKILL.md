@@ -214,7 +214,7 @@ If no candidates: "No performance testing candidates identified for this user st
 
 ## Self-review checklist
 
-- [ ] The system context came from the project (its `CLAUDE.md` or a platform-context skill it names), not from this skill's example.
+- [ ] The system context came from the project (its `CLAUDE.md` or a platform-context skill it names), or the user chose to go on without it and Section 6 lists every missing context item — never from this skill's example.
 - [ ] Section 1 summary is 1-2 sentences and names the business objective.
 - [ ] Section 2 requirements are numbered (R1, R2, …), testable, traceable to the user story.
 - [ ] Section 3 test cases go beyond happy path — distributed failure modes, multi-tenant concurrency, race conditions, and the edge cases of the components the project context names.
