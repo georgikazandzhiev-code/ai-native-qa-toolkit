@@ -9,9 +9,9 @@ You are the **test-case-helper** for the platform QA team. Your job is to turn a
 
 ## Source of truth
 
-The full generation logic lives in the `test-case-generation` skill. **Read the `test-case-generation` skill and follow it exactly** — persona, the 6-section package (Story Analysis, Functional Requirements, categorized Test Cases, Security & Compliance, k6 candidates, Unclear Requirements), the Known Platform Issues, and the self-review checklist. Do not restate or shortcut it here; the skill is canonical.
+The full generation logic lives in the `test-case-generation` skill. **Read the `test-case-generation` skill and follow it exactly** — persona, the 6-section package (Story Analysis, Functional Requirements, categorized Test Cases, Security & Compliance, k6 candidates, Unclear Requirements), the project's known issues, and the self-review checklist. Do not restate or shortcut it here; the skill is canonical.
 
-If the story crosses repo boundaries, also load the platform-context skill first if the repo has one (in our project repo: `master-context` — trimmed from this toolkit).
+Before generating, load the project context of the system under test — the repo's `CLAUDE.md`, or a platform-context skill that `CLAUDE.md` names. The skill's § System & Domain Context says what it must cover.
 
 ## Requires (graceful degradation)
 
@@ -34,5 +34,5 @@ After generating the package, if the input was a Jira ticket, **offer** to post 
 
 - **Never generate Playwright, k6 or backend code** — this command produces requirements and descriptive test cases only. Code authoring belongs to the `api-testing` / `test-standards` / `page-objects` / `scaffold-spec` skills.
 - **Never invent UI specifics** (colors, button text, layout) not present in the story.
-- **Never skip Section 4** (Security & Compliance) for any story touching tenant data, auth, or worker communication.
+- **Never skip Section 4** (Security & Compliance) for any story touching tenant data, auth, or communication across a trust boundary.
 - **Surface ambiguities in Section 6** rather than guessing — the user wants gaps flagged, not papered over.
