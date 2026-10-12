@@ -12,7 +12,7 @@ Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase
 
 Drop into `tests/app/api/<domain>/<resource>.spec.ts`.
 
-> **Helper vs direct `apiRequest` — pick per test.** The template below uses helpers because most CRUD specs are large and helpers de-duplicate the URL/headers boilerplate. **For single-spec one-shot calls, prefer direct `apiRequest({...})` inline** — it surfaces the request shape next to the assertion (upstream-style; see `tests/app/api/tenant-service/admin-realms.spec.ts` and `tests/app/api/shared/cross-tenant-isolation.spec.ts`). Mix freely within one file: helpers for repeated CRUD, inline `apiRequest` for one-off calls.
+> **Helper vs direct `apiRequest` — pick per test.** The template below uses helpers because most CRUD specs are large and helpers de-duplicate the URL/headers boilerplate. **For single-spec one-shot calls, prefer direct `apiRequest({...})` inline** — it surfaces the request shape next to the assertion (upstream-style; in the example app, `admin-realms.spec.ts` and `cross-tenant-isolation.spec.ts` do this). Mix freely within one file: helpers for repeated CRUD, inline `apiRequest` for one-off calls.
 
 ```typescript
 // Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
@@ -63,14 +63,14 @@ import resourceData from "../../../../test-data/app/<resource>.json";
 // 200 — happy path, schema + business values
 // 400 — per-field omission loop, per-field invalid-type loop, invalid id format
 // 401 — no token; admin token on a tenant-scoped path (wrong realm)
-// 403 — USER_ACCESS_TOKEN_ZERO (commented out under // TODO: FIXME: <TICKET> while unprovisioned)
+// 403 — USER_ACCESS_TOKEN_ZERO (commented out under // TODO: FIXME: <TICKET> if not provisioned)
 // 404 — non-existent id
 // 405 — unsupported verbs (dedicated 405 block)
 // SKIP: 500 — cannot be produced on purpose
 
 // No token aliases — call tokens.full() / tokens.admin() / tokens.zero() at every call site.
 // See data-strategy/reference.md §1.6 for rationale (grepability, no alias-name drift).
-// Existing specs with aliases are tech debt; normalize when next touching the file.
+// A spec with token aliases is tech debt; normalize it when next touching the file.
 
 // Tags stay inline (`{ tag: "@App-API" }`) on every test: the single-tag lint rule reads the literal,
 // so a tag hoisted into a shared const reads as "no tag". The whitelist is owned by `test-standards`.
@@ -293,7 +293,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
 test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
     // `!` (definite assignment) is required because the variable is set inside test.beforeEach,
     // which TypeScript's flow analysis does not see when strict mode is on. Same pattern as
-    // `let workerId: string;` in tests/app/api/jobs-service/jobs/export-job.spec.ts.
+    // `let workerId!: string;` in § 2 below.
     let resource!: <Resource>;
     const createdIds: string[] = [];
 
@@ -530,7 +530,7 @@ import {
 import { buildCreateWorkerBody, createWorker } from "../../../../helpers/app/workers";
 import { tokens } from "../../../../config/env";
 
-// `!` (definite assignment): set in test.beforeAll. Mirrors tests/app/api/jobs-service/jobs/export-job.spec.ts.
+// `!` (definite assignment): set in test.beforeAll.
 let workerId!: string;
 const createdWorkerIds: string[] = [];
 const createdJobIds: string[] = [];
@@ -578,11 +578,11 @@ import { z } from "zod";
 // fixtures/api/schemas/util/common.ts is the canonical home for shared
 // schemas: PageInfoSchema, APIErrorSchema (both z.strictObject), and
 // JSONSchemaResponseSchema. Import (and re-export for your consumers)
-// rather than declaring local copies — job.ts and notification-rule.ts show
-// the pattern.
-// GatewayErrorSchema (401 shape) is not yet centralized — re-export it
-// from an existing strict copy (tenant.ts / user.ts / notification-rule.ts) instead
-// of adding a new one.
+// rather than declaring local copies — in the example app, job.ts and
+// notification-rule.ts show the pattern.
+// If GatewayErrorSchema (401 shape) is not centralized in your repo, re-export it
+// from an existing strict copy (in the example app: tenant.ts / user.ts /
+// notification-rule.ts) instead of adding a new one.
 
 export { APIErrorSchema, type APIError } from "../util/common";
 import { PageInfoSchema, type PageInfo } from "../util/common";
@@ -678,9 +678,9 @@ export type Update<Resource>Response = z.infer<typeof Update<Resource>ResponseSc
 export type Delete<Resource>Response = z.infer<typeof Delete<Resource>ResponseSchema>;
 ```
 
-There is **no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file. (The `util/` side does have a barrel: `fixtures/api/schemas/util/index.ts` re-exports `./common` and `./keycloak`.)
+There is **no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file. (In the example app, the `util/` side does have a barrel: `fixtures/api/schemas/util/index.ts` re-exports `./common` and `./keycloak`.)
 
-> **Name-collision callout:** if your new resource happens to export a `UserSchema`, do **not** dodge the collision with an `as <Alias>` re-export. The existing collision is **still live today** (`tenant.ts` admin-side `UserSchema` vs `user.ts` tenant-side `UserSchema`); the planned fix renames the admin-side schema to `AdminUserSchema` at the source. Pick distinctly-named schemas at definition time.
+> **Name-collision callout:** if your new resource happens to export a `UserSchema`, do **not** dodge the collision with an `as <Alias>` re-export. If two resource files already export the same name (for example, an admin-side `UserSchema` and a tenant-side one), rename one at the source, e.g. `AdminUserSchema`. Pick distinctly-named schemas at definition time.
 
 ## 4. Helper file (`helpers/app/<resource>.ts`)
 
@@ -722,9 +722,9 @@ import { faker } from "@faker-js/faker";
 //       return { name: ..., target: ..., /* ... */, ...overrides };
 //   }
 //
-// INTERIM SHAPE (matches most existing helpers today): `Record<string, unknown>`.
-// Existing `buildCreate<X>Body` builders return `Record<string, unknown>`; migrating
-// them to the typed shape is tracked as a separate task (data-strategy refactor-playbook
+// INTERIM SHAPE (common in older helpers): `Record<string, unknown>`.
+// If your existing `buildCreate<X>Body` builders return `Record<string, unknown>`,
+// migrate them to the typed shape as a separate task (data-strategy refactor-playbook
 // §§ 1 + 3). New builders should be authored in the typed shape from the start.
 
 export function buildCreate<Resource>Body(
@@ -910,7 +910,7 @@ export async function setup<Resource>(
 
 ## 6. Multi-endpoint API flow (`tests/app/api/<domain>/<flow>.spec.ts`)
 
-For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@App-API` tag, explicit timeout. **Note**: `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
+For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@App-API` tag, explicit timeout. **Note**: in the example app, `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
 
 ```typescript
 // Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
@@ -934,7 +934,7 @@ import {
 } from "../../../../helpers/util/mailpit";
 
 function generateE2EUserPayload() {
-    // E2E variant — uses @<your-test-domain> domain (Mailpit-catchable on test infra).
+    // E2E variant — uses @<your-test-domain>, the domain your Mailpit catches.
     return {
         email: `qa-onboard-${faker.string.alphanumeric(8).toLowerCase()}@<your-test-domain>`,
         firstName: faker.person.firstName(),
@@ -1015,7 +1015,7 @@ The contract: cross-tenant access returns **404, not 403**. There are two shapes
 
 ### Tenant-scoped resource (job, worker) — token enforces isolation
 
-The tenantA / tenantB tokens must be minted in `test.beforeAll` (see `tests/app/api/shared/cross-tenant-run-stats-isolation.spec.ts` for a real-world example that obtains tokens via Keycloak per-tenant). The variables below are placeholders for that beforeAll.
+The tenantA / tenantB tokens must be minted in `test.beforeAll` (in the example app, `cross-tenant-run-stats-isolation.spec.ts` obtains them via Keycloak per tenant). The variables below are placeholders for that beforeAll.
 
 ```typescript
 // Module-scope state populated in test.beforeAll:
@@ -1074,7 +1074,7 @@ test(
 );
 ```
 
-See `tests/app/api/shared/cross-tenant-isolation.spec.ts` (admin/users) and `tests/app/api/shared/cross-tenant-run-stats-isolation.spec.ts` (jobs/run stats) for the canonical specs.
+In the example app, `cross-tenant-isolation.spec.ts` (admin/users) and `cross-tenant-run-stats-isolation.spec.ts` (jobs/run stats) follow these two shapes.
 
 ## 8. Faker-driven body builder shapes (per job type)
 
@@ -1100,7 +1100,7 @@ export function buildCreate<NewType>JobBody(
 }
 ```
 
-Existing per-type `target` shapes (from `helpers/app/jobs.ts`):
+The example app's per-type `target` shapes (from `helpers/app/jobs.ts`):
 
 | Type | `target` builder |
 |------|-----------------|
@@ -1112,7 +1112,7 @@ Existing per-type `target` shapes (from `helpers/app/jobs.ts`):
 | `backup` | `faker.internet.domainName()` |
 | `webhook` | `faker.internet.url()` |
 
-Job-type config shapes already in use:
+The example app's job-type config shapes:
 
 | Type | `config` shape |
 |------|----------------|
@@ -1387,7 +1387,7 @@ test(
     { tag: "@App-API" },
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_JOBS);
-        // qase.id(123);
+        // qase.id(N);
         const { status, body } = await listJobs(apiRequest, tokens.full());
         expect(status).toBe(200);
         expect(ListJobsResponseSchema.parse(body)).toBeTruthy();

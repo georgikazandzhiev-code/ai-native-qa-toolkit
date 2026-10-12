@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 2.0.3
+version: 2.0.4
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ Single source of truth for **where test data comes from** in this framework. Sis
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, decisions, anti-patterns.** Storage-location map, seven blessed patterns, decision tree, forbidden locations. | **Always** — on any test-data / helper / fixture / payload task. |
-| **`reference.md`** | **Catalog of facts.** Inventory of existing factories, JSON files, Mailpit fixture, faker calls in use, env-token catalog. | **Load on lookup** — "Does a factory for X already exist?" / "Which JSON file holds boundary values?" |
+| **`reference.md`** | **Catalog of facts.** The example app's factories, JSON files, Mailpit fixture, faker calls and env-token catalog. | **Load on lookup** — "What does a factory for X look like?" / "Which kind of JSON file holds boundary values?" |
 | **`patterns.md`** | **Pattern recipes with code.** Full skeletons for each of the seven blessed patterns. | **Load During Authoring** — when picking and writing a specific pattern. |
 | **`refactor-playbook.md`** | **Migration playbook** for moving existing test data into the canonical pattern. | **Load only when refactoring** existing data wiring (not for new data). |
 
@@ -38,14 +38,14 @@ Single source of truth for **where test data comes from** in this framework. Sis
 
 One canonical home per kind of data. Adding a file outside these locations is a smell — search inside the matching folder first.
 
-| Kind of data | Lives in | Owner pattern | Example |
-|--------------|----------|---------------|---------|
+| Kind of data | Lives in | Owner pattern | Example (example app) |
+|--------------|----------|---------------|-----------------------|
 | **Static — boundary / validation matrices** | `test-data/app/<resource>-validation.json` | Pattern 4 | `test-data/app/httpJobValidation.json`, `test-data/app/backupJobValidation.json`, `test-data/app/webhookJobValidation.json` (legacy camelCase names — drift; new files use hyphen-case) |
 | **Static — sentinels & lookup ids** | `test-data/app/<resource>.json` (keys: `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, etc.) | Pattern 5 | `test-data/app/worker.json`, `test-data/app/job-common.json`, `test-data/app/http-job.json`, `test-data/app/email-job.json` |
-| **Static — frontend mock payloads** | `test-data/app/<resource>.json` (used in `route.fulfill`) | Pattern 5 (route stub) | No mock-JSON fixtures in this project today; reserved for future use — see `refactor-playbook.md §4` |
-| **Static loader (JSON + transformation)** | `helpers/app/<topic>Loader.ts` (or `testDataLoader.ts`) | Pattern 5 wrapper | No loader helpers in this project today; reserved for future use |
-| **Dynamic — typed factory (`createXData`)** | `helpers/app/test-data-generators.ts` (planned), OR co-located in `helpers/app/<topic>.ts` for topic-specific data today | Pattern 2 | `helpers/app/workers.ts` (`buildCreateWorkerBody`, `buildUpdateWorkerBody`), `helpers/app/jobs.ts` (`buildCreateJobBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
-| **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | Planned alongside the centralized `test-data-generators.ts` (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`); none today |
+| **Static — frontend mock payloads** | `test-data/app/<resource>.json` (used in `route.fulfill`) | Pattern 5 (route stub) | None in the example app; the slot is for a frontend-only stub — see `refactor-playbook.md §4` |
+| **Static loader (JSON + transformation)** | `helpers/app/<topic>Loader.ts` (or `testDataLoader.ts`) | Pattern 5 wrapper | None in the example app; add one when a JSON file needs a transformation |
+| **Dynamic — typed factory (`createXData`)** | `helpers/app/test-data-generators.ts` (the target), OR co-located in `helpers/app/<topic>.ts` for topic-specific data if the repo has no shared generators file | Pattern 2 | `helpers/app/workers.ts` (`buildCreateWorkerBody`, `buildUpdateWorkerBody`), `helpers/app/jobs.ts` (`buildCreateJobBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
+| **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | None in the example app; add them next to the base factory (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`) |
 | **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | `helpers/app/workers.ts` (`buildListWorkersUrl`), `helpers/app/jobs.ts` (`buildListJobsUrl`) |
 | **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | `helpers/app/workers.ts`, `helpers/app/jobs.ts`, `helpers/app/adminTenants.ts`, `helpers/app/adminUsers.ts` |
 | **Per-test user lifecycle (admin-API + Keycloak)** | `helpers/app/adminUsers.ts` (`setupTestUser` / `teardownTestUser`); password reset via `helpers/util/keyCloak.ts` (`getAuthenticatedKcAdminClient`, `getUserIdByEmail`, `resetUserPasswordById`) | Pattern 7 | `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` |
@@ -66,7 +66,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 - New env vars added without a matching entry in `env/.env.example` → must be documented.
 - Storage-state JSON committed to git → these belong in `.auth/` (gitignored), produced by `login.setup.ts` per environment.
 
-For the full enumeration of every file in each location, see [reference.md](reference.md). The decision tree below picks the right cell of this table for any new piece of data.
+For the example app's enumeration of every file in each location, see [reference.md](reference.md). The decision tree below picks the right cell of this table for any new piece of data.
 
 ## Quick reference — the seven blessed patterns
 
@@ -75,7 +75,7 @@ For the full enumeration of every file in each location, see [reference.md](refe
 | 1 | Inline literal | Instant | Perfect | One-off value, never reused; uniqueness via `faker.string.uuid()` or `Date.now()` |
 | 2 | Typed factory with `Partial<T>` overrides | Instant | Perfect | Same shape used in 2+ tests, or a shape that has business rules |
 | 3 | Object Mother on top of factory | Instant | Perfect | Named scenarios (e.g. "matched worker+job pair", "online worker in EU") |
-| 4 | JSON validation matrix | Instant | Perfect | Boundary lists for negative tests (`<resource>-validation.json`; legacy camelCase `httpJobValidation.json`, `backupJobValidation.json` are drift) |
+| 4 | JSON validation matrix | Instant | Perfect | Boundary lists for negative tests (`<resource>-validation.json`; legacy camelCase names such as the example app's `httpJobValidation.json`, `backupJobValidation.json` are drift) |
 | 5 | JSON lookup / sentinel | Instant | Perfect | Fixed `invalidId`/`nonExistentId`, env-pinned ids (`worker.json`, `job-common.json`) |
 | 6 | API seeder helper | Fast | Perfect | An entity must exist in the system before the test runs (worker, job, tenant, user) |
 | 7 | Per-test user via admin-API + Keycloak + Mailpit | Fast | Perfect | Tests that need a fresh user (registration, reset-password, invitation, brute-force) |
@@ -108,7 +108,7 @@ If you reach a leaf node and the cited file does not exist, that means the seede
 
 ## The seven patterns — rules
 
-Code for every pattern (good vs bad, current-drift examples) lives in [patterns.md](patterns.md) — this section carries only the rules.
+Code for every pattern (good vs bad, and drift examples) lives in [patterns.md](patterns.md) — this section carries only the rules.
 
 ### Pattern 1 — Inline literal (last resort)
 
@@ -124,9 +124,9 @@ Target shape — code in [patterns.md § Pattern 2](patterns.md). Mandatory shap
 - Function returns the type, takes `Partial<T> = {}` last.
 - Defaults are realistic and pass server validation.
 - `...options` spread must be the LAST property (overrides win).
-- One factory per entity. Per-entity files in `helpers/app/test-data-generators.ts` (target) or in the topic-specific helper today (e.g. `buildCreateWorkerBody` in `helpers/app/workers.ts`, `buildCreateJobBody` + 6 sibling per-type builders in `helpers/app/jobs.ts`).
+- One factory per entity. Per-entity files in `helpers/app/test-data-generators.ts` (target) or, if the repo has no shared generators file, in the topic-specific helper (in the example app, `buildCreateWorkerBody` in `helpers/app/workers.ts`, `buildCreateJobBody` + 6 sibling per-type builders in `helpers/app/jobs.ts`).
 
-> Drift today: existing `buildCreate<X>Body` builders return `Record<string, unknown>` instead of an exported `XData` type. Refactor playbook §§ 1 + 3 cover the migration.
+> Drift: if your `buildCreate<X>Body` builders return `Record<string, unknown>` instead of an exported `XData` type (as the example app's do), refactor playbook §§ 1 + 3 cover the migration.
 
 ### Pattern 3 — Object Mother on top of factory
 
@@ -139,7 +139,7 @@ Named scenarios that delegate to the base factory; never re-declare fields. Code
 ### Pattern 4 — JSON validation matrix
 
 For boundary lists driving parametrized negative tests. Code in [patterns.md § Pattern 4](patterns.md). Rules:
-- Path is `test-data/app/<resource>-validation.json` (hyphen-case; for jobs `<type>-job-validation.json`). The camelCase `httpJobValidation.json` / `backupJobValidation.json` / `webhookJobValidation.json` are legacy drift — do not add new camelCase files.
+- Path is `test-data/app/<resource>-validation.json` (hyphen-case; for jobs `<type>-job-validation.json`). camelCase names (the example app's `httpJobValidation.json` / `backupJobValidation.json` / `webhookJobValidation.json`) are legacy drift — do not add new camelCase files.
 - Top-level keys describe the negative case (`invalidNames`, `invalidTargets`, `validMethods`, `methodsWithBody`).
 - Values are arrays of primitives. No partial objects (those belong in code, not JSON).
 - Use only when the same matrix is reused in 2+ specs OR when the matrix is large enough to obscure the test.
@@ -153,7 +153,7 @@ For fixed ids and environment-pinned references (`worker.json` sentinels like `i
 
 ### Pattern 6 — API seeder helper
 
-Target shape (assertion-style `setupX`/`teardownX` pair); current passthrough `createWorker` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. Mandatory shape:
+Target shape (assertion-style `setupX`/`teardownX` pair); a passthrough seeder such as the example app's `createWorker` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. Mandatory shape:
 - Always exposed as a pair: `setupX` (or `createX`) + `teardownX` (or `deleteX`). The pair lives in the same file.
 - **Accepts `overrides?: Partial<T>` and forwards them to the factory** (`body: createXData(overrides)`). A seeder with no override parameter is a refactor target: a test that needs a specific field value (e.g. a fixed `name` to assert on, or a `status: 'disabled'` seed state) cannot use it without forking into a second seeder. Overrides are what make a single seeder reusable across scenarios.
 - Body is built by a Pattern-2 factory (`createXData`), never inline. If the factory does not exist, create it first.
@@ -163,7 +163,7 @@ Target shape (assertion-style `setupX`/`teardownX` pair); current passthrough `c
 
 ### Pattern 7 — Per-test user via admin-API + Keycloak + Mailpit
 
-For flows that require a brand new user. This project provisions users through the tenant admin API (`POST /admin/tenants/{id}/users`), which creates a Keycloak-backed user under the hood; password reset goes through the Keycloak admin client. `setupTestUser`/`teardownTestUser` hook code in [patterns.md § Pattern 7](patterns.md). Rules:
+For flows that require a brand new user. The example app provisions users through the tenant admin API (`POST /admin/tenants/{id}/users`), which creates a Keycloak-backed user under the hood; password reset goes through the Keycloak admin client. `setupTestUser`/`teardownTestUser` hook code in [patterns.md § Pattern 7](patterns.md). Rules:
 - `getNextTestEmail(baseEmail)` produces `local+<8-char>@domain` from the supplied base email. All plus-addresses route to one Mailpit inbox — parallel-safe.
 - `getNextTestEmail` is **synchronous**. Do not `await` it.
 - Pair every `setupTestUser` with `teardownTestUser` in `afterEach`/`afterAll`. When the test itself may have deleted the user already, make the teardown tolerate it — treat a 404 as success (e.g. `Promise.allSettled` in the helper) — never an empty `try {} catch {}`, which the lint rejects and which would hide a real failure.
@@ -283,7 +283,7 @@ For per-area scopes, see the catalogs in [reference.md](reference.md).
 | `const token = process.env.USER_ACCESS_TOKEN_X` aliased then passed around | Hides the canonical name; grep misses it; read outside `config/env.ts` | Call `tokens.full()` / `.admin()` / `.zero()` directly at the call site |
 | Hardcoded uuid in a spec for "non-existent" id | Magic value; can't be updated centrally | `test-data/app/<resource>.json` `nonExistentId` |
 | `await getNextTestEmail()` | The function is synchronous; await produces noise | Drop the `await` |
-| `Math.random()` based amount generators (`helpers/util/dataGenerator.ts` `generateRandomAmount`) | Bypasses the project's faker-everywhere convention | `faker.number.float({ min, max, multipleOf: 0.01 })` |
+| `Math.random()` based amount generators (e.g. the example app's `generateRandomAmount` in `helpers/util/dataGenerator.ts`) | Bypasses the faker-everywhere convention | `faker.number.float({ min, max, multipleOf: 0.01 })` |
 | API seeder that builds its body inline with faker | Couples seeding (HTTP) and shaping (factory) — violates SRP | Body comes from a Pattern-2 factory; seeder only POSTs and parses |
 | Storage state mutated during a test | Breaks isolation for parallel Playwright workers | Pattern 7 (per-test user) or a fresh persona |
 | Mock JSON used as if it described a live backend resource | Drift between mock JSON and real backend | Pattern 6 + Pattern 7; keep mocks only for purely-frontend assertions |
@@ -352,7 +352,7 @@ The finished shape: a body builder in `helpers/app/` that takes the resolved `ow
 - Orchestrator: [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Sources of Truth and the WON'T rule against hardcoded ids both constrain every decision here.
 ## Additional resources
 
-- [reference.md](reference.md) — env-token catalog, JSON file catalog, helper catalog, storage state catalog, faker recipes.
+- [reference.md](reference.md) — the example app's env-token catalog, JSON file catalog, helper catalog, storage state catalog, and faker recipes.
 - [patterns.md](patterns.md) — side-by-side good/bad examples for each pattern.
-- [refactor-playbook.md](refactor-playbook.md) — ordered refactors for the duplication hot spots already in the codebase.
+- [refactor-playbook.md](refactor-playbook.md) — ordered refactors for common duplication hot spots.
 - Sister skill: [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md) — how API responses are asserted with Zod (this skill answers "where does the request body come from?").

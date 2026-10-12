@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-version: 2.0.1
+version: 2.0.2
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
 metadata:
   category: running
@@ -21,7 +21,7 @@ metadata:
 - **If the app cannot be reached, auth fails, or the storage state is missing**, **stop and notify the human** with the exact issue. Do not invent credentials, do not generate placeholder locators, do not substitute another tool.
 - **Exploration is human-in-the-loop in this workflow.** `npx playwright open` opens a real browser; the **human** interacts and observes. The model relies on the human's exploration report (captured strings, observed roles, form structure) — not direct shell-driven snapshots. (This is honest about a limitation; if shell-driven AI snapshots become necessary later, that's a future infra decision — see § Honest limits.)
 - **Capture the exact rendered text** (case, punctuation, whitespace, trailing periods) for any string that needs to live in `enums/app/*` — never paraphrase. See the `enums` skill for the live-text capture rule.
-- **Reuse the test-suite storage state** with `--load-storage <path>` so authenticated flows work without re-typing credentials. The path lives in `playwright.config.ts` (e.g. `.auth/app/appMainUserSession.json`).
+- **Reuse the test-suite storage state** with `--load-storage <path>` so authenticated flows work without re-typing credentials. The path lives in `playwright.config.ts` (in the example app, `.auth/app/appMainUserSession.json`).
 
 ## What `npx playwright open` is
 
@@ -32,7 +32,7 @@ metadata:
 - `--save-har <path>` — capture full network activity
 - `--device <name>` — emulate a device (`"iPhone 11"`)
 - `--viewport-size "1280,720"` — set viewport size
-- `--ignore-https-errors` — handy for self-signed certs against the dev cluster
+- `--ignore-https-errors` — handy for self-signed certs on a dev environment
 
 Run `npx playwright open --help` for the full flag list.
 
@@ -42,10 +42,10 @@ Run `npx playwright open --help` for the full flag list.
 npx playwright open https://<your-app-host>/<route>
 ```
 
-For an authenticated route, point at the test suite's storage state:
+For an authenticated route, point at the test suite's storage state (in the example app, `.auth/app/appMainUserSession.json`):
 
 ```
-npx playwright open --load-storage .auth/app/appMainUserSession.json https://<your-app-host>/<route>
+npx playwright open --load-storage <storage-state-path> https://<your-app-host>/<route>
 ```
 
 > The exact storage-state path is what `playwright.config.ts` writes to. Run `grep -n "storageState" <sibling-repos>/automation/playwright.config.ts` to confirm.
@@ -87,11 +87,11 @@ Hand the captured data to the matching skill:
 - Click an element by `ref` from a snapshot output
 - Get DOM dumps back into the conversation context
 
-If you want **AI-driven shell-based exploration** (the model takes snapshots, picks element refs, drives interactions from the terminal), that requires the third-party `@playwright/cli` binary — currently **pre-1.0** (`@playwright/cli@0.1.10`, bundling alpha Playwright) and **not installed in this repo**. Adopting it is a deliberate infrastructure decision, not a side-effect of skills cleanup. **For now, the model relies on the human's exploration report.**
+If you want **AI-driven shell-based exploration** (the model takes snapshots, picks element refs, drives interactions from the terminal), that requires the third-party `@playwright/cli` binary, a separate package that `@playwright/test` does not include. Check its maturity before you adopt it. Adopting it is a deliberate infrastructure decision, not a side-effect of skills cleanup. **Without it, the model relies on the human's exploration report.**
 
-This matches how the reference framework (`the upstream reference framework`) works — upstream uses standard `@playwright/test` with no separate CLI binary.
+This matches a mature reference framework these patterns were adapted from: it uses standard `@playwright/test` with no separate CLI binary.
 
-> **Re-check this section when you adopt new tooling.** It was written before Playwright's MCP server and agent-readable accessibility snapshots were common. Either one would let the model explore directly — and the constitution currently forbids browser MCP as a substitute for `npx playwright open`. Changing that is a constitution decision, not a skill edit.
+> **Re-check this section when you adopt new tooling.** Playwright's MCP server and agent-readable accessibility snapshots would let the model explore directly — but the constitution forbids browser MCP as a substitute for `npx playwright open`. Changing that is a constitution decision, not a skill edit.
 
 ## Forbidden substitutes — what NOT to use
 

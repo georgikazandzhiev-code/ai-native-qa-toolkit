@@ -1,6 +1,6 @@
 # Data Strategy — Pattern Examples
 
-Side-by-side good/bad examples for every pattern in [SKILL.md](SKILL.md). All examples are drawn from real files in this repo. The "BAD" snippets reflect anti-patterns currently present or easy to slip in.
+Side-by-side good/bad examples for every pattern in [SKILL.md](SKILL.md). All examples are drawn from the example app. The "BAD" snippets show anti-patterns that are easy to slip in, and the "Drift" snippets show interim shapes a repo may still carry.
 
 ## Pattern 1 — Inline literal
 
@@ -42,7 +42,7 @@ Fix: pull `nonExistentId` from `test-data/app/worker.json` (Pattern 5).
 
 ## Pattern 2 — Typed factory with `Partial<T>` overrides
 
-### Good — target shape (planned)
+### Good — target shape
 
 ```typescript
 export type WorkerData = {
@@ -71,7 +71,7 @@ Test consumes with overrides:
 const worker = createWorkerData({ region: 'EU' });
 ```
 
-### Drift today — `Record<string, unknown>` instead of typed factory (`helpers/app/workers.ts`)
+### Drift — `Record<string, unknown>` instead of typed factory (`helpers/app/workers.ts`)
 
 ```typescript
 export function buildCreateWorkerBody(
@@ -286,7 +286,7 @@ test.afterAll(async ({ apiRequest }) => {
 });
 ```
 
-### Drift today — passthrough seeder + body builder (`helpers/app/workers.ts`)
+### Drift — passthrough seeder + body builder (`helpers/app/workers.ts`)
 
 ```typescript
 export async function createWorker<T = CreateWorkerResponse>(
@@ -305,7 +305,7 @@ export async function createWorker<T = CreateWorkerResponse>(
 ```
 
 Why this is interim:
-- Seeder does one thing (HTTP only). Factory + seeder are NOT yet integrated into a single setup helper.
+- Seeder does one thing (HTTP only). Factory + seeder are NOT integrated into a single setup helper.
 - No `expect(status).toBe(201)` inside the helper → every spec must re-assert.
 - No Zod parse → every spec must re-parse.
 
@@ -396,7 +396,7 @@ Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*` (t
 
 ## Lifecycle: id-array drain (the canonical leak guard)
 
-### Good (`tests/app/api/jobs-service/workers/workers.spec.ts` pattern)
+### Good (the example app's `workers.spec.ts` pattern)
 
 ```typescript
 test.describe('POST /workers', () => {
@@ -484,7 +484,7 @@ expect(body.name).toBe(workerStub.name); // backend may have drifted
 
 Fix: seed via Pattern 6 + Pattern 7 (`setupTestUser` then call the resource API), then assert against the values you just seeded. See [refactor-playbook §4](refactor-playbook.md#4-replace-mockedcustomerjson-usage-with-real-seeding).
 
-> Note: this project has no mock-JSON fixtures today; the rule is preserved for future use.
+> Note: the example app has no mock-JSON fixtures; the rule applies once a repo adds one.
 
 ## Random amounts
 

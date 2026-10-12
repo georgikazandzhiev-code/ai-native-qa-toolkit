@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 3.1.0
+version: 3.1.1
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -47,6 +47,8 @@ Then group the output by **file kind** — each kind has its own checklist below
 - **Fixtures** (`fixtures/**/*.ts`)
 - **Enums / config / static data** (`enums/**`, `config/**`, `test-data/**`)
 - **Skills / rules** (`~/.claude/skills/**`, `.cursor/rules/**`, `CLAUDE.md`)
+
+Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fixtures/api/schemas/app/…` are the invented example app's. Map each kind to your repo's own layout from its `CLAUDE.md`.
 
 ### Step 2 — Per-kind checklist
 
@@ -137,7 +139,7 @@ Routed skills: [`enums`](../enums/SKILL.md), [`config`](../config/SKILL.md), [`d
 
 Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 
-- [ ] New skill's `SKILL.md` is **≤ 380 lines** — this repository's threshold (`npm run validate` warns above it), well inside Anthropic's 500.
+- [ ] New skill's `SKILL.md` is **≤ 380 lines** — the toolkit's threshold (its `npm run validate` warns above it), well inside Anthropic's 500.
 - [ ] Frontmatter has `name` (lowercase + hyphens, max 64 chars, no "anthropic"/"claude") and `description` (<1024 chars, follows `[what] + [when] + triggers + "Do NOT use for X (use the <other> skill)"`).
 - [ ] Supplementary files (`reference.md`, `templates.md`, `<topic>.md`) have **Load-When** annotations in SKILL.md's `## What's in each file` table.
 - [ ] **No README.md** inside the skill folder. Docs go in SKILL.md or `references/`.

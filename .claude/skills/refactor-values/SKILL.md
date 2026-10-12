@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.3
+version: 1.0.4
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -36,7 +36,7 @@ Out-of-scope:
 
 ### Phase 1: Find all consumers (do this BEFORE editing anything)
 
-Search the entire repo for both shapes — the **import reference** AND the **raw string** — because some specs may have bypassed the enum and hardcoded the value. The project does not standardize on `rg` (the binary is shimmed and may invoke a wrapper) — use plain `grep -rn` for portable, predictable output.
+Search the entire repo for both shapes — the **import reference** AND the **raw string** — because some specs may have bypassed the enum and hardcoded the value. Use plain `grep -rn` for portable, predictable output — `rg` is not installed everywhere, and a shimmed `rg` may invoke a wrapper.
 
 For an enum-key change (e.g. renaming `SUITES.API_JOBS`):
 
@@ -59,7 +59,7 @@ grep -rn "workerData.defaultPageSize" <sibling-repos>/automation/ --include="*.t
 grep -rn "defaultPageSize" <sibling-repos>/automation/test-data/app/
 ```
 
-Inspect every hit — do not auto-replace. Expect matches in `tests/app/api/**`, `tests/app/e2e/**`, `tests/app/functional/**`, `pages/app/**`, `helpers/app/**`, `fixtures/api/schemas/app/**`, `enums/**`, `~/.claude/skills/**`, `.cursor/rules/**`, and `README.md`.
+Inspect every hit — do not auto-replace. In the example app's layout, expect matches in `tests/app/api/**`, `tests/app/e2e/**`, `tests/app/functional/**`, `pages/app/**`, `helpers/app/**`, `fixtures/api/schemas/app/**`, `enums/**`, `~/.claude/skills/**`, `.cursor/rules/**`, and `README.md`.
 
 ### Phase 2: Update every consumer in the same commit
 
@@ -85,18 +85,20 @@ npx tsc --noEmit
 npx eslint .
 ```
 
-Then the affected Playwright tests — the project exposes scripts via `package.json`:
+Then the affected Playwright tests. In the example app, `package.json` exposes these scripts:
 
 - `npm run app-api` — runs `--grep @App-API` on `app-chromium`. Right call when the value is referenced from API specs.
 - `npm run app-e2e` — runs `--grep @App-E2E`. Right call when the value flows through end-to-end specs.
-- `npm run app-regression` — runs `--grep @App-regression` (lowercase — matches the codebase standard). Right call for functional specs.
+- `npm run app-regression` — runs `--grep @App-regression` (lowercase, as the example app's `package.json` greps it). Right call for functional specs.
 - `npx playwright test <path>` — when the change touches a single spec file, run that file directly.
 
 Do not raise timeouts, weaken a schema, or wrap in `try/catch` to make a failing test green — load the `debugging` skill.
 
 ## Project-specific cascade points
 
-Where a value-change in this repo radiates to. Check each row before committing.
+These are the invented example app's files. Your repo's own list belongs in its `CLAUDE.md`.
+
+Each row shows where a value change radiates to. Check every row of your own list before committing.
 
 | Source change | Cascades to | What breaks if missed |
 |---------------|-------------|-----------------------|
@@ -110,7 +112,7 @@ Where a value-change in this repo radiates to. Check each row before committing.
 | `test-data/app/job-common.json` field (e.g. `runIntervals`, `timeout.max`) | Any spec destructuring those keys; UI tests selecting a run-interval option | Boundary tests pass against stale ranges |
 | Documentation references (`~/.claude/skills/*`, `.cursor/rules/*`, `README.md`) | Future authors who copy old patterns | Long-term drift — new specs reproduce the stale value |
 
-The project's `helpers/app/<resource>.ts` files do **not** declare schemas inline (rule from `api-testing`), so a value rename does not need to touch helper code unless a helper hardcoded the old value as a literal — grep confirms this.
+Helpers (`helpers/app/<resource>.ts` in the example app) do **not** declare schemas inline (rule from `api-testing`), so a value rename does not need to touch helper code unless a helper hardcoded the old value as a literal — the Phase 1 grep finds those.
 
 ## Anti-patterns
 
@@ -150,7 +152,7 @@ The Qase suite was renamed for clarity. Both the key and the value change.
    grep -rn "SUITES.API_JOBS" <sibling-repos>/automation/ --include="*.ts"
    grep -rn "API\\\\tJobs" <sibling-repos>/automation/ --include="*.ts"
    ```
-   Hits land in `enums/app/qase-suites.ts` (definition) and ~20 lines across `tests/app/api/jobs-service/jobs/backup-job.spec.ts`, `export-job.spec.ts`, `stream-job.spec.ts`, plus other job-type specs.
+   In the example app, hits land in `enums/app/qase-suites.ts` (definition) and in the job-type specs under `tests/app/api/jobs-service/jobs/` (`backup-job.spec.ts`, `export-job.spec.ts`, `stream-job.spec.ts` and the rest).
 2. **Phase 2**: edit `qase-suites.ts` — change both the key (`API_JOBS` → `API_SCHEDULED_JOBS`) and the value (`"API\tJobs"` → `"API\tScheduled Jobs"`). Update every `qase.suite(SUITES.API_JOBS)` to `SUITES.API_SCHEDULED_JOBS`. Coordinate with the Qase owner so the existing suite is renamed (not duplicated).
 3. **Phase 3**: `npx tsc --noEmit` (catches any missed key reference), `npx eslint .`, then `npm run app-api`. Commit once.
 
@@ -163,7 +165,7 @@ Backend started rejecting all-zero UUIDs as malformed instead of returning 404. 
    grep -rn "workerData.nonExistentId" <sibling-repos>/automation/ --include="*.ts"
    grep -rn "00000000-0000-0000-0000-000000000000" <sibling-repos>/automation/ --include="*.ts"
    ```
-   Hits: `tests/app/api/jobs-service/workers/workers.spec.ts` (5 lines) plus any spec that hardcoded the literal UUID.
+   In the example app, hits: `tests/app/api/jobs-service/workers/workers.spec.ts` plus any spec that hardcoded the literal UUID.
 2. **Phase 2**: edit `test-data/app/worker.json`'s `nonExistentId`. Find any hardcoded `"00000000-..."` strings in specs that bypassed `workerData.nonExistentId` — replace each to import the constant, in the same commit.
 3. **Phase 3**: `npx tsc --noEmit`, `npx eslint .`, then `npx playwright test tests/app/api/jobs-service/workers/workers.spec.ts --project=app-chromium`. Confirm 404 tests still pass.
 
@@ -176,13 +178,13 @@ The API renamed the `"logged out"` status to `"signed_out"`. The Zod literal nee
    grep -rn "logged out" <sibling-repos>/automation/ --include="*.ts"
    grep -rn "StatusSchema" <sibling-repos>/automation/ --include="*.ts"
    ```
-   Hits: the schema definition itself, every spec asserting `expect(body.status).toBe("logged out")`, and every spec or helper that imports it from `fixtures/api/schemas/app/tenant.ts` (there is no schema barrel — consumers deep-import the resource file).
+   Hits: the schema definition itself, every spec asserting `expect(body.status).toBe("logged out")`, and every spec or helper that imports it from `fixtures/api/schemas/app/tenant.ts` (the example app has no schema barrel — consumers deep-import the resource file).
 2. **Phase 2**: update `StatusSchema = z.enum(["created", "updated", "deleted", "signed_out"])`. Update each `expect(body.status).toBe("logged out")` to `"signed_out"` in the same diff. Do **NOT** loosen to `z.string()`.
 3. **Phase 3**: `npx tsc --noEmit`, `npx eslint .`, `npm run app-api`. The `Schema.parse(body)` calls now validate the new contract.
 
 ### Example 4 (abstract) — UI message wording (`MESSAGES.LOGIN_ERROR`-shaped change)
 
-Generic shape: a UI message enum's value changes (e.g. `"Invalid email or password"` → `"Incorrect credentials. Please try again."`). Search for both the enum key and the old raw string. Page objects using `getByText(MESSAGES.LOGIN_ERROR)` auto-update; any test that hardcoded the literal must be edited in the same commit. (This project's `enums/app/job-status.ts` and `qase-suites.ts` are the analogous real cases — `MESSAGES.*` is the canonical pattern.)
+Generic shape: a UI message enum's value changes (e.g. `"Invalid email or password"` → `"Incorrect credentials. Please try again."`). Search for both the enum key and the old raw string. Page objects using `getByText(MESSAGES.LOGIN_ERROR)` auto-update; any test that hardcoded the literal must be edited in the same commit. (In the example app, `enums/app/job-status.ts` and `qase-suites.ts` are the analogous cases — `MESSAGES.*` is the canonical pattern.)
 
 ## Troubleshooting
 

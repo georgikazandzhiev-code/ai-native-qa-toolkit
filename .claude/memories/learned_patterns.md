@@ -81,7 +81,7 @@ await expect(page.getByRole('option')).not.toHaveCount(0);
 
 - **Issue:** `schema-parse-idiom` flagged `Project.parse(body).id` — a parse whose field is read on the spot, so nothing is discarded.
 - **Root cause:** the rule was written as an **allowlist of accepted parent node types**. Every shape of *using* a value that its author had not enumerated read as *discarding* it. Third defect in that one rule, same cause each time.
-- **Evidence:** EXECUTED — `node tests/fault-injection.test.mjs` → `FALSE + schema-parse-idiom  1 on smoke/good/: projects.spec.ts:57`.
+- **Evidence:** EXECUTED — the toolkit's lint-plugin fault-injection test (`node tests/fault-injection.test.mjs` in `eslint-plugin-qa-constitution/`) → `FALSE + schema-parse-idiom  1 on smoke/good/`: a false positive on the known-good smoke spec `projects.spec.ts`.
 - **Learned fix:** when a rule must decide "is this value used?", ask that question directly — walk out to the nearest enclosing statement and check whether anything reads the result. Do not enumerate the good cases. **Generalises beyond linting:** an allowlist of accepted forms is a false-positive generator wherever the set of valid forms is open.
 
 ### 📌 Case #004: `expect.soft(...)` is the idiom in a negative-case loop, not a violation — falsified in part

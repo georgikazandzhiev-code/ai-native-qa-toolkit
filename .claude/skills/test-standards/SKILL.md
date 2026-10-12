@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 2.1.2
+version: 2.1.3
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -8,7 +8,9 @@ metadata:
 
 # Test Standards
 
-Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
+Every spec — API, E2E or functional — lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
+
+Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `test-data/app/…`, and every spec file name, are the invented example app's. Your repo's own layout belongs in its `CLAUDE.md`.
 
 ## Critical
 
@@ -28,8 +30,8 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 
 | File | Purpose | Load When |
 |------|---------|-----------|
-| **`SKILL.md`** (this file) | Rules, tag whitelist, structural workflow, anti-patterns, examples for spec authoring across all four test types. | **Always** — on any task that creates / extends / refactors a spec under `tests/app/**`. |
-| **[`reference.md`](reference.md)** *(TBD — inline catalog below for now)* | Catalog: tag → npm-script mapping, `SUITES.X` enum keys, env var → token catalog, the `appConfig.timeouts` budgets used in E2E specs, list of canonical example specs per type. | **Load on lookup** — "Which `SUITES.X` for workers?" / "What's the npm command for the smoke tag?" |
+| **`SKILL.md`** (this file) | Rules, tag whitelist, structural workflow, anti-patterns, examples for spec authoring across all four test types. | **Always** — on any task that creates / extends / refactors a spec. |
+| **[`reference.md`](reference.md)** | The example app's catalog: tag → npm-script mapping, every spec with what it covers, the setup spec, intentional gaps. The model for your repo's own scenario inventory. | **Load on lookup** — "What does a detail-view spec cover?" / "What's the npm command for the smoke tag?" |
 
 **Boundary rule:** rules, decisions, and anti-patterns live in this `SKILL.md`. POM class structure is the [`page-objects`](../page-objects/SKILL.md) skill. Locator priority is the [`selectors`](../selectors/SKILL.md) skill. The deep API negative-test matrix and per-verb coverage live in [`api-testing`](../api-testing/SKILL.md) — **do not duplicate them here**. Spec scaffolding (templates) lives in [`scaffold-spec`](../scaffold-spec/SKILL.md). If you find rule content in a sibling skill (or vice versa), it's drift — fix it before adding more.
 
@@ -44,13 +46,13 @@ Every spec in `tests/app/{api,e2e,functional}/**` lands on the same shape: impor
 | `@App-API` | `app-api` | API contract + schema validation. Lives in `tests/app/api/`. |
 | `@App-Integration` | `app-integration` | Cross-component integration that's neither pure API nor end-to-end UI. |
 | `@App-E2E` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
-| (union) | `app-all` | Full nightly / pre-merge, single Playwright worker. |
+| (union) | `app-all` | Full nightly / pre-merge. |
 
-**Tag-casing matters.** `package.json` greps are case-sensitive and mixed-case: `app-regression` greps **lowercase** `@App-regression`, and `app-all` greps `@App-(Smoke|Sanity|Integration|E2E|API|regression)` — Title-case for everything except `regression`. Lowercase `@App-regression` **is the standard** that runs in CI; a Title-case `@App-Regression` tag would match neither script and would **never run**. In fact zero tests use `@App-Regression` — the codebase uniformly uses lowercase `@App-regression` (~398 occurrences across ~34 spec files). Match the existing casing exactly; never "fix" it to Title-case.
+**Tag-casing matters.** `package.json` greps are case-sensitive and mixed-case: `app-regression` greps **lowercase** `@App-regression`, and `app-all` greps `@App-(Smoke|Sanity|Integration|E2E|API|regression)` — Title-case for everything except `regression`. Lowercase `@App-regression` **is the standard** that runs in CI; a Title-case `@App-Regression` tag would match neither script and would **never run**. In fact zero tests use `@App-Regression` — the example app uniformly uses lowercase `@App-regression` (~398 occurrences across ~34 spec files). Match the existing casing exactly; never "fix" it to Title-case.
 
 ## Test types & directories
 
-| Type | Directory | Tag | Covers | Canonical example |
+| Type | Directory | Tag | Covers | Example (example app) |
 |------|-----------|-----|--------|-------------------|
 | **API** | `tests/app/api/` | `@App-API` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/jobs-service/workers/workers.spec.ts` |
 | **E2E** | `tests/app/e2e/` | `@App-E2E` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
@@ -69,7 +71,7 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 
 **Hybrid strategy for data-dependent UI tests.** When a UI feature requires data from the job's runs that takes minutes to materialize (run-step views, run-stat graphs, historical timelines), split tests into two groups: **structural tests** (tab visibility, not-enabled states, empty-state messages, toggle defaults) use a **freshly created job** — no data needed. **Data-dependent tests** (graph rendering, run-step details, diagnostic hints, historical views) use a **pre-existing, data-rich fixture** named in configuration guaranteed to have historical data. The decider: does the test need *run stats or run steps from the job's completed runs* to assert something meaningful? If yes → existing job. If no → fresh job. Never add a multi-minute polling loop in `beforeAll` to wait for the job's first run to complete — that is a signal to use the hybrid strategy instead.
 
-**Functional page-spec coverage baseline.** When authoring a functional spec for a list/table page, use the live app and POM locators to ensure coverage of every interactive element. At minimum: (1) page structure — all sections, cards, toolbar visible; (2) sorting — each sortable column toggles order; (3) pagination — next/previous, page count, rows-per-page; (4) search — type, verify filtered results, clear; (5) each filter dropdown — select, verify URL/table update, clear; (6) empty state — non-existent search term shows empty message; (7) row actions — each menu item opens its target; (8) combined filters — stacking search + filter narrows correctly. Reference: `notification-rules-page.spec.ts` is the canonical example.
+**Functional page-spec coverage baseline.** When authoring a functional spec for a list/table page, use the live app and POM locators to ensure coverage of every interactive element. At minimum: (1) page structure — all sections, cards, toolbar visible; (2) sorting — each sortable column toggles order; (3) pagination — next/previous, page count, rows-per-page; (4) search — type, verify filtered results, clear; (5) each filter dropdown — select, verify URL/table update, clear; (6) empty state — non-existent search term shows empty message; (7) row actions — each menu item opens its target; (8) combined filters — stacking search + filter narrows correctly. In the example app, `notification-rules-page.spec.ts` follows this baseline.
 
 ## Workflow — author or extend a spec
 
@@ -140,7 +142,7 @@ test(
   { tag: "@App-regression" },           // Single tag, exact whitelist casing
   async ({ dashboardPage }) => {
     qase.suite(SUITES.APP_DASHBOARD);   // First body line
-    qase.id(531);                       // Optional, if a Qase case exists
+    // qase.id(N);                      // Commented out until the case is mapped in Qase
     await dashboardPage.verifyAllSectionsVisible();
   },
 );
@@ -179,20 +181,20 @@ test(
 );
 ```
 
-Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized prefix, colon, single space, then the description. The capitalized `GIVEN`/`WHEN`/`THEN`/`AND` is the existing convention across every spec in the repo (see `dashboard-page.spec.ts`, `login-smoke.spec.ts`, `http-job-crud.spec.ts`). The one exception: inside a negative-matrix loop each step is one case, labelled with the case itself (`` `omit ${field}` ``, `` `PATCH /jobs` ``) — a GIVEN/WHEN/THEN prefix repeated on every iteration would say nothing.
+Step labels follow `GIVEN: / WHEN: / THEN: / AND:` — verbatim, capitalized prefix, colon, single space, then the description. The capitalized `GIVEN`/`WHEN`/`THEN`/`AND` prefix is the convention for every spec. The one exception: inside a negative-matrix loop each step is one case, labelled with the case itself (`` `omit ${field}` ``, `` `PATCH /jobs` ``) — a GIVEN/WHEN/THEN prefix repeated on every iteration would say nothing.
 
 ### Step 7 — E2E cleanup
 
-E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take every explicit wait from `appConfig.timeouts` (the `config` skill § Timeout budgets) — no timeout constants or numbers in the spec, track names in `const createdJobNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape — mirror `http-job-crud.spec.ts` verbatim. Don't invent timeout constants per file.
+E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take every explicit wait from `appConfig.timeouts` (the `config` skill § Timeout budgets) — no timeout constants or numbers in the spec, track names in `const createdJobNames: string[] = []`, and delete via the matching `helpers/app/<resource>.ts` helper inside `test.afterAll`. See Example 3 below for the full shape. Don't invent timeout constants per file.
 
 ### Step 8 — data-driven tests
 
 **UI cases** loop **outside** the `test()` block, so each case is its own selectable test (see Example 2). **API negative matrices** — invalid values, omitted fields, unsupported verbs — loop **inside** one `test()`, a `test.step` per value and `expect.soft` with `safeParse` ([`api-testing`](../api-testing/SKILL.md) § Per-field invalid-type loop): one test per validation concern, not one per value. The static-data tier rule (universal invalid-type arrays vs domain-specific curated sets vs inline boundaries) lives in the [`data-strategy`](../data-strategy/SKILL.md) skill — read it before adding a new file under `test-data/`.
 
-> **Drift to converge — test data.** Today, `test-data/` holds only `test-data/app/*.json` files (no factories, no tiered static). The planned three-tier shape — `test-data/factories/<area>/`, `test-data/static/util/`, `test-data/static/<area>/` — is the canonical pattern that the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. New tests authored through this skill should:
-> - Use `faker.<...>` directly inline for happy-path values until factories exist (mirrors `http-job-crud.spec.ts`'s `faker.string.alphanumeric(6)`).
-> - Import existing JSON via `import workerData from "../../../../test-data/app/worker.json";` (mirrors current api-spec usage).
-> - Avoid creating *new* JSON files — open an issue to add the matching tiered TS file when the planned migration lands.
+> **Test data without the three tiers.** The three-tier shape — `test-data/factories/<area>/`, `test-data/static/util/`, `test-data/static/<area>/` — is the canonical pattern that the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. If your repo's `test-data/` holds only JSON files (no factories, no tiered static data), that is drift to converge, and new tests authored through this skill should:
+> - Use `faker.<...>` directly inline for happy-path values until factories exist (e.g. `faker.string.alphanumeric(6)`).
+> - Import existing JSON directly, e.g. `import workerData from "../../../../test-data/app/worker.json";`.
+> - Avoid creating *new* JSON files — open an issue to add the matching tiered TS file instead.
 
 ### Locale / i18n tests
 
@@ -210,7 +212,7 @@ npm run app-smoke
 npm run app-api
 npm run app-e2e
 
-# Full union (single Playwright worker, mirrors CI)
+# Full union (mirrors CI)
 npm run app-all
 ```
 
@@ -256,7 +258,7 @@ User says: *"Verify the Dashboard renders all four sections (Jobs, Workers, Type
 
 1. **Step 1.** Single behaviour, single phase → **Functional** (`tests/app/functional/`, `@App-regression`).
 2. **Step 2.** Confirm imports, tag, `qase.suite` requirement against the Critical block above.
-3. **Step 3.** Open `/` via `npx playwright open`, verify all four section testids exist on `DashboardPage` (already there — see `pages/app/DashboardPage.ts:147-180`).
+3. **Step 3.** Open `/` via `npx playwright open`, verify all four section testids, and check that `DashboardPage` already has a locator for each before adding one.
 4. **Step 4.** Skeleton — imports + describe.
 5. **Step 5.** Tag `{ tag: "@App-regression" }`, `qase.suite(SUITES.APP_DASHBOARD)`.
 6. **Step 6.** Structure: `GIVEN: I am on Dashboard` → `THEN: All four sections visible`. Use `dashboardPage.verifyAllSectionsVisible()`.
@@ -320,7 +322,7 @@ For larger or domain-specific data sets, see the [`data-strategy`](../data-strat
 User says: *"E2E test for HTTP job: create via UI → verify in grid → edit → delete via UI."*
 
 1. **Step 1.** Multi-phase journey → **E2E** (`tests/app/e2e/`, `@App-E2E`).
-2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdJobNames` array, `test.afterAll` cleanup via `listJobs` + `deleteJob`. Mirror `http-job-crud.spec.ts` verbatim.
+2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdJobNames` array, `test.afterAll` cleanup via `listJobs` + `deleteJob`.
 
 ```typescript
 import { expect, test } from "../../../../fixtures/pom/test-options";
@@ -373,9 +375,9 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
 ### Example 4 — API + Smoke routing
 
-For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror `tests/app/api/jobs-service/workers/workers.spec.ts` for the canonical shape.
+For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror the nearest API spec in your repo (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`).
 
-For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror `tests/app/e2e/tenant-service/login-smoke.spec.ts`.
+For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror your repo's nearest smoke spec (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`).
 
 ## Troubleshooting
 

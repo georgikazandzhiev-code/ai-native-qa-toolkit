@@ -1,6 +1,6 @@
 ---
 name: mutation-testing
-version: 1.0.1
+version: 1.0.2
 description: Prove a test suite actually catches defects by mutating the code under test and measuring what survives — plus the black-box substitute (deliberate fault injection) for repos that do not own the source. Use when coverage is high but confidence is low, when reviewing whether generated or AI-authored tests assert anything real, when a suite has never caught a regression, or before trusting a coverage number in a quality gate. Trigger phrases — "are these tests any good", "mutation score", "the tests pass but prove nothing", "prove the test fails on a bug", "false green", "weak assertions", "Stryker". Do NOT use for measuring line or branch coverage (that is a runner flag, see the `test-standards` skill). Do NOT use for diagnosing a failing test (use the `debugging` skill). Do NOT use for deciding which files to test first (use the `defect-prediction` skill).
 metadata:
   category: domain
@@ -39,7 +39,7 @@ Answer this before anything else:
 
 | Situation | Technique | Why |
 |-----------|-----------|-----|
-| Source and tests in the same repo (product repo, the SDD demo repos, framework helpers/schemas) | **Mutation testing** (Stryker) | Real mutants, automated, scored. |
+| Source and tests in the same repo (a product repo, a demo app with its own tests, the framework's own helpers/schemas) | **Mutation testing** (Stryker) | Real mutants, automated, scored. |
 | Automation repo drives an external app (black-box: API over HTTP, UI over browser) | **Fault injection** (§ below) | Nothing local to mutate. Break the *test's* own oracle instead. |
 | Testing our own Zod schemas, helpers, body builders, fixtures | **Mutation testing** | This *is* our source. High value, small surface, fast. |
 | Testing a third-party service's behaviour | Neither — this is contract testing | See the `api-testing` skill. |

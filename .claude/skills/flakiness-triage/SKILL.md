@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 2.1.1
+version: 2.1.2
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -12,12 +12,12 @@ Sister skill to `debugging`. `debugging` covers "this test just failed — what'
 
 ## Critical
 
-- **NEVER add a retry to "fix" a flake without classification.** A retry hides root cause. The framework's `playwright.config.ts` already retries on CI (`retries: process.env.CI ? 1 : 0`). Adding more retries (`test.describe.configure({ retries: N })`) to hide a flake is forbidden by this skill: a retry turns a failure into a pass without telling you why it failed.
+- **NEVER add a retry to "fix" a flake without classification.** A retry hides root cause. In the example app, `playwright.config.ts` already retries once on CI (`retries: process.env.CI ? 1 : 0`). Adding more retries (`test.describe.configure({ retries: N })`) to hide a flake is forbidden by this skill: a retry turns a failure into a pass without telling you why it failed.
 - **NEVER raise `actionTimeout` / `expect.timeout` to make a flake go green.** The constitution forbids it ([`CLAUDE.md`](../../CLAUDE.md) § AI Workflow step 8 and § When You're Stuck). The timeout exposed a timing assumption; fix the assumption.
 - **NEVER wrap an `expect` in `try/catch` to suppress an intermittent failure.** Per the orchestrator: a `catch` that doesn't re-throw or assert is hiding a failure.
 - **ALWAYS reproduce N times before declaring a test "fixed".** A single green test run after a flake fix means nothing — the bar is **5 consecutive green isolated runs** of the affected spec (`--workers=1`, because isolating is their purpose) plus **one in-suite run** at the worker count CI uses — § Step 5.
 - **ALWAYS isolate the test before debugging.** Run the spec alone (`npx playwright test <spec> --workers=1`). If it passes alone but fails in the suite, the cause is **cross-test interference** (shared tenant state, leaked fixture, cleanup ordering). If it fails alone too, it's a **per-test bug** (race, missing wait, stale storage state).
-- **ALWAYS check the storage-state age for `401` flakes.** This framework's `login.setup.ts` writes storage-state files; long-running local sessions may use expired tokens. Re-run setup before assuming a code bug.
+- **ALWAYS check the storage-state age for `401` flakes.** The setup project writes storage-state files (in the example app, `tests/app/login.setup.ts`); long-running local sessions may use expired tokens. Re-run setup before assuming a code bug.
 - **NEVER skip a flaky test with `test.skip`.** Per the orchestrator, `test.skip` corrupts Qase ID mappings. Comment out under `// TODO: FIXME: <TICKET> flaky — investigating` and report the ticket.
 - **ALWAYS repeat-run a new or modified spec before merging it.** 5 consecutive green isolated runs (`--workers=1`) plus one in-suite run is the merge bar — the same bar as verifying a flake fix. A spec that has only ever run once is unverified, not stable — and the cheapest flake to fix is the one that never reached main.
 - **NEVER quarantine without a ticket and an expiry date.** A quarantine with no expiry is silent coverage loss that nobody ever revisits. See § Quarantine policy.
@@ -110,7 +110,7 @@ npx playwright test --grep "@App-regression" --workers=1 \
   --grep-invert "<failing-spec-name>"
 ```
 
-If the failing spec passes when its preceding peers are removed, one of those peers is leaking state. Common causes in this framework:
+If the failing spec passes when its preceding peers are removed, one of those peers is leaking state. Common causes in the example app:
 - **Job not cleaned up** → next spec's "should not see any jobs" fails. Fix: ensure `helpers/app/jobs.deleteJob(...)` in `afterEach`.
 - **Worker resource not cleaned up** → cleanup-ordering violation (jobs-before-workers). Fix per `helpers` skill § Cleanup ordering.
 - **Storage state mutated** → a UI spec changed user prefs. Fix: re-create the user per Playwright worker, not per suite.
@@ -151,7 +151,7 @@ Three techniques, cheapest first. All of them run before a spec reaches main.
 
 ### A. Static flake-risk scoring (seconds, no execution)
 
-Grep the changed specs and page objects for the constructs that cause flakes in this framework. Each hit is a risk point — this is a **review checklist, not a verdict**:
+Grep the changed specs and page objects for the constructs that cause flakes in a Playwright suite. Each hit is a risk point — this is a **review checklist, not a verdict**:
 
 | Signal | Grep for | Why it flakes |
 |--------|----------|---------------|
@@ -204,7 +204,7 @@ Review quarantined tests every sprint. A quarantine list that only grows means t
 
 ## Genuine-flake taxonomy
 
-The most common per-test flake causes in this framework, most common first (rough and unmeasured — measure your own distribution by labelling each flake ticket's root cause as you close it):
+The most common per-test flake causes, most common first (rough and unmeasured — measure your own distribution by labelling each flake ticket's root cause as you close it):
 
 1. **Missing wait between cause and effect**. Test fires a click that triggers an XHR + DOM update, then asserts the updated DOM before the XHR has returned. Fix: `page.waitForResponse` or `expect(...).toHaveText(...)` (which auto-retries).
 2. **Strict-mode violation under load**. Skeleton/placeholder + real content briefly co-exist. Fix: scope to the container that stabilizes.
@@ -221,7 +221,7 @@ The most common per-test flake causes in this framework, most common first (roug
 - ❌ `test.describe.configure({ retries: 3 })` on the flaky describe block. Hides the underlying race; CI passes but production user hits the same race.
 - ❌ Calling a test "fixed" after one green test run. One green proves nothing about an intermittent failure.
 - ❌ Marking the test `test.skip` with no ticket. Loses Qase ID mapping and removes visibility.
-- ❌ Bisecting flakes by sprinkling `console.log`. Use the trace (`trace: 'on-first-retry'` in `playwright.config.ts` already captures one).
+- ❌ Bisecting flakes by sprinkling `console.log`. Use the trace (the example app's `playwright.config.ts` sets `trace: 'on-first-retry'`, so the first retry already captures one).
 
 ## Self-review checklist
 
@@ -261,7 +261,7 @@ The most common per-test flake causes in this framework, most common first (roug
 1. Step 2 isolation: 3/5 green → confirms genuine flake.
 2. Trace replay: the notifications XHR returns *after* the assertion timeout. The test clicks the Refresh button then immediately asserts the row — but the row only appears after `/api/v1/notifications` resolves.
 
-**Fix:** Give the page object a `refreshNotifications()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: `BasePage` already provides one, and redefining it would silently override the base behaviour.)
+**Fix:** Give the page object a `refreshNotifications()` action that waits for its own result — the wait is registered before the click, inside the POM, so the spec stays a plain call. (Not `refresh()`: the example app's `BasePage` already provides one, and redefining it would silently override the base behaviour.)
 ```ts
 // NotificationsPage
 async refreshNotifications(): Promise<void> {
@@ -284,7 +284,7 @@ await expect(notificationsPage.firstNotificationRow).toBeVisible();
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | "Test passed locally 5× but still fails in CI" | CI is slower; absolute-timing assumptions fail. | Replay the CI trace (`show-trace`), look for the action that's slow in CI. Often the fix is the same as a per-test race (use `waitForResponse`). |
-| "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check `tests/app/login.setup.ts`. Restart Playwright workers between tags (CI does, local may not). |
+| "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check the setup project (in the example app, `tests/app/login.setup.ts`). Restart Playwright workers between tags (CI does, local may not). |
 | "Spec is `@App-Critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to `@App-regression` if the run-time budget is the issue; don't retry it under Critical. |
 | "Flake only happens while the worker resource running `export` jobs flaps between Online and Offline" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out under `// TODO: FIXME: <ENV-TICKET>`. |
 

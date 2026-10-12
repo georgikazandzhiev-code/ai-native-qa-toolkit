@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 2.1.1
+version: 2.1.2
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -68,7 +68,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 
 ## Anti-patterns
 
-- ❌ **Testing only as the owner/admin.** Every existing spec already does this. Without a second, under-privileged principal there is no access-control test — add the "should-not" identity in setup.
+- ❌ **Testing only as the owner/admin.** Functional specs usually do this already. Without a second, under-privileged principal there is no access-control test — add the "should-not" identity in setup.
 - ❌ **Asserting the attack "does not throw".** `await expect(...).not.toThrow()` proves nothing. Assert the concrete deny: the documented status (`403` or `404`), empty/typed error body, and (for BOPLA) that the sensitive field is **absent**.
 - ❌ **Turning a finding green.** Changing an expected `403` to `200` because "that's what the API returns" hides the vulnerability. Report it (§ Critical), comment the test out with a ticket.
 - ❌ **A parallel security suite with its own fixtures/tag.** Security tests are negative tests; they belong beside the CRUD specs with the same fixtures and the project's existing tag. New tag only after `test-standards` whitelist update.

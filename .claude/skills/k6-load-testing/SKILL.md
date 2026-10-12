@@ -1,6 +1,6 @@
 ---
 name: k6-load-testing
-version: 1.1.2
+version: 1.1.3
 description: Author and run k6 load, stress, spike, and soak tests in TypeScript against the platform APIs — bundler setup, executors, thresholds, custom metrics, auth, Grafana/InfluxDB output. Use for any performance-testing request. Triggers — "load test", "stress test", "spike", "soak", "k6", "SLO", "performance benchmark". Not for functional API tests (api-testing).
 metadata:
   category: domain
@@ -47,7 +47,9 @@ Non-negotiable. A load test that breaks these produces a number nobody can act o
 
 ## Repo layout
 
-All k6 tests live under `tests/perf/` in this repo (sibling to `tests/app/`):
+These are the invented example app's files. Your repo's own list belongs in its `CLAUDE.md`.
+
+In the example app, all k6 tests live under `tests/perf/` (sibling to `tests/app/`):
 
 ```
 tests/perf/
@@ -67,7 +69,7 @@ tests/perf/
 └── tsconfig.json             # Extends root but targets ES2015 for k6 VM
 ```
 
-**Do not** put k6 scripts in `tests/app/` — Playwright runner would try to collect them.
+**Do not** put k6 scripts in the Playwright test directory (`tests/app/` in the example app) — Playwright runner would try to collect them.
 
 ---
 

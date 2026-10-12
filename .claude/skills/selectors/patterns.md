@@ -1,6 +1,6 @@
 # Selectors — Patterns (good vs bad)
 
-Side-by-side examples drawn directly from this codebase. Every "Bad" snippet either exists in the framework today (and is a candidate for cleanup) or is a tempting wrong answer when authoring new code.
+Side-by-side examples drawn from the example app's page objects. Every "Bad" snippet is either a shape that page objects accumulate (a candidate for cleanup) or a tempting wrong answer when authoring new code.
 
 Cross-link from [SKILL.md](SKILL.md). For end-to-end flows, see [recipes.md](recipes.md).
 
@@ -39,7 +39,7 @@ get targetInput(): Locator {
 }
 ```
 
-The fields have visible labels, so `getByLabel` is the locator (priority 2). The schema-form's `field-field-*` test-id is the fallback only where a label is not associated with its input — not something to `.or()` with the label, because both would match the same input. `pages/app/JobsPage.ts` still uses the test-id-plus-`.or()` shape: drift, fix on next touch. The chain stays at one level — never CSS at the top.
+The fields have visible labels, so `getByLabel` is the locator (priority 2). The schema-form's `field-field-*` test-id is the fallback only where a label is not associated with its input — not something to `.or()` with the label, because both would match the same input. If a page object still uses the test-id-plus-`.or()` shape, that is drift: switch it to the label. The chain stays at one level — never CSS at the top.
 
 ### Bad
 
@@ -101,7 +101,7 @@ async openRowActionMenu(row: Locator, menuItem: string): Promise<void> {
 }
 ```
 
-Adapted from `pages/app/JobsPage.ts`, which filters on the row text and excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded; matching the name **cell** exactly does that job without the testid. Identifies the row by content; survives column reordering. **Check the live app before switching an existing locator** (`npx playwright open`): an exact cell match fails when the name cell holds more than the name — an icon label, a badge — and then the row needs a filter on the cell's own child element instead.
+Adapted from the example app's `JobsPage`, which filters on the row text and excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded; matching the name **cell** exactly does that job without the testid. Identifies the row by content; survives column reordering. **Check the live app before switching an existing locator** (`npx playwright open`): an exact cell match fails when the name cell holds more than the name — an icon label, a badge — and then the row needs a filter on the cell's own child element instead.
 
 ### Bad
 
@@ -111,7 +111,7 @@ getJobTypeByName(jobName: string): Locator {
 }
 ```
 
-Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. Today the framework exposes column **headers** through `sort-header-<columnId>` testids (`pages/app/JobsPage.ts` `getSortHeader`); per-cell column testids are missing and should be requested from the frontend owners. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
+Brittle to column reordering, additions, or per-tenant column visibility. The fix is to use a column-name-aware lookup. In the example app, column **headers** carry `sort-header-<columnId>` testids (`getSortHeader`) and cells carry `table-cell-<columnId>` (`cellForRow`). If your table has no per-cell column testids, request them from the frontend owners. Until then, prefer `getByRole('cell')` scoped under the row when the cell text is itself stable, or explicitly comment the column-index dependency.
 
 ## P4 — Component scoping (instead of repeated top-level lookups)
 
@@ -131,7 +131,7 @@ class DeleteJobDialog {
 }
 ```
 
-The existing delete dialogs in `pages/app/JobsPage.ts` and `pages/app/WorkersPage.ts` anchor on test-ids (`delete-job-dialog`, `delete-worker-*`) — drift to fix on next touch; the test-id is the fallback if the dialog has no accessible name. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
+If a delete dialog anchors on its test-id (`delete-job-dialog`, `delete-worker-*` in the example app) while it has an accessible name, that is drift: switch it to the role. The test-id is the fallback if the dialog has no accessible name. All inner getters chain off the dialog anchor, so even if a similarly-named element exists on the underlying page, it's filtered out.
 
 > **Anchor as a field is the one exception** to the "always use getters" rule shown in P14: when a single locator is the parent of every getter in the class, store it once in the constructor. Locators are lazy, so the field still re-resolves on each downstream `.click()` / `expect()`.
 
@@ -167,7 +167,7 @@ jobStatusCard(jobStatus: JobStatus): Locator {
 }
 ```
 
-From `pages/app/JobsPage.ts`. Type-checked at compile time; adding a new `JobStatus` member produces a TS error at the map.
+From the example app's `JobsPage`. Type-checked at compile time; adding a new `JobStatus` member produces a TS error at the map.
 
 ### Bad
 
@@ -189,7 +189,7 @@ Works, but: (1) the locators are constructed inline so they cannot be reused for
 
 ## P6 — Frame selection by stable attribute
 
-### Good (prescriptive — no iframes in this codebase today)
+### Good (prescriptive — the example app has no iframes)
 
 ```typescript
 constructor(readonly page: Page) {
@@ -205,7 +205,7 @@ Stable; survives the page mounting other iframes. Use `[title=…]` / `[name=…
 this.frameLocator = page.frameLocator('iframe');
 ```
 
-Picks up the wrong iframe the moment a second one mounts (chat widget, analytics, Stripe popup, etc.). The framework has no iframes today; if you add one, harden the selector before merging.
+Picks up the wrong iframe the moment a second one mounts (chat widget, analytics, Stripe popup, etc.). If you add an iframe, harden the selector before merging.
 
 ## P7 — Native semantic locator (when stable)
 
@@ -358,7 +358,7 @@ async verifyActionMenuOptions(): Promise<void> {
 }
 ```
 
-From `pages/app/JobsPage.ts`. Two menu items are mutually exclusive (a paused job shows "Resume"; an active one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
+From the example app's `JobsPage`. Two menu items are mutually exclusive (a paused job shows "Resume"; an active one shows "Pause"). `.or()` lets the assertion pass either way without inflating the spec with conditional branches.
 
 `.or()` also fits a legacy-vs-current pair, **but only when the two can never match at the same time**. If both hooks exist on the current page, the union matches twice and strict mode fails. Once the legacy markup is gone, drop the `.or()` and keep the label:
 
@@ -396,7 +396,7 @@ async expectSuccessToastForJob(name: string): Promise<void> {
 }
 ```
 
-Sonner renders each toast with `role="status"`. Filtering by the job name keeps a second toast firing in the same window (create + auto-refresh) from tripping strict mode, so no `.first()` is needed. If your Sonner build doesn't expose the role, fall back to `this.page.locator('[data-sonner-toast]').filter({ hasText: name })`. Never `.or()` the toast with the toaster region (`getByTestId('sonner')`): the region contains the toast, so both match at once and strict mode fails. `pages/app/JobsPage.ts` still has that shape: drift, fix on next touch.
+Sonner renders each toast with `role="status"`. Filtering by the job name keeps a second toast firing in the same window (create + auto-refresh) from tripping strict mode, so no `.first()` is needed. If your Sonner build doesn't expose the role, fall back to `this.page.locator('[data-sonner-toast]').filter({ hasText: name })`. Never `.or()` the toast with the toaster region (`getByTestId('sonner')`): the region contains the toast, so both match at once and strict mode fails. If a page object still has that shape, that is drift: drop the region from the `.or()`.
 
 ### Bad — hypothetical, do not write this
 
@@ -424,7 +424,7 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
 await expect(this.autoRefreshSwitch).toHaveAttribute('aria-checked', 'true');
 ```
 
-From `pages/app/JobsPage.ts`. Radix exposes its toggle/active state on `data-state` and `aria-checked`; assert against the attribute directly.
+From the example app's `JobsPage`. Radix exposes its toggle/active state on `data-state` and `aria-checked`; assert against the attribute directly.
 
 ### Bad
 
@@ -498,7 +498,7 @@ getWorkerOptionByName(workerName: string): Locator {
 }
 ```
 
-`hasText` is a **substring** match: "worker-1" also matches "worker-10". For a value passed in as a parameter, use the exact `has:` form above (§ Critical: `exact: true` in dynamic methods). `hasText` also matches when **any descendant text** of `<label>` contains the string. In the worker-selection block today, only the inner label text shows the worker name, so `hasText` and `filter({ has: <text> })` resolve to the same element. They are NOT equivalent in general — switch to `has: <Locator>` only when text alone over-matches (e.g. a tooltip repeats the name, or a sibling description includes it).
+`hasText` is a **substring** match: "worker-1" also matches "worker-10". For a value passed in as a parameter, use the exact `has:` form above (§ Critical: `exact: true` in dynamic methods). `hasText` also matches when **any descendant text** of `<label>` contains the string. In the example app's worker-selection block, only the inner label text shows the worker name, so `hasText` and `filter({ has: <text> })` resolve to the same element. They are NOT equivalent in general — switch to `has: <Locator>` only when text alone over-matches (e.g. a tooltip repeats the name, or a sibling description includes it).
 
 ### Bad
 
@@ -525,7 +525,7 @@ async expectJobListed(name: string): Promise<void> {
 }
 ```
 
-From `pages/app/JobsPage.ts`. Action → assertion that the search filtered to the expected row.
+From the example app's `JobsPage`. Action → assertion that the search filtered to the expected row.
 
 ### Bad
 

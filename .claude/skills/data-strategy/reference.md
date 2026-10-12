@@ -1,6 +1,8 @@
 # Data Strategy — Reference Catalogs
 
-Catalogs of every data source the framework already provides. Use these tables to find what exists before writing anything new. Cross-link from [SKILL.md](SKILL.md).
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+
+Use these tables to see the shape of each data source, then search your repo for what exists before writing anything new. Cross-link from [SKILL.md](SKILL.md).
 
 ## 1. Env-var catalog
 
@@ -19,9 +21,9 @@ All env vars resolve from `env/.env.<ENVIRONMENT>` (or `env/.env.example` shape)
 
 | Var | Persona | Status |
 |-----|---------|--------|
-| `USER_ACCESS_TOKEN_FULL` | Tenant-scoped user with **all** permissions in the `<realm>` realm; default for any 200/201 path on tenant-scoped endpoints | Provisioned |
-| `USER_ACCESS_TOKEN_ADMIN` | Platform admin in the **master** realm; required for `/admin/*` endpoints | Provisioned |
-| `USER_ACCESS_TOKEN_ZERO` | Tenant-scoped user with **no** permissions; default for any 403 path | **Planned.** Until provisioned, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` |
+| `USER_ACCESS_TOKEN_FULL` | Tenant-scoped user with **all** permissions in the `<realm>` realm; default for any 200/201 path on tenant-scoped endpoints | Written by the setup project |
+| `USER_ACCESS_TOKEN_ADMIN` | Platform admin in the **master** realm; required for `/admin/*` endpoints | Written by the setup project |
+| `USER_ACCESS_TOKEN_ZERO` | Tenant-scoped user with **no** permissions; default for any 403 path | Needs a zero-permission user. If your environment has none, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` |
 
 > Naming rule: `USER_ACCESS_TOKEN_<PERSONA>` is the canonical pattern. New tokens MUST follow this pattern.
 
@@ -88,7 +90,7 @@ Boundary lists for parametrized negative tests.
 | `test-data/app/backupJobValidation.json` | backup-job boundary cases |
 | `test-data/app/webhookJobValidation.json` | webhook-job boundary cases |
 
-> Gap: no `email-job-validation.json` / `sftp-job-validation.json` / `stream-job-validation.json` / `export-job-validation.json` / `worker-validation.json` files yet. Add when a per-type negative matrix grows beyond inline use. The three files above use legacy camelCase names (drift); new files use hyphen-case.
+> The example app has validation matrices for these three job types only. Add a per-type file (`email-job-validation.json`, `sftp-job-validation.json`, `worker-validation.json`, …) when its negative matrix grows beyond inline use. The three files above use legacy camelCase names (drift); new files use hyphen-case.
 
 ### 2.2 Sentinel / lookup files (Pattern 5)
 
@@ -114,7 +116,7 @@ Fixed ids and reference values.
 
 Frozen pseudo-entities used as mocks in front-end-only paths. Avoid for any test that touches the live backend; prefer Pattern 6 (API seeder) + Pattern 7 (per-test user).
 
-> No mock-JSON fixtures in this project today. The category is preserved for structure — see refactor playbook §4 for the future-state guidance.
+> The example app has no mock-JSON fixtures. The category is kept for structure — see refactor playbook §4 for how to handle one.
 
 **When the first mock-JSON file is introduced**, mark its import at the call site with a `// stub for route.fulfill` comment so it is unmistakably distinguishable from a Pattern-5 real-data import:
 
@@ -130,7 +132,7 @@ A real-data JSON import (sentinels, boundary matrices) is consumed by the test l
 
 Some JSON files are consumed via a loader rather than a direct import to compute derived fields.
 
-> No loader helpers in this project today. When a JSON file requires a transformation (date math, mapping, joining), wrap it in a loader and import the loader. Do not duplicate the transformation in each spec.
+> The example app has no loader helpers. When a JSON file requires a transformation (date math, mapping, joining), wrap it in a loader and import the loader. Do not duplicate the transformation in each spec.
 
 ## 3. Factory / generator catalog (Pattern 2 + 3)
 
@@ -210,7 +212,7 @@ Always paired: `createX` + `deleteX` (or equivalent cleanup). Body comes from a 
   - **Write**: `resetUserPasswordById(userId, newPassword, kcAdminClient?)`
   - **Token**: `getClientToken(kcAdminClient?)`
 
-> Note: this project does **not** export `createUserByEmail` / `deleteUserByEmail` / `updateUserById` directly from `keyCloak.ts`. User creation goes through the admin API (`POST /admin/tenants/{id}/users` via `setupTestUser`) which provisions a Keycloak-backed user under the hood; subsequent password reset and lookups go through the Keycloak admin client.
+> Note: the example app does **not** export `createUserByEmail` / `deleteUserByEmail` / `updateUserById` directly from `keyCloak.ts`. User creation goes through the admin API (`POST /admin/tenants/{id}/users` via `setupTestUser`) which provisions a Keycloak-backed user under the hood; subsequent password reset and lookups go through the Keycloak admin client.
 
 - `helpers/util/mailpit.ts`:
   - **Class**: `MailpitHelper.getLastEmail(email, retries?, interval?)`, `.deleteAllEmails()`, `.deleteEmailsForRecipient(email)`
@@ -354,5 +356,5 @@ Rules:
 
 - [SKILL.md](SKILL.md) — the playbook for choosing a pattern.
 - [patterns.md](patterns.md) — good/bad examples for every pattern.
-- [refactor-playbook.md](refactor-playbook.md) — known duplications and the migration steps.
+- [refactor-playbook.md](refactor-playbook.md) — common duplications and their migration steps.
 - [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md) — once the data is built, this skill covers Zod assertions and negative test matrices.

@@ -1,5 +1,7 @@
 # API Testing Reference
 
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+
 ## Architecture map
 
 | Layer | Path | Responsibility |
@@ -7,13 +9,13 @@
 | Spec | `tests/app/api/<domain>/<resource>.spec.ts` | Behavior + assertions, one spec per endpoint group (CRUD, e2e flow, isolation); domain folders per the `scaffold-spec` skill |
 | Fixture (HTTP) | `fixtures/api/api-request-fixture.ts` + `plain-function.ts` | Wraps `request` into a typed `apiRequest<T>()` returning `{ status, body }` |
 | Fixture (merge) | `fixtures/pom/test-options.ts` | Merges page-object, api, login and mailpit fixtures; **specs import `test`/`expect` from here** |
-| Schemas (per-resource) | `fixtures/api/schemas/app/<resource>.ts` | Zod schemas + inferred types for that resource. 8 resource files: `job.ts`, `notification-rule.ts`, `notification.ts`, `run-stats.ts`, `tenant-schema.ts`, `tenant.ts`, `user.ts`, `worker.ts`. **No `app/index.ts` barrel exists** — specs deep-import from the resource file. |
+| Schemas (per-resource) | `fixtures/api/schemas/app/<resource>.ts` | Zod schemas + inferred types for that resource. Resource files: `job.ts`, `notification-rule.ts`, `notification.ts`, `run-stats.ts`, `tenant-schema.ts`, `tenant.ts`, `user.ts`, `worker.ts`. **No `app/index.ts` barrel** — specs deep-import from the resource file. |
 | Schemas (shared) | `fixtures/api/schemas/util/common.ts` | **Canonical home for shared schemas — import from here.** Exports `PageInfoSchema` (`z.strictObject`), `APIErrorSchema` (`z.strictObject`), and `JSONSchemaResponseSchema`. `job.ts`/`notification-rule.ts`/`tenant.ts`/`user.ts`/`notification.ts` consume it (directly or via re-export). A barrel exists at `fixtures/api/schemas/util/index.ts` re-exporting `./common` and `./keycloak`. |
 | Config | `config/app.ts`, `config/util/*.ts` | Base URLs (`appConfig.apiUrl`) + path catalog (`appConfig.api.X` for API, `appConfig.paths.X` for UI) |
 | Helpers | `helpers/app/<resource>.ts` | Reusable API flows (`createJob`, `cleanupWorkersAndJobs`, `createTenant`, …) |
 | Test data | `test-data/app/<resource>.json` | Static fixtures (`invalidId`, `nonExistentId`, boundary values, job-type configs) |
 | Invalid-types | `fixtures/api/invalid-types.ts` | Reusable invalid-value arrays — see § Invalid-type arrays below |
-| Generators | `helpers/app/<resource>.ts` (`buildCreate<X>Body` / `buildUpdate<X>Body`). Per-file is acceptable today; **trigger threshold:** extract to a shared `helpers/app/test-data-generators.ts` once `jobs.ts` reaches a 10th job type **or** another helper crosses 5 builders. | Payloads unique per test run, via `faker`; never hardcode names |
+| Generators | `helpers/app/<resource>.ts` (`buildCreate<X>Body` / `buildUpdate<X>Body`). Per-file is acceptable; **trigger threshold:** extract to a shared `helpers/app/test-data-generators.ts` once `jobs.ts` reaches a 10th job type **or** another helper crosses 5 builders. | Payloads unique per test run, via `faker`; never hardcode names |
 | Qase | `enums/app/qase-suites.ts` | `SUITES.API_*` constants used in `qase.suite()` |
 | Mailpit | `helpers/util/mailpit.ts`, `fixtures/api/mailpit-fixture.ts` | Email loop tests; `@<your-test-domain>` recipient domain required |
 
@@ -61,7 +63,7 @@ export const StatusSchema = z.enum(["created", "updated", "deleted", "logged out
 
 ### Update (PATCH)
 
-Two flavors in this codebase, both valid — match the API:
+Two flavors in the example app, both valid — match the API:
 
 ```typescript
 // Minimal (admin tenants, admin realms, admin users)
@@ -116,7 +118,7 @@ export const APIErrorSchema = z.strictObject({
 });
 ```
 
-**Current state:** `job.ts` and `notification-rule.ts` re-export the canonical schema from `../util/common` (and `notification.ts` re-exports through `notification-rule.ts`). Local copies remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` — all `z.strictObject`. **The `tenant-schema.ts` copy is DIVERGENT:** its `details` is `z.record(z.string(), z.unknown()).optional()` (object-valued details from the schema service) vs `z.string().optional()` in `common.ts` — do not merge them blindly. When you next touch `tenant.ts` or `user.ts`, replace the local copy with the `../util/common` import; do not add a new copy.
+In the example app, `job.ts` and `notification-rule.ts` re-export the canonical schema from `../util/common` (and `notification.ts` re-exports through `notification-rule.ts`). Local copies remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` — all `z.strictObject`. **The `tenant-schema.ts` copy is DIVERGENT:** its `details` is `z.record(z.string(), z.unknown()).optional()` (object-valued details from the schema service) vs `z.string().optional()` in `common.ts` — do not merge them blindly. When you next touch a file with a local copy (here `tenant.ts` or `user.ts`), replace it with the `../util/common` import; do not add a new copy.
 
 ### `GatewayErrorSchema` — auth failures (401)
 
@@ -126,7 +128,7 @@ export const GatewayErrorSchema = z.strictObject({
 });
 ```
 
-Not yet centralized in `util/common.ts` — duplicated in `fixtures/api/schemas/app/tenant.ts`, `user.ts`, and `notification-rule.ts`, all as `z.strictObject(...)`. The request hits the API gateway before reaching the app, so 401 has a different shape than 400/404. Use it for both "no token" and "wrong-realm/wrong-issuer" tokens. **Exception:** the notification service returns the `APIErrorSchema` shape (`{ message }`) for 401 — see the verified comment in `notification-rule.ts`.
+In the example app it is duplicated in `fixtures/api/schemas/app/tenant.ts`, `user.ts`, and `notification-rule.ts`, all as `z.strictObject(...)`, instead of living in `util/common.ts`. The request hits the API gateway before reaching the app, so 401 has a different shape than 400/404. Use it for both "no token" and "wrong-realm/wrong-issuer" tokens. **Exception:** the notification service returns the `APIErrorSchema` shape (`{ message }`) for 401 — see the verified comment in `notification-rule.ts`.
 
 ### `PageInfoSchema` — pagination wrapper
 
@@ -141,7 +143,7 @@ export const PageInfoSchema = z.strictObject({
 });
 ```
 
-No local duplicates remain. `job.ts`, `tenant.ts`, `user.ts`, and `notification-rule.ts` import it from `../util/common`; `worker.ts` and `run-stats.ts` import via `./job` and `notification.ts` via `./notification-rule` (one extra hop — prefer importing from `../util/common` directly in new files).
+In the example app it has no local duplicates. `job.ts`, `tenant.ts`, `user.ts`, and `notification-rule.ts` import it from `../util/common`; `worker.ts` and `run-stats.ts` import via `./job` and `notification.ts` via `./notification-rule` (one extra hop — prefer importing from `../util/common` directly in new files).
 
 ### Empty body (403, 405)
 
@@ -199,13 +201,13 @@ Every variable is read through `config/env.ts` — tokens via the `tokens` acces
 |---------|---------|---------------------|
 | `USER_ACCESS_TOKEN_ADMIN` — `tokens.admin()` | Admin scope (admin/tenants, admin/realms, admin/users) | Tenant-scoped endpoints (returns 401, not 403) |
 | `USER_ACCESS_TOKEN_FULL` — `tokens.full()` | Tenant-scoped full permissions (jobs, workers, users, run stats) | None — admin endpoints reject it with **403** (wrong scope, [http-method-coverage.md § 12.2](http-method-coverage.md#122-authentication-coverage-matrix)) |
-| `USER_ACCESS_TOKEN_ZERO` — `tokens.zero()` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat:** this env var is **not always provisioned** in the test environment; there's an open TODO to re-add it for RBAC/403 testing. Until it is re-added, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
+| `USER_ACCESS_TOKEN_ZERO` — `tokens.zero()` | Valid token, no permissions | All scoped endpoints — returns 403 with `body === null`. **⚠ Provisioning caveat:** if your environment does not provision this token, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip`, and never silently drop the 403 row from the negative matrix. |
 | `FRONT_MAIN_PASSWORD` — `env.FRONT_MAIN_PASSWORD` | Default password for KC users created in E2E onboarding | n/a |
 | `MAILPIT_URL` — `env.MAILPIT_URL` | Mailpit base URL (default `http://localhost:8025`, set in the schema) | n/a |
 | `MAILPIT_USERNAME`, `MAILPIT_PASSWORD` — `env.X` | Optional Basic auth for protected Mailpit deployments | n/a |
 | `API_URL`, `APP_URL`, `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `TENANT_ID` — via `appConfig` | Surface via `appConfig.apiUrl` / `baseUrl` / `keycloakUrl` / `keycloakRealm` / `tenantId` | n/a |
 | `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` — `env.X` | Used by `helpers/util/keyCloak.ts` for direct KC admin operations (see `setupTestUser`) | n/a |
-| `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD` — `env.X` | Default `admin`/`admin` (in the schema). Used by `getAuthenticatedKcAdminClient` | n/a |
+| `KEYCLOAK_ADMIN_USERNAME`, `KEYCLOAK_ADMIN_PASSWORD` — `env.X` | The example app's env schema defaults them to `admin`/`admin`. Used by `getAuthenticatedKcAdminClient` | n/a |
 
 Call `tokens.full()` / `tokens.admin()` / `tokens.zero()` at every call site — **no aliasing** (see `data-strategy` §1.6 for rationale: grepability, no alias-name drift; a module-level alias also runs before the setup project has written the token). The accessor throws "`USER_ACCESS_TOKEN_FULL` is not set — did the setup project run?" when the token is missing; static variables are checked earlier, by the schema parse in `config/env.ts` at load. No `!`, `??` or `as string` (see `type-safety` § Environment variables).
 
@@ -213,7 +215,7 @@ Call `tokens.full()` / `tokens.admin()` / `tokens.zero()` at every call site —
 headers: tokens.full(),
 ```
 
-Existing specs with `const TENANT_TOKEN = ...` aliases are tech debt — normalize when next touching the file.
+If a spec has a `const TENANT_TOKEN = ...` alias, that is tech debt — normalize it when you next touch the file.
 
 ## URL/Config catalog
 
@@ -226,7 +228,7 @@ Existing specs with `const TENANT_TOKEN = ...` aliases are tech debt — normali
 - `appConfig.api.X` — API path constants. Use these, never `appConfig.paths.X` (that's UI routes).
 - `appConfig.paths.X` — UI routes (e.g. `/jobs`, `/settings/workers`). **For UI specs only.**
 
-Current `appConfig.api`:
+`appConfig.api` in the example app:
 
 | Constant | Path | Notes |
 |----------|------|-------|
@@ -243,11 +245,12 @@ Current `appConfig.api`:
 | `RUN_STATS_AGGREGATE` | `/run-stats/aggregate` | Aggregated run-stat values query |
 | `WORKERS` | `/workers` | Tenant-scoped CRUD; `/workers/list` for batch |
 
-## Helper catalog (already exists — reuse before writing new)
+## Helper catalog
 
-Helpers are tagged below with their style:
+Before writing a new helper, grep your repo's helpers for an equivalent and reuse it. The example app's helpers are tagged below with their style:
 - **(passthrough)** — returns `{ status, body }`; caller asserts. Used for CRUD across positive and negative tests.
 - **(assertion)** — asserts internally and returns the parsed payload (upstream's preferred style for assertion-style helpers).
+- **(assertion, to add)** — a setup helper the example app does not have; the signature is the shape to add when a spec needs it.
 - **(cleanup)** — tolerates 404 / uses `Promise.allSettled`; returns nothing meaningful.
 - **(builder)** — pure data builder (no `apiRequest` call).
 
@@ -258,7 +261,7 @@ Helpers are tagged below with their style:
 - (cleanup) `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` — jobs first, workers second.
 - (cleanup) `cleanupUiCreatedJobs(apiRequest, refs, token)` — resolves id-by-name with retry.
 - (assertion) `setupWorkerAndJob(apiRequest, headers?) → { workerId, jobId }` — seeds a worker + an `export`-type job in one call, asserts both creates return 201, returns the typed ids. Use for precondition setup in specs exercising job-dependent resources (notification rules, notifications, run stats); clean up via `cleanupWorkersAndJobs`.
-- (assertion, **planned**) `setupJob(apiRequest, workerIds, headers, overrides?) → Job` — seeds a job, parses with `JobSchema`, returns the typed entity. Use only for preconditions; passthroughs above stay for negative tests.
+- (assertion, to add) `setupJob(apiRequest, workerIds, headers, overrides?) → Job` — seeds a job, parses with `JobSchema`, returns the typed entity. Use only for preconditions; passthroughs above stay for negative tests.
 - Constants: `VALID_RUN_INTERVALS`, `DEFAULT_RUN_INTERVAL`, `DEFAULT_TIMEOUT`, `TIMEOUT_MIN/MAX`, `NAME_MIN/MAX_LENGTH`, `TARGET_MIN/MAX_LENGTH`, `DESCRIPTION_MAX_LENGTH`.
 
 ### Workers — `helpers/app/workers.ts`
@@ -267,19 +270,19 @@ Helpers are tagged below with their style:
 - (passthrough) `getWorkersByIds(apiRequest, ids[], headers)` — POST `/workers/list`.
 - (passthrough) `getWorkerConfig(apiRequest, workerId, type, headers)`, `getWorkerSchema(apiRequest, name, headers)`.
 - (cleanup) `cleanupWorkers(apiRequest, workerIds, headers)`.
-- (assertion, **planned**) `setupTestWorker(apiRequest, headers, overrides?) → Worker`.
+- (assertion, to add) `setupTestWorker(apiRequest, headers, overrides?) → Worker`.
 
 ### Admin Tenants — `helpers/app/adminTenants.ts`
 - (passthrough) `createTenant(apiRequest, name, headers, parentId?)` — note: name + optional parentId are positional, not a body object.
 - (passthrough) `getTenant`, `patchTenant(apiRequest, tenantId, body?, headers?)`, `deleteTenant`.
-- (assertion, **planned**) `setupTenant(apiRequest, adminHeaders, overrides?) → Tenant` — seeds a tenant, parses with `TenantSchema`, returns the typed entity. Used by onboarding / cross-tenant specs.
+- (assertion, to add) `setupTenant(apiRequest, adminHeaders, overrides?) → Tenant` — seeds a tenant, parses with `TenantSchema`, returns the typed entity. For onboarding / cross-tenant specs.
 
 ### Admin Realms — `helpers/app/adminRealms.ts`
 - (builder) `buildRealmSettings()` — valid default realm settings (login + email/smtp + tokens) for POST/PATCH bodies.
-- (passthrough) `createRealm`, `patchRealm`, `getRealm`. POST always returns 409 on dev (`<realm>` realm exists).
+- (passthrough) `createRealm`, `patchRealm`, `getRealm`. If the realm already exists in your environment, POST returns 409.
 
 ### Admin Users — `helpers/app/adminUsers.ts`
-- (builder) `generateUserPayload()` — random valid user body. **⚠ Bug:** this generator currently emits emails at `@automation.test`, which Mailpit on test infra does not catch. For any E2E flow that needs an email loop, build the payload locally with a `@<your-test-domain>` recipient (see `templates.md` § 6 `generateE2EUserPayload`) until the helper is fixed (a one-line swap to `@<your-test-domain>`).
+- (builder) `generateUserPayload()` — random valid user body. If a generator like this emits emails outside your Mailpit domain (e.g. `@automation.test`), that is a bug: Mailpit never catches them. Fix the generator (a one-line swap to `@<your-test-domain>`). For any E2E flow that needs an email loop, build the payload locally with a `@<your-test-domain>` recipient (see `templates.md` § 6 `generateE2EUserPayload`).
 - (passthrough) `createUser(apiRequest, tenantId, body, headers)` — **tenantId is positional (in the path)**, not part of the body.
 - (passthrough) `listUsers(apiRequest, tenantId, headers, params?)`.
 - (passthrough) `getUser(apiRequest, tenantId, userId, headers)`.
@@ -289,11 +292,11 @@ Helpers are tagged below with their style:
 - (assertion) `teardownTestUser(apiRequest, mailpit, tenantId, email, userId, adminToken?)` — purges Mailpit for the recipient, then DELETEs the user via the admin API.
 
 ### Users (tenant API) — `helpers/app/users.ts`
-- (builder) `buildCreateUserBody(overrides?)`, `buildUpdateUserBody(overrides?)`, `buildListUsersUrl(params?)`. **⚠ Bug:** `buildCreateUserBody` emits emails at `@<alt-test-domain>` (note the leading hyphen — **not** the same as `@<your-test-domain>`; Mailpit does not catch it). For Mailpit-catching flows, override the email field with a literal `@<your-test-domain>` address until the helper is fixed.
+- (builder) `buildCreateUserBody(overrides?)`, `buildUpdateUserBody(overrides?)`, `buildListUsersUrl(params?)`. If `buildCreateUserBody` emits a look-alike domain such as `@<alt-test-domain>` (**not** the same as `@<your-test-domain>`; Mailpit does not catch it), that is a bug: fix the builder. For Mailpit-catching flows, override the email field with a literal `@<your-test-domain>` address.
 - (passthrough) `listUsers`, `createUser(apiRequest, body, headers)`, `getUser(apiRequest, userId, headers)`, `updateUser(apiRequest, userId, body, headers)` — these target `/users` (tenant-scoped, **no tenantId in path**).
 - (passthrough) `logoutUserSession(apiRequest, sessionId, headers)` — DELETE `/users/sessions/:id`.
 - (passthrough) `deleteAdminTenantUser(apiRequest, tenantId, userId, headers)` — admin-scoped DELETE under `/admin/tenants/:tenantId/users/:userId`.
-- (assertion, **planned**) `setupUser(apiRequest, headers, overrides?) → User` — tenant-scoped setup helper, parses with `UserSchema`. Distinct from `setupTestUser` (which is admin-scoped, KC-credentialed, in `adminUsers.ts`).
+- (assertion, to add) `setupUser(apiRequest, headers, overrides?) → User` — tenant-scoped setup helper, parses with `UserSchema`. Distinct from `setupTestUser` (which is admin-scoped, KC-credentialed, in `adminUsers.ts`).
 - The two `users.ts` and `adminUsers.ts` modules cover **different APIs**: tenant-scoped (no tenantId in URL) vs admin-scoped (tenantId in URL). Pick the helper that matches the route under test.
 
 ### Mailpit utilities — `helpers/util/mailpit.ts`
@@ -337,7 +340,7 @@ Helpers are tagged below with their style:
 - (passthrough) `getTenantSchema(apiRequest, name?, token?)` — GET `/tenants/schema?name=<name>`. Returns the JSON-Schema for a given DTO type. Omitting `token` is the canonical 401 trigger for this endpoint.
 
 ### Storage state — `helpers/app/createStorageState.ts`
-- Used by `playwright.config.ts` global setup. **Do not call from specs.**
+- `createAppStorageState` — called by the setup project (`app-setup` → `tests/app/login.setup.ts`), which logs each persona in and saves one storage state per UI persona to `.auth/app/<persona>Session.json`. **Do not call from specs.**
 
 ## Schema patterns by data type
 
@@ -346,7 +349,7 @@ Helpers are tagged below with their style:
 | Field | Pattern | Strictness note |
 |-------|---------|-----------------|
 | UUID (default) | `z.string().uuid()` | **Default for any id field.** Loosen only when empirically verified non-UUID. |
-| Legacy id (verified non-UUID) | `z.string()` | Document the case inline; tighten once the API guarantees UUIDs. Several existing schemas in this repo have lax `z.string()` ids that should be tightened on the next pass. |
+| Legacy id (verified non-UUID) | `z.string()` | Document the case inline; tighten once the API guarantees UUIDs. If your schemas have lax `z.string()` ids, tighten them on the next pass. |
 | Datetime UTC `Z` | `z.string().datetime()` | Strict |
 | Datetime with offset (`+00:00`) | `z.string().datetime({ offset: true })` | Strict |
 | Conditionally absent string | `z.string().optional()` | **Only** when a named condition makes the field absent (comment the condition; cover both branches with tests) |
@@ -419,7 +422,7 @@ test(
     async ({ apiRequest, mailpit }) => {
         test.setTimeout(appConfig.timeouts.asyncFlow);
 
-        // Recipient MUST be @<your-test-domain> (Mailpit catches that domain only on test infra).
+        // Recipient MUST be @<your-test-domain> (the only domain your Mailpit catches).
         const email = `qa-onboard-${Date.now()}@<your-test-domain>`;
 
         // Always purge before triggering.
@@ -468,11 +471,11 @@ Guard rails:
 - **Only for documented eventual consistency.** Polling to paper over a timing bug, a slow environment, or a flaky assertion is forbidden — fix the root cause instead. If you cannot cite the eventual-consistency contract, do not add a poll.
 - Bounded: always pass an explicit `timeout` + poll `intervals`. No unbounded loops.
 - Return a boolean/value from the poll callback and assert it; do not put `expect(...)` inside the callback.
-- For email propagation, prefer the existing `MailpitHelper.getLastEmail(email, retries, interval)` (it already implements a bounded poll) over a hand-rolled `expect.poll`.
+- For email propagation, prefer a bounded Mailpit helper such as the example app's `MailpitHelper.getLastEmail(email, retries, interval)` (it implements a bounded poll) over a hand-rolled `expect.poll`.
 
 ## Cross-tenant isolation pattern
 
-The contract: cross-tenant access returns **404, not 403** — the server hides resource existence across tenants. There are two cross-tenant shapes in this codebase:
+The contract: cross-tenant access returns **404, not 403** — the server hides resource existence across tenants. There are two cross-tenant shapes in the example app:
 
 ### A. Tenant-scoped resource (job, worker) — token-based isolation
 
@@ -505,7 +508,7 @@ const { status, body } = await getUser<APIError>(
 expect(status).toBe(404);
 ```
 
-See `tests/app/api/shared/cross-tenant-isolation.spec.ts` (admin/users) and `tests/app/api/shared/cross-tenant-run-stats-isolation.spec.ts` (jobs/run stats) for the canonical patterns. Both 404, both treated as the app's primary cross-tenant contract.
+In the example app, `cross-tenant-isolation.spec.ts` (admin/users) and `cross-tenant-run-stats-isolation.spec.ts` (jobs/run stats) follow these two shapes. Both assert 404, the app's primary cross-tenant contract.
 
 ## Form-encoded recipe (Keycloak token)
 
@@ -554,17 +557,17 @@ Need to share a body across UI+API?   → leave in helpers/app/<resource>.ts; UI
 
 ## Endpoint context (resource-by-resource)
 
-Domain knowledge that an author needs **before** opening the OpenAPI for the first time. The OpenAPI is the source of truth for shapes; this section captures the conceptual model, dependency order, known bugs, and auth patterns that don't show up in the schema. Verify each fact against the live source before relying on it — backend evolves.
+The example app's endpoints, resource by resource: the domain knowledge an author needs **before** opening the OpenAPI for the first time — the conceptual model, dependency order, quirks, and auth patterns that don't show up in the schema. The OpenAPI is the source of truth for shapes. For your own API, verify each fact against its OpenAPI and live behavior before relying on it.
 
 ### Admin Tenants & Realms
 
 - **Tenant API:** `POST/GET/PATCH/DELETE /api/v1/admin/tenants(/:id)`. Create body: `{ name, parentId? }`. Update body: `{ name? }`. List query params: `page`, `pageSize`, `sort`, `direction`, `name`. Tenant names match `^[A-Za-z][A-Za-z0-9_-]*$`.
-- **Realm API:** `POST/PATCH /api/v1/admin/realms`. Body: `{ settings: { email?, login?, tokens? } }`. **No path param** — realm is implicit from the admin token. POST always returns 409 on dev (the `<realm>` realm already exists).
+- **Realm API:** `POST/PATCH /api/v1/admin/realms`. Body: `{ settings: { email?, login?, tokens? } }`. **No path param** — realm is implicit from the admin token. If the realm already exists, POST returns 409.
 - **Realm vs Tenant conceptual model:** **Realm** = Keycloak auth domain (one per realm). **Tenant** = organization within a realm (many). Order: Create realm → Create tenants → Create users.
 - **Schemas:** `TenantSchema` (no settings field), `TenantSettingsSchema`, `CreateRealmResponseSchema`, `UpdateRealmResponseSchema`.
 - **Helpers:** `helpers/app/adminTenants.ts` (`createTenant`, `getTenant`, `patchTenant`, `deleteTenant`); `helpers/app/adminRealms.ts` (`buildRealmSettings`, `getRealm`, `createRealm`, `patchRealm`).
 - **Auth:** Admin endpoints use `tokens.admin()`.
-- **Validation status:** realm-settings validation is largely enforced now — `admin-realms.spec.ts` has active 400 tests for empty body, `settings: null`, `settings` as string, unknown keys, missing `settings` key, and per-field invalid string/boolean/integer/object values; POST with `settings: {}` returns 400. The one unverified edge: no explicit PATCH `settings: {}` test exists.
+- **Validation:** realm settings are validated on POST and PATCH. Assert 400 for an empty body, `settings: null`, `settings` as a string, unknown keys, a missing `settings` key, and per-field invalid string/boolean/integer/object values. POST with `settings: {}` returns 400. `settings: {}` on PATCH is an easy edge to miss: cover it too, with the status the contract names.
 
 ### Jobs (`export` / HTTP / SFTP / email / backup / stream / webhook)
 
@@ -575,13 +578,13 @@ Domain knowledge that an author needs **before** opening the OpenAPI for the fir
 - **Schemas:** `JobSchema` (`assignments` field is nullable), `ListJobsResponseSchema`, `CreateJobResponseSchema`, etc.
 - **Auth pattern:** `401` (no token), `401` (admin token on a tenant endpoint — unlike `/users` which returns `404` for the same case).
 - **Sort-test guidance:** verify endpoint accepts `sort`/`direction` params and returns valid results — **do NOT assert exact order** because the database collation can differ from JS `Array.sort` and produces non-deterministic test results across environments.
-- **Type coercion:** API coerces non-string `name` / `target` to strings. Confirmed desired behavior — don't write tests that expect `400` for `name: 123`.
-- **400 vs 404 on PATCH:** an invalid body fails validation before the resource lookup (400); a valid body with a non-existent UUID returns 404. Both branches are covered by an active test in `export-job.spec.ts`.
+- **Type coercion:** the contract says the API coerces non-string `name` / `target` to strings — don't write tests that expect `400` for `name: 123`.
+- **400 vs 404 on PATCH:** an invalid body fails validation before the resource lookup (400); a valid body with a non-existent UUID returns 404. Cover both branches.
 
 ### Tenant Onboarding E2E
 
-- **Spec:** `tests/app/api/tenant-service/e2e-tenant-onboarding-flow.spec.ts` — 4 tests (create tenant + invite + verify email; UUID immutability; empty user list; multi-user emails).
-- **Email domain:** **Must use `@<your-test-domain>`** for Mailpit delivery. Local helper `generateE2EUserPayload()` enforces this — do **NOT** use `generateUserPayload()` from `adminUsers.ts` (which uses `@automation.test` and the email never arrives).
+- **Spec:** `tests/app/api/tenant-service/e2e-tenant-onboarding-flow.spec.ts` — covers create tenant + invite + verify email, UUID immutability, empty user list, and multi-user emails.
+- **Email domain:** **Must use `@<your-test-domain>`** for Mailpit delivery. A local helper `generateE2EUserPayload()` enforces this. If a shared builder such as `generateUserPayload()` emits another domain (e.g. `@automation.test`), the email never arrives — that is a bug: don't use that builder for an email loop, and fix it.
 - **Helpers:** `createTenant`, `getTenant`, `patchTenant`, `deleteTenant`, `createUser`, `listUsers`, `getUser`, `deleteUser`, `extractLinkFromEmail`, `MailpitHelper`.
 - **Cleanup order:** Mailpit emails → Users → Tenant. Each step guarded by `if (tenantId)` so a partial failure still cleans whatever made it through.
 - **Mailpit recipe:** `deleteEmailsForRecipient` before AND after, `getLastEmail(email, 10, 2000)` (10 polls, 2s interval), guard with `To.length > 0` before reading.
@@ -643,10 +646,10 @@ Use this pattern whenever tests touch settings, toggles, feature flags, or any s
 | Forbidden user (403) | `headers: tokens.zero()` — see caveat below |
 | Anonymous (401) | omit `headers` entirely |
 | Form-encoded body (Keycloak token) | `headers: 'form-urlencoded'`, `body: { grant_type, … }`, `baseUrl: appConfig.keycloakUrl` |
-| Query string | Use a `buildList<X>Url(params)` helper (see `jobs.ts`, `workers.ts`) |
+| Query string | Use a `buildList<X>Url(params)` helper (in the example app, in `jobs.ts` and `workers.ts`) |
 | Path with id | `` url: `${appConfig.api.JOBS}/${id}` `` |
 | Sub-resource | `` url: appConfig.api.JOBS_RUN_STATS.replace(":id", id) `` (or build via template literal) |
 | Mailpit mailbox | use the `mailpit` fixture (`{ apiRequest, mailpit }`); recipient must be `@<your-test-domain>` |
 | Email-loop signup (e2e onboarding) | combine `mailpit`, `extractLinkFromEmail`, and the user-creation helpers |
 
-> **`USER_ACCESS_TOKEN_ZERO` caveat.** The 403 token is part of the canonical matrix (per upstream convention), but it is **not always provisioned** in the current test environment — there's an open TODO to re-add it for RBAC/403 testing. When writing 403 tests and the env var is not provisioned, **comment out** the 403 test with `// TODO: FIXME: USER_ACCESS_TOKEN_ZERO not provisioned — re-enable when RBAC token is added` above it. Do not silently drop the 403 row from the matrix.
+> **`USER_ACCESS_TOKEN_ZERO` caveat.** The 403 token is part of the canonical matrix (per upstream convention). If your environment does not provision it, write the 403 test and **comment it out** with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` above it. Do not silently drop the 403 row from the matrix.

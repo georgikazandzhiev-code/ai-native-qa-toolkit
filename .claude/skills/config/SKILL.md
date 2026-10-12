@@ -1,7 +1,7 @@
 ---
 name: config
-version: 2.0.0
-description: Env-var and configuration conventions — env/.env.* layout, dotenv loading via ENVIRONMENT, the appConfig object in config/app.ts (URLs, api paths, UI routes, timeouts), and the config/util/ per-service convention (future — not yet created). Use when adding an env var, config property, environment file, or endpoint/route constant. Triggers — "env var", "appConfig", "config", "new URL". Not for static test data (data-strategy) or env access rules (type-safety).
+version: 2.0.1
+description: Env-var and configuration conventions — env/.env.* layout, dotenv loading via ENVIRONMENT, the appConfig object in config/app.ts (URLs, api paths, UI routes, timeouts), and the optional config/util/<service>.ts per-service convention. Use when adding an env var, config property, environment file, or endpoint/route constant. Triggers — "env var", "appConfig", "config", "new URL". Not for static test data (data-strategy) or env access rules (type-safety).
 metadata:
   category: domain
 ---
@@ -12,12 +12,12 @@ metadata:
 
 - **NEVER** hardcode URLs, tokens, emails, passwords, or tenant ids anywhere in `pages/`, `tests/`, `fixtures/`, or `helpers/`. The single source of truth for env-driven values is `config/env.ts` — the only module that reads `process.env`, validating it with a Zod schema at load — backed by `env/.env.${ENVIRONMENT}` and declared in `env/.env.example`. Everything else reads `env.X`, `tokens.admin()` / `.full()` / `.zero()`, or `appConfig` (see `type-safety` § Environment variables).
 - **NEVER** add real domains, real secrets, or production URLs to `env/.env.example`. Only `env/.env.example` is tracked; all other `env/.env.*` files are gitignored (see `.gitignore` — `env/.env.dev`, `env/.env.local`, `env/.env.prod`, plus the catch-all `.env.*` with `!.env.example`).
-- **ALWAYS** add every new env variable to `env/.env.example` with the key but a blank or placeholder value, in the correct grouped section (`KEYCLOAK CONFIGURATION`, `UI TEST USERS`, `API TEST USERS`, `QASE REPORTING`, `MAILPIT`).
-- **ALWAYS** keep app-facing URLs/settings as properties of `appConfig` in `config/app.ts`. For utility / third-party service config, the **future** convention is `config/util/<service>.ts` exporting a `<service>Config` object built from `env` — **`config/util/` does not exist yet**; create it when the first dedicated util config is warranted. Today the only utility service (Mailpit) reads `env.MAILPIT_URL`; the direct `process.env.MAILPIT_URL` read in `helpers/util/mailpit.ts` is drift — move it to `env.MAILPIT_URL` when you next touch that file. Do not invent ad-hoc config files elsewhere.
+- **ALWAYS** add every new env variable to `env/.env.example` with the key but a blank or placeholder value, in the correct grouped section (in the example app: `KEYCLOAK CONFIGURATION`, `UI TEST USERS`, `API TEST USERS`, `QASE REPORTING`, `MAILPIT`).
+- **ALWAYS** keep app-facing URLs/settings as properties of `appConfig` in `config/app.ts`. For utility / third-party service config, the convention is `config/util/<service>.ts` exporting a `<service>Config` object built from `env`. If your repo has no `config/util/` yet, create it when the first dedicated util config is warranted; until then a utility service such as Mailpit reads `env.MAILPIT_URL`. If a helper reads `process.env.MAILPIT_URL` directly (in the example app, `helpers/util/mailpit.ts`), that is drift — move it to `env.MAILPIT_URL` when you next touch that file. Do not invent ad-hoc config files elsewhere.
 - **NEVER** put endpoint paths, route strings, or message constants in env vars. Paths live only in `appConfig.api.*` / `appConfig.paths.*` (the in-source path catalog) — never in enums; message constants live in `enums/app/*` — see the `enums` skill. `config/` is for env-driven values and the path catalog only.
 - **NEVER** declare `ENVIRONMENT` itself inside any `.env` file. It is set at the **shell** level (`ENVIRONMENT=test npx playwright test`); declaring it in a `.env` file creates a chicken-and-egg loop because the file is selected *by* `ENVIRONMENT`.
-- **ALWAYS** carry JSDoc on every property of `appConfig` (and any future util configs) describing the value and naming the backing env var. The current `appConfig` properties are undocumented — that is drift to close. **Backfill JSDoc on the surrounding properties whenever you touch the file**, even if your change only adds or modifies one property; do not leave the file in a half-documented state.
-- **NEVER** introduce a runtime `process.env.X ?? appConfig.foo` override pattern in pages, helpers, or fixtures (see `pages/app/JobsPage.ts:73` for the existing one). If a path needs to be configurable, model it as either a config property OR an env var — not both. Surface ambiguity rather than encode it.
+- **ALWAYS** carry JSDoc on every property of `appConfig` (and any future util configs) describing the value and naming the backing env var. If existing `appConfig` properties have no JSDoc, that is drift to close. **Backfill JSDoc on the surrounding properties whenever you touch the file**, even if your change only adds or modifies one property; do not leave the file in a half-documented state.
+- **NEVER** introduce a runtime `process.env.X ?? appConfig.foo` override pattern in pages, helpers, or fixtures. If a path needs to be configurable, model it as either a config property OR an env var — not both. Surface ambiguity rather than encode it.
 
 ## File Locations
 
@@ -25,9 +25,9 @@ metadata:
 | -------------- | --------------------------------- | ----------------------------------------------------------------------- |
 | Env module     | `config/env.ts`                   | The **only** reader of `process.env`. Parses it with a Zod schema (`EnvSchema`) at load — defaults live there as `.default(...)` — and exports `env` (the validated static variables) and `tokens` (`admin()` / `full()` / `zero()` accessors for the run-time tokens the setup project writes) |
 | App config     | `config/app.ts`                   | `appConfig` — URLs built from `env` (`baseUrl`, `apiUrl`, `keycloakUrl`), `tenantId`, `keycloakRealm` (from `KEYCLOAK_REALM`), the in-source path catalog (`appConfig.api`, `appConfig.paths`), and infra timeouts (`appConfig.timeouts`) |
-| Utility config | `config/util/<service>.ts`        | One `<service>Config` per third-party / utility service, built from `env`. **Future convention — the directory does not exist yet**; Mailpit reads `env.MAILPIT_URL` (the direct `process.env` read in `helpers/util/mailpit.ts` is drift) |
+| Utility config | `config/util/<service>.ts`        | One `<service>Config` per third-party / utility service, built from `env`. If the directory doesn't exist yet, the first such file creates it; until then Mailpit reads `env.MAILPIT_URL` (a direct `process.env` read in a Mailpit helper is drift) |
 | Env template   | `env/.env.example`                | Tracked template — keys only or safe placeholders, grouped by section header |
-| Env (active)   | `env/.env.${ENVIRONMENT}`         | Real values, selected at runtime. Today: `.env.dev` (default), `.env.test`, `.env.perf`. All untracked |
+| Env (active)   | `env/.env.${ENVIRONMENT}`         | Real values, selected at runtime. In the example app: `.env.dev` (default), `.env.test`, `.env.perf`. All untracked |
 | Env loader     | `playwright.config.ts` (top of file) | `dotenv.config({ path })` reads `./env/.env.${ENVIRONMENT}` (default `dev`) |
 | Gitignore      | `.gitignore`                      | `env/.env.dev`, `env/.env.local`, `env/.env.prod`, `.env`, `.env.*` ignored; `!.env.example` re-included |
 
@@ -49,9 +49,9 @@ Before adding anything, walk this table. If the value fits no row, stop and ask 
 | Value kind                                                      | Home                                                                        |
 | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | URL of the app under test (frontend, API, Keycloak)             | env var + property on `appConfig` in `config/app.ts`                        |
-| URL of a utility / third-party service (Mailpit, future tools)  | env var + schema entry in `config/env.ts`, read as `env.X` — or, under the **future** convention, through a `<service>Config` in `config/util/<service>.ts` built from `env` (create the directory with the first such file; today Mailpit reads `env.MAILPIT_URL`) |
+| URL of a utility / third-party service (Mailpit, future tools)  | env var + schema entry in `config/env.ts`, read as `env.X` — or through a `<service>Config` in `config/util/<service>.ts` built from `env` (the first such file creates the directory; until then, read `env.X` directly, as Mailpit reads `env.MAILPIT_URL`) |
 | Credential (email, password, secret key, client secret)         | env var + schema entry in `config/env.ts`, read as `env.X` — **never** expose through `appConfig` or a `<service>Config` |
-| Test-user identifier (`TENANT_ID`)                              | env var + plain `appConfig.tenantId` slot (already wired)                   |
+| Test-user identifier (`TENANT_ID`)                              | env var + plain `appConfig.tenantId` slot                                   |
 | Dynamic auth token populated at runtime (`USER_ACCESS_TOKEN_*`) | written into `process.env` by the setup project at run time; read through `tokens.admin()` / `.full()` / `.zero()` from `config/env.ts` — **not** declared in `env/.env.example` or the schema |
 | Endpoint path (e.g. `/jobs`) or route (e.g. `/login`)           | `appConfig.api.*` or `appConfig.paths.*` in `config/app.ts` — **never** an env var or an enum |
 | Message string, suite name, role, status                        | `enums/app/*` (e.g. `job-status.ts`, `qase-suites.ts`, or a new `enums/app/<name>.ts`) — see the `enums` skill |
@@ -61,11 +61,11 @@ Before adding anything, walk this table. If the value fits no row, stop and ask 
 
 ## Timeout budgets
 
-Specs, page objects, helpers and templates never contain a timeout number. Every explicit timeout is a **named budget** on `appConfig.timeouts`, so the values live in one file, each repository tunes them for its own environment, and a reader can tell from the name *why* a wait is long. Agreed in #5. Most assertions need no explicit timeout at all: trust the project default.
+Specs, page objects, helpers and templates never contain a timeout number. Every explicit timeout is a **named budget** on `appConfig.timeouts`, so the values live in one file, each repository tunes them for its own environment, and a reader can tell from the name *why* a wait is long. Most assertions need no explicit timeout at all: trust the project default.
 
 | Budget | Use for | Typical value |
 |---|---|---|
-| `navigation`, `element`, `api` | Page navigation, element waits and API calls beyond the project defaults (existing) | repo-defined |
+| `navigation`, `element`, `api` | Page navigation, element waits and API calls beyond the project defaults | repo-defined |
 | `fastFail` | Inner waits inside a retry block, which should fail fast so the block retries | 3–5 s |
 | `uiResponse` | The UI reacting to a network call: a row appears, a dialog closes, an option list loads | 10 s |
 | `persist` | A save or create round trip becoming visible: the submit button enables, the sheet closes, the new row or the toast appears | 15 s |
@@ -81,9 +81,9 @@ Specs, page objects, helpers and templates never contain a timeout number. Every
 
 ## Adding a new env variable
 
-1. **Pick the section** in `env/.env.example` that matches the value: `KEYCLOAK CONFIGURATION`, `UI TEST USERS`, `API TEST USERS`, `QASE REPORTING`, `MAILPIT`. Add a new section header (matching the existing `═══` style) only if no section fits.
-2. **Add the key with a blank or safe placeholder value.** The codebase's convention is `KEY=` (blank) for credentials/URLs and `KEY=<literal>` for non-secret defaults like `KEYCLOAK_REALM=<realm>`. Never paste a real domain, token, or password into `.env.example`.
-3. **Add the real value to your local `env/.env.${ENVIRONMENT}` file** (`.env.dev` for local default, `.env.test` for CI, `.env.perf` for perf test runs). These files are gitignored — confirm with `git status` before committing.
+1. **Pick the section** in `env/.env.example` that matches the value (in the example app: `KEYCLOAK CONFIGURATION`, `UI TEST USERS`, `API TEST USERS`, `QASE REPORTING`, `MAILPIT`). Add a new section header, matching the file's existing header style (`═══` banners in the example app), only if no section fits.
+2. **Add the key with a blank or safe placeholder value.** The convention is `KEY=` (blank) for credentials/URLs and `KEY=<literal>` for non-secret defaults like `KEYCLOAK_REALM=<realm>`. Never paste a real domain, token, or password into `.env.example`.
+3. **Add the real value to your local `env/.env.${ENVIRONMENT}` file** (in the example app: `.env.dev` for local default, `.env.test` for CI, `.env.perf` for perf test runs). These files are gitignored — confirm with `git status` before committing.
 4. **Add it to the schema in `config/env.ts`** — `z.string().url()`, `z.string().email()`, `z.string().min(1)` as fits. Required unless it has a real default; a genuine default (e.g. local Mailpit) goes in the schema as `.default(...)`, its one home. A missing required variable then fails the run at load, naming it.
 5. **Reference it from code** through the module, never through `process.env` (see `type-safety` § Environment variables):
    - If it's a URL the app config object should document, add a property to `appConfig` built from `env` (or the matching util config). JSDoc the property and name the backing env var.
@@ -92,7 +92,7 @@ Specs, page objects, helpers and templates never contain a timeout number. Every
 
 ## Adding a new config property
 
-1. **Pick the file:** app-facing → `config/app.ts` (`appConfig`); utility / third-party service → `config/util/<service>.ts` (no such file exists yet — creating one establishes the directory). New utility services get a new file, not a shared `util.ts`.
+1. **Pick the file:** app-facing → `config/app.ts` (`appConfig`); utility / third-party service → `config/util/<service>.ts` (if your repo has no `config/util/` yet, the first such file creates it). New utility services get a new file, not a shared `util.ts`.
 2. **Add the property** alongside the existing ones. Match the surrounding shape — top-level for env-driven scalars (`baseUrl`, `apiUrl`, `tenantId`), nested under a sub-object for catalogs (`paths`, `api`, `timeouts`).
 3. **JSDoc the property** with one short line naming the backing env var or describing the constant — **and** backfill JSDoc on the surrounding properties in the same edit. The contract is "every property carries JSDoc"; touching the file is the trigger to close the gap. Shape:
 
@@ -103,21 +103,21 @@ Specs, page objects, helpers and templates never contain a timeout number. Every
 
    `env` is imported from `./env`. No `!`, `??` or `as string` here: a missing required variable already fails the run at load, in the schema parse in `config/env.ts`, and defaults live in that schema (see `type-safety` § Environment variables).
 
-4. **Consume it from the call site** by importing the config object. `appConfig.timeouts.navigation`, `appConfig.paths.HOME`, `appConfig.api.JOBS` are the existing precedent.
+4. **Consume it from the call site** by importing the config object. In the example app, `appConfig.timeouts.navigation`, `appConfig.paths.HOME` and `appConfig.api.JOBS` are the precedent.
 
 ## Anti-patterns
 
 - ❌ Hardcoding `https://...` URLs, real emails, passwords, or uuid tenant ids inside `tests/`, `pages/`, `helpers/`, or `fixtures/`. (Hardcoded test content has its own ban under `~/.claude/CLAUDE.md` WON'T table — this skill owns the env-and-config side of the same rule.)
 - ❌ Adding a key to `env/.env.example` with a real value (real domain, real token, real password). The template tracks the **shape**, never the secrets.
 - ❌ Adding `ENVIRONMENT=dev` (or any value of `ENVIRONMENT`) inside an `.env` file. `ENVIRONMENT` is the selector; it must come from the shell.
-- ❌ Creating a new `config/util/util.ts` aggregating multiple services. The convention is one file per service (`config/util/<service>.ts`), even though no util config file exists yet.
+- ❌ Creating a new `config/util/util.ts` aggregating multiple services. The convention is one file per service (`config/util/<service>.ts`), from the first util config on.
 - ❌ Surfacing credentials (`APP_FULL_PERMISSIONS_PASSWORD`, `KEYCLOAK_ADMIN_PASSWORD`, secret keys) through `appConfig`. Credentials stay env-only.
 - ❌ Adding `USER_ACCESS_TOKEN_*` or any other dynamically-minted token to `env/.env.example`. Those tokens are populated at runtime by setup helpers, not declared as static env values.
 - ❌ Reading `process.env` anywhere but `config/env.ts` (the setup project's token writes are the only other touch). Specs, helpers, fixtures, page objects and `config/app.ts` read `env` / `tokens`.
 - ❌ Putting endpoint paths or message strings in env vars or hand-rolling them into `process.env.*`. Paths live only in `appConfig.api.*` / `appConfig.paths.*`; message strings live in `enums/app/*`.
 - ❌ Adding or modifying a config property without JSDoc, OR leaving surrounding properties un-JSDoc'd when you touched the file. Touching the file is the trigger to backfill the un-JSDoc'd neighbours; do not leave it half-documented.
 - ❌ Redeclaring an env var twice for the same value (once on `appConfig`, once read inline in a helper). Pick one and stick to it inside a given file.
-- ❌ Adding a `process.env.X ?? appConfig.foo` runtime override. `pages/app/JobsPage.ts:73` has one (`process.env.APP_JOBS_PATH ?? appConfig.paths.JOBS`); it should not be propagated. Either make the value config-driven or env-driven, never both.
+- ❌ Adding a `process.env.X ?? appConfig.foo` runtime override, such as `process.env.APP_JOBS_PATH ?? appConfig.paths.JOBS` in a page object. If your repo already has one, it is drift: do not propagate it. Either make the value config-driven or env-driven, never both.
 - ❌ Committing `env/.env.dev`, `.env.test`, `.env.perf`, or `.env.local`. They're in `.gitignore`; if `git status` ever shows one staged, unstage and rotate any credentials that appeared.
 - ❌ Rotating an identity-provider admin credential from the QA toolchain. The application may read the same secret from a separate store, so a one-sided reset causes 500s until both are updated. Always rotate both sides together, with whoever owns the platform.
 
@@ -158,7 +158,7 @@ User says: *"Add a read-only test user so we can prove 403 on write endpoints fr
 
 User says: *"Wire up a Grafana URL so a perf-test-run annotation helper can post annotations."*
 
-1. **Decide where it belongs.** Utility service URL → `config/util/grafana.ts` (new file — this would be the first file in `config/util/`, establishing the future convention); env var `GRAFANA_URL`, added to the schema in `config/env.ts`.
+1. **Decide where it belongs.** Utility service URL → `config/util/grafana.ts` (new file — if your repo has no `config/util/` yet, this file creates it); env var `GRAFANA_URL`, added to the schema in `config/env.ts`.
 2. **Add `env/.env.example`** entry under a new `# GRAFANA` section header (or append to a sensible existing one):
    ```
    GRAFANA_URL=
@@ -193,13 +193,13 @@ User says: *"Set up a staging environment file pointing at the staging cluster."
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ZodError` at load from `config/env.ts`, naming variables                                 | Key missing from the active `.env.${ENVIRONMENT}` file, or that file doesn't exist on disk                              | Confirm the key exists in `env/.env.${ENVIRONMENT}` (default `env/.env.dev`). Confirm the file exists. If recently added, also check `env/.env.example` for the key.       |
 | Wrong environment is loaded                                                               | `ENVIRONMENT` unset, misspelled, or points at a missing file (`dotenv` is silent on missing paths)                     | Default is `dev`. Set `ENVIRONMENT=test` (or `perf`, `staging`) **in the shell** — not in an `.env` file. Confirm `env/.env.${ENVIRONMENT}` exists.                          |
-| `USER_ACCESS_TOKEN_ADMIN` / `USER_ACCESS_TOKEN_FULL` not in `env/.env.example`            | These tokens are minted at runtime by an auth-bootstrap setup (Keycloak login → token), not committed                  | Do not add them to `env/.env.example`. Confirm the auth-bootstrap setup ran (login.setup.ts / equivalent) — `tokens.admin()` throws "… is not set — did the setup project run?" when it didn't. For 403 tests while `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment the test out with `// TODO: FIXME: <TICKET>` — never a conditional `test.skip`. |
+| `USER_ACCESS_TOKEN_ADMIN` / `USER_ACCESS_TOKEN_FULL` not in `env/.env.example`            | These tokens are minted at runtime by an auth-bootstrap setup (Keycloak login → token), not committed                  | Do not add them to `env/.env.example`. Confirm the auth-bootstrap setup ran (login.setup.ts / equivalent) — `tokens.admin()` throws "… is not set — did the setup project run?" when it didn't. If your environment does not provision `USER_ACCESS_TOKEN_ZERO`, write the 403 tests and comment them out with `// TODO: FIXME: <TICKET>` — never a conditional `test.skip`. |
 | TypeScript: `process.env.X` is `string \| undefined`                                      | Code reads `process.env` outside `config/env.ts`; Node types every value as optional                                   | Read `env.X` / `tokens.x()` instead — see `type-safety` § Environment variables. Existing `!`, `as string`, `?? "default"` reads at call sites are drift; migrate on next touch. |
 | Self-signed certificate errors | TLS validation enabled | If an override is already set above the dotenv call for an admin client, do not remove it without auditing that client. Prefer trusting the certificate. |
 | Accidentally committed `env/.env.dev` (or `.env.test`, `.env.perf`)                        | `.gitignore` rule didn't catch it (e.g. file added with `-f`)                                                          | `git rm --cached env/.env.dev`; verify `.gitignore` covers `env/.env.dev` and `.env.*` (with `!.env.example`); rotate every credential exposed in the file.              |
-| New config property has no JSDoc and review is blocking                                    | `appConfig` properties are currently undocumented; the contract for **new** properties is JSDoc                        | Add a one-line JSDoc naming the backing env var: `/** <description> — loaded from <ENV_VAR> env variable */`. While here, JSDoc the surrounding properties too.            |
+| New config property has no JSDoc and review is blocking                                    | Older `appConfig` properties may have no JSDoc; the contract for **new** properties is JSDoc                           | Add a one-line JSDoc naming the backing env var: `/** <description> — loaded from <ENV_VAR> env variable */`. While here, JSDoc the surrounding properties too.            |
 | Trying to add an endpoint path or message string to `config/`                              | Paths do belong in `config/app.ts`, but in the in-source catalog (`appConfig.api`, `appConfig.paths`), never as env-driven values or enums; messages are `enums/app/*` | Use `appConfig.api.*` / `appConfig.paths.*` for path strings, `enums/app/*` for message/suite/status constants. `config/` is for env-driven values, not strings.            |
-| `process.env.APP_JOBS_PATH ?? appConfig.paths.JOBS` pattern in a new PR                    | Runtime env override of a config catalog value — not a sanctioned pattern                                              | Pick one source. Either the path is config-driven (`appConfig.paths.JOBS`) or env-driven (rare, justify) — never both with a runtime fallback. The existing one at `pages/app/JobsPage.ts:73` is drift, not precedent. |
+| `process.env.APP_JOBS_PATH ?? appConfig.paths.JOBS` pattern in a new PR                    | Runtime env override of a config catalog value — not a sanctioned pattern                                              | Pick one source. Either the path is config-driven (`appConfig.paths.JOBS`) or env-driven (rare, justify) — never both with a runtime fallback. If your repo already has one, it is drift, not precedent. |
 
 ## See Also
 

@@ -1,6 +1,6 @@
 ---
 name: fixtures
-version: 1.1.2
+version: 1.1.3
 description: Playwright fixture authoring — POM dependency injection, the test-options.ts merge point, apiRequest/mailpit/loginUser fixtures, scoping (test vs Playwright worker), and kebab-case naming. Use when adding a fixture, registering a page object for DI, or extending FrameworkFixtures. Triggers — "fixture", "test-options", "register page object", "Playwright worker scope". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or plain helpers (helpers).
 metadata:
   category: domain
@@ -13,19 +13,19 @@ metadata:
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, decisions, anti-patterns.** How to decide whether you need a fixture and how to author one correctly. | **Always** — on any fixture / DI task. |
-| **`reference.md`** | **Catalog of facts.** Full fixture inventory (every POM + `apiRequest` / `loginUser` / `mailpit`), env-var dependency map, storage-state & token catalog, plain-functions-not-fixtures, and the anti-catalog of what the framework deliberately does NOT do. | **Load on lookup** — "Which POMs are registered?" / "What env vars does `mailpit` need?" / "What storage state does `login.setup.ts` produce?" |
+| **`reference.md`** | **Catalog of facts.** The example app's fixture inventory (every POM + `apiRequest` / `loginUser` / `mailpit`), env-var dependency map, storage-state & token catalog, plain-functions-not-fixtures, and the anti-catalog of what the framework deliberately does NOT do. | **Load on lookup** — "Which POMs does the example app register?" / "What env vars does `mailpit` need?" / "What storage state does the setup project produce?" |
 | **`recipes.md`** | **End-to-end wiring scenarios.** Add a POM fixture, seed-via-`apiRequest` in a UI spec, mailpit email loop, guest flow, `storageState` override, add a persona, domain fixture owning a context, `apiRequest`-dependent fixture, `mergeTests`, helper-with-cleanup, debug table. | **Load during authoring** — you're wiring a new fixture or a new fixture consumer. |
 
 **Boundary rule:** decisions and rules live in `SKILL.md`; the inventory lives in `reference.md`; wiring skeletons live in `recipes.md`. If you find inventory in `SKILL.md`, it is drift — move it to `reference.md`.
 
 ## Critical
 
-Non-negotiable. Every rule below is enforced by the orchestrator (`~/.claude/CLAUDE.md` MUST table) or has bitten the codebase before.
+Non-negotiable. Every rule below is enforced by the orchestrator (`~/.claude/CLAUDE.md` MUST table) or prevents a common failure.
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** import them from `@playwright/test` in a spec — fixtures will be `undefined` and TypeScript loses the merged types.
 - **ALWAYS** receive page objects via fixture DI. **NEVER** call `new JobsPage(page)` (or any other POM constructor) inside a spec, `beforeEach`, or helper. Page objects are registered in `fixtures/pom/page-object-fixture.ts`; specs destructure them.
 - **ALWAYS** add new fixtures to the `mergeTests(...)` call in `fixtures/pom/test-options.ts`. A fixture file that isn't merged is invisible to specs.
-- **Default fixture scope is `{ scope: 'test' }`.** Use `{ scope: 'worker' }` only for genuinely expensive shared setup (auth storage state, full app boot). Misusing Playwright worker scope causes shared mutable state across parallel tests — silent flake. The framework has **no** Playwright-worker-scoped fixtures today.
+- **Default fixture scope is `{ scope: 'test' }`.** Use `{ scope: 'worker' }` only for genuinely expensive shared setup (auth storage state, full app boot). Misusing Playwright worker scope causes shared mutable state across parallel tests — silent flake. The example app has **no** Playwright-worker-scoped fixtures.
 - **File naming is `<name>-fixture.ts` (kebab-case).** Examples: `page-object-fixture.ts`, `api-request-fixture.ts`, `mailpit-fixture.ts`, `login-fixture.ts`. CamelCase fixture filenames are drift — do not introduce.
 - **Fixture lifecycle is `setup → await use(value) → teardown`.** Code after `await use(value)` is the teardown and runs even if the test fails. Code before `await use(...)` is the setup. Skipping `await use(...)` means the test never sees the fixture.
 - **The decisive reason to choose a fixture over `beforeEach`/`afterEach` is that setup and teardown become one self-contained unit.** Both run after a failed test — Playwright runs `afterEach` too — so the difference is not *whether* cleanup runs but *what it knows*. The post-`use` block tears down exactly what its own setup created, with no shared `let` variable linking two hooks; if setup throws, `use` is never reached and teardown never tries to delete something that was never created; only tests that request the fixture pay for it; and any spec reuses it by name instead of copying both hooks. If the setup needs none of that, it is a helper or an inline hook — not a fixture. (The full `apiRequest`-direct vs helper vs fixture decision is owned by `api-testing` § Three callable shapes.)
@@ -56,10 +56,10 @@ The POM axis is unconditional (POMs are always fixtures). The API axis defers to
 
 ## Fixture inventory
 
-The full, current inventory (every registered POM, `apiRequest` / `loginUser` / `mailpit`, env-var map, storage-state & token catalog) lives in **`reference.md`**. Keep it there — do not re-inline it here. When you add a fixture, update `reference.md § 1`.
+The example app's inventory (every registered POM, `apiRequest` / `loginUser` / `mailpit`, env-var map, storage-state & token catalog) lives in **`reference.md`**. Do not re-inline it here. Your repo's own fixture list belongs in its `CLAUDE.md`; when you add a fixture, update that list.
 
-**Drift to be aware of** (do not propagate):
-- `fixtures/forgot-password.spec.ts` is a misplaced spec — specs belong under `tests/app/**`, not under `fixtures/`. Do not author new specs here.
+**Misplaced specs** (do not propagate):
+- If a spec sits under `fixtures/` (for example a `forgot-password.spec.ts`), that is drift — specs belong under `tests/app/**`, not under `fixtures/`. Do not author new specs there.
 
 ## test-options.ts — the merge point
 
@@ -73,7 +73,7 @@ Walk these steps in order. Stop at any step where the artifact already exists; r
 
 1. **Decide whether you need a fixture at all.** Load the `api-testing` skill § Three callable shapes and apply its decision rule. The summary: `apiRequest` direct in the spec is the default; promote to a helper function on the second use; promote to a fixture only when 3+ specs need the same setup with **guaranteed teardown** (auto-cleanup on test failure). If you don't clear that bar, do not write a fixture.
 2. **Pick the right home.** New page object → extend `FrameworkFixtures` and the `base.extend(...)` block in `fixtures/pom/page-object-fixture.ts`. New API-side fixture → new file under `fixtures/api/<name>-fixture.ts`. New service / cross-cutting fixture → new file under `fixtures/services/<name>-fixture.ts`. Do not invent a new top-level directory.
-3. **Name the file `<name>-fixture.ts` (kebab-case).** Match the existing names in the inventory.
+3. **Name the file `<name>-fixture.ts` (kebab-case).** Match the existing fixture file names.
 4. **Type the fixture's value.** Either inline (`base.extend<{ mailpit: MailpitHelper }>({...})` — see `mailpit-fixture.ts`) or via a named type alias (`FrameworkFixtures` for page objects, `ApiRequestMethods` for `apiRequest`). Export the type when callers outside the fixture file will reference it.
 5. **Implement `setup → await use(value) → teardown`.** Setup runs before the test, the value is yielded via `await use(value)`, teardown runs after the test (even on failure). Code that runs only on success belongs **inside** the test, not in the fixture.
 6. **Pick scope.** Default `{ scope: 'test' }` — re-runs setup per test, isolated. Only use `{ scope: 'worker' }` for genuinely expensive shared setup that must survive across tests in the same Playwright worker (auth storage state). See § Fixture scoping.
@@ -84,15 +84,15 @@ Walk these steps in order. Stop at any step where the artifact already exists; r
 
 | Need | Scope | Why |
 |------|-------|-----|
-| Per-test page objects (`jobsPage`, `createJobPage`, …), per-test mailbox handle, per-test `apiRequest` | `test` (default) | Re-runs setup per test → isolation. The whole inventory above runs on `test` scope |
+| Per-test page objects (`jobsPage`, `createJobPage`, …), per-test mailbox handle, per-test `apiRequest` | `test` (default) | Re-runs setup per test → isolation. The example app's whole inventory runs on `test` scope |
 | Genuinely expensive shared setup — auth storage state minted once per Playwright worker, full app boot, a seeded tenant the entire spec file shares read-only | `worker` | One setup per Playwright worker process. **Teardown runs once per Playwright worker, not per test.** Misuse = shared mutable state across parallel tests = silent flake |
 
-The current codebase uses **only `test` scope** — there are no Playwright-worker-scoped fixtures merged into `test-options.ts` today. If you reach for Playwright worker scope, the bar is high: prove the setup is shareable AND read-only AND expensive. Auth storage minted by `tests/app/login.setup.ts` is the canonical fit; build per-test data with `apiRequest` directly or a helper, not a Playwright-worker-scoped fixture.
+The example app uses **only `test` scope** — no Playwright-worker-scoped fixture is merged into its `test-options.ts`. If you reach for Playwright worker scope, the bar is high: prove the setup is shareable AND read-only AND expensive. Auth storage minted by the setup project (`tests/app/login.setup.ts` in the example app) is the canonical fit; build per-test data with `apiRequest` directly or a helper, not a Playwright-worker-scoped fixture.
 
 ## Framework notes (rationale for existing choices)
 
 - **Why `mailpit` builds its own `APIRequestContext`.** `apiRequest` is hard-wired to send `Authorization: Bearer <token>`; Mailpit needs `Authorization: Basic <base64>`. That auth-shape mismatch is why `mailpit-fixture.ts` calls `request.newContext(...)` itself — and why it **must** `await context.dispose()` in teardown. Do not try to route mailbox calls through `apiRequest`.
-- **`login.setup.ts` conventions.** It imports `test` from `fixtures/pom/test-options` (same runner/fixture surface as specs, so future setup tests can reach `apiRequest`/`mailpit` without changing the import) and calls `qase.ignore()` in **every** setup test — these are storage/token generators, not real test cases, and would otherwise pollute Qase signal. Any new setup test must do both.
+- **`login.setup.ts` conventions.** The example app's setup file imports `test` from `fixtures/pom/test-options` (same runner/fixture surface as specs, so future setup tests can reach `apiRequest`/`mailpit` without changing the import) and calls `qase.ignore()` in **every** setup test — these are storage/token generators, not real test cases, and would otherwise pollute Qase signal. Any new setup test must do both.
 - **`resetStorageState` clears cookies + permissions only — NOT `localStorage`/`sessionStorage`.** If a spec depends on client-side storage being wiped (e.g. a "first visit" banner keyed off `localStorage`), clear it explicitly; `resetStorageState` will not.
 
 ## Anti-patterns
@@ -106,9 +106,9 @@ The current codebase uses **only `test` scope** — there are no Playwright-work
 - ❌ Fixture that mutates global state (env vars, file system, tenant flags) without restoring it in teardown. The next test in the Playwright worker inherits the mutation.
 - ❌ Fixture that swallows assertion failures with a `try/catch` around the test body or `await use()`. The orchestrator forbids `try/catch` in tests; a fixture wrapping `use()` in a `try/catch` is the same anti-pattern in disguise. Defensive teardown (e.g. `Promise.allSettled` for cleanup) is fine — silencing test failures is not.
 - ❌ Single-spec one-off fixture. If it's used by one spec, it's a `beforeEach` block or an `apiRequest` direct call (see `api-testing` § Three callable shapes). Promote on the third spec, not the first.
-- ❌ CamelCase fixture filenames (`pageObjectFixture.ts`, `mailpitFixture.ts`). Use `<name>-fixture.ts` (kebab-case). Match the existing inventory.
+- ❌ CamelCase fixture filenames (`pageObjectFixture.ts`, `mailpitFixture.ts`). Use `<name>-fixture.ts` (kebab-case). Match the existing fixture file names.
 - ❌ Authoring a Zod schema, `appConfig` value, or business-logic helper inside a fixture file. Schemas live under `fixtures/api/schemas/`, config in `config/`, helpers in `helpers/`. The fixture orchestrates lifecycle, nothing else.
-- ❌ Writing a spec under `fixtures/` (the existing `fixtures/forgot-password.spec.ts` is drift). Specs go under `tests/app/api/`, `tests/app/e2e/`, or `tests/app/functional/`.
+- ❌ Writing a spec under `fixtures/`. Specs go under `tests/app/api/`, `tests/app/e2e/`, or `tests/app/functional/`.
 - ❌ Navigation or `waitForLoaded()` inside a POM fixture body (`await use(new X(page).goto())`). Forces every test that destructures the POM to pay the navigation cost even if it never visits that page. Navigation belongs in the spec or a POM `open()` method; the fixture body is just `await use(new XPage(page))`.
 - ❌ `Object.fromEntries(Object.entries(poms).map(...))` to register POMs. Looks clever, breaks TypeScript narrowing inside test bodies, defeats jump-to-definition, adds runtime indirection for zero saving. List each POM explicitly. Reject in review.
 - ❌ Re-aliasing a destructured fixture (`const m = markets;`). Use the destructured name so readers can grep it.
@@ -145,10 +145,10 @@ User says: *"Expose the new Notifications page to tests via a fixture."*
 
 ### Example 2 — Why `apiRequest` is a fixture, not a helper
 
-The `apiRequest` fixture in `fixtures/api/api-request-fixture.ts` wraps Playwright's built-in `request` (an `APIRequestContext`) into a typed `<T>(params) => Promise<{ status, body: T }>` function. It is a fixture — not a helper — for two reasons rooted in the lifecycle:
+The example app's `apiRequest` fixture (`fixtures/api/api-request-fixture.ts`) wraps Playwright's built-in `request` (an `APIRequestContext`) into a typed `<T>(params) => Promise<{ status, body: T }>` function. It is a fixture — not a helper — for two reasons rooted in the lifecycle:
 
 - **DI of `request`.** Playwright provides a fresh `APIRequestContext` per test scope. The fixture closes over that context, so every spec gets the same shape (`apiRequest({ method, url, baseUrl, body, headers })`) without re-acquiring the context manually.
-- **Lifecycle hook for the wrapper, not the contract.** The fixture body uses `await use(apiRequestFn)` — the wrapper itself has no teardown today, but the lifecycle scaffolding is already in place if cross-cutting concerns (default headers, retry, instrumentation) need to be added later. A plain helper would have to be re-imported in every spec and would lose the per-test `request` injection.
+- **Lifecycle hook for the wrapper, not the contract.** The fixture body uses `await use(apiRequestFn)` — the wrapper itself has no teardown, but the lifecycle scaffolding is in place if cross-cutting concerns (default headers, retry, instrumentation) are added later. A plain helper would have to be re-imported in every spec and would lose the per-test `request` injection.
 
 This is the canonical "fixture justification" shape — the fixture earns its complexity by hosting Playwright lifecycle (`request` injection) and being merged once at `test-options.ts` so every spec receives it without ceremony.
 
@@ -158,7 +158,7 @@ User says: *"Every job-mutation test needs a worker seeded first. Should I write
 
 1. Step 1 — Apply `api-testing` skill § Three callable shapes. The setup is reused across multiple specs AND chains 2+ API calls (worker create + capture id) AND needs guaranteed teardown (delete the worker even if the test fails). That clears the fixture bar.
 2. Step 2 — New file under `fixtures/api/seeded-worker-fixture.ts` (API-side resource → `fixtures/api/`). Build it on top of `apiRequestFixture` so the new fixture inherits `apiRequest` — same pattern as `login-fixture.ts` extending `baseApiRequestFixture`.
-3. Step 5 — Lifecycle: setup builds the body via the existing `buildCreateWorkerBody()` helper, calls `apiRequest`, parses the response with the matching schema, and yields the typed worker id. After `await use(...)`, teardown calls the project's `cleanupWorkers(apiRequest, [workerId], headers)` helper (tolerates 404).
+3. Step 5 — Lifecycle: setup builds the body via the `buildCreateWorkerBody()` body builder, calls `apiRequest`, parses the response with the matching schema, and yields the typed worker id. After `await use(...)`, teardown calls the example app's `cleanupWorkers(apiRequest, [workerId], headers)` helper (tolerates 404).
 4. Step 6 — Scope `test`. A Playwright-worker-scoped seeded worker would be shared across every test in the Playwright worker, defeating the per-test isolation and risking 409 on jobs assigned to it.
 5. Step 7 — Append to `mergeTests(...)` in `fixtures/pom/test-options.ts`. Without this, specs cannot destructure `{ seededWorker }`.
 6. Step 8 — JSDoc the fixture with the env-var requirement (token), the cleanup helper used, and the jobs-before-workers ordering quirk that makes teardown 409-safe only via `cleanupWorkers` / `cleanupWorkersAndJobs`.
@@ -177,7 +177,7 @@ User says: *"Every job-mutation test needs a worker seeded first. Should I write
 
 ## See Also
 
-- **`reference.md`** — full fixture inventory, env-var map, storage-state & token catalog, and the anti-catalog of deliberate omissions.
+- **`reference.md`** — the example app's fixture inventory, env-var map, storage-state & token catalog, and the anti-catalog of deliberate omissions.
 - **`recipes.md`** — end-to-end wiring scenarios (add a POM fixture, seed-in-UI-spec, mailpit loop, guest flow, persona add, domain fixture, `mergeTests`, helper-with-cleanup, debug table).
 - **`api-testing`** skill — § Three callable shapes is the canonical decision rule for `apiRequest` direct vs helper function vs helper fixture. This skill defers to it.
 - **`selectors`** skill — selectors-vs-POM placement; page-object registration through this skill's `page-object-fixture.ts` is what makes locators reachable from specs.

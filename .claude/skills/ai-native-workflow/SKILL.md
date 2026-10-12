@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.5
+version: 2.1.6
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -8,7 +8,7 @@ metadata:
 
 # AI-Native Workflow
 
-This skill is the **routing and onboarding layer** for AI-assisted work on this scaffold (Playwright v1.56 + TypeScript, multi-tenant scheduled-jobs platform with Qase integration). It teaches you how the constitution (`~/.claude/CLAUDE.md`), the on-demand skills, and the manual personas fit together — and which one to load for which task. It does not own any rules itself; rules live in their respective files.
+This skill is the **routing and onboarding layer** for AI-assisted work on this scaffold (Playwright + TypeScript, with Qase integration). The skills' examples use an invented example app, a multi-tenant scheduled-jobs platform; your repo's own facts live in its `CLAUDE.md`. It teaches you how the constitution (`~/.claude/CLAUDE.md`), the on-demand skills, and the manual personas fit together — and which one to load for which task. It does not own any rules itself; rules live in their respective files.
 
 ## Critical
 
@@ -50,7 +50,7 @@ For a generic "create / add / generate / extend / refactor" prompt, load `common
 Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and surface if a phase cannot be completed.
 
 1. **Understand** — re-read the prompt, restate the goal in one sentence, confirm the work category (new artifact / edit / refactor / debug / investigate).
-2. **Locate** — open `~/.claude/CLAUDE.md § Routed Skill Index` and identify the matching skill. If the repository has its own `CLAUDE.md` or a repo-context skill, read it too — it holds the folder map the skills assume.
+2. **Locate** — open `~/.claude/CLAUDE.md § Routed Skill Index` and identify the matching skill. If the repository has its own `CLAUDE.md` or a repo-context skill, read it too — it holds the repo's real folder map, which replaces the example app's paths in the skills.
 3. **Audit** — read existing code from disk (`ls`, then `Read` the relevant files). Never propose from memory. For API work, also confirm the endpoint contract via OpenAPI; for UI work, run `npx playwright open` (see the `playwright-cli` skill) per `~/.claude/CLAUDE.md` MUST: Explore Before Generate.
 4. **Plan** — for multi-step or multi-file changes, write the scope: what changes, in which files, why, what's deliberately out of scope. If the work has several logical parts, name the **PR boundaries** now — one PR per part (`GOVERNANCE.md` § One logical change per PR). Wait for human approval on non-trivial work.
 5. **Generate** — author the code following the matched skill's `## Critical` rules and the relevant `~/.claude/CLAUDE.md` MUST/WON'T entries. Re-check the Critical block while generating, not after.
@@ -64,7 +64,7 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 - **Layered topology.** Constitution → skills → personas. One source per concern; precedence is documented.
 - **Routed by area through one index, not by free text.** The Routed Skill Index makes skill selection deterministic — the model does not have to guess.
 - **One source of truth per concern.** env-driven URLs/credentials/tokens read through `config/env.ts` — `env.X`, `tokens.full()`, or `appConfig` for URLs (declared in `env/.env.example`; never `process.env` at a call site); endpoint paths and route constants in `config/app.ts` (`appConfig.api.*`, `appConfig.paths.*`); message strings, suite names, role names, status values in `enums/app/*` (e.g. `job-status.ts`, `qase-suites.ts`); fixed test constants in `test-data/app/*.json`. Per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, NOT in `enums/`.
-- **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern but the codebase still has the legacy form, it says so (e.g. `api-testing` names legacy camelCase test-data files as drift and forbids new ones). The next person to touch the file converges; they don't perpetuate the drift.
+- **Drift is surfaced explicitly in skills.** When a skill documents the canonical pattern and a codebase may still carry the legacy form, it names that form as drift (e.g. `api-testing` treats legacy camelCase test-data files as drift and forbids new ones). The next person to touch the file converges; they don't perpetuate the drift.
 - **Hard-stop forbidden patterns.** `~/.claude/CLAUDE.md § WON'T` and each skill's `## Anti-patterns` list refusal triggers, not soft preferences.
 
 ## Anti-patterns
@@ -117,8 +117,8 @@ User: *"`tests/app/functional/jobs-service/jobs/email-create-edit-job.spec.ts` f
 2. **Locate** — `tests/app/functional/**` → Routed Skill Index → load `flakiness-triage` first to classify the failure (isolation experiment: real bug, cross-test interference, or per-test flake), then `debugging` to fix it (failure-mode taxonomy + Trace Viewer / UI Mode workflow), plus `selectors` + `playwright-cli` if a locator looks suspect after re-exploration. UI invariants live in `page-objects` + `selectors` + `test-standards`.
 3. **Audit** — read the spec from disk. Pull the CI artifact (`gh run download`), open the trace.
 4. **Plan** — root-cause first (env? race? isolation?), no scope creep into unrelated cleanup.
-5. **Generate** — fix at root cause (e.g. add a readiness check in `auth.setup.ts`). Re-run `npx playwright open` (see the `playwright-cli` skill) if a locator looks suspect.
-6. **Verify** — 5 consecutive isolated runs plus one in-suite run (`flakiness-triage` § Step 5), re-run locally with `ENVIRONMENT=ci`, then push and watch CI.
+5. **Generate** — fix at root cause (e.g. add a readiness check in the login setup, `login.setup.ts` in the example app). Re-run `npx playwright open` (see the `playwright-cli` skill) if a locator looks suspect.
+6. **Verify** — 5 consecutive isolated runs plus one in-suite run (`flakiness-triage` § Step 5), re-run locally with `ENVIRONMENT=<ci-env>`, then push and watch CI.
 7. **Surface** — report root cause and the diagnostic path you walked (which Playwright tool, what the trace showed, why this fix is the minimal one).
 
 ### Example 3 — Adding a new env variable
@@ -127,8 +127,8 @@ User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 
 1. **Understand** — add an env-driven config value.
 2. **Locate** — `config/**` → load `config` skill (env file layout, JSDoc-on-properties, deferral to `type-safety` for the access pattern). `enums/**` is **NOT** the right home — per `~/.claude/CLAUDE.md § Sources of Truth`, paths live in `config/`, not in `enums/`. Also load `type-safety` (§ Environment variables) for the access rules — env values are read only through `config/env.ts`.
-3. **Audit** — read `config/env.ts`, `config/app.ts`, `env/.env.example`, and `helpers/util/mailpit.ts`. Grep for any existing `MAILPIT_URL` reference. (`config/util/mailpit.ts` does not exist — `config/util/` is a future convention.)
-4. **Plan** — declare in `env/.env.example`, add `MAILPIT_URL` to the schema in `config/env.ts` (with its local default as `.default(...)` there, the one home for defaults), and read it as `env.MAILPIT_URL` — replacing the direct `process.env.MAILPIT_URL` read in `helpers/util/mailpit.ts`, which is drift. No `!`, `??` or `||` at the call site.
+3. **Audit** — read `config/env.ts`, `config/app.ts`, `env/.env.example`, and `helpers/util/mailpit.ts`. Grep for any existing `MAILPIT_URL` reference. (If your repo has no `config/util/mailpit.ts`, Mailpit reads `env.MAILPIT_URL` directly; `config/util/<service>.ts` is the optional per-service convention in the `config` skill.)
+4. **Plan** — declare in `env/.env.example`, add `MAILPIT_URL` to the schema in `config/env.ts` (with its local default as `.default(...)` there, the one home for defaults), and read it as `env.MAILPIT_URL`. If `helpers/util/mailpit.ts` reads `process.env.MAILPIT_URL` directly, that is drift: replace it with `env.MAILPIT_URL`. No `!`, `??` or `||` at the call site.
 5. **Generate** — follow the `config` skill's pattern. Do NOT add the path to `enums/` — that's the legacy split that `~/.claude/CLAUDE.md` explicitly forbids.
 6. **Verify** — `tsc --noEmit`, `eslint .`, run the affected Mailpit-using tests.
 7. **Surface** — report: var declared and in the schema, consumer reads `env.MAILPIT_URL`, no `enums/` change.
@@ -148,7 +148,7 @@ User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 
 ## See Also
 
-- **`~/.claude/CLAUDE.md`** — the always-on orchestrator. The **only rule file** in this repo. This skill teaches how to apply it.
+- **`~/.claude/CLAUDE.md`** — the always-on orchestrator. The top rule file; a project's own `CLAUDE.md` ranks below it (see § Critical). This skill teaches how to apply it.
 - **API authoring:** [`api-testing`](../api-testing/SKILL.md) — full per-area workflow + endpoint context (consolidated from the previous `api-tests.mdc`).
 - **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`test-standards`](../test-standards/SKILL.md) — class structure, locator strategy, spec conventions (consolidated from the previous `ui-tests.mdc`).
 - **Domain orientation:** the adopting repository's `CLAUDE.md`, or a platform-context skill it names — the system under test's own facts; [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).

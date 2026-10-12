@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 2.0.5
+version: 2.0.6
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -17,13 +17,13 @@ This skill is the **single source of truth** for API-test invariants and workflo
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, workflow, decisions, anti-patterns.** Teaches the model how to think about API tests. | **Always** — on any API-testing task. |
-| **`reference.md`** | **Catalog of facts.** Helper inventory by resource, token catalog, URL catalog, response shape catalog, error envelope schemas, schema patterns by data type, decision tree, Mailpit recipe, cross-tenant patterns, form-encoded recipe, common request recipes. | **Load During Phase 2** (Coverage Plan) and on lookups — "What helpers exist for jobs?" / "What's the shape of a list response?" / "Which token for 403?" |
+| **`reference.md`** | **Catalog of facts** from the example app. Helper inventory by resource, token catalog, URL catalog, response shape catalog, error envelope schemas, schema patterns by data type, decision tree, Mailpit recipe, cross-tenant patterns, form-encoded recipe, common request recipes. | **Load During Phase 2** (Coverage Plan) and on lookups — "What helpers exist for jobs?" / "What's the shape of a list response?" / "Which token for 403?" |
 | **`templates.md`** | **Copy-paste skeletons.** Full CRUD spec, schema file, helper file, body builder, test-data JSON, E2E flow, cross-tenant isolation spec, per-job-type body shapes. | **Load During Phase 4** (Scaffold) — scaffolding a new spec, schema, helper, or test-data file. |
 | **`http-method-coverage.md`** | **Per-verb coverage methodology.** GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS/405 playbook with what-to-test, what-not-to-test, anti-patterns, and self-review checklists per verb. Includes resource × method matrix. | **Load During Phase 3** (Negative Matrix) — "What do I owe for this verb on this resource?" — open after the workflow tells you to author tests for a specific endpoint × method. |
 
 **Boundary rule:** decisions, rules, and anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Skeletons live in `templates.md`. Per-verb playbooks live in `http-method-coverage.md`. If you find rule content in a catalog file (or vice versa), it's drift — fix it.
 
-> **Source-of-truth philosophy.** The patterns described here are based on the reliable, battle-tested patterns of the upstream framework (`the upstream reference framework`), adapted to this project's domain (single `app/` area, multi-tenant scheduled-jobs platform, no response envelope, Mailpit instead of Mailhog). When the current codebase deviates from a upstream pattern, this skill encodes the **upstream-correct pattern** (e.g. shared error/pagination schemas in `util/common.ts`, `z.string().uuid()` by default, full barrel re-exports, assertion-style helpers for setup) and flags the local deviation as drift to converge. Do **not** treat the current state of the codebase as canonical; treat it as the starting point for the next consolidation pass.
+> **Source-of-truth philosophy.** The patterns described here are the reliable, battle-tested patterns of a mature reference framework (called *upstream* below), adapted to the example app, an invented multi-tenant scheduled-jobs platform (single `app/` area, no response envelope, Mailpit instead of Mailhog). When a codebase deviates from an upstream pattern, this skill encodes the **upstream-correct pattern** (e.g. shared error/pagination schemas in `util/common.ts`, `z.string().uuid()` by default, full barrel re-exports, assertion-style helpers for setup) and flags the local deviation as drift to converge. Do **not** treat a codebase's current state as canonical; treat it as the starting point for the next consolidation pass.
 
 
 ## Critical
@@ -58,8 +58,8 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
 - [ ] 5. Add `SUITES.API_<RESOURCE>` to enums/app/qase-suites.ts if it does not exist.
 - [ ] 6. Add static fixtures (`invalidId`, `nonExistentId`, …) to test-data/app/<resource>.json if needed.
 - [ ] 7. Author the spec from templates.md. Test name format:
-        `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used in 100% of
-        specs today (e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`).
+        `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used by every
+        API spec (e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`).
         Keep `<reason>` short and behavior-focused; omit it when the status alone is unambiguous (e.g.
         `Verify DELETE /jobs/{id} returns 200`).
 - [ ] 8. Cover the negative matrix (see § The negative test matrix).
@@ -83,8 +83,8 @@ Full TypeScript signature, parameter usage table, and `headers` overload semanti
 
 This API does **not** use a global response envelope. Responses are direct or resource-keyed.
 
-1. **One file per resource** under `fixtures/api/schemas/app/<resource>.ts`. **There is no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file (`fixtures/api/schemas/app/job.ts`, etc.). A shared-schema barrel does exist at `fixtures/api/schemas/util/index.ts` (re-exports `./common` and `./keycloak`). **Name-collision rule:** never dodge collisions with `as <Alias>` re-exports; pick distinct names at definition. The `UserSchema` collision is **still live today** (`tenant.ts:170` and `user.ts:32` both export a `UserSchema`) — the `UserSchema` → `AdminUserSchema` rename remains unresolved.
-2. **Reusable shared schemas live in `fixtures/api/schemas/util/common.ts` — importing from there is correct and recommended.** It exports `PageInfoSchema` (`z.strictObject`), `APIErrorSchema` (`z.strictObject`), and `JSONSchemaResponseSchema`. `job.ts` and `notification-rule.ts` import/re-export from it; `notification.ts` flows through `notification-rule.ts`; `worker.ts` and `run-stats.ts` flow through `job.ts`. Local copies of `APIErrorSchema` still remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` (the `tenant-schema.ts` copy has a divergent `details` shape); `GatewayErrorSchema` is not yet centralized (local `z.strictObject` copies in `tenant.ts`, `user.ts`, `notification-rule.ts`). When touching any duplicating file, centralize through `util/common.ts` rather than duplicating again — full inventory in `reference.md § Error catalog`.
+1. **One file per resource** under `fixtures/api/schemas/app/<resource>.ts`. **There is no `fixtures/api/schemas/app/index.ts` barrel** — specs deep-import from the resource file (`fixtures/api/schemas/app/job.ts`, etc.). In the example app, a shared-schema barrel exists at `fixtures/api/schemas/util/index.ts` (re-exports `./common` and `./keycloak`). **Name-collision rule:** never dodge collisions with `as <Alias>` re-exports; pick distinct names at definition. If two resource files export the same name (for example, an admin-side and a tenant-side `UserSchema`), rename one at the source, e.g. `AdminUserSchema`.
+2. **Reusable shared schemas live in `fixtures/api/schemas/util/common.ts` — importing from there is correct and recommended.** It exports `PageInfoSchema` (`z.strictObject`), `APIErrorSchema` (`z.strictObject`), and `JSONSchemaResponseSchema`. In the example app, `job.ts` and `notification-rule.ts` import/re-export from it; `notification.ts` flows through `notification-rule.ts`; `worker.ts` and `run-stats.ts` flow through `job.ts`. Local copies of `APIErrorSchema` remain in `tenant.ts`, `user.ts`, and `tenant-schema.ts` (the `tenant-schema.ts` copy has a divergent `details` shape), and `GatewayErrorSchema` has local `z.strictObject` copies in `tenant.ts`, `user.ts` and `notification-rule.ts` instead of one in `util/common.ts`. When touching any duplicating file, centralize through `util/common.ts` rather than duplicating again — full inventory in `reference.md § Error catalog`.
 3. Always export both the schema and the inferred type:
 
 ```typescript
@@ -92,7 +92,7 @@ export const JobSchema = z.strictObject({ /* ... */ });
 export type Job = z.infer<typeof JobSchema>;
 ```
 
-4. **Use `z.strictObject()` for every new schema** — rejects unexpected fields, catches additive API drift, matches upstream's default. The strict migration is **essentially complete**: ~93 `z.strictObject` definitions across `fixtures/api/schemas/` vs 5 lax ones, all intentional or non-response shapes (2 in `run-stats.ts` `StatsStoreResponseSchema` with an inline "intentional" comment — the third-party run-stats store's responses may include extra fields; 2 credential-input schemas in `util/keycloak.ts`; 1 deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`, whose extra keys are the point of the endpoint). Do not author new lax `z.object` schemas.
+4. **Use `z.strictObject()` for every new schema** — rejects unexpected fields, catches additive API drift, matches upstream's default. A lax shape is acceptable only when it is intentional or not a response shape, with an inline comment saying why. In the example app the lax ones are `StatsStoreResponseSchema` in `run-stats.ts` (the third-party run-stats store's responses may include extra fields), two credential-input schemas in `util/keycloak.ts`, and a deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`, whose extra keys are the point of the endpoint. Do not author new lax `z.object` schemas.
 5. Response shape catalog (no envelope):
    - **List** (paginated): `{ pageInfo: PageInfoSchema, <resourcePlural>: z.array(<Resource>Schema) }`.
    - **Single (GET by id)**: `{ <resource>: <Resource>Schema }` (e.g. `{ tenant }`, `{ job }`, `{ user }`).
@@ -100,7 +100,7 @@ export type Job = z.infer<typeof JobSchema>;
    - **Update / Delete**: `{ status: StatusSchema }` only, OR `{ <resource>Id, status, <resource>?: <Resource>Schema }` when the API echoes the updated entity (see `UpdateJobResponseSchema`).
 6. Reuse error schemas before inventing new ones (see § Error envelopes).
 7. Datetime: use `z.string().datetime()` for `Z` style, `z.string().datetime({ offset: true })` for `+00:00`.
-8. **UUIDs — default to `z.string().uuid()`.** Only loosen to `z.string()` when you have empirically verified the API returns a non-UUID id (rare; document the case inline). Several existing `id: z.string()` fields in the codebase should be tightened on the next pass — encode the right pattern here, not the lax one.
+8. **UUIDs — default to `z.string().uuid()`.** Only loosen to `z.string()` when you have empirically verified the API returns a non-UUID id (rare; document the case inline). If your schemas have lax `id: z.string()` fields, tighten them on the next pass — encode the right pattern, not the lax one.
 9. **Optional vs nullable — interrogate every modifier.** A schema is a contract assertion, not a transcription of what the API happens to return today. Lazy `.optional()` / `.nullable()` hides regressions: the parser shrugs at `null`, the test passes, and a real bug ships. Default to strict; loosen **only** when a named condition justifies it.
 
    **Strictness ladder — pick the tightest level the contract truly allows:**
@@ -125,7 +125,7 @@ export type Job = z.infer<typeof JobSchema>;
    - ❌ Combining `.optional().nullable()` without a one-line comment justifying both states.
    - ❌ Marking `id`, `createdAt`, or any audit field optional/nullable. These are contract invariants.
 
-   **Project examples (currently in `JobSchema`):**
+   **Examples (the example app's `JobSchema`):**
    - `assignments: z.array(JobAssignmentSchema).nullable()` — ✅ justified: `null` when no worker assignments are configured for the job. A test asserts both list items with populated assignments and items with `null`.
    - `jobStatus: z.string().optional()` — ⚠ revisit: is the field really sometimes absent, or always present (perhaps with a sentinel value outside the four job statuses `passing` / `failing` / `degraded` / `paused`, e.g. `"unknown"` / `"pending"`, before the first run)? If always present, tighten to `z.string()` (or `z.enum([...])`) so the next contract drift fails loudly.
    - `updatedAt: z.string()` — ✅ strict; even on a fresh resource the API echoes a timestamp (verified). Resist the temptation to add `.nullable()` "just in case".
@@ -138,8 +138,8 @@ This API does **not** use ASP.NET ProblemDetails. Use these three patterns:
 
 | Status | Pattern | Schema | Where it lives |
 |--------|---------|--------|----------------|
-| 400, 404, 409, 500 | `{ message: string, details?: string }` | `APIErrorSchema` | canonical: `fixtures/api/schemas/util/common.ts` (re-exported by `job.ts` and `notification-rule.ts`). Legacy local copies remain in `tenant.ts`, `user.ts`, `tenant-schema.ts` — centralize when next touched |
-| 401 | `{ error: string }` | `GatewayErrorSchema` | duplicated `z.strictObject` copies in `tenant.ts`, `user.ts`, `notification-rule.ts` — not yet in `util/common.ts` (request hits the API gateway before reaching the app). Exception: the notification service returns the `APIErrorSchema` shape for 401 — see the comment in `notification-rule.ts` |
+| 400, 404, 409, 500 | `{ message: string, details?: string }` | `APIErrorSchema` | canonical: `fixtures/api/schemas/util/common.ts` (example app: re-exported by `job.ts` and `notification-rule.ts`; legacy local copies in `tenant.ts`, `user.ts`, `tenant-schema.ts` — centralize when next touched) |
+| 401 | `{ error: string }` | `GatewayErrorSchema` | (example app) duplicated `z.strictObject` copies in `tenant.ts`, `user.ts`, `notification-rule.ts` instead of one in `util/common.ts` (request hits the API gateway before reaching the app). Exception: the example app's notification service returns the `APIErrorSchema` shape for 401 — see the comment in `notification-rule.ts` |
 | 403 | empty body | `expect(body).toBeNull()` | n/a — body is `null` |
 | 405 | empty body | `expect(body).toBeNull()` | n/a |
 
@@ -166,30 +166,30 @@ Otherwise, call `apiRequest({...})` directly inside the spec. Wrapping a single 
 
 ### Two helper styles — pick by use case
 
-The codebase uses both. Both are valid; the choice depends on whether the helper is a **happy-path assertion** (one shape only) or a **CRUD wrapper** (used across positive AND negative tests).
+The example app uses both. Both are valid; the choice depends on whether the helper is a **happy-path assertion** (one shape only) or a **CRUD wrapper** (used across positive AND negative tests).
 
 > **Principle (upstream-aligned):** a helper that creates an entity and is used for setup MUST `Schema.parse` the response body before returning the typed payload. This is the assertion-style contract — every caller gets a validated entity, no caller redoes the validate-then-cast dance, and a missing field surfaces at the schema boundary instead of as `undefined` deep in a downstream assertion. Passthrough helpers (`{ status, body }`) are still allowed for negative-test reuse.
 
-**Style A — assertion-style** (parse internally, return typed payload). Use when the helper exists to seed a precondition and the caller only cares about the parsed entity. The helper asserts `status` and runs `Schema.parse(body)` once; the caller gets a typed value back. **Skeleton:** [templates.md § 18](templates.md) (Helper styles). **Existing examples:** `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`. **Planned:** `setupJob`, `setupTestWorker`, `setupUser`, `setupTenant`.
+**Style A — assertion-style** (parse internally, return typed payload). Use when the helper exists to seed a precondition and the caller only cares about the parsed entity. The helper asserts `status` and runs `Schema.parse(body)` once; the caller gets a typed value back. **Skeleton:** [templates.md § 18](templates.md) (Helper styles). **In the example app:** `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`. Add `setupJob`, `setupTestWorker`, `setupUser` and `setupTenant` in the same shape.
 
-> Note: `appConfig.api.ADMIN_TENANT` is **singular** (`/admin/tenants`) — the constant name does not pluralize even though the path does. Always grep `config/app.ts` before guessing.
+> Note: in the example app, `appConfig.api.ADMIN_TENANT` is **singular** (`/admin/tenants`) — the constant name does not pluralize even though the path does. Always grep `config/app.ts` before guessing.
 
-**Style B — passthrough** (return `{ status, body }`; caller asserts). Use when the same helper is exercised across multiple status codes (201, 400, 401, 403, 404, 409). Status-asserting inside would crash the negative tests. **Skeleton:** [templates.md § 18](templates.md). **Existing examples:** every CRUD function in `helpers/app/jobs.ts`, `workers.ts`, `adminTenants.ts`, `users.ts`.
+**Style B — passthrough** (return `{ status, body }`; caller asserts). Use when the same helper is exercised across multiple status codes (201, 400, 401, 403, 404, 409). Status-asserting inside would crash the negative tests. **Skeleton:** [templates.md § 18](templates.md). **In the example app:** every CRUD function in `helpers/app/jobs.ts`, `workers.ts`, `adminTenants.ts`, `users.ts`.
 
 ### Helper signature rules (project-wide)
 
 - First arg is always `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`).
 - Last optional arg is always `headers?: string` (the token). Pass `undefined`/omit for anonymous-call testing.
-- For URL building with query strings, expose a sibling `buildList<X>Url(params)` that takes a typed param object (see `helpers/app/jobs.ts:buildListJobsUrl`).
+- For URL building with query strings, expose a sibling `buildList<X>Url(params)` that takes a typed param object (in the example app, `buildListJobsUrl` in `helpers/app/jobs.ts`).
 - Cleanup helpers (e.g. `cleanupWorkers`, `cleanupWorkersAndJobs`) use `Promise.allSettled` and tolerate 404.
 - **Never declare a Zod schema inside a helper.** Schemas live only under `fixtures/api/schemas/app/`.
 
-Before writing a new helper, check the full inventory in [reference.md § Helper catalog](reference.md#helper-catalog-already-exists--reuse-before-writing-new). Canonical examples: `helpers/app/jobs.ts` (passthrough CRUD + builders + cleanup), `helpers/app/adminUsers.ts` (both styles, incl. assertion-style `setupTestUser`).
+Before writing a new helper, grep your repo's helpers for an equivalent. [reference.md § Helper catalog](reference.md#helper-catalog) shows the example app's inventory. Good models in the example app: `helpers/app/jobs.ts` (passthrough CRUD + builders + cleanup) and `helpers/app/adminUsers.ts` (both styles, incl. assertion-style `setupTestUser`).
 
 ## Test data
 
 - **Static** (deterministic ids, strings, numbers): `test-data/app/<resource>.json`. Import and destructure: `import workerData from "../../../../test-data/app/worker.json"; const { invalidId, nonExistentId } = workerData;` (the `invalidId` / `nonExistentId` keys live in resource-specific files like `worker.json`; cross-cutting numeric tables live in `job-common.json`).
-- **Filename convention: hyphen-case** — `webhook-job.json`, `email-job.json`, `job-common.json`. Three legacy camelCase files (`httpJobValidation.json`, `webhookJobValidation.json`, `backupJobValidation.json`) are drift; do not add new camelCase JSON files. New validation tables go in `<type>-job-validation.json`.
+- **Filename convention: hyphen-case** — `webhook-job.json`, `email-job.json`, `job-common.json`. If your repo has legacy camelCase files (the example app has `httpJobValidation.json`, `webhookJobValidation.json` and `backupJobValidation.json`), they are drift; do not add new camelCase JSON files. New validation tables go in `<type>-job-validation.json`.
 - **Dynamic** (random per test run): `faker` inside body builders (`buildCreateJobBody`, `buildCreateWorkerBody`, …). Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`).
 - Never invent new uuid/tokens — read from JSON or `faker.string.uuid()`.
 
@@ -200,7 +200,7 @@ Where invalid values live drives whether the next reviewer can find them. Pick t
 | Tier | What | Where | Example |
 |------|------|-------|---------|
 | **1. Universal type-mismatch** | Values that are wrong for any field of a given primitive type (any required string field, any integer field, …) | `fixtures/api/invalid-types.ts` (the constants below) | `invalidString` for any required string field |
-| **2. Domain-specific curated** | Project-specific invalid sets (invalid email formats, password-policy violations, job-type-specific bad configs) | `test-data/app/<resource>-validation.json` (e.g. `<type>-job-validation.json`; legacy camelCase `httpJobValidation.json` is drift) | `invalidEmails`, `invalidExportConfigs` |
+| **2. Domain-specific curated** | Project-specific invalid sets (invalid email formats, password-policy violations, job-type-specific bad configs) | `test-data/app/<resource>-validation.json` (e.g. `<type>-job-validation.json`; a legacy camelCase name such as `httpJobValidation.json` is drift) | `invalidEmails`, `invalidExportConfigs` |
 | **3. Field-specific boundary / range** | Out-of-range numerics that are wrong for exactly one field (e.g. `runInterval` outside `15..3600`) | Inline `const` in the spec, only when the set is meaningful to one field and used in one place | `const outOfRangeIntervals = [-1, 0, 14, 3601, 999999];` |
 
 If a tier-3 inline set appears in 2+ specs, promote it to tier 2.
@@ -215,7 +215,7 @@ Use a valid payload as the base and override one field at a time. This isolates 
 
 **Convention: loop INSIDE `test()`, never outside, and check the schema with `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`** (the constitution's carve-out — `parse` would throw and stop the loop). One `test()` per validation concern; the loop iterates invalid values inside the test body. Wrap each iteration in `test.step()` so the trace shows which value broke. Use `expect.soft()` for inner-loop assertions so the loop continues past failures and the trace lists *every* invalid value the API mishandled in one run — not just the first. The test still fails at the end if any soft assertion failed.
 
-This matches the project's 405 catch-all pattern (see `http-method-coverage.md` for the full per-verb playbook) and avoids the per-value test explosion that the loop-outside form produces.
+This matches the 405 catch-all pattern (see `http-method-coverage.md` for the full per-verb playbook) and avoids the per-value test explosion that the loop-outside form produces.
 
 Two shapes:
 - **Single-field form** — one `test()` per field, loop iterates invalid values inside. Easier to read when a resource has 1–3 validated fields. **Skeleton:** [templates.md § 9](templates.md).
@@ -237,17 +237,17 @@ Every CRUD spec covers these scenarios. Use the matrix as a checklist when autho
 
 | Status | Trigger | Schema / Body assertion | Notes |
 |--------|---------|-------------------------|-------|
-| `200/201` | Happy path with full body | `expect(<Resource>Schema.parse(body)).toBeTruthy()` + field assertions | Jobs `POST` returns **201**, admin tenants/users `POST` returns **200** — match the actual endpoint |
+| `200/201` | Happy path with full body | `expect(<Resource>Schema.parse(body)).toBeTruthy()` + field assertions | In the example app, jobs `POST` returns **201** and admin tenants/users `POST` returns **200** — match the actual endpoint |
 | `400` | Invalid payload, invalid path id, missing required field, empty body `{}` | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | One `test()` per validation concern; loop over `invalidString`/`invalidIntegerTypes`/etc. **inside** the test with `expect.soft`. See § Per-field invalid-type loop |
 | `401` | Omit `headers` entirely | `expect(GatewayErrorSchema.parse(body)).toBeTruthy()` | Do NOT pass an empty string token; **omit the property** |
 | `401` | Wrong-realm / wrong-issuer token | `expect(GatewayErrorSchema.parse(body)).toBeTruthy()` | Distinct from "no token" — both return 401 with the gateway shape |
-| `403` | Valid token without required scope (`USER_ACCESS_TOKEN_ZERO`) | `expect(body).toBeNull()` | Only when ZERO env var is provisioned for the test environment |
+| `403` | Valid token without required scope (`USER_ACCESS_TOKEN_ZERO`) | `expect(body).toBeNull()` | If the ZERO token is not provisioned in your environment, write the test and comment it out under `// TODO: FIXME: <TICKET>` |
 | `404` | Non-existent uuid (`test-data/app/<resource>.json` `nonExistentId`) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Distinct from 400 invalid-format id |
-| `405` | Wrong verb on a real path (loop **inside** a single test, not outside) | `expect(body).toBeNull()` | See `tests/app/api/tenant-service/admin-realms.spec.ts` for the canonical loop |
+| `405` | Wrong verb on a real path (loop **inside** a single test, not outside) | `expect(body).toBeNull()` | Loop skeleton: [http-method-coverage.md § 11](http-method-coverage.md#11-405-catch-all) (for example, the example app's `admin-realms.spec.ts`) |
 | `409` | Duplicate name / conflicting state (e.g. worker still assigned to a job) | `expect(APIErrorSchema.parse(body)).toBeTruthy()` | Jobs-then-workers cleanup ordering exists because of this |
 
-Project-specific quirks:
-- `PATCH /jobs/:id`: an invalid body fails validation **before** the resource lookup (400), while a valid body with a non-existent uuid returns 404 — both branches are covered by an active test in `export-job.spec.ts`.
+Quirks to check for:
+- `PATCH /jobs/:id` in the example app: an invalid body fails validation **before** the resource lookup (400), while a valid body with a non-existent uuid returns 404 — cover both branches.
 - Sort tests: assert the endpoint accepts the params and returns valid results — **do NOT assert exact ordering** (DB collation differs from JS).
 
 ### Skipping a test for a real backend bug
@@ -283,7 +283,7 @@ Track ids in a describe-scoped array, push after create, drain in `afterAll`. **
 - Seeded GET-by-id suites that share one resource → `beforeAll` (create once) + `afterAll` (delete)
 - POST suites that create N resources → push ids in each test, drain in `afterAll`
 
-See `tests/app/api/jobs-service/jobs/export-job.spec.ts` for both patterns.
+[templates.md § 1](templates.md) shows both hook patterns.
 
 **Defensive guards:**
 - If a 400/422 negative test unexpectedly returns 201, capture the id into the cleanup array anyway — the test asserts the failure but cleanup must succeed.
@@ -311,7 +311,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 **Single-call exception:** if a test contains exactly one API call, `test.step` is optional but encouraged for consistency with multi-call peers.
 
-**Skeleton (correct vs forbidden):** [templates.md § 16](templates.md). See also `http-method-coverage.md` § PATCH and `tests/app/api/jobs-service/jobs/export-job.spec.ts`.
+**Skeleton (correct vs forbidden):** [templates.md § 16](templates.md). See also `http-method-coverage.md` § PATCH.
 
 ## Qase tagging
 
@@ -326,36 +326,36 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 ## Multi-step & E2E API tests
 
 - Multi-endpoint onboarding API flows use the `@App-API` tag (they live in `tests/app/api/`), both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
-- Email tests **must** use `@<your-test-domain>` recipient domain — Mailpit catches only that domain on the test infra.
+- Email tests **must** use the `@<your-test-domain>` recipient domain — the one domain your Mailpit catches.
 - Mailpit pattern: `await mailpit.deleteEmailsForRecipient(email)` **before** triggering the action and again **after** the test finishes; then `const message = await mailpit.getLastEmail(email, 10, 2000)`. **`getLastEmail` returns `MailMessage | null`** — guard with `expect(message).not.toBeNull()` before dereferencing, then read `message!.Content.Body`.
-- For invite-style flows, prefer `getInviteLinkFromEmail(mailpit, email)` from `helpers/util/mailpit.ts` — it already retries, asserts non-null, and runs the body through `extractLinkFromEmail`.
+- For invite-style flows, prefer a helper like the example app's `getInviteLinkFromEmail(mailpit, email)` from `helpers/util/mailpit.ts` — it retries, asserts non-null, and runs the body through `extractLinkFromEmail`.
 - `extractLinkFromEmail(emailBody)` takes a **single** argument and matches any URL containing `action-token`. There is no hint/keyword overload — if you need to discriminate links, post-filter the matched URL.
-- For per-test user setup, reuse `setupTestUser` / `teardownTestUser` from `helpers/app/adminUsers.ts`. **What `setupTestUser` actually does** (avoid the temptation to assume more): generates a `@<your-test-domain>` email, creates the user via the admin API, sets the password directly via the Keycloak admin client (bypassing the invite-link / email-reset flow), purges Mailpit for the recipient, and returns `{ email, userId }`. It does **not** mint or return access tokens, and it does **not** exercise the invite-link UX. For tests that need to drive the invite-link flow end-to-end, write the steps inline (purge → create user → `getInviteLinkFromEmail` → follow the link) rather than reaching for `setupTestUser`.
+- For per-test user setup, the example app reuses `setupTestUser` / `teardownTestUser` from `helpers/app/adminUsers.ts`. **What `setupTestUser` actually does** (avoid the temptation to assume more): generates a `@<your-test-domain>` email, creates the user via the admin API, sets the password directly via the Keycloak admin client (bypassing the invite-link / email-reset flow), purges Mailpit for the recipient, and returns `{ email, userId }`. It does **not** mint or return access tokens, and it does **not** exercise the invite-link UX. For tests that need to drive the invite-link flow end-to-end, write the steps inline (purge → create user → `getInviteLinkFromEmail` → follow the link) rather than reaching for `setupTestUser`.
 - Cleanup order for onboarding: Mailpit emails → Users → Tenant. Guard each step with `if (tenantId)` / `if (userIds.length)`.
 
 ## Anti-patterns
 
-Avoid these — they correspond to common reviewer findings and the upstream anti-pattern list adapted to this codebase:
+Avoid these — they correspond to common reviewer findings and the upstream anti-pattern list adapted to the example app:
 
 - ❌ Calling `request.get` / `request.post` / `request.fetch` directly inside a spec or helper. Always go through `apiRequest`.
 - ❌ Defining a `z.object({...})` inside a spec or helper file. Schemas live only under `fixtures/api/schemas/app/`.
 - ❌ Authoring a **new** schema as `z.object({...})` instead of `z.strictObject({...})`. New schemas must be strict; existing lax objects are drift to be closed.
 - ❌ Defaulting ids to `z.string()`. Use `z.string().uuid()` unless you have empirically verified the API returns a non-UUID and documented the case inline.
 - ❌ Asserting only `status` without `Schema.parse(body)` (or vice-versa) on success responses.
-- ❌ Adding a new local copy of `PageInfoSchema` / `APIErrorSchema` instead of importing from `fixtures/api/schemas/util/common.ts` — the shared definitions live there now (the old upstream-port schemas were deleted); import or re-export them.
+- ❌ Adding a new local copy of `PageInfoSchema` / `APIErrorSchema` instead of importing from `fixtures/api/schemas/util/common.ts` — the shared definitions live there; import or re-export them.
 - ❌ Hardcoded uuids, tokens, base URLs, or paths in specs. Pull from `env` / `tokens` (`config/env.ts`), `appConfig`, or `test-data/app/*.json`.
 - ❌ Creating resources without a matching `test.afterEach` / `test.afterAll` cleanup hook.
 - ❌ Importing `test`/`expect` from `@playwright/test` — always from `fixtures/pom/test-options`.
 - ❌ Defaulting Zod fields to `.optional()` / `.nullable()` without a named condition AND a verification test (see § Zod schema conventions, item 9).
 - ❌ Duplicating shared error / pagination / auth schemas across resource files instead of centralizing in `fixtures/api/schemas/util/common.ts`.
-- ❌ Aliasing schemas in re-exports with `as <Alias>` to dodge name collisions. Pick distinct names at definition (e.g. `UserSchema` vs `AdminUserSchema` — the `UserSchema` collision between `tenant.ts` and `user.ts` is still live).
-- ❌ Mailpit recipient outside `@<your-test-domain>` (the test infra only catches that domain). `@automation.test` and `@<alt-test-domain>` are silently dropped — the helpers that emit them (`generateUserPayload`, `buildCreateUserBody`) are known bugs.
+- ❌ Aliasing schemas in re-exports with `as <Alias>` to dodge name collisions. Pick distinct names at definition (e.g. `UserSchema` vs `AdminUserSchema`).
+- ❌ Mailpit recipient outside `@<your-test-domain>` (the only domain your Mailpit catches). Other domains, such as `@automation.test` or a look-alike `@<alt-test-domain>`, are silently dropped. If a body builder emits an address outside your Mailpit domain, that is a bug: fix the builder, and override the email with a `@<your-test-domain>` address meanwhile.
 - ❌ New test-data JSON files in camelCase (`fooBarValidation.json`). Use hyphen-case (`foo-bar-validation.json`).
 - ❌ Empty `config: {}` body for jobs — job POST requires the per-job-type config keys (`export`, `http`, `sftp`, `email`, `backup`, `stream`, `webhook`); empty `config` returns 400.
 - ❌ Deleting workers before jobs — returns 409 because the job still references the worker. Always cleanup jobs first (use `cleanupWorkersAndJobs`).
 - ❌ Asserting exact ordering on sort tests — DB collation differs from JavaScript string sort. Assert that the endpoint accepts the sort param and returns valid items.
 - ❌ Wrapping a single one-shot request in a helper "for tidiness" — reach for a helper only on reuse / multi-step / preconditions.
-- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. This project uses `Verify <METHOD> <path> returns <status> [with <reason>]`, with `{id}` for path parameters; the per-verb variants (create-and-GET-back, PATCH per-field, the 405 catch-all, cross-tenant) are listed once, in [http-method-coverage.md § 14](http-method-coverage.md#14-test-name-templates-per-verb).
+- ❌ Test names with `should` / `it` prefixes, free-form titles, or upstream's behavior-shaped `Verify <action>` form. The convention is `Verify <METHOD> <path> returns <status> [with <reason>]`, with `{id}` for path parameters; the per-verb variants (create-and-GET-back, PATCH per-field, the 405 catch-all, cross-tenant) are listed once, in [http-method-coverage.md § 14](http-method-coverage.md#14-test-name-templates-per-verb).
 - ❌ `for...of` loop **outside** `test()` for invalid-value validation (one-test-per-value pattern). Loop INSIDE `test()` with `test.step` + `expect.soft` per § Per-field invalid-type loop. The loop-outside form generates dozens of nearly-identical tests, hammers the API with extra auth cycles, and clutters Qase reporting.
 - ❌ Hard `expect()` inside an in-test validation loop. Use `expect.soft()` so all iterations report — a failing first iteration must not silence the rest.
 - ❌ `expect.soft(Schema.parse(body))` inside a loop. `parse` throws before `expect.soft` sees anything, so the loop still stops at the first bad response. Use `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)`.
@@ -382,8 +382,8 @@ Before declaring a spec done, verify:
 - [ ] Every `.optional()` / `.nullable()` modifier is justified inline (named condition + branch test) per the strictness ladder.
 - [ ] No new duplicate copies of `APIErrorSchema` / `GatewayErrorSchema` / `PageInfoSchema` — import `APIErrorSchema` / `PageInfoSchema` from `fixtures/api/schemas/util/common.ts` (or re-export through an existing resource file like `job.ts` / `notification-rule.ts`); re-export `GatewayErrorSchema` from an existing strict copy.
 - [ ] New test-data JSON files use **hyphen-case** filenames (`<type>-job-validation.json`), never camelCase.
-- [ ] Mailpit recipients use `@<your-test-domain>` — never `@automation.test`, `@<alt-test-domain>`, or any other domain (the test infra catches only `@<your-test-domain>`).
-- [ ] Specs that exercise 403 from a no-permission token: if `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`.
+- [ ] Mailpit recipients use `@<your-test-domain>` — never `@automation.test`, `@<alt-test-domain>`, or any other domain (your Mailpit catches only `@<your-test-domain>`).
+- [ ] Specs that exercise 403 from a no-permission token: if `USER_ACCESS_TOKEN_ZERO` is not provisioned, comment out the test with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned`.
 - [ ] No `test.fixme()` / `test.skip()`. A disabled test is commented out under `// TODO: FIXME: <TICKET>`.
 - [ ] Linter passes for the spec, schema, helper, and test-data files.
 
@@ -410,14 +410,14 @@ User says: _"Verify that PATCH /jobs/:id with only `name` preserves all other fi
 
 1. **`test.step` mandatory** (§ Critical) — three steps: GET-before, PATCH, GET-after.
 2. **Style** — single test, three `test.step`s, parsed schema in each step.
-3. **Assertion shape** — capture `before` from GET-before, then in GET-after assert `after.name === newName` and every other field equals `before[<field>]`. Example pattern is in `tests/app/api/jobs-service/jobs/export-job.spec.ts` (§ PATCH per-field isolation in `templates.md`).
+3. **Assertion shape** — capture `before` from GET-before, then in GET-after assert `after.name === newName` and every other field equals `before[<field>]`. The skeleton is the PATCH per-field isolation block in [templates.md § 1](templates.md).
 4. **Loop required fields** — if you're proving the pattern for *every* updatable field, write one `test()` per field with the same three-step pattern. Don't collapse into a `for...of` of steps inside a single test — that hides which field broke.
 
 ### Example 3 — Locking down validation for a request body
 
 User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field validation."_
 
-1. **Open the spec** — `tests/app/api/jobs-service/workers/workers.spec.ts`. Find the empty-body test; keep it (it's part of coverage, not a substitute).
+1. **Open the spec** — the workers spec (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`). Find the empty-body test; keep it (it's part of coverage, not a substitute).
 2. **Build `validBody`** — call `buildCreateWorkerBody()` once at describe scope.
 3. **Per-field invalid-type loops** (loop INSIDE `test()` per § convention) — one `test()` per field, iterating the matching universal array inside the body with `expect.soft` (`invalidString` for `name`/`location`, `invalidStringTypes` for any optional string, `invalidIntegerTypes` for any integer field). Test name: `Verify POST /workers returns 400 for invalid <field> values`.
 4. **Per-field omission loop** — one `test()`, loop required-field names inside the body using the destructure-and-omit pattern (§ Per-field omission). Test name: `Verify POST /workers returns 400 when required fields are missing`.
@@ -433,8 +433,8 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 | `playwright/no-skipped-test` ESLint failure on a `test.skip` | The rule catches skips; `test.skip` also corrupts Qase IDs | **Comment out** the test instead and add `// TODO: FIXME: <TICKET>` above. No eslint-disable needed because the test is commented out, not skipped. |
 | 401 returns `{ error: "..." }` but `APIErrorSchema` was used | Wrong schema for 401 — the API gateway returns a different shape than app errors | Use `GatewayErrorSchema` (`{ error: string }`) for 401. Use `APIErrorSchema` (`{ message, details? }`) for 400/404/409. See the table in § Error envelopes. |
 | Cleanup fails with 409 Conflict deleting a worker | The worker is still assigned to a job | Delete jobs first, workers second. Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, token)` which enforces the order automatically. |
-| Mailpit `getLastEmail` returns `null` | Wrong recipient domain (`@automation.test`, `@example.com`) — Mailpit on the test infra catches only `@<your-test-domain>` | Switch the recipient to `@<your-test-domain>`. For e2e onboarding, use `setupTestUser` which generates the correct domain. |
-| 403 test fails because the env var is undefined | `USER_ACCESS_TOKEN_ZERO` is not yet provisioned in this environment | Comment out the test with `// TODO: FIXME: re-enable when RBAC token is added`. Do not silently drop the 403 row from the matrix. |
+| Mailpit `getLastEmail` returns `null` | Wrong recipient domain (`@automation.test`, `@example.com`) — your Mailpit catches only `@<your-test-domain>` | Switch the recipient to `@<your-test-domain>`. For e2e onboarding, use a setup helper that generates the correct domain (in the example app, `setupTestUser`). |
+| 403 test fails because the env var is undefined | `USER_ACCESS_TOKEN_ZERO` is not provisioned in your environment | Comment out the test with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned`. Do not silently drop the 403 row from the matrix. |
 | A test fails locally but passes elsewhere — or vice versa | Flake, isolation issue, environment drift | Stop iterating blindly. Load the `debugging` skill — it covers UI Mode (`npx playwright test --ui`), Trace Viewer, Inspector, the failure-mode taxonomy. Do not raise timeouts, wrap in `try/catch`, or weaken assertions to make it green. |
 
 ## See Also
