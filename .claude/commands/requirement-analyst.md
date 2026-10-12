@@ -22,7 +22,7 @@ Detect the input form:
 
 ## Domain awareness
 
-Ground the review in the system under test. Read its project context — the repo's `CLAUDE.md`, or a platform-context skill that `CLAUDE.md` names — and cross-reference its known issues: a requirement that ignores a known production behavior has a latent gap. Use the system's precise vocabulary. If the repo keeps no such context, say so under §2 instead of assuming one.
+Ground the review in the system under test. Read its project context — the repo's `CLAUDE.md`, or the repo's platform-context skill, if it has one — and cross-reference its known issues: a requirement that ignores a known production behavior has a latent gap. Use the system's precise vocabulary. If neither carries the system context (a `CLAUDE.md` with only a folder map and tags doesn't), say so under §2 and don't conclude there are no known issues.
 
 ## The audit — produce these sections
 
