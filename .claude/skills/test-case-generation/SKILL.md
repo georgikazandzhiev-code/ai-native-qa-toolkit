@@ -35,7 +35,7 @@ The skill turns the user story into something an Automation Engineer can execute
 
 | File | Purpose | Read when |
 |------|---------|-----------|
-| **`SKILL.md`** (this file) | The full master prompt — persona, rules, system context, performance triggers, k6 test-type catalog, 6-section task template. | Every test-case generation run. |
+| **`SKILL.md`** (this file) | The full master prompt — persona, rules, an example of the system context (the real one comes from the project), performance triggers, k6 test-type catalog, 6-section task template. | Every test-case generation run. |
 
 This is a single-file skill. The system context comes from the project; the example in § System & Domain Context shows its shape and depth.
 
@@ -54,7 +54,7 @@ The generator needs a picture of the system under test before it writes a case, 
 1. The adopting repository's `CLAUDE.md`, or a platform-context skill that `CLAUDE.md` names.
 2. If neither carries the context — a `CLAUDE.md` with only a folder map and tags doesn't — stop after Sections 1–2 and ask the user for the context. If the user says to go on without it, write the cases from the story alone and list every missing context item in Section 6.
 
-The context covers, where the system has them: the core business concepts and their vocabulary; the architecture and how components communicate; data stores and retention; the auth model; data pipelines and message limits; result structures; performance targets; known production issues; known failure modes of its asynchronous or distributed parts. A context with some of these counts as present: generate, and list in Section 6 each missing item the story needs.
+The context covers, where the system has them: the core business concepts and their vocabulary; the architecture and how components communicate; data stores and retention; the auth model; data pipelines and message limits; result structures; performance targets; known production issues. A context with some of these counts as present: generate, and list in Section 6 each missing item the story needs.
 
 ### Example — the toolkit's invented scheduled-jobs platform
 
@@ -152,7 +152,7 @@ Flag an API or data flow as a k6 candidate when ANY of these apply (the examples
 - [ ] 3. Cross-reference against the project's known issues — does any issue affect this story's surface? If yes, name it in Section 6.
 - [ ] 4. Generate Section 1 (Story Analysis) — summary in 1-2 sentences.
 - [ ] 5. Generate Section 2 (Functional Requirements) — clear, testable, R1/R2/R3 numbered.
-- [ ] 6. Generate Section 3 (Test Cases) — beyond obvious paths; cover the distributed failure modes the project context names (in the example: message-queue disconnect, queue-stream-full, replay, state-store corruption), race conditions, data accuracy under load. Categorize each as [API] / [Integration] / [E2E], assign a priority (P1/P2/P3), and cite the covered requirement(s). Include observability cases — when the feature fails, does the failure get recorded and a notification fire, or does the system go silent (a failure that publishes no result is exactly this class of bug)? Coverage floor: a story touching asynchronous or distributed surfaces (work that completes outside the request/response: a queue, scheduler, background worker, event consumer or webhook delivery; a synchronous call chain across services is not one; in the example: worker / scheduler / message queue) needs 15+ cases.
+- [ ] 6. Generate Section 3 (Test Cases) — beyond obvious paths; cover the distributed failure modes the project context names (in the example: message-queue disconnect, queue-stream-full, replay, state-store corruption), race conditions, data accuracy under load. Categorize each as [API] / [Integration] / [E2E], assign a priority (P1/P2/P3), and cite the covered requirement(s). Include observability cases — when the feature fails, does the failure get recorded and a notification fire, or does the system go silent (a failure that publishes no result is exactly this class of bug)? Coverage floor: a story touching asynchronous surfaces (work that completes outside the request/response: a queue, scheduler, background worker, event consumer or webhook delivery; a synchronous call chain across services is not one; in the example: worker / scheduler / message queue) needs 15+ cases.
 - [ ] 6b. Traceability sweep — walk R1…Rn and confirm every requirement is covered by at least one test case. A requirement with zero cases means Section 3 is incomplete.
 - [ ] 7. Generate Section 4 (Security & Compliance) — tenant isolation, token validation, trust-boundary constraints (in the example: worker outbound-only), input validation, IDOR / injection into message routing / unauthorized data access.
 - [ ] 8. Generate Section 5 (Performance Testing Candidates) — for every endpoint/flow matching a trigger, specify Endpoint, Trigger matched, k6 test type, Key thresholds, Risk if untested. State "No performance testing candidates identified" if none apply.
@@ -172,7 +172,7 @@ Deliver the package as a single Markdown response. Tone: professional, technical
 Numbered list (R1, R2, R3, …) of clear, testable, traceable requirements.
 
 ### Section 3: Test Cases
-Numbered list with descriptive names sufficient for an Automation Engineer to understand intent and components. Go beyond obvious scenarios — positive paths, negative paths, complex edge cases, concurrency, race conditions, distributed-system failure modes. For features on asynchronous or distributed surfaces, specifically cover the failure modes the project context names (in the example: message-queue disconnection, queue stream full, message replay, scheduler state-store corruption, concurrent job execution, and run-stat accuracy under load). For anything that can fail silently, add observability cases: the failure must be visible (in the example: run stat recorded, notification raised, job status surfaced as `jobStatus: "failing"`) — a system that fails silently is the worst production scenario.
+Numbered list with descriptive names sufficient for an Automation Engineer to understand intent and components. Go beyond obvious scenarios — positive paths, negative paths, complex edge cases, concurrency, race conditions, distributed-system failure modes. For features on asynchronous or distributed surfaces, specifically cover the failure modes the project context names (in the example: message-queue disconnection, queue stream full, message replay, scheduler state-store corruption), plus concurrency and data accuracy under load (in the example: concurrent job execution, run-stat accuracy under load). For anything that can fail silently, add observability cases: the failure must be visible (in the example: run stat recorded, notification raised, job status surfaced as `jobStatus: "failing"`) — a system that fails silently is the worst production scenario.
 
 Every test case carries three annotations: `TC-NN [category] (priority, covers R…)`:
 
@@ -228,7 +228,7 @@ If no candidates: "No performance testing candidates identified for this user st
 - [ ] Every test case in Section 3 carries `[API]` / `[Integration]` / `[E2E]` tag (and the tag matches the actual interaction), a P1/P2/P3 priority, and the requirement(s) it covers.
 - [ ] Every requirement R1…Rn is covered by at least one test case — no orphan requirements.
 - [ ] Silent-failure surfaces have observability cases (the failure is recorded, a notification is raised, the status is visible).
-- [ ] Story touches asynchronous or distributed surfaces → Section 3 has 15+ cases.
+- [ ] Story touches asynchronous surfaces (step 6) → Section 3 has 15+ cases.
 - [ ] Section 4 covers tenant isolation, token validation, trust-boundary security, input validation, vulnerability brainstorm.
 - [ ] Section 5 flags every endpoint / flow matching a Performance Testing Trigger; each candidate has Endpoint, Trigger, k6 type, thresholds, risk.
 - [ ] Section 6 lists ambiguities + dependencies + the cross-referenced known issues of the project, OR explicitly states "All requirements are well-defined".
@@ -265,7 +265,7 @@ User story: *"As a tenant user, I want to update my own profile name."*
 |---------|-------|-----|
 | Generated test cases use Gherkin (`Given/When/Then`). | Misread of "descriptive sentences" — Gherkin belongs in spec scaffolding, not requirements. | Rewrite as descriptive sentences. The agent layer translates them to Gherkin / `test.step` later (the [`test-standards`](../test-standards/SKILL.md) skill owns that). |
 | Test case tagged `[E2E]` describes direct service-to-service communication (in the example: worker-to-backend over the message queue). | `[E2E]` is the user-perspective tag (UI). Service-to-service traffic is data-flow → `[Integration]`. | Re-tag. |
-| Section 3 has 5 test cases for a complex story. | Coverage too thin — missed edge cases. | Re-walk the project's known issues, distributed failure modes, multi-tenant concurrency, race conditions. Aim for 15+ cases for a story touching asynchronous or distributed surfaces. |
+| Section 3 has 5 test cases for a complex story. | Coverage too thin — missed edge cases. | Re-walk the project's known issues, distributed failure modes, multi-tenant concurrency, race conditions. Aim for 15+ cases for a story touching asynchronous surfaces (step 6). |
 | The package names services or limits the project doesn't have (workers, queue streams, a 50KB message cap). | The project context was missing, and the generator filled the gap from this skill's example. | Load the project context or ask for it, then regenerate. |
 | Section 5 says "No performance testing candidates" for a story that fans out to many downstream components (in the example: all workers). | Cascade-prone trigger missed. | Re-read the trigger list — fan-out to many downstream components always matches Trigger 7 (in the example: assignment updates → scheduler → all job executors). |
 | Generated package contains code samples. | Skill-boundary violation — this skill produces requirements, not code. | Strip the code; route the user to `api-testing` / `test-standards` / `page-objects` for the implementation phase. |
