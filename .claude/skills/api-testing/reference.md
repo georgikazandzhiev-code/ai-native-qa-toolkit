@@ -1,6 +1,6 @@
 # API Testing Reference
 
-Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
 ## Architecture map
 

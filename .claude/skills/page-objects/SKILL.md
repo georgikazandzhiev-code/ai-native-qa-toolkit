@@ -37,7 +37,7 @@ Page Object classes are the seam between specs and the UI: they own every locato
 
 ## Architecture map
 
-These are the invented example app's page objects. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's page objects. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 | Layer | Path | Responsibility | Examples |
 |-------|------|----------------|----------|

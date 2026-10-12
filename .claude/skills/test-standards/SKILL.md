@@ -10,7 +10,7 @@ metadata:
 
 Every spec — API, E2E or functional — lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
 
-Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `test-data/app/…`, and every spec file name, are the invented example app's. Your repo's own layout belongs in its `CLAUDE.md`.
+Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `test-data/app/…`, and every spec file name, are the invented example app's. Your repo's own layout belongs in its `CLAUDE.md` or repo-context skill.
 
 ## Critical
 

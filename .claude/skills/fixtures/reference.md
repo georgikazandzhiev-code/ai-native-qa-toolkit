@@ -1,6 +1,6 @@
 # Fixtures — Reference
 
-Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
 The catalogs say what is registered, where it lives and what it depends on. Rules and decisions live in `SKILL.md`; end-to-end wiring lives in `recipes.md`. When you add a fixture, update your repo's list.
 

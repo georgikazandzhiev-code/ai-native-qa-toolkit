@@ -47,7 +47,7 @@ Non-negotiable. A load test that breaks these produces a number nobody can act o
 
 ## Repo layout
 
-These are the invented example app's files. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's files. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 In the example app, all k6 tests live under `tests/perf/` (sibling to `tests/app/`):
 

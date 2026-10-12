@@ -4,7 +4,7 @@ description: The invented example app's scenario inventory — each E2E, Functio
 
 # Test Standards — Reference
 
-Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
 Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inventory: what each spec covers and which gaps are intentional. Keep your own list in that shape, so authors don't duplicate coverage and reviewers can spot what's missing for a new feature. Update it in the same edit batch as adding or removing a spec.
 
@@ -134,8 +134,9 @@ These are the example app's intentional gaps. Track your repo's own the same way
 - **Worker selector switching not tested** in any detail-view spec — requires multi-worker setup (≥ 2 active workers per tenant). Add the test once a helper can seed more than one worker per tenant.
 - **Radix tooltip hover interactions** in detail-view specs — not an AC requirement; label text already visible verbatim in the legend; hover + Radix pointer-event timing is flaky under Playwright.
 - **Stream-job Message Statistics / Throughput value formats** — too many units (integers, B/KB/MB, B/s, ms) and low user-impact if slightly malformed.
-- **Tenant requires a primary user** (an onboarding acceptance criterion) — not a gap. If the backend creates a tenant without a primary user, that is a bug: write the test in the onboarding-flow spec (`e2e-tenant-onboarding-flow.spec.ts` in the example app), comment it out under `// TODO: FIXME: <TICKET>`, and report it.
 - **`tests/app/e2e/jobs-service/jobs/export-job-view.spec.ts`** — anti-pattern; it overlaps the functional `export-job-expanded-view.spec.ts`. Don't replicate the layout for new job types. See [`selectors/recipes.md` § 18](../selectors/recipes.md).
+
+**Not a gap — disabled by a bug.** If the backend creates a tenant without a primary user (an onboarding acceptance criterion), write the test in the onboarding-flow spec (`e2e-tenant-onboarding-flow.spec.ts` in the example app), comment it out under `// TODO: FIXME: <TICKET>`, and report it.
 
 ---
 

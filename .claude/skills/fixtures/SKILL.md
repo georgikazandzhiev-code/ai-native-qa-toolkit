@@ -56,7 +56,7 @@ The POM axis is unconditional (POMs are always fixtures). The API axis defers to
 
 ## Fixture inventory
 
-The example app's inventory (every registered POM, `apiRequest` / `loginUser` / `mailpit`, env-var map, storage-state & token catalog) lives in **`reference.md`**. Do not re-inline it here. Your repo's own fixture list belongs in its `CLAUDE.md`; when you add a fixture, update that list.
+The example app's inventory (every registered POM, `apiRequest` / `loginUser` / `mailpit`, env-var map, storage-state & token catalog) lives in **`reference.md`**. Do not re-inline it here. Your repo's own fixture list belongs in its `CLAUDE.md` or repo-context skill; when you add a fixture, update that list.
 
 **Misplaced specs** (do not propagate):
 - If a spec sits under `fixtures/` (for example a `forgot-password.spec.ts`), that is drift — specs belong under `tests/app/**`, not under `fixtures/`. Do not author new specs there.

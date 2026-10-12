@@ -8,7 +8,7 @@ metadata:
 
 # AI-Native Workflow
 
-This skill is the **routing and onboarding layer** for AI-assisted work on this scaffold (Playwright + TypeScript, with Qase integration). The skills' examples use an invented example app, a multi-tenant scheduled-jobs platform; your repo's own facts live in its `CLAUDE.md`. It teaches you how the constitution (`~/.claude/CLAUDE.md`), the on-demand skills, and the manual personas fit together — and which one to load for which task. It does not own any rules itself; rules live in their respective files.
+This skill is the **routing and onboarding layer** for AI-assisted work on this scaffold (Playwright + TypeScript, with Qase integration). The skills' examples use an invented example app, a multi-tenant scheduled-jobs platform; your repo's own facts live in its `CLAUDE.md` or repo-context skill. It teaches you how the constitution (`~/.claude/CLAUDE.md`), the on-demand skills, and the manual personas fit together — and which one to load for which task. It does not own any rules itself; rules live in their respective files.
 
 ## Critical
 

@@ -347,7 +347,7 @@ Copying the whole `.claude/` folder into a repository instead needs no merge: th
 
 ## Adopting it in your repo
 
-The constitution and skills are **project-agnostic on purpose**. Every example in the skills uses an invented scheduled-jobs app, described in [GOVERNANCE.md § Example domain](https://github.com/georgikazandzhiev-code/ai-native-qa-toolkit/blob/main/GOVERNANCE.md#example-domain). Its file names, specs, page objects, helpers and run stats are illustrations, not files to look for in your repo.
+The constitution and skills are **project-agnostic on purpose**. Every example in the skills uses an invented scheduled-jobs app, described in [GOVERNANCE.md § Example domain](GOVERNANCE.md#example-domain). Its file names, specs, page objects, helpers and run stats are illustrations, not files to look for in your repo.
 
 To onboard a repository, keep `CLAUDE.md` as-is and add a project-level `CLAUDE.md` at the repo root carrying that repo's own folder map, fixture entry points, tag whitelist, and test-id catalogs, plus the system under test's context (architecture, vocabulary, performance targets, known issues) that test-case generation and requirement reviews read. Where a skill shows the example app's files, your project `CLAUDE.md` names your real ones. The reusable skills then apply on top without modification.
 

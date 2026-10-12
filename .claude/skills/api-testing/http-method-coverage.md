@@ -419,7 +419,7 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
 
 ### Per-resource scope
 
-These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 | Resource | Collection forbidden | Resource forbidden | Spec block |
 |----------|---------------------|--------------------|-----------|
@@ -490,7 +490,7 @@ A status-200 alone is **never** sufficient evidence that the call did what it cl
 
 ## 13. Resource × method coverage matrix
 
-These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 Build the same matrix for your own specs and use it as a gap report when planning new ones.
 

@@ -22,7 +22,7 @@ metadata:
 
 ## File Locations
 
-These are the invented example app's enums. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's enums. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 Keep the `enums/` tree small and intentional. List every file in your repo's `enums/` before adding more.
 
@@ -91,7 +91,7 @@ Steps:
 2. Top-level JSDoc describing the file's purpose (mirror `qase-suites.ts` / `reports.ts`).
 3. Pick the pattern: **`as const` object literal (or `as const` array + derived union type) — always.** TypeScript `enum` is not used. No exceptions; no JSDoc-justified exemption.
 4. Add `export * from './<kebab-name>'` to `enums/app/index.ts`.
-5. Update your repo's enum list (in its `CLAUDE.md`) in the same PR — if the files change and the list does not, the list drifts.
+5. Update your repo's enum list (in its `CLAUDE.md` or repo-context skill) in the same PR — if the files change and the list does not, the list drifts.
 
 ## Capturing the real string from the live app
 
@@ -132,7 +132,7 @@ If the app is unavailable, do **not** ship the value. Stop and notify the human 
 - [ ] Every consumer that previously hardcoded the same string now imports the constant.
 - [ ] If a UI-message constant was added, the value was captured via the `playwright-cli` skill workflow (`npx playwright open`) from the live app — not guessed.
 - [ ] No in-place rename or value change without going through `refactor-values`.
-- [ ] Your repo's enum list (in its `CLAUDE.md`) still matches the files. Update it in the same PR if you added a new file.
+- [ ] Your repo's enum list (in its `CLAUDE.md` or repo-context skill) still matches the files. Update it in the same PR if you added a new file.
 - [ ] `npx playwright test` and the linter pass for affected specs.
 
 ## Examples
@@ -181,7 +181,7 @@ User says: _"Two specs assert the login error 'Invalid email or password'. Centr
    File: `enums/app/messages.ts`.
 5. **Barrel** — add `export * from './messages';` to `enums/app/index.ts`.
 6. **Update consumers** — both specs replace the hardcoded literal with `MESSAGES.LOGIN_INVALID_CREDENTIALS`.
-7. **Update your repo's enum list** (in its `CLAUDE.md`) — `enums/app/messages.ts` joins it.
+7. **Update your repo's enum list** (in its `CLAUDE.md` or repo-context skill) — `enums/app/messages.ts` joins it.
 8. **Run** — `npx playwright test` for the two specs.
 
 ## Troubleshooting

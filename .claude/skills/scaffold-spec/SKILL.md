@@ -43,7 +43,7 @@ Ask the user (or infer from context) which type of spec to create:
 | **E2E** | `tests/app/e2e/<domain>/` | `@App-E2E` | `page-objects` + `selectors` skills |
 | **Functional** | `tests/app/functional/<domain>/` | `@App-regression` | `page-objects` + `selectors` skills |
 
-These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 Specs are grouped into **service-domain subfolders**: one per backend service, plus `shared/`. In the example app these are `tenant-service/`, `jobs-service/`, `notification-service/` and `shared/`. Within a domain, add a sub-subfolder (in the example app, `jobs/`, `workers/`, `run-stats/` under `jobs-service/`) only when that domain has 10+ specs in one test type. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
 

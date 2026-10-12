@@ -82,7 +82,7 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 
 ## 2. ARIA role catalog (most-used in this framework)
 
-These are the invented example app's role usages. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's role usages. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 `role` argument to `getByRole`. Roles toward the top of the table are the most reliable in component libraries built on Radix primitives (used directly or through a component kit).
 
@@ -190,7 +190,7 @@ Rules of thumb:
 
 ## 4. Framework testid taxonomy
 
-These are the invented example app's testids. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's testids. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 Follow the same naming shapes when adding new test ids.
 
@@ -407,7 +407,7 @@ After `frameLocator` is captured, every selector inside the frame uses the same 
 
 ### 7.1 Where page objects live
 
-These are the invented example app's page objects. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's page objects. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 | Path | Use |
 |------|-----|

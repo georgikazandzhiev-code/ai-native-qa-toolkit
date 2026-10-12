@@ -24,7 +24,7 @@ This skill governs **how** to author a helper: location, naming, signature, expo
 
 ## File locations and inventory
 
-These are the invented example app's helpers. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's helpers. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 The **canonical** layout (per orchestrator File Naming Conventions, kebab-case for new files):
 

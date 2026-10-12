@@ -96,7 +96,7 @@ Do not raise timeouts, weaken a schema, or wrap in `try/catch` to make a failing
 
 ## Project-specific cascade points
 
-These are the invented example app's files. Your repo's own list belongs in its `CLAUDE.md`.
+These are the invented example app's files. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 Each row shows where a value change radiates to. Check every row of your own list before committing.
 

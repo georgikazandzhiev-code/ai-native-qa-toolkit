@@ -4,7 +4,7 @@ description: POM key-method catalog and inventory for the invented example app, 
 
 # Page Objects — Reference
 
-Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
 Companion file to [`SKILL.md`](SKILL.md). A catalog like this one lists what each page object already has, so authors don't reinvent locators / actions that are already there. Keep your repo's catalog in this shape and update it when adding a new POM or extending an existing one.
 
@@ -283,7 +283,7 @@ The example app keeps two base classes here: `BasePage.ts` and `DataTableBase.ts
 
 ## How to update this catalog
 
-Your repo's catalog lives in its `CLAUDE.md`. When adding or extending a POM, update it in the same edit batch:
+Your repo's catalog lives in its `CLAUDE.md` or repo-context skill. When adding or extending a POM, update it in the same edit batch:
 
 1. New POM → add a row to the class inventory + a new section listing key methods.
 2. New action method on an existing POM → add a bullet under the matching section.

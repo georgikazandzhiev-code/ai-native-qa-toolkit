@@ -1,7 +1,7 @@
 ---
 name: type-safety
 version: 2.0.2
-description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod patterns by major version (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
+description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
 ---
@@ -19,7 +19,7 @@ This skill teaches the going-forward TypeScript and Zod conventions for the fram
 - **ALWAYS** specify explicit return types on exported and public functions (`Promise<void>`, `Promise<UserResponse>`, `Locator`, `string`). Parameter types are mandatory — `noImplicitAny` enforces it; never silence it.
 - **NEVER** read `process.env` outside the config module. `config/env.ts` reads it once and validates it with Zod when it loads, so a missing variable stops the run at startup; everything else imports `env.X`, `tokens.admin()` or `appConfig`. No `!`, no `as string`, no `??` / `||` defaults at call sites — defaults live in the schema. See § Environment variables.
 - **NEVER** use `z.any()` to make a parse error go away — that's hiding contract drift. Investigate the divergence, write the test as the contract says, and comment it out with `// TODO: FIXME: <TICKET>` per the `api-testing` skill — never `test.skip`.
-- **Match the string-format validators to your repo's Zod major version** (check `package.json`). If your repo is on Zod 3, use chained string-format validators (`z.string().uuid()`, `z.string().email()`, `z.string().url()`); the Zod 4 top-level forms (`z.uuid()`, `z.email()`) do not exist there. On Zod 4, prefer the top-level forms; the chained ones still work but are deprecated. The examples in these skills are written for Zod 3.
+- **The rules and examples here are written for Zod 3** (check your repo's `package.json`). On Zod 3, use chained string-format validators (`z.string().uuid()`, `z.string().email()`, `z.string().url()`); the Zod 4 top-level forms (`z.uuid()`, `z.email()`) do not exist there.
 
 ## Environment variables — read once, through the config module
 
@@ -79,7 +79,7 @@ Existing code that reads `process.env.X!` at call sites is drift — migrate a f
 
 ## Zod schema patterns
 
-The patterns below are written for **Zod 3**. If your repo is on Zod 4, swap the chained string formats for its top-level validators (`z.uuid()`, `z.email()`, `z.url()`, `z.iso.datetime()`); on Zod 3 those top-level forms do not exist.
+The patterns below are written for **Zod 3**; Zod 4's top-level validators (`z.uuid()`, `z.email()`) do not exist there.
 
 ### `z.strictObject()` for new schemas
 

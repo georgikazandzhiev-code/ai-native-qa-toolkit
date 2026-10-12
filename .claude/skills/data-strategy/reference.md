@@ -1,6 +1,6 @@
 # Data Strategy — Reference Catalogs
 
-Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md`.
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
 Use these tables to see the shape of each data source, then search your repo for what exists before writing anything new. Cross-link from [SKILL.md](SKILL.md).
 
