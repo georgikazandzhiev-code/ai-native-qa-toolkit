@@ -50,6 +50,7 @@ the single sentence that captures the failure mode this skill prevents. This
 is the agent's first read after the description.
 -->
 
+<One paragraph: the surface this skill covers, the skills it pairs with, and the failure mode it prevents.>
 <!-- No paired rule: the toolkit ships no glob rules, and rule content lives
 in the skill (skill-creator § Critical, NO PAIRED RULES). -->
 

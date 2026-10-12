@@ -318,7 +318,7 @@ When per-area workflow has grown inside an always-on file (a section of a projec
 1. Keep in the always-on file only the lines that must hold in every session for that repo. Everything else is skill content.
 2. Run Phases 1–5 here with the moved text as the source. With the standard sections added, a long section can pass 380 lines — then split it per Phase 4.
 3. Leave a one-line pointer at the old location naming the new skill.
-4. Add the skill's routing row: in the Routed Skill Index in `~/.claude/CLAUDE.md` for a skill every repo can use, in the project `CLAUDE.md` for a skill about one repo (repo-specific facts live per project — constitution, opening paragraph).
+4. Add the skill's row to the Routed Skill Index (Phase 7).
 5. Run Phases 6-8.
 
 ## Anti-patterns
@@ -401,7 +401,7 @@ User says: *"Our project `CLAUDE.md` has a 300-line § Run-stats API tests secti
 3. **Phase 2 (topology)** — Layer 2. Cluster: API authoring.
 4. **Phase 4 (progressive disclosure)** — the moved text exceeds 380 lines once it gets the standardized structure; the query catalog and inventory go to `reference.md` (one level deep).
 5. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original section was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
-6. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill, and add its routing row to the project `CLAUDE.md` (a skill about one repo's endpoints is not a toolkit skill). Name `api-testing` in its See Also.
+6. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill, and add its row to the Routed Skill Index. Add it to `api-testing`'s See Also and back.
 7. **Phase 8 (verify)** — run the full checklist + Phase 6 subagent test.
 
 ## Troubleshooting
