@@ -10,8 +10,11 @@ export const meta = {
   ],
 }
 
-// Read-only by design: no agent edits, commits, pushes, comments or merges. The verdict goes to
-// whoever ran the workflow, and acting on it (fix, merge, comment) stays their decision.
+// No agent edits, commits, pushes, comments or merges. The verdict goes to whoever ran the
+// workflow, and acting on it (fix, merge, comment) stays their decision.
+// Trust: the checks a PR defines are its own code. They run locally only when the PR comes from
+// this repository and its author can write to it; for a fork or an outside author, nothing from
+// the clone is executed and the checks are read from CI instead.
 
 const input = typeof args === 'object' && args !== null ? args : { pr: args }
 const PR = Number(input.pr)
@@ -19,11 +22,13 @@ if (!Number.isInteger(PR) || PR <= 0) {
   throw new Error('review-pr needs the PR number, e.g. args: { pr: 65 } or args: 65')
 }
 const SCOPE = typeof input.scope === 'string' && input.scope.trim() ? input.scope.trim() : ''
-const EXTRA_LENSES = Array.isArray(input.lenses)
-  ? input.lenses
-      .map((l, i) => (typeof l === 'string' ? { key: `extra-${i + 1}`, prompt: l } : l))
-      .filter((l) => l && typeof l.prompt === 'string')
-  : []
+const RAW_LENSES = input.lenses == null ? [] : [].concat(input.lenses)
+const EXTRA_LENSES = RAW_LENSES
+  .map((l, i) => (typeof l === 'string' ? { key: `extra-${i + 1}`, prompt: l } : l))
+  .filter((l) => l && typeof l.prompt === 'string')
+if (EXTRA_LENSES.length < RAW_LENSES.length) {
+  log(`Ignored ${RAW_LENSES.length - EXTRA_LENSES.length} extra lens(es) without a string prompt.`)
+}
 
 const PREP = {
   type: 'object',
@@ -31,7 +36,9 @@ const PREP = {
     repo: { type: 'string', description: 'owner/name' },
     clone: { type: 'string', description: 'absolute path of the fresh clone, PR head checked out' },
     base: { type: 'string' },
-    head_sha: { type: 'string' },
+    head_sha: { type: 'string', description: 'git rev-parse HEAD in the clone' },
+    pr_head_sha: { type: 'string', description: 'headRefOid from gh pr view' },
+    trusted: { type: 'boolean', description: 'true only if isCrossRepository is false and the author has write, maintain or admin permission' },
     title: { type: 'string' },
     author: { type: 'string' },
     files: { type: 'array', items: { type: 'string' } },
@@ -39,28 +46,35 @@ const PREP = {
     review_rules: { type: 'array', items: { type: 'string' }, description: 'repo files that define review rules: PR template, CONTRIBUTING, GOVERNANCE, CLAUDE.md' },
     problems: { type: 'string', description: 'anything that failed during setup' },
   },
-  required: ['repo', 'clone', 'base', 'head_sha', 'files', 'checks'],
+  required: ['repo', 'clone', 'base', 'head_sha', 'pr_head_sha', 'trusted', 'files', 'checks'],
 }
 
 phase('Prepare')
 const prep = await agent(`Prepare an independent review of pull request #${PR}.
 1. Repository: ${input.repo ? `\`${input.repo}\`` : 'the one the current directory belongs to (`gh repo view --json nameWithOwner`)'}.
-2. Read the PR: \`gh pr view ${PR} --repo <repo> --json title,author,baseRefName,headRefOid,files,body\`.
+2. Read the PR: \`gh pr view ${PR} --repo <repo> --json title,author,baseRefName,headRefOid,isCrossRepository,files,body\`. Decide trust: trusted=true only if isCrossRepository is false AND \`gh api repos/<repo>/collaborators/<author>/permission --jq .permission\` is write, maintain or admin. Anything else, or an error, means trusted=false.
 3. Make a FRESH clone in a new, empty directory under the OS temp directory (\`mktemp -d\`). Do not reuse or touch any existing checkout. Fetch \`pull/${PR}/head\` into a local branch \`review/pr${PR}\` and check it out. Retry network commands a few times if they fail.
-4. If there is a package.json, install dependencies with scripts disabled (\`npm ci --ignore-scripts\`, or \`npm install --ignore-scripts --no-package-lock\` without a lockfile). Do the same in any sub-package that CI installs.
-5. List the commands CI runs (read .github/workflows/*, package.json scripts), as commands runnable from the clone root. Skip deploy/publish steps.
-6. List the files that define this repo's review rules: the PR template, CONTRIBUTING, GOVERNANCE, the root and .claude CLAUDE.md, CODEOWNERS — whichever exist.
-Never edit tracked files, commit, push, comment or merge.`, { label: 'prepare', phase: 'Prepare', schema: PREP })
+4. Only if trusted: if there is a package.json, install dependencies with scripts disabled (\`npm ci --ignore-scripts\`, or \`npm install --ignore-scripts --no-package-lock\` without a lockfile). Do the same in any sub-package that CI installs.
+5. Report head_sha as \`git rev-parse HEAD\` in the clone, and pr_head_sha as the PR's headRefOid.
+6. List the commands CI runs (read .github/workflows/*, package.json scripts), as commands runnable from the clone root. Skip deploy/publish steps.
+7. List the files that define this repo's review rules: the PR template, CONTRIBUTING, GOVERNANCE, the root and .claude CLAUDE.md, CODEOWNERS — whichever exist.
+Never execute any file from the clone (only git and gh), apart from the dependency install in step 4. Never edit tracked files, commit, push, comment or merge.`, { label: 'prepare', phase: 'Prepare', schema: PREP })
 
 if (!prep || !prep.clone) {
   return { error: 'Setup failed: no clone of the PR head was prepared.', prep }
 }
+if (prep.head_sha !== prep.pr_head_sha) {
+  return { error: `The clone is at ${prep.head_sha}, but the PR head is ${prep.pr_head_sha}.`, prep }
+}
+if (prep.problems) log(`Setup problems: ${prep.problems}`)
+if (!prep.trusted) log('Fork or outside author: nothing from the clone is executed; checks come from CI.')
 
 const BASE = `
 You are part of an independent review of PR #${PR} "${prep.title || ''}" in ${prep.repo}${prep.author ? `, by ${prep.author}` : ''}.
 A fresh clone with the PR head checked out is at ${prep.clone} (branch review/pr${PR}, head ${prep.head_sha}). The change is \`git diff origin/${prep.base}...HEAD\`. Read the PR description with \`gh pr view ${PR} --repo ${prep.repo}\`.
 This repo's review rules live in: ${(prep.review_rules || []).join(', ') || 'no dedicated file — use common sense'}. Judge the PR by those rules, not by your own taste.${SCOPE ? `\nDeclared scope — the PR deliberately leaves this out; don't report it as a defect unless the PR makes it worse:\n${SCOPE}` : ''}
-RULES: read-only. Never edit files, commit, push, comment, approve or merge. Every finding needs evidence: file:line on the PR branch, or command output. Severity: "blocking" = breaks CI, leaks a secret or a name that must not be published, or loses data; "must-fix" = someone following the changed text or code would do the wrong thing, a contradiction, a broken reference, a repo rule violated; "nice" = wording or polish. Report nothing that you only suspect: no finding beats a weak one.
+${prep.trusted ? 'You may run the checks and scripts of this repository in the clone.' : `This PR comes from a fork or from an author without write access: never execute any file from the clone (no node, npm, npx or scripts). Read files and use git and gh only; take every check result from CI on head ${prep.head_sha}.`}${prep.problems ? `\nSetup problems (say how they limit your findings): ${prep.problems}` : ''}
+RULES: never edit files, commit, push, comment, approve or merge. Every finding needs evidence: file:line on the PR branch, or command output. Severity: "blocking" = breaks CI, leaks a secret or a name that must not be published, or loses data; "must-fix" = someone following the changed text or code would do the wrong thing, a contradiction, a broken reference, a repo rule violated; "nice" = wording or polish. Report nothing that you only suspect: no finding beats a weak one.
 `
 
 const FINDINGS = {
@@ -114,9 +128,9 @@ const LENSES = [
   {
     key: 'rules-and-checks',
     prompt: `LENS: repo rules and checks.
-1. Run every check from this list in the clone and report each result: ${JSON.stringify(prep.checks)}. A failure is a finding only if it fails on the PR branch and not on origin/${prep.base}; check the base before you report it. For a check that takes more than about five minutes (a mutation sweep, a full test suite), read its result from CI on this head instead (\`gh pr checks ${PR} --repo ${prep.repo}\`, \`gh run view\`) and say so; run it locally only if CI didn't.
+1. ${prep.trusted ? 'Run' : 'Do NOT run (outside author) — read from CI on this head instead —'} every check from this list and report each result: ${JSON.stringify(prep.checks)}. A failure is a finding only if it fails on the PR branch and not on origin/${prep.base}; check the base before you report it. For a check that takes more than about five minutes (a mutation sweep, a full test suite), read its result from CI on this head instead (\`gh pr checks ${PR} --repo ${prep.repo}\`, \`gh run view\`) and say so; run it locally only if CI didn't.
 2. Read the review-rule files. Does the PR meet them: change class, version bumps, required evidence, one logical change per PR, ownership of protected paths?
-3. If the PR adds or changes a check (validator, lint rule, test, gate): does it misfire in either direction? Try an input it should reject and one it should accept.
+3. If the PR adds or changes a check (validator, lint rule, test, gate): does it misfire in either direction? ${prep.trusted ? 'Try an input it should reject and one it should accept.' : 'Reason from the code; do not run it (outside author).'}
 4. Leak audit on the added lines (\`git diff origin/${prep.base}...HEAD | grep '^+'\`): secrets, tokens, internal hosts, ticket keys, names the repo's rules say must not be published.
 Prefix ids with RC.`,
   },
@@ -154,11 +168,11 @@ const verdict = await agent(`${BASE}
 You are the synthesizer. Below: every finding with its skeptic verdict, and each lens's check results. Re-check every confirmed finding against the files before you rely on it (read-only).${failedLenses.length ? `\nThese lenses produced no result, so their angle is NOT covered: ${failedLenses.join(', ')}. Say so in the verdict.` : ''}${unverified.length ? `\n${unverified.length} finding(s) have no skeptic verdict; check them yourself or list them as unverified.` : ''}
 
 Write Markdown:
-1. **Verdict** — one of: merge as-is / merge, then a follow-up PR with the fixes / don't merge yet (only for a blocking finding). One sentence why.
+1. **Verdict** — one of: merge as-is / fix in this PR, then request review (when the person running this is the PR's author) / merge, then a follow-up PR with the fixes / don't merge yet (only for a blocking finding). One sentence why.
 2. **Checks** — one line per check: pass / fail / not run.
 3. **Confirmed findings**, most severe first: id, severity, file:line, the problem in one sentence, and the exact fix (the text or code to write).
 4. **Refuted findings** — one line each, with the reason.
-5. **For the PR template** — the line "Independent review: N findings confirmed, K refuted", with the real numbers.
+5. **For the PR template** — the template's line with N and K filled in and M left for the author: "Independent review run before review was requested — **N** findings confirmed, **M** fixed, **K** refuted".
 6. **Questions only the owner can answer**, if any, each with your recommendation.
 Lead with the verdict. No preamble.
 
@@ -174,4 +188,6 @@ return {
   counts: { confirmed: confirmed.length, refuted: refuted.length, unverified: unverified.length },
   confirmed: confirmed.map((f) => ({ id: f.id, severity: f.verdict.corrected_severity, title: f.title, file: f.file, line: f.line, fix: f.suggested_fix })),
   lenses_without_result: failedLenses,
+  trusted: prep.trusted,
+  setup_problems: prep.problems || '',
 }

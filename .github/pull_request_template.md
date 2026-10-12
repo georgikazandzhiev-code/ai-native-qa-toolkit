@@ -33,7 +33,8 @@
      description true; do the doc or example edits break a rule the lint can't see), then a skeptic
      pass that tries to refute each finding. The author is the worst-placed person to see their own
      blind spots; the numbers below make a skipped review visible instead of silent.
-     The review-pr workflow (.claude/workflows/review-pr.js) runs exactly this and prints the numbers. -->
+     The review-pr workflow (.claude/workflows/review-pr.js) runs exactly this and prints N and K;
+     M is how many of the confirmed findings you then fix. -->
 
 - [ ] Independent review run before review was requested — **N** findings confirmed, **M** fixed, **K** refuted. Paste the confirmed list or link it; say why any confirmed finding was not fixed
 - [ ] **new or changed check** (validator check, lint rule, test harness): run against a reference implementation on inputs chosen to break it, and every branch mutated — kill ratio **x / y**, survivors named. "Every branch is tested" is a number here, not a sentence
