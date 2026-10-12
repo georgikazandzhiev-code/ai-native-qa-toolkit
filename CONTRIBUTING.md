@@ -43,6 +43,8 @@ CI runs all of these; running them locally first is faster than a round trip. Al
 | `node eslint-plugin-qa-constitution/tests/fault-injection.test.mjs` | *(if you touched a lint rule)* every rule actually bites — and nothing cries wolf |
 | `npm run eval:compare` | No eval regression beyond the noise floor |
 
+Once the PR is open as a draft (so no review is requested yet), and before you mark it ready for review, run the independent review the PR template asks for: ask Claude Code to *run the review-pr workflow for PR N* (`.claude/workflows/review-pr.js`). Its output fills in N (confirmed) and K (refuted) of the template's Independent review line; M (fixed) is yours to fill in after you fix them.
+
 ## Change classes and versioning
 
 Pick the class by **what happens to output that was previously correct**, not by line count (`GOVERNANCE.md` § Change classes):
