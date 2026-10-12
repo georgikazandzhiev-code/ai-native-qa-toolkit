@@ -16,7 +16,7 @@ disable-model-invocation: true
 
 This skill is a **manual-invocation generator**: given a user story, produce a comprehensive test-case package across 6 sections. Invoke explicitly via `/test-case-generation` (the skill is `disable-model-invocation: true` because its activation depends on the user supplying input — auto-routing it would catch unrelated prompts).
 
-The skill turns the user story into something an Automation Engineer can execute against. It does not produce code; it produces requirements, test cases, security considerations, and k6 performance recommendations. Generation is informed by the **project context** of the system under test — its architecture, vocabulary, performance targets and known issues — which the adopting repository keeps in its own `CLAUDE.md`, or in the repo's platform-context skill, if it has one. Load it first; § System & Domain Context lists what it covers.
+The skill turns the user story into something an Automation Engineer can execute against. It does not produce code; it produces requirements, test cases, security considerations, and k6 performance recommendations. Generation is informed by the **project context** of the system under test — its architecture, vocabulary, performance targets and known issues — which the adopting repository keeps in its own `CLAUDE.md`, or in a platform-context skill that `CLAUDE.md` names. Load it first; § System & Domain Context lists what it covers.
 
 ## Critical
 
@@ -51,7 +51,7 @@ Analyze the provided user story and generate a comprehensive set of software req
 
 The generator needs a picture of the system under test before it writes a case, and it comes from the project, not from this skill:
 
-1. The adopting repository's `CLAUDE.md`, or the repo's platform-context skill, if it has one.
+1. The adopting repository's `CLAUDE.md`, or a platform-context skill that `CLAUDE.md` names.
 2. If neither carries the context — a `CLAUDE.md` with only a folder map and tags doesn't — stop after Sections 1–2 and ask the user for the context. If the user says to go on without it, write the cases from the story alone and list every missing context item in Section 6.
 
 The context covers, where the system has them: the core business concepts and their vocabulary; the architecture and how components communicate; data stores and retention; the auth model; data pipelines and message limits; result structures; performance targets; known production issues; known failure modes of its asynchronous or distributed parts. A context with some of these counts as present: generate, and list in Section 6 each missing item the story needs.
@@ -103,6 +103,13 @@ Backend → Remote message queue → Proxy → schedules.dispatch queue stream �
 
 - **`schedules` queue stream at its size limit** — when a burst fills the queue stream, the newest schedule entries are discarded and the publisher gets no error.
 
+#### Known Failure Modes
+
+- **Message-queue disconnect** — a worker loses the message queue mid-run.
+- **`schedules` queue stream full** — see Known Issues.
+- **Message replay** — a reconnecting consumer receives schedule entries it already processed.
+- **Scheduler state-store corruption** — the key-value state store holds schedule entries the scheduler can no longer read.
+
 ## Performance Testing Triggers
 
 **Performance targets** come from the project context. With none stated, Section 5 still flags the candidates and Section 6 asks for the target.
@@ -145,7 +152,7 @@ Flag an API or data flow as a k6 candidate when ANY of these apply (the examples
 - [ ] 3. Cross-reference against the project's known issues — does any issue affect this story's surface? If yes, name it in Section 6.
 - [ ] 4. Generate Section 1 (Story Analysis) — summary in 1-2 sentences.
 - [ ] 5. Generate Section 2 (Functional Requirements) — clear, testable, R1/R2/R3 numbered.
-- [ ] 6. Generate Section 3 (Test Cases) — beyond obvious paths; cover the distributed failure modes the project context names (in the example: message-queue disconnect, queue-stream-full, replay, state-store corruption), race conditions, data accuracy under load. Categorize each as [API] / [Integration] / [E2E], assign a priority (P1/P2/P3), and cite the covered requirement(s). Include observability cases — when the feature fails, does the failure get recorded and a notification fire, or does the system go silent (a failure that publishes no result is exactly this class of bug)? Coverage floor: a story touching asynchronous or distributed surfaces (work that completes outside the request/response: a queue, scheduler, background worker, event consumer or webhook delivery; in the example: worker / scheduler / message queue) needs 15+ cases.
+- [ ] 6. Generate Section 3 (Test Cases) — beyond obvious paths; cover the distributed failure modes the project context names (in the example: message-queue disconnect, queue-stream-full, replay, state-store corruption), race conditions, data accuracy under load. Categorize each as [API] / [Integration] / [E2E], assign a priority (P1/P2/P3), and cite the covered requirement(s). Include observability cases — when the feature fails, does the failure get recorded and a notification fire, or does the system go silent (a failure that publishes no result is exactly this class of bug)? Coverage floor: a story touching asynchronous or distributed surfaces (work that completes outside the request/response: a queue, scheduler, background worker, event consumer or webhook delivery; a synchronous call chain across services is not one; in the example: worker / scheduler / message queue) needs 15+ cases.
 - [ ] 6b. Traceability sweep — walk R1…Rn and confirm every requirement is covered by at least one test case. A requirement with zero cases means Section 3 is incomplete.
 - [ ] 7. Generate Section 4 (Security & Compliance) — tenant isolation, token validation, trust-boundary constraints (in the example: worker outbound-only), input validation, IDOR / injection into message routing / unauthorized data access.
 - [ ] 8. Generate Section 5 (Performance Testing Candidates) — for every endpoint/flow matching a trigger, specify Endpoint, Trigger matched, k6 test type, Key thresholds, Risk if untested. State "No performance testing candidates identified" if none apply.
@@ -214,7 +221,7 @@ If no candidates: "No performance testing candidates identified for this user st
 
 ## Self-review checklist
 
-- [ ] The system context came from the project (its `CLAUDE.md` or its platform-context skill, if it has one), or the user chose to go on without it and Section 6 lists every missing context item — never from this skill's example.
+- [ ] The system context came from the project (its `CLAUDE.md` or a platform-context skill it names) and Section 6 lists each context item the story needs that it lacks, or the user chose to go on without it and Section 6 lists every missing context item — never from this skill's example.
 - [ ] Section 1 summary is 1-2 sentences and names the business objective.
 - [ ] Section 2 requirements are numbered (R1, R2, …), testable, traceable to the user story.
 - [ ] Section 3 test cases go beyond happy path — distributed failure modes, multi-tenant concurrency, race conditions, and the edge cases of the components the project context names.
@@ -267,7 +274,7 @@ User story: *"As a tenant user, I want to update my own profile name."*
 ## See Also
 
 - **Paired rule:** (none) — this skill is a manual-invocation generator with no glob attachment.
-- **Project context (domain orientation):** the adopting repository's `CLAUDE.md`, or the repo's platform-context skill, if it has one — the architecture, vocabulary, performance targets and known issues of the system under test. `GOVERNANCE.md` § Example domain describes the invented platform the example context uses.
+- **Project context (domain orientation):** the adopting repository's `CLAUDE.md`, or a platform-context skill it names — the architecture, vocabulary, performance targets and known issues of the system under test. `GOVERNANCE.md` § Example domain describes the invented platform the example context uses.
 - **Implementation skills (next phase, after the test-case package is approved):** [`api-testing`](../api-testing/SKILL.md), [`test-standards`](../test-standards/SKILL.md), [`page-objects`](../page-objects/SKILL.md), [`scaffold-spec`](../scaffold-spec/SKILL.md), [`k6-load-testing`](../k6-load-testing/SKILL.md) — generate the actual code from the test-case package.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.
 

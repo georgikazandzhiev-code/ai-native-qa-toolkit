@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.6
+version: 2.1.5
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -151,7 +151,7 @@ User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 - **`~/.claude/CLAUDE.md`** — the always-on orchestrator. The **only rule file** in this repo. This skill teaches how to apply it.
 - **API authoring:** [`api-testing`](../api-testing/SKILL.md) — full per-area workflow + endpoint context (consolidated from the previous `api-tests.mdc`).
 - **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`test-standards`](../test-standards/SKILL.md) — class structure, locator strategy, spec conventions (consolidated from the previous `ui-tests.mdc`).
-- **Domain orientation:** the adopting repository's `CLAUDE.md`, or the repo's platform-context skill, if it has one — the system under test's own facts; [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).
+- **Domain orientation:** the adopting repository's `CLAUDE.md`, or a platform-context skill it names — the system under test's own facts; [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).
 - **The skill list** — `~/.claude/CLAUDE.md § Routed Skill Index`. Not repeated here on purpose.
 - [`build-alternatives`](../build-alternatives/SKILL.md) — the rule for open choices: build every way on `alt/` branches, then ask which to keep.
 - **`skill-creator`** — for authoring or refactoring a skill (manual invocation only). Use this when you catch a gap (e.g. when an empty placeholder needs to be authored).
