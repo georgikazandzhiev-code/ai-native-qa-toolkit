@@ -59,7 +59,7 @@ The validator checks structure; the human validates *content*.
 
 The standardized SKILL.md structure mandates every section below. The validator checks that each section heading is present; review checks that its content earns its place. Skills missing any section are not ready to ship.
 
-- [ ] **Opener** — one paragraph, paired-rule callout (or "(none)" explicitly).
+- [ ] **Opener** — one paragraph.
 - [ ] **`## Critical`** block at top — 5–9 hard rules (the target; trim a longer block) in `**ALWAYS**` / `**NEVER**` form. Each rule enforceable, not aspirational. Drawn from real incidents.
 - [ ] **`## What's in each file`** table when the skill has supplementary files (`reference.md`, `templates.md`, `<topic>.md`, `assets/`). Skip when single-file.
 - [ ] **Workflow / phases / decision tables / architecture map** — the skill's substance. Use one or more body patterns from [`patterns.md`](patterns.md).
@@ -73,7 +73,7 @@ The standardized SKILL.md structure mandates every section below. The validator 
 
 ## 4. Body quality (manual review)
 
-Anthropic + Cursor fundamentals the validator can't catch.
+Anthropic's skill-authoring fundamentals the validator can't catch.
 
 - [ ] **Concise** — no filler ("This skill helps you…", "In this section we will…").
 - [ ] **Imperative body** — "Open the file", "Run the test", not "You should open" or "We open".
@@ -114,7 +114,7 @@ One-way and stale cross-references were the #1 source of audit churn in Tier 1.
 - [ ] **Bidirectional cross-references** — when this skill cites a sibling, that sibling's `See Also` mentions this skill back (when relevant). Update both in the same edit.
 - [ ] **Paired rule cited** — explicit link if it exists, "(none)" if not. No omission.
 - [ ] **No broken markdown links** — every `[text](path)` resolves to a real file. Use `ls`, `cat`, or `Read` to verify.
-- [ ] **`~/.claude/CLAUDE.md § Routed Skill Index` updated** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's index is the live route map (and the only human-readable index — `project-identity.mdc` was retired in favor of consolidating into `~/.claude/CLAUDE.md`).
+- [ ] **`~/.claude/CLAUDE.md § Routed Skill Index` updated** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's index is the live route map and the only human-readable index.
 - [ ] Sibling skills' `See Also` updated if cluster relationships changed (bidirectional).
 - [ ] **Cluster siblings' `See Also` updated** when this skill belongs to a cluster — the existing siblings should mention this skill in their `See Also` so the cluster is internally connected.
 
@@ -126,9 +126,9 @@ The marks that distinguish a skill that "fits this repo" from a generic skill.
 
 - [ ] **Signature device** — at least one of: architecture map (table), storage location map (table), decision tree (mermaid), pattern catalog (numbered). Mirror `scaffold-spec` / `data-strategy` / `api-testing`.
 - [ ] **Opener** answers "what does this skill cover, what's the failure mode it prevents". One paragraph max.
-- [ ] **Paired-rule callout** — if a paired glob rule exists, opener says "Read that rule first" and links it. If no paired rule, `## See Also` says `(none)` explicitly.
+- [ ] **No paired glob rule** — rule content lives in the skill, and `## See Also` says `Paired rule: (none)` explicitly.
 - [ ] **Cluster fit** — skill belongs to one of the five named clusters (API authoring / UI authoring / domain orientation / failure investigation / repo hygiene); at least one cluster sibling is cross-linked.
-- [ ] **Visible in Settings → Rules & Memories → "Agent Decides"** after Cursor reload (skip when `disable-model-invocation: true`).
+- [ ] **Listed among the agent's available skills** in a fresh session (skip when `disable-model-invocation: true`).
 
 ---
 
@@ -137,11 +137,11 @@ The marks that distinguish a skill that "fits this repo" from a generic skill.
 Skip this section entirely for manual-only skills (`disable-model-invocation: true`). For everything else, run the subagent test from [SKILL.md Phase 6](../SKILL.md#phase-6-test-via-subagent).
 
 - [ ] Authored 3 prompts: direct trigger, paraphrased trigger, negative case.
-- [ ] Spawned 3 `generalPurpose` readonly subagents in parallel with the test prompt template.
+- [ ] Spawned 3 read-only subagents in parallel (in Claude Code, the `Explore` agent type) with the test prompt template.
 - [ ] **Direct prompt** → subagent reports `new_skill_status: "selected"`.
 - [ ] **Paraphrased prompt** → subagent reports `selected`.
 - [ ] **Negative prompt** → subagent reports `not_selected` (no false positive).
-- [ ] Output quality (run prompt 1 in a fresh chat without `readonly`): result matches the project signature shape and cites the paired rule.
+- [ ] Output quality (run prompt 1 in a fresh session, letting it act): result matches the project signature shape and follows the skill's rules.
 
 If direct fails: description fundamentally broken (rewrite from scratch).
 If paraphrased fails: trigger phrases too narrow (broaden, add 2-3 more).
@@ -152,10 +152,10 @@ If output drifts: body content thin (extend with more workflow / examples per `p
 
 ## 9. Pre-merge
 
-- [ ] Hook reports zero errors on the latest save (re-trigger by saving any skill file).
+- [ ] `npm run validate` reports zero errors (it is a command, not a hook — nothing runs on save).
 - [ ] `git status` shows only intended new files; no stray edits.
 - [ ] PR description names the skill, the cluster, and the three subagent test outcomes.
-- [ ] If a paired rule was added: ≤ 120 lines, glob-attached, invariants only (no workflows).
+- [ ] No paired glob rule was added (skill-creator § Critical, NO PAIRED RULES).
 - [ ] `npm run validate` passes check 15 — the Routed Skill Index and the skill folders name the same skills.
 - [ ] Branch off main; commit message follows existing repo convention.
 
