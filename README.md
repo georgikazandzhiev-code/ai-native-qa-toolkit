@@ -20,13 +20,14 @@ The short version of why it matters: `FR-009` said a user must not learn that an
 
 ## How it works
 
-Three layers, loaded progressively:
+Three layers load progressively, and workflows run when you ask for one:
 
 | Layer | File | Loaded |
 |-------|------|--------|
 | **Constitution** | `.claude/CLAUDE.md` | Always. MUST / SHOULD / WON'T tables, a mandatory pre-edit checklist, and the routing index. |
 | **Skills** | `.claude/skills/<name>/SKILL.md` | On demand, when the task matches. Deep how-to for one concern each. |
 | **Personas** | `.claude/commands/*.md` | Manually, as slash commands. |
+| **Workflows** | `.claude/workflows/*.js` | When you ask Claude Code to run one by name. `review-pr` is the independent review every PR owes: critics look for problems, and a skeptic tries to refute each finding. |
 
 The constitution is deliberately short and absolute; skills carry the detail. A skill may extend a constitutional rule and may never contradict one.
 
@@ -267,6 +268,7 @@ See `.claude/constitutions/README.md`.
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code/overview), as the CLI, the desktop app or the VS Code / JetBrains extension. The skills, personas and `CLAUDE.md` are written for it.
 - Git.
+- For the `review-pr` workflow: the GitHub CLI (`gh`), signed in. It reviews GitHub pull requests only.
 
 **To run this repository's own checks** (`npm run validate` and the test suites):
 
@@ -344,6 +346,14 @@ Merge this into `~/.claude/settings.json` (don't overwrite the file — add to i
 ```
 
 Copying the whole `.claude/` folder into a repository instead needs no merge: the shipped `.claude/settings.json` points at `${CLAUDE_PROJECT_DIR}/.claude/hooks/`. Either way, open `/hooks` once (or restart Claude Code) so a running session picks it up. `npm run test:alternatives` proves the gate denies an unbuilt choice and lets a marked question through.
+
+The `review-pr` workflow is loaded from the `.claude/workflows/` folder of the repository you work in, so copy it into each repository where you want it. It needs Claude Code's Workflow tool and the GitHub CLI (`gh`), signed in with read access to the repository; it reviews GitHub pull requests only:
+
+```bash
+mkdir -p .claude/workflows && cp <path-to>/ai-native-qa-toolkit/.claude/workflows/review-pr.js .claude/workflows/
+```
+
+Then ask Claude Code to *run the review-pr workflow for PR N*. It never edits, pushes, comments or merges; fixing, commenting and merging stay with you. It does run the PR's own check scripts on your machine with your `gh` login, so on a PR from a fork or from an author without write access it executes nothing from the PR and reads the checks from CI instead. One run starts a critic per lens and a skeptic per finding, so it costs far more than a single review. Its first two runs, on #65 and #66, used 24 and 21 agents and took about 115 and 45 minutes; the longer one shared the machine with other workflows. Those numbers were measured once each and no validator checks them.
 
 ## Adopting it in your repo
 
