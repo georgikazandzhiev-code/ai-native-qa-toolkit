@@ -1,7 +1,7 @@
 ---
 name: skill-creator
 version: 2.0.0
-description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work (use the matched skill) or editing the constitution.
+description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work (use the matched skill) or changing a constitution rule.
 metadata:
   category: authoring
 disable-model-invocation: true
@@ -13,7 +13,7 @@ Manual-only meta-skill for authoring and refactoring skills inside `~/.claude/sk
 
 Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic validation hook; that hook never existed, so nothing was checked — which is how 16 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
 
-> **Truth source.** Skill topology, rule disposition, migration sequence: the Routed Skill Index in `~/.claude/CLAUDE.md`.
+> **Truth source.** Skill topology: the Routed Skill Index in `~/.claude/CLAUDE.md`.
 
 ## Critical
 
@@ -75,7 +75,7 @@ Every skill in this repo follows this exact section order. The template encodes 
 | **`## Examples`** | Yes (2-3) | Worked walkthroughs that cite the workflow steps. Use concrete, realistic names (`UsersPage`, `createUser`) that read as illustrations — never a path the reader is expected to find in this repository. |
 | **`## Troubleshooting`** | Yes | Table: symptom → cause → fix. Lists real failure modes a future author will hit. |
 | **`## Gotchas`** | Optional, session-grown | Dated bullets of non-obvious environment quirks, API surprises, and workarounds discovered during real sessions (`- **YYYY-MM-DD:** <gotcha>`). Agents append here when a session hits one. Promote a gotcha into `## Critical` / `## Troubleshooting` once it recurs or stabilizes; prune entries that a fix upstream made obsolete. |
-| **`## See Also`** | Yes | Cross-skill links (paired rule, sibling skills in cluster, orchestration doc). Must be verified — no TBD references for now-populated skills. |
+| **`## See Also`** | Yes | Cross-skill links (sibling skills in cluster, orchestration doc). Must be verified — no TBD references for now-populated skills. |
 
 **Why this structure is non-negotiable:** every Tier 1 audit found drift caused by skills that used a different structure. Models reading skills route by section name; deviations break routing. `npm run validate` fails on a missing required section; what stays manual is whether the content under each heading earns it.
 
@@ -145,7 +145,7 @@ Pick the **cluster** for cross-linking siblings:
 
 - **API authoring** — `scaffold-spec → api-testing → data-strategy → helpers → fixtures → type-safety`.
 - **UI authoring** — `scaffold-spec → selectors → page-objects → playwright-cli → frontend-cross-check → enums → fixtures`.
-- **Domain orientation** — `test-case-generation`, which reads the system's own context from the adopting repo's `CLAUDE.md`.
+- **Domain orientation** — `test-case-generation`.
 - **Failure investigation** — `debugging → playwright-cli → frontend-cross-check`.
 - **Repo hygiene** — `refactor-values → skill-creator → ai-native-workflow`.
 
@@ -256,7 +256,6 @@ If `disable-model-invocation: true`, skip Phase 6 — the skill fires only on `/
 
 In the new SKILL.md `## See Also` section:
 
-- Paired rule (or `(none)` explicitly).
 - Sibling skills in the chosen cluster from Phase 2 — verify each is **populated** (not TBD).
 - Orchestration — always cite the Routed Skill Index in `~/.claude/CLAUDE.md`, the one skill index.
 
@@ -316,10 +315,10 @@ Refactors that exceed 30% of the original `SKILL.md` line count usually mean the
 
 When per-area workflow has grown inside an always-on file (a section of a project `CLAUDE.md`, or a rule file it loads):
 
-1. Keep in the always-on file only what must hold in every session — the constitution's MUST / SHOULD / WON'T rows. Everything else is skill content.
-2. Run Phases 1–5 here with the moved text as the source. Moved bodies usually exceed 380 lines and need a Phase 4 split.
+1. Keep in the always-on file only the lines that must hold in every session for that repo. Everything else is skill content.
+2. Run Phases 1–5 here with the moved text as the source. With the standard sections added, a long section can pass 380 lines — then split it per Phase 4.
 3. Leave a one-line pointer at the old location naming the new skill.
-4. Add the skill's row to the Routed Skill Index in `~/.claude/CLAUDE.md`.
+4. Add the skill's routing row: in the Routed Skill Index in `~/.claude/CLAUDE.md` for a skill every repo can use, in the project `CLAUDE.md` for a skill about one repo (repo-specific facts live per project — constitution, opening paragraph).
 5. Run Phases 6-8.
 
 ## Anti-patterns
@@ -359,7 +358,7 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 - [ ] `## Self-review checklist` — checkboxes the model walks through.
 - [ ] `## Examples` — 2-3 worked walkthroughs with concrete, realistic illustrative names (not bare placeholders, not one product's files).
 - [ ] `## Troubleshooting` — symptom → cause → fix table.
-- [ ] `## See Also` — paired rule, sibling skills (verified populated, not TBD), orchestration doc.
+- [ ] `## See Also` — sibling skills (verified populated, not TBD), orchestration doc.
 - [ ] No code blocks > 5 lines in SKILL.md (boundary rule). Skeletons live in `templates.md` if needed.
 - [ ] Every codebase claim verified by grep (helpers, paths, testids, env vars, npm scripts, schemas).
 - [ ] Every code snippet matches `type-safety` conventions (`env.X` / `tokens.full()` instead of `process.env`, `z.strictObject()`, no Zod 4 in Zod 3 codebase, testid prefixes as the frontend emits them).
@@ -395,14 +394,14 @@ User says: *"`enums/SKILL.md` is missing the `## Examples` section."*
 
 ### Example 3 — Moving a project's run-stats rules into a skill
 
-User says: *"Our project `CLAUDE.md` has a 150-line § Run-stats API tests section. Move it into a skill."* (Follows § Moving rule content into a skill.)
+User says: *"Our project `CLAUDE.md` has a 300-line § Run-stats API tests section. Move it into a skill."* (Follows § Moving rule content into a skill.)
 
-1. **Split the section** — the two lines that hold in every session (e.g. "run-stats assertions wait for the data to arrive, never a fixed sleep") stay in the project `CLAUDE.md`; the per-endpoint workflow, query catalog and job-type inventory are skill content.
+1. **Split the section** — only the run-stats line of the folder map stays in the project `CLAUDE.md`, because every session needs it; the per-endpoint workflow, query catalog and job-type inventory are skill content.
 2. **Phase 1 (intent)** — WHAT: test the run-stats endpoints. WHEN: editing `tests/app/api/jobs-service/run-stats/**`. Output shape: SKILL.md + `reference.md`.
 3. **Phase 2 (topology)** — Layer 2. Cluster: API authoring.
 4. **Phase 4 (progressive disclosure)** — the moved text exceeds 380 lines once it gets the standardized structure; the query catalog and inventory go to `reference.md` (one level deep).
 5. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original section was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
-6. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill. Add its row to `~/.claude/CLAUDE.md § Routed Skill Index`; add it to `api-testing`'s See Also and back.
+6. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill, and add its routing row to the project `CLAUDE.md` (a skill about one repo's endpoints is not a toolkit skill). Name `api-testing` in its See Also.
 7. **Phase 8 (verify)** — run the full checklist + Phase 6 subagent test.
 
 ## Troubleshooting

@@ -67,7 +67,7 @@ The standardized SKILL.md structure mandates every section below. The validator 
 - [ ] **`## Self-review checklist`** with checkboxes the model walks through.
 - [ ] **`## Examples`** — 2–3 worked walkthroughs with concrete, realistic names (`UsersPage`, `createUser`) rather than bare placeholders. This toolkit is installed into many repositories, so an example must read as an illustration — never a path the reader is expected to find in this one.
 - [ ] **`## Troubleshooting`** — symptom → cause → fix table, listing real failure modes.
-- [ ] **`## See Also`** — paired rule, sibling cluster, orchestration doc, identity.
+- [ ] **`## See Also`** — sibling cluster, orchestration doc.
 
 ---
 
@@ -112,7 +112,6 @@ One-way and stale cross-references were the #1 source of audit churn in Tier 1.
 - [ ] **`See Also` lists exist** — each cited skill has a populated `SKILL.md` (not an empty placeholder folder).
 - [ ] **TBD references explicit** — when a sibling skill is intentionally not yet authored, its mention carries `*(TBD)*` and a fallback note.
 - [ ] **Bidirectional cross-references** — when this skill cites a sibling, that sibling's `See Also` mentions this skill back (when relevant). Update both in the same edit.
-- [ ] **Paired rule cited** — explicit link if it exists, "(none)" if not. No omission.
 - [ ] **No broken markdown links** — every `[text](path)` resolves to a real file. Use `ls`, `cat`, or `Read` to verify.
 - [ ] **`~/.claude/CLAUDE.md § Routed Skill Index` updated** in the same edit batch when adding, renaming, or removing a skill. The orchestrator's index is the live route map and the only human-readable index.
 - [ ] Sibling skills' `See Also` updated if cluster relationships changed (bidirectional).
@@ -126,7 +125,7 @@ The marks that distinguish a skill that "fits this repo" from a generic skill.
 
 - [ ] **Signature device** — at least one of: architecture map (table), storage location map (table), decision tree (mermaid), pattern catalog (numbered). Mirror `scaffold-spec` / `data-strategy` / `api-testing`.
 - [ ] **Opener** answers "what does this skill cover, what's the failure mode it prevents". One paragraph max.
-- [ ] **No paired glob rule** — rule content lives in the skill, and `## See Also` says `Paired rule: (none)` explicitly.
+- [ ] **No paired glob rule** — rule content lives in the skill.
 - [ ] **Cluster fit** — skill belongs to one of the five named clusters (API authoring / UI authoring / domain orientation / failure investigation / repo hygiene); at least one cluster sibling is cross-linked.
 - [ ] **Listed among the agent's available skills** in a fresh session (skip when `disable-model-invocation: true`).
 

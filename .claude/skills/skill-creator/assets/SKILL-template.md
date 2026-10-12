@@ -50,11 +50,8 @@ the single sentence that captures the failure mode this skill prevents. This
 is the agent's first read after the description.
 -->
 
-This skill holds its own rules; the always-on constitution,
-`~/.claude/CLAUDE.md`, carries only the MUST / SHOULD / WON'T rows that hold
-in every session.
-<!-- The toolkit ships no paired glob rules — rule content lives in the skill
-(skill-creator § Critical, NO PAIRED RULES). -->
+<!-- No paired rule: the toolkit ships no glob rules, and rule content lives
+in the skill (skill-creator § Critical, NO PAIRED RULES). -->
 
 ## Critical
 
@@ -252,17 +249,15 @@ REQUIRED. Cross-skill links. Must be VERIFIED:
   folders). Mark TBD ones as *(TBD)* with a fallback note.
 - The cross-reference is BIDIRECTIONAL — when you cite a sibling skill here,
   update that sibling's See Also to mention this skill back.
-- The paired rule line says "(none)", so the absence is intentional.
 
 Cluster siblings (pick the cluster from skill-creator Phase 2):
 - API authoring: scaffold-spec, api-testing, data-strategy, helpers, fixtures, type-safety
 - UI authoring: scaffold-spec, selectors, page-objects, playwright-cli, frontend-cross-check, enums, fixtures
-- Domain orientation: test-case-generation (the system's own context lives in the adopting repo's CLAUDE.md)
+- Domain orientation: test-case-generation
 - Failure investigation: debugging, playwright-cli, frontend-cross-check
 - Repo hygiene: refactor-values, skill-creator, ai-native-workflow
 -->
 
-- **Paired rule:** (none) — rule content lives in this skill.
 - **Sibling cluster (<cluster name>):** [`<sibling-1>`](../<sibling-1>/SKILL.md), [`<sibling-2>`](../<sibling-2>/SKILL.md), [`<sibling-3>`](../<sibling-3>/SKILL.md).
 - **Orchestration:** the Routed Skill Index in `~/.claude/CLAUDE.md` — add this skill's row there.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.
