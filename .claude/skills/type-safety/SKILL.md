@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 2.0.1
+version: 2.0.2
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -8,18 +8,18 @@ metadata:
 
 # Type Safety
 
-This skill teaches the going-forward TypeScript and Zod conventions for the framework. The codebase mixes patterns today; rules below are the target, and drift is called out where it exists. Do not pre-emptively bulk rewrite; migrate when the file is next touched.
+This skill teaches the going-forward TypeScript and Zod conventions for the framework. A codebase may mix patterns; the rules below are the target, and the skill names the usual drift. Do not pre-emptively bulk rewrite; migrate when the file is next touched.
 
 ## Critical
 
 - **NEVER** use `any`, `: any` parameters, `as any`, or `@ts-ignore` / `@ts-expect-error` to silence the type checker. `tsconfig.json` has `"strict": true` and `"noImplicitAny": true` for a reason — that surface is the contract.
 - **NEVER** use `as T` or `as unknown as T` to cross a type boundary. If the value's shape is unknown, type it as `unknown` and narrow via `Schema.parse(...)` or a type guard.
-- **ALWAYS** define new API schemas with `z.strictObject({...})`. `z.object()` silently strips unknown keys and hides contract drift; the strict migration is essentially complete (the few remaining lax schemas are intentional — see § Zod schema patterns), so a new lax `z.object` schema is a regression (per `api-testing` § Zod schema conventions).
+- **ALWAYS** define new API schemas with `z.strictObject({...})`. `z.object()` silently strips unknown keys and hides contract drift; a lax schema is acceptable only as a commented, intentional exception (see § Zod schema patterns); any other new lax `z.object` schema is a regression (per `api-testing` § Zod schema conventions).
 - **ALWAYS** assert API responses with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). Type generics on `apiRequest<T>()` alone are insufficient (no runtime check). A bare `Schema.parse(body)` with no `expect(...).toBeTruthy()` wrapper is also insufficient.
 - **ALWAYS** specify explicit return types on exported and public functions (`Promise<void>`, `Promise<UserResponse>`, `Locator`, `string`). Parameter types are mandatory — `noImplicitAny` enforces it; never silence it.
 - **NEVER** read `process.env` outside the config module. `config/env.ts` reads it once and validates it with Zod when it loads, so a missing variable stops the run at startup; everything else imports `env.X`, `tokens.admin()` or `appConfig`. No `!`, no `as string`, no `??` / `||` defaults at call sites — defaults live in the schema. See § Environment variables.
 - **NEVER** use `z.any()` to make a parse error go away — that's hiding contract drift. Investigate the divergence, write the test as the contract says, and comment it out with `// TODO: FIXME: <TICKET>` per the `api-testing` skill — never `test.skip`.
-- **This codebase uses Zod 3** (`^3.25.23`). Use chained string-format validators (`z.string().uuid()`, `z.string().email()`, `z.string().url()`). The Zod 4 top-level forms (`z.uuid()`, `z.email()`) do not apply here.
+- **The rules and examples here are written for Zod 3** (check your repo's `package.json`). On Zod 3, use chained string-format validators (`z.string().uuid()`, `z.string().email()`, `z.string().url()`); the Zod 4 top-level forms (`z.uuid()`, `z.email()`) do not exist there.
 
 ## Environment variables — read once, through the config module
 
@@ -79,7 +79,7 @@ Existing code that reads `process.env.X!` at call sites is drift — migrate a f
 
 ## Zod schema patterns
 
-This codebase uses **Zod 3** (`^3.25.23`). Patterns below match that version; Zod 4's top-level validators (`z.uuid()`, `z.email()`) do not apply here. A future Zod 4 migration is on the radar but out of scope for new code today.
+The patterns below are written for **Zod 3**; Zod 4's top-level validators (`z.uuid()`, `z.email()`) do not exist there.
 
 ### `z.strictObject()` for new schemas
 
@@ -87,7 +87,7 @@ This codebase uses **Zod 3** (`^3.25.23`). Patterns below match that version; Zo
 export const WorkerSchema = z.strictObject({ /* ... */ });
 ```
 
-`z.object()` silently strips unknown keys; a backend that adds a new field nobody noticed will pass tests forever. `z.strictObject()` rejects unknown keys at runtime, so additive contract drift surfaces as a `ZodError` immediately. The migration is **essentially complete**: ~93 `z.strictObject` definitions across `fixtures/api/schemas/` vs 5 intentional lax ones (2 in `run-stats.ts` `StatsStoreResponseSchema`, commented as intentional — the third-party run-stats store's responses may include extra fields; 2 credential-input shapes in `util/keycloak.ts`; 1 deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`). Do not add new lax `z.object` schemas.
+`z.object()` silently strips unknown keys; a backend that adds a new field nobody noticed will pass tests forever. `z.strictObject()` rejects unknown keys at runtime, so additive contract drift surfaces as a `ZodError` immediately. A lax schema is legitimate only when it is intentional and commented. In the example app, the exceptions are `StatsStoreResponseSchema` in `run-stats.ts` (the third-party run-stats store's responses may include extra fields), two credential-input shapes in `util/keycloak.ts`, and one deliberate `.passthrough()` on `TenantSchemaResponseSchema` in `tenant-schema.ts`. Do not add new lax `z.object` schemas.
 
 ### Chained string-format validators (Zod 3)
 
@@ -100,7 +100,7 @@ export const WorkerSchema = z.strictObject({ /* ... */ });
 | Integer | `z.number().int()` |
 | Non-empty string | `z.string().min(1)` |
 
-Default ids to `z.string().uuid()`; only loosen to `z.string()` when the API has been verified to return a non-UUID id (rare; document inline). Many existing `id: z.string()` fields are drift — tighten on next touch.
+Default ids to `z.string().uuid()`; only loosen to `z.string()` when the API has been verified to return a non-UUID id (rare; document inline). If existing schemas type UUID ids as plain `id: z.string()`, that is drift — tighten on next touch.
 
 ### The exact response-validation idiom
 
@@ -124,7 +124,7 @@ Defer to the `api-testing` skill's strictness ladder (§ Zod schema conventions,
 
 ### No response-envelope factory
 
-This codebase has **no** `createApiResponseSchema` factory. Each resource file under `fixtures/api/schemas/app/` declares its own schemas. The shared shapes (`PageInfoSchema`, `APIErrorSchema`, `JSONSchemaResponseSchema`) live canonically in `fixtures/api/schemas/util/common.ts` — import from there. `GatewayErrorSchema` is not yet centralized (strict local copies in `tenant.ts` / `user.ts` / `notification-rule.ts`); a few legacy local `APIErrorSchema` copies also remain. See `api-testing` § Architecture map and § Error envelopes.
+The convention has **no** `createApiResponseSchema` factory. Each resource file under `fixtures/api/schemas/app/` declares its own schemas. The shared shapes (`PageInfoSchema`, `APIErrorSchema`, `JSONSchemaResponseSchema`) live canonically in `fixtures/api/schemas/util/common.ts` — import from there. If a shared shape still has local copies, that is drift: centralize it when you touch the file. In the example app, `GatewayErrorSchema` has strict local copies in `tenant.ts` / `user.ts` / `notification-rule.ts`, and a few legacy local `APIErrorSchema` copies remain. See `api-testing` § Architecture map and § Error envelopes.
 
 ## No `any`, no unsafe casts
 
@@ -150,7 +150,7 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 
 - ❌ `: any` typed parameters or returns. Use `unknown` at boundaries, concrete types inside.
 - ❌ `as T` or `as unknown as T` to silence the type-checker. Parse the value with Zod and let the schema produce the type.
-- ❌ `@ts-ignore` / `@ts-expect-error` without a linked tracking comment AND a real plan to remove. None should exist in the codebase today (`grep` returns zero); keep it that way.
+- ❌ `@ts-ignore` / `@ts-expect-error` without a linked tracking comment AND a real plan to remove. A `grep` for them should return zero; keep it that way.
 - ❌ `process.env.X` anywhere outside `config/` — in a spec, helper, fixture or page object. Import `env.X` or `tokens.x()` from the config module.
 - ❌ `process.env.X!` or `process.env.X as string`. Both silence the compiler without checking anything; the schema in `config/env.ts` is the check.
 - ❌ `process.env.X ?? "default"` / `|| "default"` at a call site. Defaults live in the schema (`.default(...)`); `||` also swallows an explicit empty string.
@@ -176,7 +176,7 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 - [ ] No `process.env` outside `config/`. Static values come from `env.X`, tokens from `tokens.x()` called where they're used, URLs and paths from `appConfig`. No `!`, `as string`, `??` or `||` on env values; any default is in the schema.
 - [ ] If the file already read `process.env` in a part I did not touch, I left it (legacy drift; migrate the file when you next touch it).
 - [ ] No `z.any()` added to silence a `ZodError`. Real divergences route through `api-testing` § Skipping a test for a real backend bug.
-- [ ] No `prettier/prettier` errors remain (4-space indent, single quotes, trailing commas). Run `npx eslint --fix <file>` if the file shows formatting errors — never commit with wrong Prettier settings.
+- [ ] No `prettier/prettier` errors remain (your repo's Prettier config decides indent, quotes and trailing commas). Run `npx eslint --fix <file>` if the file shows formatting errors — never commit with wrong Prettier settings.
 - [ ] Linter (`npx eslint`) and `tsc --noEmit` clean for changed files.
 
 ## Examples
@@ -214,13 +214,13 @@ User says: *"Add `POST /jobs/:id/pause` and validate the response."*
    expect(PauseJobResponseSchema.parse(body)).toBeTruthy();
    ```
 
-5. **No `createApiResponseSchema`.** This codebase has no factory; each resource declares its own schemas. Reuse shared shapes (`APIErrorSchema`, `PageInfoSchema`) by importing — never duplicate.
+5. **No `createApiResponseSchema`.** The convention has no factory; each resource declares its own schemas. Reuse shared shapes (`APIErrorSchema`, `PageInfoSchema`) by importing — never duplicate.
 
 ### Example 3 — Fixing a `string | undefined` propagation
 
 User says: *"`appConfig.apiUrl` is typed `string | undefined` and downstream callers all guard. Tighten it."*
 
-1. **Open `config/app.ts`.** Today: `apiUrl: process.env.API_URL`.
+1. **Open `config/app.ts`.** Suppose it reads `apiUrl: process.env.API_URL`.
 2. **Read it from the validated env:** `apiUrl: env.API_URL`. `API_URL` is in the schema as `z.string().url()`, so the property is a `string`, and a missing or malformed value fails the run at load.
 3. **JSDoc the property** in the same edit (per the `config` skill), naming the backing variable.
 4. **Remove downstream guards** that only handled `undefined`; they're dead code now.

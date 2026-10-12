@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 3.0.0
+version: 3.0.1
 description: >-
   Generate requirements and test cases from a user story or acceptance criteria — 6-section package:
   story analysis, functional requirements, categorized test cases, security & compliance, k6
@@ -63,7 +63,7 @@ Every example in this toolkit uses one invented product (`GOVERNANCE.md` § Exam
 #### Core Business Concepts
 
 - **Workers:** Agents installed at customer sites, each in a region, unique `WORKER_ID`, outbound-only connection to the message queue, execute job runs.
-- **Job Types:** HTTP/HTTPS (request timing breakdown), `export` (duration, record skip rate, run steps), SFTP (port check, auth check), email, backup, stream, webhook (callback delivery).
+- **Job Types:** HTTP/HTTPS (request timing breakdown), `export` (duration, record skip rate, run steps), SFTP (transfer result, files transferred, transfer time), email, backup, stream (stream state, messages consumed, consumer lag), webhook (callback delivery).
 - **Multi-Tenancy:** Data isolated by `tenant_id`; JWT tokens carry tenant context; row-level isolation in the relational database; run stats labeled with `tenant_id` in the run-stats store.
 - **Executors** (job executors): Services within a worker (`export`, `http`, `sftp`, run-step recording) that subscribe to message-queue consumer groups for load balancing.
 - **Scheduling:** Scheduler receives schedule entries, persists them in the message queue's key-value state store, emits run messages at each job's configured `runInterval`.
@@ -91,8 +91,9 @@ Backend → Remote message queue → Proxy → schedules.dispatch queue stream �
 #### Result Structures
 
 - **`export`:** `avg_duration_ms`, `record_skip_rate`, `run_steps_data` (RunStep array with `run_step_number`, `run_step_target`, `run_step_name`, `run_step_duration_ms`, `run_step_status`, `run_step_skip_pct`).
-- **HTTP:** `dns_lookup_ms`, `tcp_connect_ms`, `tls_handshake_ms`, `ttfb_ms`, `download_ms`, `total_time_ms`, `status_code`, `response_size`, `conn_reused`.
-- **SFTP:** `dns_lookup_ms`, `tcp_connect_ms`, `connection_result`, `auth_succeeded`, `ttfb_ms`, `time_to_last_byte_ms`, `transfer_time_ms`, `status_code`.
+- **HTTP:** `status_code`, `response_size_bytes`, `total_time_ms`, `connect_ms`, `tls_ms`, `waiting_ms`, `download_ms`.
+- **SFTP:** `transfer_result`, `files_transferred`, `bytes_transferred`, `session_setup_ms`, `file_transfer_ms`, `transfer_time_ms`.
+- **Stream:** `stream_state`, `messages_consumed`, `consumer_lag`, `batch_time_ms`.
 - **Run Steps:** a job id plus a run-step list and a run-step sequence fingerprint.
 
 #### Performance Targets

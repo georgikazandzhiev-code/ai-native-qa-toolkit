@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.1.0
+version: 1.1.1
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
@@ -8,7 +8,7 @@ metadata:
 
 # Helpers
 
-This skill governs **how** to author a helper in this codebase: location, naming, signature, exports, cleanup, body-builder, URL-builder, and body-style conventions. The decision of **whether** a piece of code should be a helper at all (vs a direct `apiRequest` call vs a Playwright fixture) lives in the `api-testing` skill — read that first when triaging.
+This skill governs **how** to author a helper: location, naming, signature, exports, cleanup, body-builder, URL-builder, and body-style conventions. The decision of **whether** a piece of code should be a helper at all (vs a direct `apiRequest` call vs a Playwright fixture) lives in the `api-testing` skill — read that first when triaging.
 
 ## Critical
 
@@ -18,11 +18,13 @@ This skill governs **how** to author a helper in this codebase: location, naming
 - **The decision of WHEN to write a helper vs call `apiRequest({...})` directly vs build a fixture lives in the `api-testing` skill (§ Helpers — three callable shapes). This skill governs how to author the helper, not when.** Do not reproduce that decision tree here.
 - **ALWAYS** make cleanup helpers tolerate 404 via `Promise.allSettled` over the per-id deletes. A cleanup helper that throws on a missing resource breaks the next test's setup.
 - **Specs that seed jobs with assigned workers MUST cleanup jobs before worker resources (409 conflict otherwise).** Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` in `helpers/app/jobs.ts` — it enforces the order. Never invent a parallel deleter.
-- **New helper files use kebab-case naming** per the orchestrator's File Naming Conventions (`helpers/app/admin-tenants.ts`, `helpers/util/date-time-format.ts`). Existing camelCase files (`adminTenants.ts`, `adminRealms.ts`, `adminUsers.ts`, `createStorageState.ts`, `keyCloak.ts`, `dateTimeFormat.ts`, `balanceFormat.ts`, `dataGenerator.ts`) are legacy drift — rename when next touched, never propagate.
-- **Authoring a setup helper** (assertion-style — parses internally, returns typed entity) follows the contract in `api-testing` § Two helper styles. The current canonical example is `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`.
+- **New helper files use kebab-case naming** per the orchestrator's File Naming Conventions (`helpers/app/admin-tenants.ts`, `helpers/util/date-time-format.ts`). If your repo has camelCase helper files (in the example app, `adminTenants.ts`, `adminUsers.ts`, `createStorageState.ts`, `keyCloak.ts`, …), they are legacy drift — rename when next touched, never propagate.
+- **Authoring a setup helper** (assertion-style — parses internally, returns typed entity) follows the contract in `api-testing` § Two helper styles. The example app's `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts` is one example.
 - **`process.stderr.write` for error-path diagnostics.** The framework bans `console.*` in committed code. `process.stderr.write` in cleanup/teardown helpers is an accepted exception for surfacing resource-leak warnings in CI logs (e.g., a teardown that tolerates failure but shouldn't be silent). Keep to error/cleanup paths only — never for happy-path logging or debug output.
 
 ## File locations and inventory
+
+These are the invented example app's helpers. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 The **canonical** layout (per orchestrator File Naming Conventions, kebab-case for new files):
 
@@ -40,12 +42,12 @@ The **canonical** layout (per orchestrator File Naming Conventions, kebab-case f
 | `adminTenants.ts` | Passthrough (minimal) | `createTenant`, `getTenant`, `patchTenant`, `deleteTenant`. **camelCase legacy — canonical: `admin-tenants.ts`.** |
 | `adminUsers.ts` | **Mixed** — passthrough CRUD AND assertion-style setup/teardown | Passthrough: `createUser`, `getUser`, `listUsers`, `updateUser`, `deleteUser`. Assertion-style: `setupTestUser` / `teardownTestUser` (Mailpit-purges + Keycloak-resets-password + admin-API-creates the user). **camelCase legacy — canonical: `admin-users.ts`.** |
 | `adminRealms.ts` | Passthrough CRUD + body builder | `getRealm`, `createRealm`, `patchRealm`; `buildRealmSettings` (valid default login/email/tokens settings). **camelCase legacy — canonical: `admin-realms.ts`.** |
-| `users.ts` | Passthrough CRUD + body builder + URL builder | `createUser`, `getUser`, `listUsers`, `updateUser`, `logoutUserSession`, `deleteAdminTenantUser`; `buildCreateUserBody`, `buildUpdateUserBody`; `buildListUsersUrl`. **NOTE — drift:** `buildCreateUserBody` emits `@<alt-test-domain>` recipients which Mailpit on the test infra silently drops; per `api-testing` (§ Mailpit) the only valid Mailpit-catchable domain is `@<your-test-domain>`. |
+| `users.ts` | Passthrough CRUD + body builder + URL builder | `createUser`, `getUser`, `listUsers`, `updateUser`, `logoutUserSession`, `deleteAdminTenantUser`; `buildCreateUserBody`, `buildUpdateUserBody`; `buildListUsersUrl`. **NOTE:** if a body builder like `buildCreateUserBody` emits recipients outside your Mailpit domain (e.g. `@<alt-test-domain>`), that is a bug: Mailpit never catches them, so fix the builder and do not copy it. Per `api-testing` (§ Mailpit) the only valid Mailpit-catchable domain is `@<your-test-domain>`. |
 | `run-stats.ts` | Passthrough + assertion-style picker | `getJobRunStats`, `listRunStatCatalog`, `getJobTypes`, `queryRunStats`, `aggregateRunStats` (URL builders are internal); assertion-style `pickNotificationRuleRunStatForType`. |
 | `notifications.ts` | **Mixed** — passthrough CRUD + cleanup + assertion-style fixtures | `listNotifications`, `getNotification`, `acknowledgeNotification`, `resolveNotification`, `bulkResolveNotifications`, `getNotificationsStats`, `getNotificationHistory`; `cleanupNotificationsForJob`. Assertion-style fixture lifecycle: `setupFiringNotificationsFixture` / `teardownFiringNotificationsFixture`, `claimFiringNotifications`, and the shared on-disk cache trio `warmSharedFiringNotificationsFixtureCache` / `loadSharedFiringNotificationsFixture` / `clearSharedFiringNotificationsFixtureCache`. |
 | `notification-rules.ts` | **Mixed** — passthrough CRUD + body builders + cleanup + assertion-style fixture | `listNotificationRules`, `createNotificationRule`, `getNotificationRule`, `updateNotificationRule`, `deleteNotificationRule`; `buildTriggerCondition`, `buildCreateNotificationRuleBody`, `buildSeverityCascade`, `buildClearCondition`, `buildCreateCascadeNotificationRuleBody`, `buildUpdateNotificationRuleBody`, `buildJobBodyForType`; `cleanupNotificationRules`. Assertion-style: `setupNotificationRuleSpecFixture` (1 worker + one job per job type + run-stat discovery). |
 | `notification-rule-display.ts` | Pure label mappers (no `apiRequest`) | `NOTIFICATION_RULE_OPERATOR_DISPLAY_LABELS`, `NOTIFICATION_RULE_EVALUATION_WINDOW_LABELS`, `formatNormalizedRunStatLabel`, `getNotificationRuleOperatorDisplayLabel`, `getNotificationRuleEvaluationWindowDisplayLabel`, `formatNotificationRuleConditionForDetailsDisplay` — mirrors the frontend's notification-rule-details-sheet display strings for UI assertions. |
-| `tenant-schema.ts` | Passthrough | `getTenantSchema`. **`-schema` suffix is non-standard — canonical: `tenant.ts`** (currently the resource file is named `tenant.ts` already; this helper file should fold in or rename). |
+| `tenant-schema.ts` | Passthrough | `getTenantSchema`. **`-schema` suffix is non-standard — canonical: `tenant.ts`** (the resource is `tenant`, so fold this helper into `tenant.ts` or rename it). |
 | `createStorageState.ts` | Auth bootstrap (UI flow) | `createAppStorageState` — Keycloak UI login + OTP + `context.storageState({ path })`. Lives under `helpers/app/` despite being auth-bootstrap because it depends on `pages/util/LoginPage`. **camelCase legacy — canonical: `create-storage-state.ts`.** |
 
 ### Utility helpers — `helpers/util/`
@@ -59,7 +61,7 @@ The **canonical** layout (per orchestrator File Naming Conventions, kebab-case f
 | `dataGenerator.ts` | `generateRandomAmount`, `generateTestEmail`, `generateUserData`. **camelCase legacy — canonical: `data-generator.ts`.** `generateTestEmail` is the legacy overlap with `mailpit.ts:getNextTestEmail` — use `getNextTestEmail(baseEmail)` for any email a test creates. `generateUserData` overlaps `users.ts:buildCreateUserBody` — consolidate when next touched. |
 | `otpauth.ts` | `generateTOTP({ secret, algorithm?, digits?, period? })`. Already kebab-safe (single word). |
 
-> **Filename drift reality.** Of 18 files under `helpers/` (12 in `helpers/app/`, 6 in `helpers/util/`), 8 are camelCase (`adminRealms.ts`, `adminTenants.ts`, `adminUsers.ts`, `createStorageState.ts`, `keyCloak.ts`, `dateTimeFormat.ts`, `balanceFormat.ts`, `dataGenerator.ts`). 10 are already kebab-safe-or-single-word (`jobs.ts`, `workers.ts`, `users.ts`, `run-stats.ts`, `tenant-schema.ts`, `notifications.ts`, `notification-rules.ts`, `notification-rule-display.ts`, `mailpit.ts`, `otpauth.ts`). Do not invent new camelCase files — the orchestrator's File Naming Conventions are the source of truth and the legacy list above is finite drift.
+> **Filename drift.** The rows marked *camelCase legacy* show what legacy drift looks like; the single-word and kebab-case files (`jobs.ts`, `run-stats.ts`, `notification-rules.ts`, `otpauth.ts`) are already fine. If your repo has camelCase helper files, treat them as a finite list: rename each when you next touch it. Do not invent new camelCase files — the orchestrator's File Naming Conventions are the source of truth.
 
 ## Helper signature rules
 
@@ -69,7 +71,7 @@ Apply these to every new helper. They are project-wide invariants — `api-testi
 - **Last optional parameter is `headers?: string`** (the bearer token). For unauthenticated calls (testing 401), the caller omits it entirely — never pass an empty string. For form-encoded calls (Keycloak token endpoint), pass the literal string `"form-urlencoded"` — see `api-testing` § Common request recipes.
 - **Return shape — passthrough style:** `Promise<ApiRequestResponse<T>>` where `T` is the schema-inferred response type. The caller owns status assertion and `Schema.parse(body)`. This is the default for CRUD helpers used across positive AND negative tests.
 - **Return shape — assertion-style:** the typed entity itself (`Promise<{ email: string; userId: string }>` for `setupTestUser`). The helper asserts `status` and runs `Schema.parse(body)` once internally. Only for setup helpers that exist to seed a precondition. **Decision rule lives in `api-testing` § Two helper styles.**
-- **Sync URL builders** — for query-string endpoints, expose a sibling `buildList<X>Url(params)` that takes a typed param object and returns the path string. Existing examples: `buildListJobsUrl`, `buildListWorkersUrl`, `buildListUsersUrl`, `buildRunStatsQueryUrl`. Keep these synchronous — they are pure path-shapers.
+- **Sync URL builders** — for query-string endpoints, expose a sibling `buildList<X>Url(params)` that takes a typed param object and returns the path string. In the example app: `buildListJobsUrl`, `buildListWorkersUrl`, `buildListUsersUrl`, `buildRunStatsQueryUrl`. Keep these synchronous — they are pure path-shapers.
 - **Sync body builders** — `buildCreate<X>Body(overrides?)` / `buildUpdate<X>Body(overrides?)` returning a plain object literal seeded from `faker`. Always splat `...overrides` last so callers can override any field. Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`).
 - **Cleanup helpers** — accept arrays of ids (typed `string[]`), iterate via `Promise.allSettled` over per-id deletes, never throw. The shape is `cleanup<Resource>(apiRequest, ids: string[], headers?: string): Promise<void>`. For multi-resource cleanups with ordering constraints, name the helper after both resources in dependency order (`cleanupWorkersAndJobs` deletes jobs first **despite the name reading workers-first** — the name is descriptive of the inputs, the order is enforced by the implementation).
 - **Schemas import-only.** A helper file imports response types from `fixtures/api/schemas/app/<resource>.ts` (`type CreateJobResponse`); it never declares a `z.object` / `z.strictObject`. If you find yourself reaching for `z`, the schema belongs in `fixtures/api/schemas/app/`.
@@ -80,13 +82,13 @@ Apply these to every new helper. They are project-wide invariants — `api-testi
 The decision rule lives in **`api-testing` § Two helper styles** — read that and pick the style that matches your use case. This skill does not duplicate the decision tree.
 
 Cliff-notes for orientation only (not a substitute for the api-testing section):
-- **Assertion-style** parses internally and returns a typed payload. Use when the helper exists to seed a precondition. Existing examples in this codebase: `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`, `setupWorkerAndJob` in `helpers/app/jobs.ts`, `setupNotificationRuleSpecFixture` in `helpers/app/notification-rules.ts`, `setupFiringNotificationsFixture` in `helpers/app/notifications.ts`.
-- **Passthrough** returns `{ status, body }` and lets the caller assert. Use when the same helper runs across positive AND negative tests. Existing examples: every CRUD helper in `helpers/app/jobs.ts`, `helpers/app/workers.ts`, `helpers/app/adminTenants.ts`, `helpers/app/users.ts`.
-- **Planned** — more assertion-style setup helpers are coming (`setupJob`, `setupTestWorker`, `setupUser`, `setupTenant`). Today the project leans heavily passthrough.
+- **Assertion-style** parses internally and returns a typed payload. Use when the helper exists to seed a precondition. In the example app: `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts`, `setupWorkerAndJob` in `helpers/app/jobs.ts`, `setupNotificationRuleSpecFixture` in `helpers/app/notification-rules.ts`, `setupFiringNotificationsFixture` in `helpers/app/notifications.ts`.
+- **Passthrough** returns `{ status, body }` and lets the caller assert. Use when the same helper runs across positive AND negative tests. In the example app: every CRUD helper in `helpers/app/jobs.ts`, `helpers/app/workers.ts`, `helpers/app/adminTenants.ts`, `helpers/app/users.ts`.
+- **Mostly passthrough is normal.** `setupJob`, `setupTestWorker`, `setupUser` and `setupTenant` are the assertion-style helpers to add in the same shape; when to add one is decided in `api-testing` § Two helper styles.
 
 ## Cleanup helper patterns
 
-These are the project-specific cleanup invariants. Generic guidance lives in `api-testing` § Cleanup patterns; this section covers the helper-author side.
+These are the cleanup invariants for helper authors. Generic guidance lives in `api-testing` § Cleanup patterns; this section covers the helper-author side.
 
 - **`Promise.allSettled` over per-id deletes.** A failure on one id must not skip the others. See `cleanupWorkers` and `cleanupWorkersAndJobs`.
 - **404 is success.** A test that already deleted its resource should not crash teardown. Do not branch on the response status inside a cleanup helper unless you also log; throwing is forbidden.
@@ -95,31 +97,31 @@ These are the project-specific cleanup invariants. Generic guidance lives in `ap
 
 ## Body-builder patterns
 
-- One file per resource, alongside the CRUD helpers (`jobs.ts` co-locates seven `buildCreate*Body` variants for the seven job types).
-- `qa-` prefix + faker suffix is the project convention for greppable cleanup. Do not drop the prefix.
-- Seven job types live in `helpers/app/jobs.ts`: `buildCreateJobBody` (defaults to type `export`), `buildCreateHTTPJobBody`, `buildCreateStreamJobBody`, `buildCreateSFTPJobBody`, `buildCreateEmailJobBody`, `buildCreateBackupJobBody`, `buildCreateWebhookJobBody`. Adding an 8th job type goes in the same file. **The 10th-job-type-or-5th-builder-on-another-file trigger** for extracting body builders to a shared `helpers/app/test-data-generators.ts` has not fired yet — until then, per-resource is fine.
-- Recipient-domain rule for any builder that emits an email: it MUST be `@<your-test-domain>` (Mailpit catches only that). `buildCreateUserBody` in `helpers/app/users.ts` currently emits `@<alt-test-domain>` and is a known bug; do not pattern after it.
+- One file per resource, alongside the CRUD helpers (in the example app, `jobs.ts` co-locates seven `buildCreate*Body` variants for the seven job types).
+- `qa-` prefix + faker suffix is the convention for greppable cleanup. Do not drop the prefix.
+- In the example app, seven job types live in `helpers/app/jobs.ts`: `buildCreateJobBody` (defaults to type `export`), `buildCreateHTTPJobBody`, `buildCreateStreamJobBody`, `buildCreateSFTPJobBody`, `buildCreateEmailJobBody`, `buildCreateBackupJobBody`, `buildCreateWebhookJobBody`. Adding an 8th job type goes in the same file. **The 10th-job-type-or-5th-builder-on-another-file trigger** decides when to extract body builders to a shared `helpers/app/test-data-generators.ts` — below it, per-resource is fine.
+- Recipient-domain rule for any builder that emits an email: it MUST be `@<your-test-domain>` (Mailpit catches only that). If a body builder emits an address outside your Mailpit domain (e.g. `@<alt-test-domain>`), that is a bug: fix the builder and do not pattern after it.
 
 ## Auth-bootstrap helpers
 
-- **The Keycloak admin client (`helpers/util/keyCloak.ts`) is the one sanctioned place for env reads in helpers** — and even it reads `env.KEYCLOAK_*` from `config/env.ts`, never `process.env` (see `type-safety` § Environment variables). It is the auth boundary — everywhere else, the caller passes the token via the `headers` parameter.
-- **The UI auth bootstrap (`helpers/app/createStorageState.ts`)** logs in via the Keycloak UI, optionally enters a TOTP, waits for the app sidebar, and writes the storage state to a path. It is consumed from `tests/app/login.setup.ts` (project setup hook), not from regular specs.
+- **The Keycloak admin client (`helpers/util/keyCloak.ts` in the example app) is the one sanctioned place for env reads in helpers** — and even it reads `env.KEYCLOAK_*` from `config/env.ts`, never `process.env` (see `type-safety` § Environment variables). It is the auth boundary — everywhere else, the caller passes the token via the `headers` parameter.
+- **The UI auth bootstrap (`helpers/app/createStorageState.ts` in the example app)** logs in via the Keycloak UI, optionally enters a TOTP, waits for the app sidebar, and writes the storage state to a path. It is consumed from the setup project (`tests/app/login.setup.ts`), not from regular specs.
 - **`setupTestUser`** is the bridge between the admin API and Keycloak: it creates the user via the admin API, resets the password directly via the Keycloak admin client (bypassing the invite-link / email-reset UX), purges the Mailpit mailbox, and returns `{ email, userId }`. It does **not** mint or return access tokens, and it does **not** drive the invite-link flow end-to-end. For tests that need the invite-link UX, write the steps inline (purge → create user → `getInviteLinkFromEmail` → follow the link) — see `api-testing` § Multi-step & E2E API tests.
 
 ## Anti-patterns
 
 - ❌ Declaring a Zod schema (`z.object`, `z.strictObject`, …) inside a helper file. Move it to `fixtures/api/schemas/app/<resource>.ts` and import the inferred type back.
-- ❌ Reading credentials or tokens inside a helper — `process.env` anywhere, or `env` / `tokens` outside the sanctioned `helpers/util/keyCloak.ts` auth boundary. The caller controls the token via `headers`.
+- ❌ Reading credentials or tokens inside a helper — `process.env` anywhere, or `env` / `tokens` outside the sanctioned auth-boundary helper (`helpers/util/keyCloak.ts` in the example app). The caller controls the token via `headers`.
 - ❌ Hardcoding URLs, paths, or uuids inside a helper. Paths come from `appConfig.api.X`, base URL from `appConfig.apiUrl`, uuids from `test-data/app/*.json` or `faker.string.uuid()`.
-- ❌ A new helper file in camelCase. Use kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). Existing camelCase files are drift; rename when next touched.
+- ❌ A new helper file in camelCase. Use kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). If your repo has camelCase helper files, they are drift; rename when next touched.
 - ❌ A cleanup helper that throws on 404. Use `Promise.allSettled` and tolerate already-deleted ids.
 - ❌ Cleanup of jobs with assigned workers that deletes workers first — returns 409 because the job still references the worker. Always delete jobs first; reach for `cleanupWorkersAndJobs`.
 - ❌ Authoring a passthrough helper that asserts `status` internally. Passthrough means the caller asserts — status-asserting inside breaks negative tests.
 - ❌ Authoring an assertion-style helper that returns `{ status, body }`. Assertion-style returns the typed payload; if you need both shapes, the helper is passthrough.
 - ❌ Wrapping a single one-shot `apiRequest` call in a helper "for tidiness". The decision rule is in `api-testing` § Helpers — start with `apiRequest({...})` directly in the spec, promote on the second use.
-- ❌ Helper that emits a non-`@<your-test-domain>` Mailpit recipient. The test infra catches only `@<your-test-domain>`; everything else (`@<alt-test-domain>`, `@automation.test`) is silently dropped.
+- ❌ Helper that emits a non-`@<your-test-domain>` Mailpit recipient. Mailpit catches only `@<your-test-domain>`; an address on any other domain (`@<alt-test-domain>`, `@automation.test`) never reaches the inbox.
 - ❌ Helper that calls `request.get` / `request.post` / `request.fetch` directly. Always go through `apiRequest`.
-- ❌ Adding a new utility under `helpers/util/` that overlaps an existing one (`generateTestEmail` vs `getNextTestEmail`, `buildCreateUserBody` vs `generateUserData`). Search before creating; consolidate when you find drift. For any email a test creates, the one to use is `getNextTestEmail(baseEmail)` from `helpers/util/mailpit.ts` — Mailpit plus-addressing makes every address unique and catchable.
+- ❌ Adding a new utility under `helpers/util/` that overlaps an existing one (in the example app, `generateTestEmail` vs `getNextTestEmail`, `buildCreateUserBody` vs `generateUserData`). Search before creating; consolidate when you find drift. For any email a test creates, the one to use is `getNextTestEmail(baseEmail)` from `helpers/util/mailpit.ts` — Mailpit plus-addressing makes every address unique and catchable.
 - ❌ Passing `headers: ""` to fake an unauthenticated call. **Omit the property entirely** — `apiRequest`'s 401 path requires the absent property, not the empty string.
 
 ## Self-review checklist
@@ -127,10 +129,10 @@ These are the project-specific cleanup invariants. Generic guidance lives in `ap
 Before declaring a helper change done, verify:
 
 - [ ] File is under `helpers/app/<resource>.ts` (resource-scoped) or `helpers/util/<name>.ts` (cross-resource).
-- [ ] Filename is kebab-case (or you are matching one of the listed legacy camelCase files exactly).
+- [ ] Filename is kebab-case (or you are editing one of your repo's legacy camelCase files in place).
 - [ ] First parameter is `apiRequest: ApiRequestFn`; last optional parameter is `headers?: string`.
 - [ ] No `z.object` / `z.strictObject` / `z.<anything>` inside the helper file. Response types are imported from `fixtures/api/schemas/app/`.
-- [ ] No `process.env` reads inside the helper, and no `env` / `tokens` reads either unless the file IS `helpers/util/keyCloak.ts` (which reads `env.KEYCLOAK_*`).
+- [ ] No `process.env` reads inside the helper, and no `env` / `tokens` reads either unless the file IS the auth-boundary helper (`helpers/util/keyCloak.ts` in the example app, which reads `env.KEYCLOAK_*`).
 - [ ] Endpoint paths come from `appConfig.api.X`; base URL is `appConfig.apiUrl`.
 - [ ] If the helper is a body builder, the name carries a `qa-` prefix + faker suffix and `...overrides` is splat last.
 - [ ] If the helper is a cleanup, it uses `Promise.allSettled` and tolerates 404.
@@ -148,11 +150,11 @@ User says: _"We re-create-and-delete a job in five specs. Make a setup helper."_
 
 Walk:
 1. **Decision** — load `api-testing` § Helpers and § Two helper styles. Five-spec reuse for setup precondition → assertion-style helper (`setupJob`).
-2. **Location** — `helpers/app/jobs.ts` (resource-scoped, file already exists).
+2. **Location** — the resource's helper file, `helpers/app/jobs.ts` in the example app. Extend it; do not add a second jobs file.
 3. **Signature** — `export async function setupJob(apiRequest: ApiRequestFn, workerIds: string[], headers: string, overrides?: Record<string, unknown>): Promise<Job>`. First arg `apiRequest`, last is the optional payload override; `headers` is required here because setup always authenticates.
 4. **Body** — call `buildCreateJobBody(workerIds, overrides)`, then `apiRequest<CreateJobResponse>({ method: "POST", url: appConfig.api.JOBS, baseUrl: appConfig.apiUrl, headers, body })`. Assert `status === 201`. Run `expect(JobSchema.parse(body)).toBeTruthy()` and return the typed entity.
 5. **Pair with** `teardownJob(apiRequest, jobId, headers)` that calls `deleteJob` and tolerates 404 (just `Promise.allSettled` of one for shape consistency, or a try/log).
-6. **Schema** — already exists in `fixtures/api/schemas/app/job.ts` (`JobSchema`, `CreateJobResponse`). Do not redeclare.
+6. **Schema** — in the example app, `fixtures/api/schemas/app/job.ts` declares `JobSchema` and `CreateJobResponse`. Search your schemas first; do not redeclare.
 7. **Schema import** — import `JobSchema` from the resource file `fixtures/api/schemas/app/job.ts` (per `api-testing` § Zod schema conventions there is no `app/` schema barrel; specs and helpers deep-import from the resource file).
 
 ### Example 2 — Adding a cleanup helper for a brand-new resource
@@ -170,11 +172,11 @@ Walk:
 User says: _"We're adding GraphQL jobs. Add the body builder."_
 
 Walk:
-1. **Location** — `helpers/app/jobs.ts` — same file, after the existing six per-type variants.
-2. **Signature** — `export function buildCreateGraphQLJobBody(workerIds: string[], overrides?: Record<string, unknown>): Record<string, unknown>` — match the seven existing variants byte-for-byte.
+1. **Location** — `helpers/app/jobs.ts` — same file, after the example app's six per-type variants.
+2. **Signature** — `export function buildCreateGraphQLJobBody(workerIds: string[], overrides?: Record<string, unknown>): Record<string, unknown>` — match the seven sibling variants byte-for-byte.
 3. **Faker seeding** — `name: \`qa-graphql-${faker.string.alphanumeric(8).toLowerCase()}\``, `target: faker.internet.url()` (or whatever the GraphQL endpoint shape is), `type: "graphql"`, `runInterval: DEFAULT_RUN_INTERVAL`, `timeout: DEFAULT_TIMEOUT`, `config: { /* graphql-specific keys */ }`, `workerIds`, `...overrides`.
-4. **Threshold check** — adding the 8th type. The 10th-type trigger for promoting all body builders to a shared `helpers/app/test-data-generators.ts` has not yet fired; keep it inline.
-5. **Schema** — the response shape is already covered by `JobSchema` (it discriminates on `type`); the new job type extends the existing `config` shape inside `fixtures/api/schemas/app/job.ts` — that schema work belongs to `api-testing` / `type-safety`, not this skill.
+4. **Threshold check** — adding the 8th type stays below the 10th-type trigger for promoting all body builders to a shared `helpers/app/test-data-generators.ts`; keep it inline.
+5. **Schema** — the response shape is `JobSchema`, which discriminates on `type`; the new job type extends its `config` shape inside `fixtures/api/schemas/app/job.ts` — that schema work belongs to `api-testing` / `type-safety`, not this skill.
 
 ## Troubleshooting
 
@@ -182,13 +184,13 @@ Walk:
 |---------|-------|-----|
 | My helper has a `z.object(...)` in it | Schema declared in the wrong layer | Move the schema to `fixtures/api/schemas/app/<resource>.ts`; export both the schema and the inferred type; import the inferred type back into the helper from that resource file (there is no `app/` schema barrel). See `api-testing` § Zod schema conventions. |
 | Cleanup fails with `409 Conflict` deleting a worker | The worker is still assigned to a job — wrong delete order | Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` from `helpers/app/jobs.ts`. It deletes jobs first, workers second. |
-| ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The orchestrator's File Naming Conventions section is the source of truth; the legacy camelCase files in this codebase are listed in this skill's File Locations section — do not propagate. |
+| ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The orchestrator's File Naming Conventions section is the source of truth; if your repo has legacy camelCase files, do not propagate them (the example app's are marked in § File locations and inventory). |
 | Cleanup throws and breaks the next test's setup | A delete returned 404 (already gone) and the helper threw | Wrap deletes in `Promise.allSettled`. Cleanup must tolerate 404 — never throw. See `cleanupWorkers` and `cleanupWorkersAndJobs`. |
-| `setupTestUser` returns `null` for the invite link / email never arrives | Recipient domain is not `@<your-test-domain>` — Mailpit on the test infra silently drops everything else | Use the `setupTestUser` flow as-is (it already generates `qa-reset-...@<your-test-domain>`). For your own helpers, hardcode the `@<your-test-domain>` domain. `buildCreateUserBody` in `helpers/app/users.ts` emits `@<alt-test-domain>` today — that is a known bug; do not copy that pattern. |
+| `setupTestUser` returns `null` for the invite link / email never arrives | Recipient domain is not `@<your-test-domain>` — Mailpit catches only that domain, so mail to any other domain never arrives | Use the `setupTestUser` flow as-is (it already generates `qa-reset-...@<your-test-domain>`). For your own helpers, hardcode the `@<your-test-domain>` domain. If a body builder emits `@<alt-test-domain>` (or any other domain), that is a bug: fix it and do not copy that pattern. |
 | 401 test fails because `headers: ""` triggered a different error | Empty-string `headers` sends an `Authorization: Bearer ` request, not an unauthenticated request | **Omit the `headers` property entirely** in the helper call site. Never pass an empty string. |
 | I don't know whether to write a helper, call `apiRequest` directly, or build a fixture | Decision rule is not in this skill | Load `api-testing` § Helpers — three callable shapes / Two helper styles. This skill governs how to author the helper; that one governs whether you should. |
-| My new helper duplicates `generateTestEmail` / `generateUserData` / `getNextTestEmail` | The codebase has overlapping email/user generators across `dataGenerator.ts` and `mailpit.ts` | Search before creating and consolidate when next touched. For any email a test creates, use `getNextTestEmail(baseEmail)` (in `helpers/util/mailpit.ts`) — `generateTestEmail` is the legacy overlap; Mailpit plus-addressing makes every address unique and catchable. |
-| A non-Keycloak helper reads `process.env.KEYCLOAK_*` (or `env.KEYCLOAK_*`) and gets `undefined` or the wrong value | A helper read env directly that should not have | Move the read up to the spec (`env.X` / `tokens.x()`) or an auth-bootstrap helper and pass the value in. The only sanctioned env reader in `helpers/` is `helpers/util/keyCloak.ts`, via `env.KEYCLOAK_*` from `config/env.ts` — every other helper takes the token via the `headers` parameter. |
+| My new helper duplicates `generateTestEmail` / `generateUserData` / `getNextTestEmail` | Overlapping email/user generators (in the example app, across `dataGenerator.ts` and `mailpit.ts`) | Search before creating and consolidate when next touched. For any email a test creates, use `getNextTestEmail(baseEmail)` (in `helpers/util/mailpit.ts`) — `generateTestEmail` is the legacy overlap; Mailpit plus-addressing makes every address unique and catchable. |
+| A non-Keycloak helper reads `process.env.KEYCLOAK_*` (or `env.KEYCLOAK_*`) and gets `undefined` or the wrong value | A helper read env directly that should not have | Move the read up to the spec (`env.X` / `tokens.x()`) or an auth-bootstrap helper and pass the value in. The only sanctioned env reader in `helpers/` is the auth-boundary helper (`helpers/util/keyCloak.ts` in the example app), via `env.KEYCLOAK_*` from `config/env.ts` — every other helper takes the token via the `headers` parameter. |
 
 ## See Also
 

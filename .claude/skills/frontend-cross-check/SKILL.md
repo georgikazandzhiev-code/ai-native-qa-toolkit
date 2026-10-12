@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.9
+version: 1.0.10
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -25,7 +25,7 @@ Open the frontend before authoring or modifying any of these, every time:
 | Author / modify | Cross-check what in frontend |
 |------------------|--------------------------------|
 | **Selector / page object** (`pages/**`) | `data-testid` emissions; component structure (Radix vs plain HTML); accessible roles and labels; `disabled` / loading state attributes |
-| **UI message constant** (`enums/app/messages.ts`, when created) | Message keys in the i18n message catalog (e.g. `messages/en.json`); inline string literals in `src/components/**`; toast strings; validation messages |
+| **UI message constant** (a messages enum; `enums/app/messages.ts` in the example app's layout) | Message keys in the i18n message catalog (e.g. `messages/en.json`); inline string literals in `src/components/**`; toast strings; validation messages |
 | **Route reference** in a UI test | File-based routes in the app's route folder (e.g. `src/routes/`; file → URL mapping) |
 | **Storage-state path / auth setup** | Frontend's auth flow, Keycloak realm name, redirect targets |
 | **Schema-form field selector** | The schema-form component's emission pattern (testid prefix, error testid prefix) |
@@ -86,7 +86,7 @@ For things the source can't tell you (does the toast actually appear? what does 
 - ❌ Treating the frontend's test files (`*.test.tsx`, `*.stories.tsx`) as the source of truth for production behavior. The component file (`<name>.tsx`) is canonical; tests and stories may use stub data.
 - ❌ Confirming a claim against the i18n message catalog (e.g. `messages/en.json`) only. A frontend can have a catalog and still emit inline English literals — both sources matter.
 - ❌ Treating routes as URLs. With a file-based router, `jobs.$jobId.tsx` is the route file, **`/jobs/:jobId`** is the URL. Translate carefully.
-- ❌ Assuming the QA orchestrator's claim about the frontend is correct without verification. The orchestrator was authored before this skill existed; cross-checks may catch drift.
+- ❌ Assuming the QA orchestrator's claim about the frontend is correct without verification. Its frontend claims are not checked against the frontend source; cross-checks may catch drift.
 - ❌ Confirming a Radix primitive by checking `package.json` `@radix-ui/*` deps only. Primitives often arrive indirectly — wrapped by a component kit, or under a package name other than `@radix-ui/*` — check the import lines, not just the manifest.
 
 ## Self-review checklist
@@ -120,7 +120,7 @@ User says: *"Centralize the 'Worker registered successfully' toast text."*
 2. **Grep:** `grep -rn "Worker registered" <sibling-repos>/frontend/src/`.
 3. Observe: `src/components/settings/workers/register-worker-sheet.tsx` calls `toast.success('Worker registered successfully')` with the inline literal — **not** a catalog message key.
 4. **Decide source:** since this is an inline literal (not a catalog message key), capture the exact string from the source: `"Worker registered successfully"`. No quotes, no period, exact case.
-5. Add to `enums/app/messages.ts` per the `enums` skill (when that file exists). Cross-reference the source path in the JSDoc so the next maintainer can verify.
+5. Add it to the messages enum per the `enums` skill (in the example app's layout, `enums/app/messages.ts`). If your repo has no messages enum yet, this first captured message creates it. Cross-reference the source path in the JSDoc so the next maintainer can verify.
 6. **Optional:** open the live app and trigger the action to confirm the rendered text matches the source — an i18n layer or formatter may transform some strings at render time, even ones written as literals.
 
 ### Example 3 — Confirm a route exists before writing a UI test

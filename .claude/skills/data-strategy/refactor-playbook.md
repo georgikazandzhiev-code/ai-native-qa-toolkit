@@ -1,16 +1,16 @@
 # Data Strategy — Refactor Playbook
 
-Six numbered cleanups for the duplication and inconsistency hot spots already in this codebase. Each entry is self-contained: scope, before/after, mechanical migration steps, and a verification checklist. Recommendations only — execute when scoped into a refactor task.
+Six numbered cleanups for common duplication and inconsistency hot spots, shown on the example app's files. Each entry is self-contained: scope, before/after, mechanical migration steps, and a verification checklist. Recommendations only — execute when scoped into a refactor task.
 
 > Convention: each playbook leaves the framework in a consumable state at every step (no "big bang" rewrite). Run the full suite after each step.
 
-> Sections § 2 and § 4 are **ported verbatim from the upstream `the upstream reference framework` data-strategy playbook** with no changes to body, paths, or examples. They are preserved as faithful copies for two reasons: (1) so this skill matches the upstream playbook 1:1 in section count and structure, and (2) so the rules become immediately actionable if the corresponding patterns are introduced into this project later. Each verbatim section is flagged with a "Not applicable to this project today" annotation at the top.
+> Sections § 2 and § 4 are **ported verbatim from the data-strategy playbook of a mature reference framework these patterns were adapted from** with no changes to body, paths, or examples. They are preserved as faithful copies for two reasons: (1) so this skill matches the upstream playbook 1:1 in section count and structure, and (2) so the rules become immediately actionable if your repo introduces the corresponding patterns. Each verbatim section is flagged with a "Not applicable to this project today" annotation at the top.
 
 ## 1. Stop inlining job / worker payloads — consume the existing builder
 
 ### Symptoms
 
-- `helpers/app/workers.ts` defines `buildCreateWorkerBody`, `buildUpdateWorkerBody`, `buildListWorkersUrl` with override support.
+- In the example app, `helpers/app/workers.ts` defines `buildCreateWorkerBody`, `buildUpdateWorkerBody`, `buildListWorkersUrl` with override support.
 - `helpers/app/jobs.ts` defines `buildCreateJobBody` (defaults to type `export`) plus six sibling per-type builders (`buildCreateHTTPJobBody`, `buildCreateStreamJobBody`, `buildCreateSFTPJobBody`, `buildCreateEmailJobBody`, `buildCreateBackupJobBody`, `buildCreateWebhookJobBody`) and `buildUpdateJobBody` / `buildListJobsUrl`.
 - Specs that nevertheless hand-roll the same shape with `faker.*` inline are drift. Every business-rule change to a job or worker shape requires touching ≥4 places.
 
@@ -18,7 +18,7 @@ Six numbered cleanups for the duplication and inconsistency hot spots already in
 
 1. `rg "faker\." tests/app/api/<domain>/<resource>.spec.ts tests/app/e2e/<domain>/<resource>.spec.ts tests/app/functional/<domain>/<resource>.spec.ts` to enumerate offending blocks for each resource.
 2. For each inline block, replace with `buildCreateWorkerBody({ /* only fields the test cares about */ })` or the matching job-type builder. Drop `faker` import if it becomes unused.
-3. For pairing tests, prefer an Object Mother that delegates to the base builder (planned).
+3. For pairing tests, prefer an Object Mother that delegates to the base builder.
 4. If a test needs a field the builder doesn't randomize (e.g., a specific run interval or region), pass it via overrides — do NOT add a new builder.
 5. If a test exercises a *boundary* on a single field, the override goes in the test:
    ```typescript
@@ -35,7 +35,7 @@ Six numbered cleanups for the duplication and inconsistency hot spots already in
 
 ## 2. Collapse asset-pair near-duplicate
 
-> **Not applicable to this project today.** Ported verbatim from the upstream the upstream reference framework data-strategy playbook. The asset-pair concept does not exist in this codebase; the section is preserved here as a faithful copy of the upstream rule for future reference if a similar near-duplicate pair is introduced.
+> **Not applicable to this project today.** Ported verbatim from the data-strategy playbook of a mature reference framework these patterns were adapted from. The asset-pair concept does not exist in this codebase; the section is preserved here as a faithful copy of the upstream rule for future reference if a similar near-duplicate pair is introduced.
 
 ### Symptoms
 
@@ -99,10 +99,10 @@ export function createAssetPairDataForUI(): AssetPairData {
 
 ### Symptoms
 
-Every Pattern-6 seeder in `helpers/app/` is currently **passthrough** — it forwards `body` and `headers` to `apiRequest` and returns `{ status, body }` raw, leaving the spec to assert status and Zod-parse the response:
+In the example app, every Pattern-6 seeder in `helpers/app/` is **passthrough** — it forwards `body` and `headers` to `apiRequest` and returns `{ status, body }` raw, leaving the spec to assert status and Zod-parse the response:
 
 ```typescript
-// helpers/app/workers.ts (today)
+// helpers/app/workers.ts (passthrough)
 export async function createWorker<T = CreateWorkerResponse>(
     apiRequest: ApiRequestFn,
     body: Record<string, unknown>,
@@ -119,7 +119,7 @@ export async function createWorker<T = CreateWorkerResponse>(
 ```
 
 Consequences:
-- The seeder does one thing (HTTP only). Factory + seeder are NOT yet integrated.
+- The seeder does one thing (HTTP only). Factory + seeder are NOT integrated.
 - No `expect(status).toBe(201)` inside the helper → every spec must re-assert.
 - No Zod parse → every spec must re-parse.
 - No exported typed factory (`WorkerData` / `JobData` / `TenantData` / `UserData`) — `buildCreate<X>Body` returns `Record<string, unknown>`.
@@ -204,7 +204,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 
 ## 4. Replace `mockedCustomer.json` usage with real seeding
 
-> **Not applicable to this project today.** Ported verbatim from the upstream the upstream reference framework data-strategy playbook. There are no mock-JSON fixtures (`mockedCustomer.json`, `customer.json`) in this repo today; the section is preserved here as a faithful copy of the upstream rule for the moment any front-end-only spec introduces such a stub.
+> **Not applicable to this project today.** Ported verbatim from the data-strategy playbook of a mature reference framework these patterns were adapted from. There are no mock-JSON fixtures (`mockedCustomer.json`, `customer.json`) in this repo today; the section is preserved here as a faithful copy of the upstream rule for the moment any front-end-only spec introduces such a stub.
 
 ### Symptoms
 
@@ -262,7 +262,7 @@ const TENANT_TOKEN = process.env.USER_ACCESS_TOKEN_FULL;
 const ADMIN_TOKEN = process.env.USER_ACCESS_TOKEN_ADMIN;
 ```
 
-Module-level aliases conceal the canonical name from `rg`, encourage copy-paste into other specs, create N+1 places to update if a token rotates, and read `process.env` outside the config module (see `type-safety` § Environment variables). This pattern is pervasive across `tests/app/api/**`, `tests/app/e2e/**`, and `tests/app/functional/**` — refactor playbook section dedicated.
+Module-level aliases conceal the canonical name from `rg`, encourage copy-paste into other specs, create N+1 places to update if a token rotates, and read `process.env` outside the config module (see `type-safety` § Environment variables). When the pattern has spread across `tests/app/api/**`, `tests/app/e2e/**`, and `tests/app/functional/**`, remove it in one dedicated refactor — this section.
 
 ### Migration steps
 
@@ -288,7 +288,7 @@ Module-level aliases conceal the canonical name from `rg`, encourage copy-paste 
 
 ### Symptoms
 
-`helpers/util/dataGenerator.ts` provides:
+The example app's `helpers/util/dataGenerator.ts` provides:
 
 ```typescript
 export function generateRandomAmount(min = 1.0, max = 100000.0): number {
@@ -297,7 +297,7 @@ export function generateRandomAmount(min = 1.0, max = 100000.0): number {
 }
 ```
 
-`Math.random()` is non-seedable, breaks the project's faker-everywhere convention, and the file justifies its own existence with a single utility that faker already provides.
+`Math.random()` is non-seedable, breaks the faker-everywhere convention, and the file justifies its own existence with a single utility that faker already provides.
 
 ### Migration steps
 
@@ -332,7 +332,7 @@ rg "const \w+_TOKEN = process\.env\.(USER|ADMIN)_ACCESS_TOKEN_" helpers/
 # Math.random audit (§ 6)
 rg "Math\.random" helpers/ tests/
 
-# Verbatim sections (§§ 2, 4) — kept as faithful copies; not actionable in this repo today
+# Verbatim sections (§§ 2, 4) — kept as faithful copies; actionable only if your repo has these patterns
 # rg "exchange:\s*'(Phemex|Coinflare|Bitmart)'" tests/   # § 2 — upstream only
 # rg "mockedCustomer\." tests/ -A2 | grep -v "route.fulfill"   # § 4 — upstream only
 ```
@@ -341,5 +341,5 @@ rg "Math\.random" helpers/ tests/
 
 - [SKILL.md](SKILL.md) — the rule each refactor enforces.
 - [patterns.md](patterns.md) — good/bad examples for every pattern.
-- [reference.md](reference.md) — catalogs to verify "is there already a helper?".
+- [reference.md](reference.md) — the example app's catalogs; search your repo to answer "is there already a helper?".
 - Sister: [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md).

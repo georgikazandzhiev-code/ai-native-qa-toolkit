@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 3.0.3
+version: 3.0.4
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -21,7 +21,7 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | **Rules, decisions, anti-patterns.** Teaches the model how to think about selectors and where they live. | **Always** — on any selector / page-object / locator task. |
 | **`reference.md`** | **Catalog of facts.** Locator API, ARIA role catalog, web-first assertion catalog, framework testid taxonomy, attribute filters / CSS hooks, FrameLocator API, POM file conventions. | **Load on lookup** — "What's the right `getByRole` for a Radix select?" / "Which testid prefix is used for job row actions?" / "What assertions auto-wait?" |
-| **`patterns.md`** | **Side-by-side good vs bad examples.** P1–P18, drawn from real page objects. | **Load During Review** — "Show me the right shape for anchor-and-drill" / "Is this `.first()` justified?" / "What does a good toast assertion look like?" |
+| **`patterns.md`** | **Side-by-side good vs bad examples.** P1–P18, drawn from the example app's page objects. | **Load During Review** — "Show me the right shape for anchor-and-drill" / "Is this `.first()` justified?" / "What does a good toast assertion look like?" |
 | **`recipes.md`** | **End-to-end recipes for full UI patterns.** Tables, sheets, Radix dropdowns, confirmation modals, Sonner toasts, iframes, navigation, pagination, downloads, tabs, OTP, hovers, network-confirmed actions, popups, search, async row creation, POM-vs-spec placement, job expanded-view tests. | **Load During Authoring** — building a new page object for a recurring UI shape; start in the matching recipe. |
 
 **Boundary rule:** decisions, rules, and anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Good/bad pattern contrasts live in `patterns.md`. Full end-to-end skeletons live in `recipes.md`. **If you find rule content in a catalog file (or vice versa), it is drift — fix it before adding more.**
@@ -31,7 +31,7 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 Non-negotiable. Violating any of these breaks the framework's contract.
 
 - **ALWAYS start from `getByRole`, and reach for a test-id only after a semantic locator has been tried and found wanting.** The order is `getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTitle > getByTestId > page.locator(css)`. Tests built this way double as accessibility audits — if `getByRole('button', { name: 'Save' })` fails, screen-reader users are broken too and the test catches it. See § Priority hierarchy.
-- **The one exception is narrow, per-element, and never reaches above priority 4.** A *single* locator may promote `getByTestId` above `getByText` when **that element** is a headless primitive whose visible text or accessible name is unstable (in this codebase: Radix Select / Switch / Dialog / DropdownMenu / Popover / Tabs). `getByRole` and `getByLabel` still come first. Rationale and the test-id contract prefixes: [recipes.md § Radix](recipes.md).
+- **The one exception is narrow, per-element, and never reaches above priority 4.** A *single* locator may promote `getByTestId` above `getByText` when **that element** is a headless primitive whose visible text or accessible name is unstable (in the example app: Radix Select / Switch / Dialog / DropdownMenu / Popover / Tabs). `getByRole` and `getByLabel` still come first. Rationale and the test-id contract prefixes: [recipes.md § Radix](recipes.md).
 - **The exception covers the trigger, not the whole component subtree.** Radix renders real ARIA roles inside the portal: the popover is a `listbox`, its items are `option`s, a dialog is a `dialog`, a validation message is an `alert`, a toast is a `status`. Address those **by role**. A second eval re-run showed the skill arm promoting test-ids for popover content, options and error messages where `getByRole('option', { name })` and `getByRole('alert')` work — a narrower version of the same over-generalisation.
 - **NEVER generalise that exception to a page, a file, or a form.** A form with one Radix dropdown and four native inputs gets **one** promoted locator and four semantic ones. A blind A/B eval caught exactly this failure: the skill arm made `data-testid` primary for nearly every element on a mostly-native form and scored *below* an unaided baseline (`evals/results.json`, `BENCHMARK.md`). Leading with a test-id where a role would work is a defect, even where existing page objects next to it do the same.
 - **NEVER use XPath.** Not `page.locator('//...')`, not `'xpath=...'`. No exceptions.
@@ -53,7 +53,7 @@ Non-negotiable. Violating any of these breaks the framework's contract.
 
 ## Where selectors live — POM vs spec
 
-This is a strict convention. Audited against this repo's UI specs (`tests/app/e2e/` + `tests/app/functional/`): most specs route locators through page objects under `pages/app/`; the inline `page.getBy*` calls that remain are predominantly tolerated patterns (arrival markers, one-off Sonner toast assertions). Inline `page.locator('css')` is rare and treated as tech debt.
+This is a strict convention. Specs route locators through page objects (under `pages/app/` in the example app). The inline `page.getBy*` calls that remain should be the tolerated patterns: arrival markers and one-off Sonner toast assertions. Inline `page.locator('css')` in a spec is tech debt.
 
 ```mermaid
 flowchart TD
@@ -74,7 +74,7 @@ flowchart TD
 | **Page object dynamic method** | Locators parameterized by data (`getRowByName(name)`, `getRunStatCardByLabel(label)`) live as POM methods returning `Locator` synchronously. | `jobsPage.getRowByName(name)` |
 | **Page object assertion method** | A short assertion expressed against a one-off element should be a **method on the POM**, not an inline locator. The framework convention is `verifyXxx()`. | `JobsPage.verifyNoResults()`, `NotificationRulesPage.verifyNoResults()` |
 | **Inline in spec — TOLERATED** | A locator used by a single test, only as an assertion target (not for interaction), where wrapping it in a POM method would inflate the POM with one-off members. | Sonner toast arrival (`page.getByText('Job "<name>" created successfully')`), empty-state markers (`expect(page.getByText('No Export Run Stats Available')).toBeVisible()`) |
-| **Inline in spec — FORBIDDEN** | Inline `page.locator('css-class')` in a spec. Inline locator that is **clicked / filled / hovered / typed into**. Inline locator reused across more than one `test()` block. | All current violations should be refactored into POM getters. |
+| **Inline in spec — FORBIDDEN** | Inline `page.locator('css-class')` in a spec. Inline locator that is **clicked / filled / hovered / typed into**. Inline locator reused across more than one `test()` block. | Refactor every such locator into a POM getter. |
 
 ### When inline is OK (the only two cases)
 
@@ -121,7 +121,7 @@ The default order is Playwright's recommendation: **semantic-first, testid-last*
 |----------|---------|-------------|
 | 1 | `getByRole(role, { name })` | Native semantic elements: `heading`, `button` (with stable text), `link`, `tab`, `checkbox`, `menuitem`, `dialog`, `row`, `columnheader`, `cell`. Also Radix-mapped roles when reliable: `combobox` (Radix select trigger), `switch`, `option` (when the popover is open) |
 | 2 | `getByLabel(label)` | Form inputs with a visible `<label>` association |
-| 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (used in `pages/app/JobsPage.ts` search controls) |
+| 3 | `getByPlaceholder(text)` | Inputs without a label but with a stable placeholder (the example app's `JobsPage` search controls) |
 | 4 | `getByText(text, { exact })` | Static UI strings: page titles, success messages, dropdown options, empty-state messages — **only when the text is stable across states and not reused elsewhere on the page** |
 | 5 | `getByAltText(text)` | Images with meaningful `alt` text |
 | 6 | `getByTitle(text)` | Elements with a stable `title` attribute |
@@ -130,7 +130,7 @@ The default order is Playwright's recommendation: **semantic-first, testid-last*
 
 ### The one exception, stated narrowly
 
-A **single** locator may promote `getByTestId` above `getByText` (to priority 4) when that **specific element** is a headless-primitive wrapper whose visible text or accessible name is unstable — in this codebase, a Radix `<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>` or `<Tabs>`.
+A **single** locator may promote `getByTestId` above `getByText` (to priority 4) when that **specific element** is a headless-primitive wrapper whose visible text or accessible name is unstable — in the example app, a Radix `<Select>`, `<Switch>`, `<Dialog>`, `<DropdownMenu>`, `<Popover>` or `<Tabs>`.
 
 **Three constraints on that exception, and they are the point of this section:**
 
@@ -140,7 +140,7 @@ A **single** locator may promote `getByTestId` above `getByText` (to priority 4)
 
 Full rationale, the FE test-id contract prefixes, and the per-primitive recipes: **[recipes.md § Radix](recipes.md)**. Read that when you are actually writing a Radix locator — not when deciding the default for a page.
 
-> **This exception is descriptive, not aspirational.** It documents why existing page objects lean on test-ids for Radix components. It is **not** a licence to default to `getByTestId`, and a new page object that reaches for test-ids before trying roles is a defect regardless of how many existing locators do the same.
+> **This exception is descriptive, not aspirational.** It documents why page objects built around Radix (the example app's among them) lean on test-ids. It is **not** a licence to default to `getByTestId`, and a new page object that reaches for test-ids before trying roles is a defect regardless of how many existing locators do the same.
 
 ## Decision tree — pick the right locator
 
@@ -181,7 +181,7 @@ Use ONLY when the element is a real native or ARIA-mapped role AND the accessibl
 
 ### 2. `getByTestId` — the planned fallback
 
-Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-job-button`, `delete-job-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-runInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the frontend. Regex / prefix testids (`getByTestId(/^job-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row job-status badges). Need a new testid? **Ask the frontend owners to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
+Use when the element has a `data-testid` AND no stable role, label or text locator works for it (the narrow exception in § Critical). **Naming convention:** kebab-case `<feature>-<element-kind>` (`create-job-button`, `delete-job-confirm`). Schema-form field wrappers follow `schema-field-<fieldName>` and the inputs/triggers inside them follow `field-field-<fieldPath>` (`field-field-target`, `field-field-runInterval`) — emitted by `src/components/schema-form/schema-form.tsx` in the example app's frontend. Regex / prefix testids (`getByTestId(/^job-actions-/)`) are acceptable for repeating elements (per-row action buttons, per-row job-status badges). Need a new testid? **Ask the frontend owners to add one** rather than dropping to CSS. **Inventory:** [reference.md § 4 Framework testid taxonomy](reference.md). **Adding a new testid:** [reference.md § 4.11](reference.md).
 
 ### 3. Anchor + drill (composition over deep CSS) — the most important pattern
 
@@ -205,7 +205,7 @@ Every sheet, dialog, expanded-row, or composite component MUST be scoped to a pa
 
 ### 8. Iframe — `frameLocator`
 
-This framework does **not** mount any iframes today (Keycloak login is full-page; no third-party widgets are embedded). The shape below is **prescriptive** — apply when the first iframe ships. Always select the iframe by a stable attribute (`title`, `name`, `id`, or `src*=`). Bare `frameLocator('iframe')` is fragile. Inside the frame the same priority hierarchy applies: testid (when present) → role → label → text. A `FrameLocator` is **not** a `Locator` — expose specific getters (`get passwordInput(): Locator`) that return chained `Locator`s. **Code:** [patterns.md § P6](patterns.md). **Recipes:** [recipes.md § 6](recipes.md).
+The example app mounts no iframes (Keycloak login is full-page; no third-party widgets are embedded), so the shape below is **prescriptive** — apply it when your app mounts one. Always select the iframe by a stable attribute (`title`, `name`, `id`, or `src*=`). Bare `frameLocator('iframe')` is fragile. Inside the frame the same priority hierarchy applies: testid (when present) → role → label → text. A `FrameLocator` is **not** a `Locator` — expose specific getters (`get passwordInput(): Locator`) that return chained `Locator`s. **Code:** [patterns.md § P6](patterns.md). **Recipes:** [recipes.md § 6](recipes.md).
 
 ### 9. The collection pattern
 
@@ -236,12 +236,12 @@ Every page object that covers a form or CRUD operation **must** include selector
 |---------------|-----------------|-------------------|
 | Success toast (Sonner) | After successful create / update / delete | `getByRole('status')` filtered by the unique part of the message (the job name) — Sonner toasts render with `role="status"`. Fall back to `[data-sonner-toast]` with the same filter only if the role is missing. Never unfiltered: toasts stack (see [recipes.md § 5](recipes.md)) |
 | Error toast (Sonner) | After failed mutation or server error | Same shape as success toast; assert `toContainText(/error|failed/i)` |
-| Field validation message | On blur or submit with invalid input | Prefer the role: `getByRole('alert')` scoped to the field, or `expect(input).toHaveAccessibleErrorMessage(...)`. The schema-form's `error-<fieldName>` test-id is the fallback when the error has no role or association; helpers `fieldError(name)` / `fieldInput(path)` (see `pages/app/CreateJobPage.ts`) |
-| Confirmation modal | Destructive action (delete) | `getByRole('dialog', { name })` — Radix dialogs expose the role. The per-feature delete dialog testids are the fallback (`delete-job-dialog` / `delete-job-confirm` on `pages/app/JobsPage.ts`, `delete-worker-dialog` on `pages/app/WorkersPage.ts`) — see [recipes.md § 4](recipes.md) |
+| Field validation message | On blur or submit with invalid input | Prefer the role: `getByRole('alert')` scoped to the field, or `expect(input).toHaveAccessibleErrorMessage(...)`. The schema-form's `error-<fieldName>` test-id is the fallback when the error has no role or association; helpers `fieldError(name)` / `fieldInput(path)` (see `CreateJobPage` in the example app) |
+| Confirmation modal | Destructive action (delete) | `getByRole('dialog', { name })` — Radix dialogs expose the role. The per-feature delete dialog testids are the fallback (in the example app, `delete-job-dialog` / `delete-job-confirm` on `JobsPage` and `delete-worker-dialog` on `WorkersPage`) — see [recipes.md § 4](recipes.md) |
 | Loading state | During async operations | Spinner / skeleton testid scoped under the data container — `getByRole('progressbar')` when exposed |
 | Empty state | List or table with no data | `getByText('No <X> Available', { exact: true })` — the exact strings live in `enums/app/*` (e.g. `MESSAGES.NO_EXPORT_RUN_STATS`); inline `getByText` in a spec is tolerated only as a one-off arrival marker (see § Where selectors live) |
 
-> The `MESSAGES.*` member names above are illustrative. **`enums/app/messages.ts` does not exist yet** — see the `enums` skill for the rule (a UI string the app shows always goes to a centralized constant, even when asserted in a single spec; create the file with the first captured message). Capture the exact rendered string via live-app exploration (see the `playwright-cli` skill — uses `npx playwright open`); never invent a `MESSAGES.*` name.
+> The `MESSAGES.*` member names above are illustrative. If your repo has no messages enum (`enums/app/messages.ts` in the example app), create it with the first captured message — see the `enums` skill for the rule (a UI string the app shows always goes to a centralized constant, even when asserted in a single spec). Capture the exact rendered string via live-app exploration (see the `playwright-cli` skill — uses `npx playwright open`); never invent a `MESSAGES.*` name.
 
 ### Forbidden — feedback-less POMs
 
@@ -257,7 +257,7 @@ Playwright assertions auto-wait. Use them everywhere; do NOT mix with `await loc
 - A web-first assertion.
 - A `waitForResponse` / `waitForRequest` for a known XHR.
 - A re-read of a Locator after the triggering action (Locators are lazy).
-- An `expect(async () => { … }).toPass({ timeout })` retry block when the value being read legitimately keeps changing (see `pages/app/JobsPage.ts` `expandRow`, `openRowActionMenu`).
+- An `expect(async () => { … }).toPass({ timeout })` retry block when the value being read legitimately keeps changing (see `JobsPage.expandRow` and `JobsPage.openRowActionMenu` in the example app).
 
 ### Form interaction hygiene (mutation action methods)
 
@@ -289,7 +289,7 @@ Only when ALL of these hold:
 
 Forbidden CSS:
 
-- App-level class names tracking layout / styling (`.text-muted-foreground`, `.h-10.w-full.overflow-hidden`) at the **top** of a chain. They can appear deep in a chain only when the design system has no testid for the element — see `pages/app/JobsPage.ts` `timingStackedBarIn` (acknowledged as tech debt; FE improvement requested).
+- App-level class names tracking layout / styling (`.text-muted-foreground`, `.h-10.w-full.overflow-hidden`) at the **top** of a chain. They can appear deep in a chain only when the design system has no testid for the element — for example `JobsPage.timingStackedBarIn` in the example app. Treat that as tech debt and ask the frontend owners for a testid.
 - Tailwind utility classes (`text-3xl`, `font-bold`, `flex`, `gap-2`, etc.) at **any** position in the chain — even when chained off a higher-priority anchor. Tailwind classes are styling concerns that change with design updates. Prefer `getByText(/pattern/)` for text-content matching or request a `data-testid` from FE.
 - Position-based selectors for content (`.locator('td').nth(2)` to grab "the third column").
 - Tag-only selectors with no follow-up filter (`page.locator('header')` standalone). Note: `page.locator('header').filter({ hasText: 'X' })` is tolerated because `.filter()` IS the scope — but when a `data-testid` exists, prefer it.
@@ -313,7 +313,7 @@ Forbidden CSS:
 
 ## SOLID checklist for page objects
 
-- **SRP** — One page object per page or component. A "JobsPage" should not also know about Workers. Shared pieces (`BasePage`, `DataTableBase`) live under `pages/baseClasses/` — the directory contains only those two files today.
+- **SRP** — One page object per page or component. A "JobsPage" should not also know about Workers. Shared pieces (`BasePage`, `DataTableBase` in the example app) live under `pages/baseClasses/`.
 - **OCP** — Add new locators as new getters; don't widen existing getters with options.
 - **LSP** — Sub-classes (extending `BasePage`, `DataTableBase`) MUST keep parent assumptions intact; never override a getter to return a different shape.
 - **ISP** — A consumer that needs only shared table behaviour should not have to instantiate the entire `JobsPage`. Keep shared concerns in a base class (`DataTableBase`) or extract a small component.
@@ -349,7 +349,7 @@ Walk the workflow:
 1. **Phase 1 (explore)** — `npx playwright open --load-storage <storage-state-path> https://<app-host>/jobs` (path from `playwright.config.ts`). The human navigates and observes: each row has a kebab button with `data-testid` matching `job-actions-<id>` (per-row); clicking it opens a Radix menu of items.
 2. **Pattern 4 (filter by text)** + **Pattern 6 (dynamic method)** — the row anchor depends on the job name; the action button is a per-row testid prefix.
 3. **Add to `pages/app/JobsPage.ts`:**
-    - `getRowByName(name: string): Locator` — already present (Pattern 4).
+    - `getRowByName(name: string): Locator` — the example app's `JobsPage` already has it (Pattern 4).
     - `openRowActionMenu(row: Locator, menuItem: string): Promise<void>` — locates the prefix testid `getByTestId(/^job-actions-/)` scoped under `row`, clicks it, then clicks `getByRole('menuitem', { name: menuItem })`.
 4. **Validation** — POM method must end in a post-condition. Assert the menu item is hidden (menu closed) before returning, OR verify the next visible UI state (sheet opened, toast shown).
 5. **Spec** — `await jobsPage.openRowActionMenu(row, 'Edit')`, then assertions on the next state.
@@ -374,7 +374,7 @@ User says: *"Add a 'delete job' flow with the confirmation dialog."*
 
 1. **Phase 1 (explore)** — open the jobs list, click the row-action `Delete`. Snapshot reveals a Radix dialog with role `dialog`, title `Delete Job`, body text confirming the job name, and two buttons: `Cancel` and `Delete`.
 2. **Pattern 7 (sub-component scoping)** — define the dialog as an anchor; chain everything inside it.
-3. **Existing infrastructure** — `JobsPage` already exposes the delete-dialog getters (`deleteDialog` → `delete-job-dialog`, `deleteConfirmButton` → `delete-job-confirm`, `deleteCancelButton` scoped to the dialog). Reuse them rather than re-rolling.
+3. **Existing infrastructure** — search the page object first. In the example app, `JobsPage` already exposes the delete-dialog getters (`deleteDialog` → `delete-job-dialog`, `deleteConfirmButton` → `delete-job-confirm`, `deleteCancelButton` scoped to the dialog). Reuse them rather than re-rolling.
 4. **Action method** must validate success: after confirming the dialog, assert the dialog is hidden, the row is gone (`expect(getRowByName(name)).toBeHidden()`) AND the success toast appeared (Sonner pattern, [recipes.md § 5](recipes.md)).
 
 ## Troubleshooting
@@ -387,7 +387,7 @@ User says: *"Add a 'delete job' flow with the confirmation dialog."*
 | `page.locator('.btn-primary')` because the button has no accessible name | App class tracks styling, not semantics; unstable across redesigns | First re-check the snapshot for an `aria-label` or hidden role. If absent, request a `data-testid` from FE; until then, anchor under a higher-priority parent and drill (Pattern 3). Never ship a top-level CSS-class locator. |
 | Sonner toast assertion is flaky / matches the wrong toast | Bare `[data-sonner-toast]` matches every stacked toast on screen (auto-refresh "Loaded N jobs" can fire alongside "created successfully") | Filter by the unique part of the message — usually the job name. Pattern in [recipes.md § 5](recipes.md). Invented `notification-success`/`notification-error` testids do **not** exist in Sonner's DOM — always use the `[data-sonner-toast]` attribute filter. |
 | `getByText('Edit')` matches multiple elements | Substring matching catches "Edit job", "Edit profile", etc. | Always pass `exact: true` for short strings: `getByText('Edit', { exact: true })`. Or use `getByRole('button', { name: 'Edit', exact: true })` when the role is exposed. |
-| Field validation error locator returns nothing | Wrong shape — schema-form errors render at `data-testid='error-<fieldName>'`, not under the field input | Use the existing `fieldError(name)` helper in `pages/app/CreateJobPage.ts` or `getByTestId('error-<fieldName>')` directly. Pair with the input testid `field-field-<fieldPath>` for context. |
+| Field validation error locator returns nothing | Wrong shape — schema-form errors render at `data-testid='error-<fieldName>'`, not under the field input | Use the schema-form `fieldError(name)` helper (on `CreateJobPage` in the example app) or `getByTestId('error-<fieldName>')` directly. Pair with the input testid `field-field-<fieldPath>` for context. |
 | Auth fails or `npx playwright open` cannot reach the app | Environment / credentials issue | **Stop and notify the human** with the exact issue and what you need (credentials, storage state path, env vars). Do not generate placeholder locators with guessed names. Re-explore once unblocked. |
 | Test calls `await locator.click()` immediately after navigation and races | `Locator.click()` auto-waits but only up to the action timeout; redirects mid-action can race | Use `await expect(locator).toBeVisible()` first to anchor the wait, then click. Or — for actions that trigger a known XHR — combine with `page.waitForResponse(...)` (see [recipes.md § 13](recipes.md)). |
 
@@ -410,7 +410,7 @@ User says: *"Add a 'delete job' flow with the confirmation dialog."*
 ## Additional resources
 
 - [reference.md](reference.md) — full Locator API, role catalog, web-first assertion catalog, framework testid taxonomy, attribute filters, FrameLocator API.
-- [patterns.md](patterns.md) — side-by-side good/bad examples drawn from real page objects.
+- [patterns.md](patterns.md) — side-by-side good/bad examples drawn from the example app's page objects.
 - [recipes.md](recipes.md) — end-to-end recipes for tables, sheets, dropdowns, dialogs, toasts, iframes, navigation.
 - [`page-objects`](../page-objects/SKILL.md) — POM/method standards (consolidated from the previous `ui-tests.mdc`).
 - `~/.claude/CLAUDE.md` — always-applied invariants (framework identity, MUST/SHOULD/WON'T tables, domain glossary).

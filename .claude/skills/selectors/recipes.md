@@ -37,7 +37,7 @@ get dataTable(): Locator {
 }
 
 // Rows carry a per-id prefix testid (`table-row-<id>`), matched via prefix CSS
-// anchored under the table root — DataTableBase.ts:29.
+// anchored under the table root (the example app's DataTableBase.tableRows).
 get tableRows(): Locator {
     return this.dataTable.locator("[data-testid^='table-row-']");
 }
@@ -89,7 +89,7 @@ Asserting "no row exists for X":
 await expect(this.dataTable.getByText(deletedName)).toBeHidden();
 ```
 
-Per-cell column testids (`table-cell-<columnId>`) exist today — any remaining column-index lookup (`.locator('td').nth(n)`) is legacy and should migrate to `cellForRow(row, columnId)` / `getColumnTexts(columnId)` from `DataTableBase` when next touched:
+When per-cell column testids (`table-cell-<columnId>`) exist, a column-index lookup (`.locator('td').nth(n)`) is legacy: migrate it to `cellForRow(row, columnId)` / `getColumnTexts(columnId)` from `DataTableBase`:
 
 ```typescript
 async verifyEachRowContains(value: string, columnId: string): Promise<void> {
@@ -217,7 +217,7 @@ async selectRunIntervalOption(optionLabel: string): Promise<void> {
 }
 ```
 
-From `pages/app/JobsPage.ts` `selectRunIntervalOption`. The "open with retry" wrapper is necessary because Radix occasionally swallows the first click on a stubborn trigger.
+From the example app's `JobsPage.selectRunIntervalOption`. The "open with retry" wrapper is necessary because Radix occasionally swallows the first click on a stubborn trigger.
 
 For toolbar filters that use `getByRole('option')` (status / type / outcome filters):
 
@@ -238,11 +238,11 @@ Rules:
 
 ## 4. Confirmation modals & delete dialogs
 
-There is no generic confirmation-modal base class in `pages/baseClasses/` — every delete flow uses **per-feature dialog testids** following the same `delete-<feature>-dialog` / `-confirm` / `-cancel` shape.
+The example app has no generic confirmation-modal base class in `pages/baseClasses/` — every delete flow uses **per-feature dialog testids** following the same `delete-<feature>-dialog` / `-confirm` / `-cancel` shape.
 
 ### 4.1 Per-feature confirm-delete dialog (Reports delete-widget)
 
-The frontend's shared confirm-delete dialog component renders with a per-feature `testId` — on the Reports page it's `delete-widget`. Verified against `pages/app/ReportsPage.ts`:
+In the example app, the frontend's shared confirm-delete dialog component renders with a per-feature `testId` — on the Reports page it's `delete-widget` (`ReportsPage`):
 
 ```typescript
 get confirmDeleteDialog(): Locator {
@@ -308,7 +308,7 @@ async expectSuccessToastForJob(name: string): Promise<void> {
 }
 ```
 
-From `pages/app/JobsPage.ts`. Filtering by the job name first protects against a second toast firing in the same window (e.g. an auto-refresh "Loaded N jobs" toast).
+From the example app's `JobsPage`. Filtering by the job name first protects against a second toast firing in the same window (e.g. an auto-refresh "Loaded N jobs" toast).
 
 For a generic per-event toast assertion:
 
@@ -342,7 +342,7 @@ Rules:
 
 ## 6. iframes — prescriptive
 
-The framework today does **not** mount any iframes. Keycloak login is rendered as a full page; no third-party widgets are embedded. The recipe below is reserved for the first iframe that ships:
+The example app mounts no iframes: Keycloak login is rendered as a full page, and no third-party widgets are embedded. Use the recipe below when your app mounts one:
 
 ### Single iframe with a stable title
 
@@ -382,7 +382,7 @@ Rules:
 
 ## 7. Sidebar navigation
 
-Pattern: click sidebar link → wait for URL → assert page shell visible. Driven by `pages/app/SideNavigation.ts`.
+Pattern: click sidebar link → wait for URL → assert page shell visible. In the example app, `SideNavigation` drives it.
 
 ```typescript
 get jobs(): Locator {
@@ -413,7 +413,7 @@ Rules:
 
 ## 8. Pagination
 
-One canonical shape — the pagination API on `DataTableBase`, inherited by the standard `data-table` pages (`JobsPage`, `InventoryPage`, `WorkersPage`, `NotificationRulesPage`; pages with non-standard table roots like `NotificationsPage` don't extend it):
+One canonical shape — the pagination API on `DataTableBase`, inherited by the standard `data-table` pages (in the example app, `JobsPage`, `InventoryPage`, `WorkersPage`, `NotificationRulesPage`; pages with non-standard table roots like `NotificationsPage` don't extend it):
 
 ```typescript
 get pageSizeSelect(): Locator {
@@ -461,7 +461,7 @@ Rules:
 
 ### Download — established pattern
 
-Re-use the existing `ReportsPage.downloadPdf()` method as the template rather than reimplementing it. Inline shape, for reference:
+Reuse your repo's download wrapper if it has one rather than reimplementing it. The example app's `ReportsPage.downloadPdf()` shows the shape:
 
 ```typescript
 async downloadPdf(): Promise<Download> {
@@ -472,16 +472,16 @@ async downloadPdf(): Promise<Download> {
 }
 ```
 
-From `pages/app/ReportsPage.ts`. The caller asserts on the returned `Download` (`suggestedFilename()` regex + non-zero `statSync(await download.path()).size`).
+From the example app's `ReportsPage`. The caller asserts on the returned `Download` (`suggestedFilename()` regex + non-zero `statSync(await download.path()).size`).
 
 Rules:
 - `waitForEvent('download')` MUST be armed **before** the click that triggers the download.
 - Assert the button is enabled before clicking — a disabled export button silently no-ops.
 - Keep the download wrapper on the owning POM; lift it into a base class only when a second page needs it.
 
-### Upload — prescriptive (no callers in the codebase yet)
+### Upload — prescriptive (the example app has no upload flow)
 
-When you introduce the first upload flow, expose the hidden `<input type="file">` through a `getByTestId` (request a stable `data-testid` from dev — do not rely on `input[type="file"]` CSS) and call `setInputFiles` on the locator. Path is **relative to the project root**, mirroring `./test-downloads/`:
+When you introduce an upload flow, expose the hidden `<input type="file">` through a `getByTestId` (request a stable `data-testid` from dev — do not rely on `input[type="file"]` CSS) and call `setInputFiles` on the locator. Path is **relative to the project root**:
 
 ```typescript
 get importJobsUploadInput(): Locator {
@@ -533,16 +533,16 @@ async selectChartTimeframe(timeframe: string): Promise<void> {
 }
 ```
 
-From `pages/app/JobsPage.ts`.
+From the example app's `JobsPage`.
 
 Rules:
 - Active-state assertion is `toHaveAttribute('data-state', 'active' | 'on')` — matches Radix's emitted attribute. Do not use class-name regex (`/_active_/`) unless the markup actually uses CSS-module classes.
-- Disabled tabs (e.g. `export` "Run Steps" / "Timeline" in the current build) carry `data-disabled` and `aria-disabled="true"`; assert via `toBeDisabled()` or `toHaveAttribute('aria-disabled', 'true')`.
-- `getByRole('tabpanel')` is currently **not** reliable in this codebase — anchor on the testid of the panel content (`export-expanded-view`, `sftp-expanded-view`, `http-expanded-view`) instead.
+- Disabled tabs (e.g. the example app's `export` "Run Steps" / "Timeline") carry `data-disabled` and `aria-disabled="true"`; assert via `toBeDisabled()` or `toHaveAttribute('aria-disabled', 'true')`.
+- `getByRole('tabpanel')` is **not** reliable in the example app, so anchor on the testid of the panel content (`export-expanded-view`, `sftp-expanded-view`, `http-expanded-view`) instead.
 
 ## 11. OTP / multi-input keystroke flows — prescriptive
 
-The framework today does **not** include OTP inputs. Email-based flows (`forgot-password`, `initial-user-registration`) use Mailpit + a clickable link; the inbox lookup happens through the `mailpit` fixture, not a UI OTP component. The shape below is reserved for the first OTP UI:
+No page object in the example app covers an OTP input. Its email-based flows (`forgot-password`, `initial-user-registration`) use Mailpit + a clickable link; the inbox lookup happens through the `mailpit` fixture, not a UI OTP component. Use the shape below for the first OTP UI you cover:
 
 ```typescript
 // Page object
@@ -558,16 +558,16 @@ await expect(loginPage.codeInput).toBeFocused();
 await page.keyboard.type(code);
 ```
 
-Rules (when the first OTP component ships):
+Rules (for an OTP component):
 - Click the first input, then `page.keyboard.type(code)` — typical OTP components auto-advance focus across `otp-input-0` … `otp-input-N`.
 - `fill` does NOT work for OTP inputs that listen to keystroke events; use `keyboard.type`.
 - If the test is flaky on the first keystroke, the right hardening is `await expect(loginPage.codeInput).toBeFocused()` **before** `keyboard.type` — not a `waitFor` before the click (`click()` already waits), not retries, not lengthening timeouts on the typed assertion.
 
-For the existing mail-based reset flow, see the `mailpit` fixture in `fixtures/` and the [api-testing](../api-testing/SKILL.md) skill — both cover how the verification link is fetched.
+For the example app's mail-based reset flow, see the `mailpit` fixture in `fixtures/` and the [api-testing](../api-testing/SKILL.md) skill — both cover how the verification link is fetched.
 
 ## 12. Hover-revealed menus — prescriptive
 
-The framework does not expose any hover-revealed menus today. Sidebar tooltips are handled by the OS-level tooltip primitive (no test interaction needed); row actions open on **click**, not hover. The shape below is reserved for the first hover-revealed UI:
+The example app has no hover-revealed menus: sidebar tooltips are handled by the OS-level tooltip primitive (no test interaction needed), and row actions open on **click**, not hover. Use the shape below for a hover-revealed UI:
 
 ```typescript
 async openProfileDropdown(): Promise<void> {
@@ -576,7 +576,7 @@ async openProfileDropdown(): Promise<void> {
 }
 ```
 
-Rules (when a hover menu first ships):
+Rules (for a hover menu):
 - A hover that reveals a menu MUST be followed by `expect(menu).toBeVisible()` before any further click.
 - Never `click` a menu trigger that requires hover — the menu may dismiss on click.
 - Hover + Radix pointer-event timing is flaky under Playwright; if you need to assert a tooltip's text, prefer `getByRole('tooltip', { name: '...' })` after the hover, not innerText snapshots.
@@ -605,7 +605,7 @@ async clickManualRefreshAndWaitForRefresh(timeout = appConfig.timeouts.longPoll)
 }
 ```
 
-From `pages/app/JobsPage.ts`. Click → network confirmation → button-re-enabled assertion. Three independent signals.
+From the example app's `JobsPage`. Click → network confirmation → button-re-enabled assertion. Three independent signals.
 
 For job creation, the canonical "click submit" wait is the sheet-hidden + success-toast pair (Recipe 5 shows the Sonner shape):
 
@@ -620,12 +620,12 @@ async createJobFromSheet(data: JobFormData): Promise<void> {
 
 Rules:
 - For server-function calls: predicate matches URL substring (`/_server` or `/api/v1/run-stats`) + method. Swap `/_server` for the path segment your app's server-function calls carry (see the Network tab).
-- Status codes vary in this codebase (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
+- Status codes vary in the example app (`200`, `204`); prefer the URL+method predicate over status assertions unless the spec specifically tests an error path.
 - For long-running async (the first run stats after creating an `export` job), use the `firstData` budget on the **assertion** (`expect(async () => { … }).toPass({ timeout: appConfig.timeouts.firstData })` — see § 18 Job expanded-view tests below), not on the response wait.
 
 ## 14. Multi-page (popup) flows — prescriptive
 
-The framework today does **not** open any new browser tabs from inside a test (`page.waitForEvent('popup')` has zero callers). If you add the first popup flow (OAuth, third-party billing portal, "Open in new tab"), use the shape below and lift it into a base class on the second usage:
+No flow in the example app opens a new browser tab. If you add the first popup flow (OAuth, third-party billing portal, "Open in new tab"), use the shape below and lift it into a base class on the second usage:
 
 ```typescript
 async openExternalBillingPortal(): Promise<Page> {
@@ -669,9 +669,9 @@ async selectStatusOption(label: string): Promise<void> {
 }
 ```
 
-From `pages/app/JobsPage.ts`.
+From the example app's `JobsPage`.
 
-For a searchable filter popover (the Notification Rules type filter's bespoke RunStatDropdown):
+For a searchable filter popover (the example app's Notification Rules type filter, a bespoke RunStatDropdown):
 
 ```typescript
 async openTypeFilter(): Promise<void> {
@@ -694,10 +694,10 @@ async selectTypeOption(label: string): Promise<void> {
 }
 ```
 
-From `pages/app/NotificationRulesPage.ts` — open the popover, assert the list is visible, search-narrow, prefix-match the label (the FE appends unit suffixes like `[ms]`), then settle the table.
+From the example app's `NotificationRulesPage` — open the popover, assert the list is visible, search-narrow, prefix-match the label (the FE appends unit suffixes like `[ms]`), then settle the table.
 
 Rules:
-- Search inputs in this app debounce client-side; pair the `fill` with a row-visibility assertion (above) — never with `waitForTimeout`.
+- Search inputs in the example app debounce client-side; pair the `fill` with a row-visibility assertion (above) — never with `waitForTimeout`.
 - After `applyFilter`, always `waitForTableSettled` (Recipe 1) and re-read the table.
 - Filter chips and active-filter visibility checks belong on the page object (`statusFilter`, `typeFilter`, `outcomeFilter`); never inline them in a spec.
 
@@ -726,7 +726,7 @@ Rules:
 
 ## 17. POM vs spec — the placement decision in one flow
 
-A typical `export`-job CRUD test illustrating where each locator should live. The shape below mirrors the actual flow in `tests/app/e2e/jobs-service/jobs/export-job.spec.ts`:
+A typical `export`-job CRUD test illustrating where each locator should live. The shape below follows the example app's `export-job.spec.ts` flow:
 
 ```typescript
 import { expect, test } from '../../../../fixtures/pom/test-options';
@@ -743,7 +743,7 @@ test('Create, verify in grid, view details, edit, and delete `export` job',
         createJobPage,
     }) => {
         qase.suite(SUITES.APP_JOBS);
-        qase.id(656);
+        // qase.id(N);
 
         const jobName = `e2e-export-${faker.string.alphanumeric(6).toLowerCase()}`;
         const target = faker.system.directoryPath();
@@ -844,11 +844,11 @@ Single source of truth for view structure and behaviour:
 - **`beforeAll` seeds one job via the API** (use `buildCreate{TYPE}JobBody` + `createJob` from `helpers/app/jobs.ts`). **Never through the UI** — UI creation adds 60+ seconds per test run and is non-deterministic.
 - **Wait for the first run stats** via `expect(async () => { ... }).toPass({ timeout: appConfig.timeouts.firstData })` polling a known run stat. Jobs typically need a minute or two before the first scheduled run completes.
 - **Assertions must be semantic, not just presence:**
-  - Run-stat cards: regex that matches the value shape (`/^(CONNECTED|REFUSED)$/`, `/\d+(\.\d+)?ms/`, `/\d{3}/`), not `toBeVisible()` alone.
+  - Run-stat cards: regex that matches the value shape (`/^(COMPLETED|FAILED)$/`, `/\d+(\.\d+)?ms/`, `/\d{3}/`), not `toBeVisible()` alone.
   - Timing breakdown: iterate POM constants (`SFTP_TIMING_SEGMENTS`, `STREAM_TIMING_SEGMENTS`, etc.), assert label + color dot + ms value per segment.
   - Tooltips: assert exact text via `getByRole("tooltip", { name: "..." })`.
   - Collapse / re-expand at the end to verify render stability.
-- **Use POM constants for label arrays** — never hardcode them in the spec. The `pages/app/JobsPage.ts` exports `HTTP_RUN_STAT_CARD_LABELS`, `HTTP_TIMING_SEGMENTS`, etc.
+- **Use POM constants for label arrays** — never hardcode them in the spec. In the example app, `JobsPage.ts` exports `HTTP_RUN_STAT_CARD_LABELS`, `HTTP_TIMING_SEGMENTS`, etc.
 - **`afterAll` deletes via API** — `listJobs` → `deleteJob`. UI delete is slow + flaky.
 
 ### Conditional inline ms labels (`verifyInlineMsLabels`)
@@ -868,11 +868,11 @@ Use the parameterized `verifyInlineMsLabels` helper on `JobsPage` — works for 
 
 ### Anti-pattern reference
 
-`tests/app/e2e/jobs-service/jobs/export-job-view.spec.ts` (qase 931) pre-dates this convention and is the **anti-pattern**: it repeats the full UI-creation CRUD flow just to re-verify structural assertions already covered by `export-job-expanded-view.spec.ts`. **Do not replicate this layout for any new job type.** Keep it in-tree until product decides to prune it; it's allowed to exist, but it's not a template.
+In the example app, `tests/app/e2e/jobs-service/jobs/export-job-view.spec.ts` is the **anti-pattern**: it repeats the full UI-creation CRUD flow just to re-verify structural assertions already covered by `export-job-expanded-view.spec.ts`. **Do not replicate this layout for any new job type.** A spec like this may stay in the repo, but it is not a template.
 
 ### Pre-seeded job exception (stream)
 
-Some job types take too long for the first run stats to land within reasonable test timeouts. For stream jobs specifically, the `stream-job-detail-view.spec.ts` targets a **pre-seeded job** named by `STREAM_FIXTURE_JOB_NAME` (no default committed). If the named job is missing, the spec should **fail fast with a clear message** in `beforeAll` (via `listJobs`) — never skip, because a skipped spec reads as green; the current self-skip is drift rather than timing out on row expansion. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
+Some job types take too long for the first run stats to land within reasonable test timeouts. For stream jobs in the example app, `stream-job-detail-view.spec.ts` targets a **pre-seeded job** named by `STREAM_FIXTURE_JOB_NAME` (no default committed). If the named job is missing, the spec should **fail fast with a clear message** in `beforeAll` (via `listJobs`) rather than time out on row expansion — never skip, because a skipped spec reads as green. If the spec self-skips when the job is missing, that is drift: make `beforeAll` fail fast. Use this pattern only when API seeding genuinely can't produce ready data within ~90 seconds.
 
 ---
 
@@ -888,9 +888,9 @@ Some job types take too long for the first run stats to land within reasonable t
 
 ## Radix — full rationale for the priority exception
 
-> Moved out of `SKILL.md` on 2026-08-11 after a blind A/B eval showed the skill arm reaching for
+> Moved out of `SKILL.md` after a blind A/B eval showed the skill arm reaching for
 > `data-testid` and CSS on **non-Radix** elements. The rule was correct; its placement in the
-> priority-hierarchy section made agents read the exception as the default. `SKILL.md` now carries
+> priority-hierarchy section made agents read the exception as the default. `SKILL.md` carries
 > the narrow rule; the argument lives here. Evidence: `evals/results.json`, `BENCHMARK.md`.
 
 When an app builds its interactive components on **Radix UI primitives** (directly or through a component kit), they typically include:
@@ -930,7 +930,7 @@ Being a Radix primitive is **not** on its own a reason, and neither is the exist
 
 ### The trap this exception creates
 
-Existing page objects use `getByTestId` far more often than `getByText`. That ratio is a **description
+Page objects built around Radix (the example app's among them) tend to use `getByTestId` far more than `getByText`. That ratio is a **description
 of accumulated Radix handling, not a target to match.** Two failure modes follow from misreading it:
 
 - **Page-level promotion.** Applying the exception to every locator in a page object because one

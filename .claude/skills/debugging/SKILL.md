@@ -1,6 +1,6 @@
 ---
 name: debugging
-version: 2.0.0
+version: 2.0.1
 description: Investigate any Playwright test failure — failure-mode taxonomy (TimeoutError, strict mode, ZodError, detachment, network race, stale storage state), trace capture/replay, and choosing UI Mode vs Trace Viewer vs Inspector. Load whenever a test fails or behaves unexpectedly. Triggers — "test fails", "timeout", "ZodError", "trace". Never to silence a failure; for intermittent failures use flakiness-triage first.
 metadata:
   category: running
@@ -21,9 +21,9 @@ When a Playwright test fails in this framework, you investigate first and fix se
 - **Re-run a flake fix multiple times before declaring done.** A single green test run after a flake fix is not enough — the bar is 5 consecutive green isolated runs plus one in-suite run ([`flakiness-triage`](../flakiness-triage/SKILL.md) § Step 5).
 - **Never commit `test.only(...)`.** `playwright.config.ts` has `forbidOnly: !!process.env.CI`; CI will fail the build. Use `--grep` to narrow in CI workflows.
 
-## Capture defaults (this project)
+## Capture defaults (example app)
 
-What `playwright.config.ts` automatically captures and where it lands:
+Check your repo's `playwright.config.ts` for its own settings. The example app's config captures these automatically:
 
 | Artifact     | Setting                       | Where                                                       |
 | ------------ | ----------------------------- | ----------------------------------------------------------- |
@@ -32,7 +32,7 @@ What `playwright.config.ts` automatically captures and where it lands:
 | Video        | `video: 'retain-on-failure'` | `test-results/<test-id>/video.webm`                          |
 | HTML report  | `reporter: [['html']]` (default; `QASE_REPORT=true` switches to list + blob + Qase) | `playwright-report/index.html` |
 
-**Implication:** locally `retries: 0`, so on a first failure **no trace is written**. To capture one locally, either run UI Mode (always traces) or pass `--trace on` / `--trace retain-on-failure` on the command line. CI uses `retries: 1` so the second attempt produces the trace artifact.
+**Implication:** with `retries: 0` locally, a first failure writes **no trace**. To capture one locally, either run UI Mode (always traces) or pass `--trace on` / `--trace retain-on-failure` on the command line. With `retries: 1` in CI, the second attempt produces the trace artifact.
 
 ## Choosing the right tool
 
@@ -61,7 +61,7 @@ Map the failure message to a category — each routes to a tool and (often) a si
 | `ZodError` on `Schema.parse(body)` | `expect.parse: ZodError: at body.X: Invalid enum value...` | API response disagrees with the Zod schema (contract drift) | If OpenAPI is the source of truth, this is a backend bug — route to `api-testing` § Skipping a test for a real backend bug. **Never** loosen the schema. |
 | Locator "not attached" | `element is not attached to the DOM` | Misdiagnosis — Playwright's `Locator` is lazy; it never goes stale on its own. Real cause: page replaced before the action, frame swap, navigation race | Trace Viewer — check whether the action fired before/after a navigation event. |
 | Network race | Action then immediate assert; flaky pass/fail | Action fires the XHR, assertion runs before the response lands | Wrap the action with `page.waitForResponse(...)` in the page-object method (NOT in the spec). |
-| Auth failure / 401 mid-test | `Unauthorized` after a previously-passing flow | Stale storage state at `.auth/app/appMainUserSession.json` | Re-run the `app-setup` project. Verify `login.setup.ts` produced the file. |
+| Auth failure / 401 mid-test | `Unauthorized` after a previously-passing flow | Stale storage state in the file your setup project writes (in the example app, `.auth/app/appMainUserSession.json`) | Re-run the setup project (`app-setup` in the example app). Verify the login setup (`login.setup.ts` in the example app) produced the file. |
 | Token expiry mid-suite | 401s appearing only in the last ~20% of a long CI test run (>1h) | Auth token lifespan shorter than total suite duration | Check Keycloak realm → Access Token Lifespan. Increase to 2× the longest suite duration, or implement token refresh in `beforeEach` via the auth-bootstrap helper. |
 | `beforeAll` timeout → cascading 401s | Multiple tests in a describe fail with 401 / "Request context disposed" / "`beforeAll` hook timeout exceeded" | `beforeAll` hook creates tenants/users/Keycloak entities and exceeds its timeout on a slow environment. The disposed request context causes every subsequent test to report 401. | Check the `beforeAll` timeout first. Size it to the number of slow operations (see `api-testing` § Setup timeouts). Do NOT raise the global `actionTimeout` or add retries. |
 | Stale UI aggregate | `expect(uiCount).toBe(apiCount)` fails with a small delta (e.g., 75 vs 77) | Dashboard/list page loaded with cached or pre-render data; API returned a fresher count | Move the API call outside the retry loop for a stable expected value. Inside `expect(async () => { … }).toPass()`, call `page.reload()` + `verifyPageLoaded()` to force the UI to re-fetch, then re-read the UI value. Timeout 30s. |
@@ -93,8 +93,8 @@ When a test passes locally but fails in CI, you need CI's artifacts to reproduce
 
 1. **Download the CI artifacts.** GitHub Actions: `gh run download <run-id> -n playwright-report` (and `test-results` if separate). Bitbucket / other: pull the `playwright-report` and `test-results` archives from the pipeline UI.
 2. **Open the failed trace.** Unzip the report; the trace zip for the failing test lives under `data/`. Then `npx playwright show-trace path/to/trace.zip`.
-3. **Compare against local.** Common CI-only causes in this project:
-   - Storage state stale or absent (`.auth/app/appMainUserSession.json` not produced) — confirm `app-setup` ran and succeeded.
+3. **Compare against local.** Common CI-only causes:
+   - Storage state stale or absent (the setup project's file was not produced — in the example app, `.auth/app/appMainUserSession.json`) — confirm the setup project (`app-setup` in the example app) ran and succeeded.
    - Different `ENVIRONMENT` (CI loads `env/.env.<ENVIRONMENT>`; local typically `env/.env.dev`).
    - Parallelism — the CI worker count is a per-repository fact (the repo's own `CLAUDE.md` states it). If your CI runs `workers: 1` while local runs in parallel (or the reverse), a test that depends on shared state passes serially and fails in parallel (or vice versa).
    - Token drift (`USER_ACCESS_TOKEN_*`, written by the setup project and read via `tokens.x()`) between CI secrets and local `.env`.
@@ -159,7 +159,7 @@ Before declaring a failure resolved:
 1. **§ CI-only failures** — pull the artifact: `gh run download <run-id> -n playwright-report`.
 2. Open the trace: `npx playwright show-trace path/to/trace.zip`. The trace shows `login.setup.ts` ran and `appMainUserSession.json` was produced — but the jobs list endpoint returned 401 on the first request and then the test aborted.
 3. **Compare environments** — local `env/.env.dev` has `USER_ACCESS_TOKEN_FULL` from a long-lived dev account; CI's token is minted fresh by `app-setup` against a colder cluster. The token-mint step in `app-setup` raced ahead of the Keycloak service being ready.
-4. **Replay locally:** `CI=1 ENVIRONMENT=ci npx playwright test <file> --workers=1 --retries=1` — reproduces the 401.
+4. **Replay locally:** `CI=1 ENVIRONMENT=<ci-env> npx playwright test <file> --workers=1 --retries=1` — reproduces the 401.
 5. **Fix at root** — add a readiness check in `login.setup.ts` (or the helper that mints tokens) that polls Keycloak before issuing the credential request. **Do NOT** raise `navigationTimeout` — that masks the real timing bug. Verify the CI test run is green for 3 consecutive pipeline executions.
 
 ## Troubleshooting
@@ -173,7 +173,7 @@ Before declaring a failure resolved:
 | `Error: strict mode violation: ... resolved to N elements` | Locator matches >1 element | `selectors` skill § Strict mode — disambiguation. Add `{ exact: true }`, scope to a parent (Pattern 7), or `.filter({ hasText })`. |
 | 409 Conflict deleting a worker resource in cleanup | Worker resource still assigned to a job | Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, token)`; never raw-delete worker resources in `afterAll` for job specs. |
 | `element is not attached to the DOM` | Misdiagnosis — `Locator` is lazy and never goes stale; the real cause is page replacement, frame swap, or a navigation race | Open the trace; check whether the action fired before/after navigation. Add a web-first assertion or `page.waitForResponse(...)` in the page-object method to anchor the wait. |
-| Auth fails mid-test (401 on a previously-passing flow) | Stale storage state at `.auth/app/appMainUserSession.json` | Re-run the `app-setup` project; check `login.setup.ts` produced the file; verify `playwright.config.ts` `storageState` path is unchanged. |
+| Auth fails mid-test (401 on a previously-passing flow) | Stale storage state in the file your setup project writes (in the example app, `.auth/app/appMainUserSession.json`) | Re-run the setup project (`app-setup` in the example app); check the login setup (`login.setup.ts` in the example app) produced the file; verify `playwright.config.ts` `storageState` path is unchanged. |
 | `forbidOnly` failed the CI build | Committed `test.only(...)` | Remove `test.only(...)`; use `--grep "<title>"` to narrow test runs in CI workflows. |
 | HTML report opens empty / stale | No test run produced one yet, OR `playwright-report/` is stale | Run the failing test once first to refresh the report; then `npx playwright show-report`. |
 | UI Mode is slow / consumes lots of memory | UI Mode keeps a hot context across sessions | Close it after each session. For pure post-mortem on a captured trace, prefer Trace Viewer (`npx playwright show-trace ...`) — lighter weight. |

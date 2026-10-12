@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 3.0.1
+version: 3.0.2
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -53,16 +53,16 @@ flowchart TD
     Q2 -->|"Live-app exploration"| Explore["playwright-cli (npx playwright open)"]
     Q2 -->|"No"| Q3{Is it an API artifact?}
 
-    Q3 -->|"Zod schema"| Schema["api-testing (schema patterns,<br/>z.strictObject, shared envelopes) +<br/>type-safety (Zod 3 chained validators)"]
+    Q3 -->|"Zod schema"| Schema["api-testing (schema patterns,<br/>z.strictObject, shared envelopes) +<br/>type-safety (Zod validators per major version)"]
     Q3 -->|"Helper for an API flow"| Helper["helpers (per-resource helper,<br/>buildCreateX / createX / cleanupX)"]
     Q3 -->|"Fixture (helper-fixture for setup/teardown)"| Fixture["fixtures (DI, scoping,<br/>3+-files promotion rule)"]
     Q3 -->|"Endpoint path / route"| Config["config (appConfig.api.X)"]
     Q3 -->|"No"| Q4{Is it data?}
 
     Q4 -->|"Faker factory"| Factory["data-strategy (factory pattern,<br/>Zod-validated overrides)"]
-    Q4 -->|"Static data — universal invalid types"| Universal["data-strategy +<br/>fixtures/api/invalid-types.ts (existing)"]
+    Q4 -->|"Static data — universal invalid types"| Universal["data-strategy +<br/>fixtures/api/invalid-types.ts (example app)"]
     Q4 -->|"Static data — domain-specific"| Domain["data-strategy (three-tier rule)"]
-    Q4 -->|"Test fixture JSON"| LegacyJson["data-strategy (drift entry —<br/>existing test-data/app/*.json)"]
+    Q4 -->|"Test fixture JSON"| LegacyJson["data-strategy (drift entry —<br/>update test-data/app/*.json in place)"]
     Q4 -->|"No"| Q5{Is it routing infrastructure?}
 
     Q5 -->|"Enum constant - SUITES, MESSAGES, statuses, etc."| Enums["enums (where the constant lives,<br/>extension workflow)"]
@@ -84,8 +84,8 @@ flowchart TD
 | Add a reusable component | `page-objects` (§ component composition) | `selectors` | `pages/baseClasses/<Name>.ts` |
 | Add an API helper (per-resource) | `helpers` | `api-testing` | `helpers/app/<resource>.ts` |
 | Add a helper fixture (3+ specs + guaranteed teardown) | `fixtures` | `helpers` | `fixtures/api/<name>-fixture.ts` (or `fixtures/services/` per the `fixtures` skill) |
-| Add a Faker factory | `data-strategy` | `type-safety` | `test-data/factories/<area>/<name>.factory.ts` *(planned — see drift note)* |
-| Add static test data | `data-strategy` | — | `test-data/static/{util,<area>}/<name>.ts` *(planned — see drift note)* |
+| Add a Faker factory | `data-strategy` | `type-safety` | `test-data/factories/<area>/<name>.factory.ts` *(see the tiering note below)* |
+| Add static test data | `data-strategy` | — | `test-data/static/{util,<area>}/<name>.ts` *(see the tiering note below)* |
 | Add an endpoint path | `config` | `api-testing` | `config/app.ts` (`appConfig.api.X`) — never an enum |
 | Add a SUITES key / UI string / status | `enums` | — | `enums/app/{index,qase-suites}.ts` |
 | Add an env var / `appConfig` path | `config` | `type-safety` | `config/{app,util/<service>}.ts` |
@@ -94,7 +94,7 @@ flowchart TD
 | Verify a `data-testid` against the live frontend | `frontend-cross-check` | `selectors`, `playwright-cli` | (varies) |
 | New to the framework — onboarding | `ai-native-workflow` | `~/.claude/CLAUDE.md` + every cluster | (none) |
 
-> **Drift to converge — test data tiering.** Today, `test-data/` holds only `test-data/app/*.json` files (no `test-data/factories/`, no `test-data/static/`). The planned three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. Routing for *new* data work points at the planned location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place.
+> **Drift to converge — test data tiering.** The three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. If your repo's `test-data/` holds only JSON files (no `test-data/factories/`, no `test-data/static/`), that is drift to converge. Routing for *new* data work points at the three-tier location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place.
 >
 > **Tag casing is settled — lowercase `@App-regression` is the standard.** The `package.json` `app-regression` and `app-all` scripts grep lowercase `@App-regression`; Title-case `@App-Regression` matches **nothing** and would silently drop the test from CI. ~398 tags across ~34 functional specs already use the lowercase form. Never "fix" the casing to Title-case.
 
@@ -137,7 +137,7 @@ Skip the precondition and you produce code that compiles but is wrong against re
 
 ### Step 4 — walk the workflow
 
-Each deep skill ships a numbered workflow (steps 1..N) with precondition checks, real-codebase examples, and a final verification. Walk it linearly. Do not skip "study an existing example" — every audit of this framework has caught skills that look right but violate subtle conventions because the author didn't read the canonical example first.
+Each deep skill ships a numbered workflow (steps 1..N) with precondition checks, worked examples from the invented example app, and a final verification. Walk it linearly. Do not skip "study an existing example" — every audit of this framework has caught skills that look right but violate subtle conventions because the author didn't read the nearest existing example in their repo first.
 
 ### Step 5 — re-read this skill's Critical block
 
@@ -159,7 +159,7 @@ npm run app-regression                                     # whole tag group
 npm run app-api
 npm run app-e2e
 npm run app-smoke
-npm run app-all                                            # full nightly union, single Playwright worker
+npm run app-all                                            # full nightly union
 ```
 
 For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns the failure-mode taxonomy and the right Playwright tool.
@@ -188,7 +188,7 @@ For failures: load the [`debugging`](../debugging/SKILL.md) skill — it owns th
 - ❌ **Generated API test omits `expect(SchemaName.parse(body)).toBeTruthy();`.** Type generics alone don't validate. Fix: every API response asserted with the exact pattern (the `api-testing` skill).
 - ❌ **Generated POM has JSDoc on locator getters.** Names are self-documenting. Fix: JSDoc on action methods only (the `page-objects` skill).
 - ❌ **Adding a new POM without updating `page-object-fixture.ts` in the same edit.** Spec ends up doing `new <Page>(page)`. Fix: same-edit-batch sibling update (see Step 9).
-- ❌ **Generating a new `test-data/app/<name>.json` file.** Drift to converge — the planned tier is `test-data/factories/` or `test-data/static/`. Fix: route to the `data-strategy` skill; for now, prefer inline `faker.<...>` over a new JSON file.
+- ❌ **Generating a new `test-data/app/<name>.json` file.** Drift to converge — the three-tier homes are `test-data/factories/` and `test-data/static/`. Fix: route to the `data-strategy` skill; if your repo has neither directory yet, prefer inline `faker.<...>` over a new JSON file.
 - ❌ **Returning code without running the affected tests.** A task with failing tests is not complete. Fix: Step 8 — run, confirm green, then declare done.
 
 ## Self-review checklist
@@ -233,8 +233,8 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 User says: *"Add API tests for `POST /workers` covering 201, 400 (each required field omitted + invalid types), 401, 403, 405."*
 
 1. **Step 1 — categorize.** API test → API tests + Zod schema + helper.
-2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod 3 chained validators).
-3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Read `tests/app/api/jobs-service/workers/workers.spec.ts` for the canonical shape.
+2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod validators per major version).
+3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Glob your repo for the nearest spec of the same type (in the example app, e.g. `tests/app/api/jobs-service/workers/workers.spec.ts`) and follow its shape.
 4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
 5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.WORKERS`. `tokens.full()`. `@App-API` tag.
 6. **Step 6 — generate.** `tests/app/api/jobs-service/workers/workers.spec.ts` (extend if exists), `fixtures/api/schemas/app/worker.ts`, `helpers/app/workers.ts`.

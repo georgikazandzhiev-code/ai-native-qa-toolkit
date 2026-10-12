@@ -86,7 +86,7 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 - **Conflict (DELETE):** only when the resource is a parent in a 409-cascade (e.g. worker still assigned to a job).
 - **Mailpit side-effect (POST-create):** only on resources whose creation triggers email (admin-users invite, tenant onboarding).
 - **Cascade (DELETE):** only on parents whose children must follow (tenant → users; never the reverse — job / worker ordering is the opposite, see § 9).
-- **403 (ZERO):** every spec should cover it. Until `USER_ACCESS_TOKEN_ZERO` is provisioned, write the test as the contract says and comment out the whole block with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` (see [reference.md § Token catalog](reference.md#token-catalog)).
+- **403 (ZERO):** every spec should cover it. If `USER_ACCESS_TOKEN_ZERO` is not provisioned, write the test as the contract says and comment out the whole block with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` (see [reference.md § Token catalog](reference.md#token-catalog)).
 
 ---
 
@@ -94,12 +94,12 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 
 **Intent:** read a paged collection of a resource scoped by token / path. Idempotent and safe.
 
-**Examples in repo:** `GET /jobs` (`export-job.spec.ts:795`), `GET /workers` (`workers.spec.ts:324`), `GET /admin/tenants` (`admin-tenants.spec.ts:36`), `GET /admin/tenants/{id}/users` (`admin-users.spec.ts:41`), `GET /users` (`user.spec.ts:48`).
+**In the example app:** `GET /jobs` (`export-job.spec.ts`), `GET /workers` (`workers.spec.ts`), `GET /admin/tenants` (`admin-tenants.spec.ts`), `GET /admin/tenants/{id}/users` (`admin-users.spec.ts`), `GET /users` (`user.spec.ts`).
 
 ### What to test
 
 1. **Happy path** — `expect(status).toBe(200); expect(List<Resource>sResponseSchema.parse(body)).toBeTruthy();` — exercises both the envelope and the resource shape inside the array.
-2. **Default pagination** — assert `body.pageInfo.page === 1`, `pageInfo.pageSize === 10` (project default), `body.<resourcePlural>.length <= pageInfo.pageSize`.
+2. **Default pagination** — assert `body.pageInfo.page === 1`, `pageInfo.pageSize === 10` (the example app's default), `body.<resourcePlural>.length <= pageInfo.pageSize`.
 3. **Custom pagination** — pass `?page=N&pageSize=M`, assert echoed values and that `length === Math.min(M, totalElements)` and `totalPages === Math.ceil(totalElements / pageSize)`.
 4. **Boundary pageSize** — happy path at the documented max (e.g. `pageSize=50` on jobs) AND a 400 just past it (`pageSize=51`).
 5. **Beyond-last-page** — `?page=999999` returns `200` with `length === 0`. Do **not** assert 404; the contract is "empty page, not error."
@@ -115,7 +115,7 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 ### Don't test
 
 - Exact ordering of sort results.
-- Total-element counts (`totalElements === N`) — other tests in the same dev environment add and remove rows in parallel; assert relative invariants (`>= 1`, `<= pageSize`) instead.
+- Total-element counts (`totalElements === N`) — other tests in the same shared environment add and remove rows in parallel; assert relative invariants (`>= 1`, `<= pageSize`) instead.
 
 ### Skeleton
 
@@ -142,7 +142,7 @@ test(
 
 **Intent:** read one resource by its server-assigned id. Idempotent.
 
-**Examples in repo:** `GET /jobs/{id}` (`export-job.spec.ts:1111`), `GET /workers/{id}` (`workers.spec.ts:566`), `GET /admin/tenants/{id}` (`admin-tenants.spec.ts:672`), `GET /admin/tenants/{id}/users/{userId}` (`admin-users.spec.ts:808`), `GET /workers/{id}/config` (`workers.spec.ts:1218`), `GET /tenants/schema` (`tenant-schema.spec.ts:21`).
+**In the example app:** `GET /jobs/{id}` (`export-job.spec.ts`), `GET /workers/{id}` (`workers.spec.ts`), `GET /admin/tenants/{id}` (`admin-tenants.spec.ts`), `GET /admin/tenants/{id}/users/{userId}` (`admin-users.spec.ts`), `GET /workers/{id}/config` (`workers.spec.ts`), `GET /tenants/schema` (`tenant-schema.spec.ts`).
 
 ### What to test
 
@@ -150,8 +150,8 @@ test(
 2. **Identity** — `expect(body.<resource>.id).toBe(<resourceId>)` so a cross-tenant or wrong-id leak fails loudly.
 3. **Invalid id format** — loop over `["!@#$%", "null", "<script>"]` (or use `invalidString` from `fixtures/api/invalid-types`). Each must return **400** with `expect(APIErrorSchema.parse(body)).toBeTruthy()`.
 4. **Non-existent id** — use `nonExistentId` from `test-data/app/<resource>.json` (or a fresh `faker.string.uuid()`). Returns **404** with `expect(APIErrorSchema.parse(body)).toBeTruthy()`.
-5. **Cross-tenant access** — Tenant A's token on Tenant B's resource → **404, not 403**. See `tests/app/api/shared/cross-tenant-isolation.spec.ts` and `tests/app/api/shared/cross-tenant-run-stats-isolation.spec.ts` for both shapes (tenant-scoped via token, admin-scoped via tenantId-in-path).
-6. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped resource), 403 (ZERO — commented out under `// TODO: FIXME: <TICKET>` while the token is unprovisioned).
+5. **Cross-tenant access** — Tenant A's token on Tenant B's resource → **404, not 403**. There are two shapes (tenant-scoped via token, admin-scoped via tenantId-in-path); skeletons in [templates.md § 7](templates.md). In the example app, `cross-tenant-isolation.spec.ts` and `cross-tenant-run-stats-isolation.spec.ts` cover both.
+6. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped resource), 403 (ZERO — commented out under `// TODO: FIXME: <TICKET>` if the token is not provisioned).
 7. **GET-after-DELETE** — covered by the DELETE spec (see § 9), not duplicated here.
 
 ### Don't test
@@ -164,26 +164,26 @@ test(
 
 **Intent:** create a new resource and return its id (and sometimes the created entity).
 
-**Examples in repo:** `POST /jobs` (× 7 job types — `export` / `http` / `sftp` / `email` / `backup` / `stream` / `webhook`), `POST /workers` (`workers.spec.ts:96`), `POST /admin/tenants` (`admin-tenants.spec.ts:401`), `POST /admin/tenants/{id}/users` (`admin-users.spec.ts:457`), `POST /admin/realms` (`admin-realms.spec.ts:105`).
+**In the example app:** `POST /jobs` (× 7 job types — `export` / `http` / `sftp` / `email` / `backup` / `stream` / `webhook`), `POST /workers` (`workers.spec.ts`), `POST /admin/tenants` (`admin-tenants.spec.ts`), `POST /admin/tenants/{id}/users` (`admin-users.spec.ts`), `POST /admin/realms` (`admin-realms.spec.ts`).
 
-> **Status mapping varies.** Jobs + workers return `201`; admin-tenants / admin-users / admin-realms return `200`. Match the actual endpoint — never hardcode.
+> **Status mapping varies.** In the example app, jobs + workers return `201`; admin-tenants / admin-users / admin-realms return `200`. Match the actual endpoint — never hardcode.
 
 ### What to test
 
 1. **Happy path** — assert the right status (`201` for jobs/workers, `200` for admin-side), parse `Create<Resource>ResponseSchema`, push the returned id into `createdIds[]` for `afterAll` cleanup. Push **before** the GET-after step in case GET fails.
 2. **GET-after-create** — fetch the created entity by id and assert each field of the request payload was persisted (`name`, `target`, `type`, `runInterval`, `timeout`, `status: "enabled"`, etc.). For jobs, assert `body.job.assignments[0].workerId === workerId` and `body.job.assignments[0].type === <jobType>`.
-3. **Cross-list verification** — at least one POST test that confirms the new entity appears in `GET /<resource>s?name=<created>`. See `export-job.spec.ts:168`.
+3. **Cross-list verification** — at least one POST test that confirms the new entity appears in `GET /<resource>s?name=<created>`.
 4. **Body-shape variants** — for resources with multiple shapes, write one happy-path per shape (jobs by job type, worker by deployment kind, etc.). Mirror the per-type config: `export` target = a directory path, HTTP target = `https://...`, stream target = `wss://...`, etc. (see [templates.md § 8](templates.md)).
 5. **Empty body** → 400 + `APIErrorSchema`.
 6. **Missing each required field** — write one test per required field, deleting it from a valid payload. (Jobs: `name`, `target`, `type`, `workerIds`, `config`, `runInterval`, `timeout`. Admin user: `email`, `firstName`, `lastName`. Admin tenant: `name`.)
 7. **Invalid type per field** — loop over `invalidString` / `invalidIntegerTypes` / `specialChars` / `boundaryString` from `fixtures/api/invalid-types` for each field. Each invalid value → 400 + `APIErrorSchema`.
 8. **Duplicate / conflict** → 409 + `APIErrorSchema`. Examples: tenant with existing name; worker with existing name; user invite with existing email.
-9. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped POST), 403 (ZERO — commented out under `// TODO: FIXME: <TICKET>` while the token is unprovisioned).
+9. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped POST), 403 (ZERO — commented out under `// TODO: FIXME: <TICKET>` if the token is not provisioned).
 10. **405** — covered by the dedicated 405 block per § 11.
 
 ### Side effects
 
-- **Mailpit-bearing creates** (`POST /admin/tenants/{id}/users`, tenant-onboarding flows): purge the recipient's mailbox **before** the POST, then assert one email arrives via `getInviteLinkFromEmail(mailpit, email)` or `mailpit.getLastEmail`. Recipient must be `@<your-test-domain>` per [SKILL.md § Anti-patterns](SKILL.md). `generateUserPayload()` currently emits `@automation.test` (broken); for E2E build the payload locally with `@<your-test-domain>`.
+- **Mailpit-bearing creates** (`POST /admin/tenants/{id}/users`, tenant-onboarding flows): purge the recipient's mailbox **before** the POST, then assert one email arrives via `getInviteLinkFromEmail(mailpit, email)` or `mailpit.getLastEmail`. Recipient must be `@<your-test-domain>` per [SKILL.md § Anti-patterns](SKILL.md). If a payload builder emits another domain (e.g. `@automation.test`), that is a bug: build the E2E payload locally with `@<your-test-domain>`, and fix the builder.
 - **Worker-bound creates** (`POST /jobs`): the job body must include valid `workerIds`. Empty `config: {}` returns 400 — every job type requires its type-specific config keys (see [reference.md](reference.md) and [templates.md § 8](templates.md)).
 - **Cascading registrations** (`POST /admin/tenants` triggers realm creation in Keycloak): no separate test, but cleanup must call `deleteTenant` to remove the realm.
 
@@ -198,7 +198,7 @@ test(
 
 **Intent:** a `POST` whose body is a query payload, not a create payload. The response is data, not a created entity. Common when the query is too rich for query-string params (large id arrays, nested filters, complex aggregations).
 
-**Examples in repo:** `POST /workers/list` (`workers.spec.ts:1097` — fetch workers by id array), `POST /run-stats/aggregate` (`run-stats-aggregate.spec.ts:149` — aggregated run-stat values query across job types).
+**In the example app:** `POST /workers/list` (`workers.spec.ts` — fetch workers by id array), `POST /run-stats/aggregate` (`run-stats-aggregate.spec.ts` — aggregated run-stat values query across job types).
 
 ### What to test
 
@@ -209,7 +209,7 @@ test(
 5. **Each required field missing** → 400 (e.g. omit `runStats`, `timeframe`, `aggregation`).
 6. **Invalid type per field** — bad enum values for `aggregation`, malformed timeframe strings, non-uuid ids → 400.
 7. **Auth coverage** — 401 (no token), 403 (ZERO if provisioned).
-8. **Cross-tenant** — Tenant A queries Tenant B's `assignmentId` → 200 with empty result OR 404 (depending on contract). For run-stats-aggregate the contract is "no leak" — see `cross-tenant-run-stats-isolation.spec.ts`.
+8. **Cross-tenant** — Tenant A queries Tenant B's `assignmentId` → 200 with empty result OR 404 (depending on contract). For run-stats-aggregate the contract is "no leak" (in the example app, `cross-tenant-run-stats-isolation.spec.ts` asserts it).
 9. **405** — `GET /run-stats/aggregate` and `PATCH /run-stats/aggregate` (etc.) → 405. Covered by the 405 block.
 
 ### Don't test
@@ -223,7 +223,7 @@ test(
 
 **Intent:** replace the entire resource. Sending a partial body must fail.
 
-> **No PUT endpoints exist in this API at the time of writing** — every "update" endpoint is `PATCH`. This section is the playbook to use **when** PUT is added (or if you need to test 405 against PUT on a path that only supports PATCH). The shape mirrors upstream's PUT specs ([assetsCRUD.spec.ts:350](<upstream-repo>/tests/back/api/assetsCRUD.spec.ts), [assetsPairs.spec.ts:321](<upstream-repo>/tests/back/api/assetsPairs.spec.ts)).
+> **The example app has no PUT endpoints** — every "update" endpoint is `PATCH`. This section is the playbook to use **when** your API has PUT (or if you need to test 405 against PUT on a path that only supports PATCH). The shape mirrors upstream's PUT specs ([assetsCRUD.spec.ts](<upstream-repo>/tests/back/api/assetsCRUD.spec.ts), [assetsPairs.spec.ts](<upstream-repo>/tests/back/api/assetsPairs.spec.ts)).
 
 ### What to test
 
@@ -251,22 +251,22 @@ test(
 
 **Intent:** update one or more fields of a resource without sending the rest. Unchanged fields must persist.
 
-**Examples in repo:** `PATCH /jobs/{id}` (`export-job.spec.ts:1253` and one PATCH block per other job type), `PATCH /workers/{id}` (`workers.spec.ts:676`), `PATCH /admin/tenants/{id}` (`admin-tenants.spec.ts:825`), `PATCH /admin/tenants/{id}/users/{userId}` (`admin-users.spec.ts:1001`), `PATCH /users/{id}` (`user.spec.ts:1032`), `PATCH /admin/realms` (`admin-realms.spec.ts:211`).
+**In the example app:** `PATCH /jobs/{id}` (`export-job.spec.ts` and one PATCH block per other job type), `PATCH /workers/{id}` (`workers.spec.ts`), `PATCH /admin/tenants/{id}` (`admin-tenants.spec.ts`), `PATCH /admin/tenants/{id}/users/{userId}` (`admin-users.spec.ts`), `PATCH /users/{id}` (`user.spec.ts`), `PATCH /admin/realms` (`admin-realms.spec.ts`).
 
 ### What to test
 
-1. **Per-field isolation — one test per updatable field.** This is the most rigorous shape and the most-cited project gotcha. Each test follows the GET-PATCH-GET pattern:
+1. **Per-field isolation — one test per updatable field.** This is the most rigorous shape and the most-cited PATCH gotcha. Each test follows the GET-PATCH-GET pattern:
    1. **GET-before**: snapshot the current entity into `before`.
    2. **PATCH** with `{ <singleField>: <newValue> }` (only that field). Assert `200` + `Update<Resource>ResponseSchema`.
    3. **GET-after**: assert `body.<field> === <newValue>` AND every other field equals `before.<field>`.
 
-   See `export-job.spec.ts:1311–1518` for the canonical implementation across `name`, `target`, `runInterval`, `timeout`, `status`. Repeat the pattern for every updatable field on the resource.
+   The skeleton is the per-field isolation block in [templates.md § 1](templates.md). In the example app, the jobs spec has one such test for each of `name`, `target`, `runInterval`, `timeout` and `status`. Repeat the pattern for every updatable field on the resource.
 
 2. **PATCH preserves unchanged fields explicitly** — at least one test where a single PATCH is followed by a GET that asserts every non-touched field is unchanged from `before`. (Some specs combine this with the per-field tests; either is fine.)
 
-3. **State toggle round-trip** — for resources with `enabled` ⇄ `disabled` (or any boolean / enum state), PATCH to the off-state, GET to confirm, PATCH back to on-state, GET to confirm. See `export-job.spec.ts:1459`.
+3. **State toggle round-trip** — for resources with `enabled` ⇄ `disabled` (or any boolean / enum state), PATCH to the off-state, GET to confirm, PATCH back to on-state, GET to confirm.
 
-4. **Empty body** → 400 + `APIErrorSchema`. (`PATCH /admin/realms` now enforces this — `admin-realms.spec.ts` has active 400 tests for empty body, `settings: null`, wrong-type `settings`, and unknown keys.)
+4. **Empty body** → 400 + `APIErrorSchema`. (In the example app, `PATCH /admin/realms` enforces this; assert 400 for an empty body, `settings: null`, wrong-type `settings`, and unknown keys.)
 
 5. **"One invalid + rest valid" per field** — for each field, send a valid full body with one field replaced by an invalid value (loop `invalidString` / `invalidIntegerTypes` / `specialChars`). Each combo → 400. This isolates per-field validation in the way [SKILL.md](SKILL.md) prescribes.
 
@@ -274,21 +274,21 @@ test(
 
 7. **Invalid id format** → 400. Loop `["!@#$%", "null", "<script>"]`.
 
-8. **Non-existent id** → 404. Send a **valid** body — an invalid body fails validation first and returns 400 before the resource lookup (`PATCH /jobs/{id}` covers both branches in an active test in `export-job.spec.ts`).
+8. **Non-existent id** → 404. Send a **valid** body — an invalid body fails validation first and returns 400 before the resource lookup (cover both branches, as the example app does for `PATCH /jobs/{id}`).
 
-9. **Conflict** → 409 (renaming to an existing name; for tenants and admin-tenants this is exercised — see `admin-tenants.spec.ts:924`).
+9. **Conflict** → 409 (renaming to an existing name, e.g. a tenant).
 
 10. **Cross-tenant** — Tenant A's token PATCH on Tenant B's resource → **404, not 403**.
 
-11. **PATCH on already-DELETEd entity** → 404 (covered by the DELETE spec, see § 9 and `admin-tenants.spec.ts:1178`).
+11. **PATCH on already-DELETEd entity** → 404 (covered by the DELETE block, see § 9).
 
-12. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped PATCH), 403 (ZERO; for admin-scoped PATCH, also test tenant-scoped tokens are rejected — see `admin-tenants.spec.ts:1012`).
+12. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped PATCH), 403 (ZERO; for admin-scoped PATCH, also test tenant-scoped tokens are rejected).
 
 13. **405** — wrong verb on `/<resource>` collection (no `:id`) → 405. Covered by the 405 block.
 
 ### GET-merge-PATCH for `allOf` schemas
 
-When the API uses JSON-Schema `allOf` discriminated by a field (jobs dispatch on `type`), a partial PATCH that omits the discriminator can be **rejected** because the body is validated against the wrong branch. Solution: merge the partial fields into a fresh GET response and resend the union (see `patchPartial` helper at `export-job.spec.ts:1258`). This is a project-specific quirk — encode it inline in the per-resource helper, do not push it into a generic shared helper.
+When the API uses JSON-Schema `allOf` discriminated by a field (jobs dispatch on `type`), a partial PATCH that omits the discriminator can be **rejected** because the body is validated against the wrong branch. Solution: merge the partial fields into a fresh GET response and resend the union (in the example app, the jobs spec's `patchPartial` helper does this). This quirk belongs to one resource — encode it inline in the per-resource helper, do not push it into a generic shared helper.
 
 ### Don't test
 
@@ -301,20 +301,20 @@ When the API uses JSON-Schema `allOf` discriminated by a field (jobs dispatch on
 
 **Intent:** remove a resource by id. Idempotent at the contract level (re-DELETE returns 404, not 200).
 
-**Examples in repo:** `DELETE /jobs/{id}` (`export-job.spec.ts:1797`), `DELETE /workers/{id}` (`workers.spec.ts:967`), `DELETE /admin/tenants/{id}` (`admin-tenants.spec.ts:1043`), `DELETE /admin/tenants/{id}/users/{userId}` (`admin-users.spec.ts:1324`), `DELETE /users/sessions/{sessionId}` (`user.spec.ts:730`).
+**In the example app:** `DELETE /jobs/{id}` (`export-job.spec.ts`), `DELETE /workers/{id}` (`workers.spec.ts`), `DELETE /admin/tenants/{id}` (`admin-tenants.spec.ts`), `DELETE /admin/tenants/{id}/users/{userId}` (`admin-users.spec.ts`), `DELETE /users/sessions/{sessionId}` (`user.spec.ts`).
 
 ### What to test
 
 1. **Happy path** — `200` + `expect(Delete<Resource>ResponseSchema.parse(body)).toBeTruthy()` + `body.<resource>Id === <deletedId>` + `body.status === "deleted"`. Capture into a multi-step test that also covers items 2–3.
 2. **GET-after-DELETE** → 404 + `APIErrorSchema` (the entity is gone).
-3. **Re-DELETE same id** → 404 + `APIErrorSchema` (idempotency-as-404, not idempotency-as-200). See `export-job.spec.ts:1847` and `admin-tenants.spec.ts:1139`.
+3. **Re-DELETE same id** → 404 + `APIErrorSchema` (idempotency-as-404, not idempotency-as-200).
 4. **Invalid id format** → 400. Loop `["!@#$%", "null", "<script>"]`.
 5. **Non-existent id** → 404 + `APIErrorSchema` (distinct test from re-DELETE — different semantic).
 6. **Cross-tenant** — Tenant A's token DELETE on Tenant B's resource → **404, not 403**.
-7. **PATCH-after-DELETE** → 404 (covers a missed-cache class of bug; one test in admin-tenants — see `admin-tenants.spec.ts:1178`).
-8. **Cascade** — for resources whose deletion must propagate, write a dedicated cascade spec. Today: `DELETE /admin/tenants/{id}` cascades to its users — see `tenant-cascade.spec.ts:26` (after tenant DELETE, GET each user → 404 and GET user list → 404).
+7. **PATCH-after-DELETE** → 404 (covers a missed-cache class of bug; one test in the DELETE block is enough).
+8. **Cascade** — for resources whose deletion must propagate, write a dedicated cascade spec. In the example app, `DELETE /admin/tenants/{id}` cascades to its users, and `tenant-cascade.spec.ts` asserts it (after tenant DELETE, GET each user → 404 and GET user list → 404).
 9. **Conflict** — for resources that are referenced by another (worker still assigned to a job) → **409**. Cleanup ordering exists exactly because of this: `cleanupWorkersAndJobs` deletes jobs first, workers second. See [SKILL.md § Cleanup patterns](SKILL.md).
-10. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped DELETE — see `export-job.spec.ts:1895`), 403 (ZERO).
+10. **Auth coverage** — 401 (no token), 401 (admin token on tenant-scoped DELETE), 403 (ZERO).
 11. **405** — wrong verb on the collection path (e.g. DELETE on `/jobs` without `:id`) → 405. Covered by the 405 block.
 
 ### Don't test
@@ -328,12 +328,12 @@ When the API uses JSON-Schema `allOf` discriminated by a field (jobs dispatch on
 
 **Intent:** HEAD returns headers without the body; OPTIONS returns allowed methods (CORS preflight).
 
-> **No HEAD or OPTIONS endpoints exist in this API today.** No specs need to test them. Two exceptions:
+> **The example app has no HEAD or OPTIONS endpoints**, so its specs don't test them. Two exceptions:
 >
 > - **CORS preflight via OPTIONS** is exercised implicitly by the browser when `tests/app/e2e/**` runs against the UI. No API spec needs to check it.
 > - **HEAD on a real path** to check for existence — not used in the contract; do not invent it.
 
-If a future endpoint adds HEAD/OPTIONS, the playbook is:
+If your API has HEAD/OPTIONS endpoints, the playbook is:
 
 - **HEAD** — `200` with `body === null`. Headers must match the GET equivalent (no extra `Content-Length` enforcement — Playwright normalizes).
 - **OPTIONS** — `200`/`204` + `Allow` header listing the supported methods. Assert each documented method appears in `Allow`.
@@ -346,7 +346,7 @@ In every spec, HEAD and OPTIONS are still exercised by the **405 catch-all** (se
 
 **Intent:** prove every wrong verb on every supported path returns `405 Method Not Allowed`.
 
-**Examples in repo:** `405 Method Not Allowed - Unsupported HTTP methods` block in `export-job.spec.ts:1918` and `workers.spec.ts:1384`. Other specs inline a 405 row in their PATCH/DELETE block.
+**In the example app:** the `405 Method Not Allowed - Unsupported HTTP methods` block in the jobs spec and in the workers spec.
 
 ### Pattern — single test, loop INSIDE
 
@@ -411,24 +411,26 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
 ### Coverage rules
 
 - **Always two tests:** one for the **collection** path (no `:id`) and one for the **resource** path (with `:id`). The supported methods differ between them — list collection rejects PUT/PATCH/DELETE; resource path rejects POST.
-- **Resource-path id can be a real id or `faker.string.uuid()`.** Both work; the verb gate is hit before the lookup. The jobs spec uses `faker.string.uuid()` (`export-job:1953`); the workers spec uses a real `seededWorkerId` (`workers:1420`). Either is fine — pick whichever simplifies setup in your spec.
-- **Pass `body: {}` for non-DELETE verbs (defensive).** The workers spec does not (`workers:1418`) and works; the jobs spec does (`export-job:1935`) and works. New code should pass `body: {}` to make the 405 deterministic across gateway implementations and avoid a class of "silent 400 instead of 405" bug.
+- **Resource-path id can be a real id or `faker.string.uuid()`.** Both work; the verb gate is hit before the lookup. In the example app, the jobs spec uses `faker.string.uuid()` and the workers spec uses a real `seededWorkerId`. Either is fine — pick whichever simplifies setup in your spec.
+- **Pass `body: {}` for non-DELETE verbs (defensive).** In the example app, the workers spec does not and works; the jobs spec does and works. New code should pass `body: {}` to make the 405 deterministic across gateway implementations and avoid a class of "silent 400 instead of 405" bug.
 - **`expect.soft(status, "<method> /<path>")`** — soft, so the loop reaches every verb; pass the descriptive message so the failure log says `"PATCH /jobs: expected 405, received 200"` instead of an anonymous status mismatch.
 - **`body` is `null`** — assert it with `expect.soft(body, label).toBeNull()`, as [SKILL.md § Error envelopes](SKILL.md) does for 403/405. A 405 has no structured body, so there is no schema to parse; a 405 that suddenly carries one is a gateway change worth seeing.
 - **Run on the canonical token** (`USER_ACCESS_TOKEN_FULL` for tenant-scoped, `USER_ACCESS_TOKEN_ADMIN` for admin-scoped) — the request must reach the method-allowance check, not be rejected at auth.
 
-### Per-resource scope (today)
+### Per-resource scope
+
+These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
 | Resource | Collection forbidden | Resource forbidden | Spec block |
 |----------|---------------------|--------------------|-----------|
-| `/jobs` | `PUT`, `PATCH`, `DELETE` | `POST` | `export-job.spec.ts:1918` |
-| `/workers` | `PUT`, `PATCH`, `DELETE` | `PUT`, `POST` | `workers.spec.ts:1384` |
+| `/jobs` | `PUT`, `PATCH`, `DELETE` | `POST` | `export-job.spec.ts` §405 |
+| `/workers` | `PUT`, `PATCH`, `DELETE` | `PUT`, `POST` | `workers.spec.ts` §405 |
 | `/admin/tenants` | `PUT`, `PATCH`, `DELETE` | `POST`, `PUT` | `admin-tenants.spec.ts` §405 |
 | `/admin/tenants/{id}/users` | `PUT`, `PATCH`, `DELETE` | `POST`, `PUT` | `admin-users.spec.ts` §405 |
 | `/users` | `DELETE`, `PATCH`, `PUT` | `DELETE`, `POST`, `PUT` | `user.spec.ts` §405 |
 | `/admin/realms` | `PUT`, `DELETE` | — (no by-id endpoint) | `admin-realms.spec.ts` §405 |
 
-> **Resolved (2026-06-24):** all four previously-drifting resources now have a dedicated 405 block — `user` was the last, closed in this PR. No 405 drift remains in `tests/app/api/**`. `/users` also covers `/users/sessions/{sessionId}` (forbidden: `POST`). The workers block (`workers.spec.ts:1384`) remains the cleanest copy-target for new resources.
+Every resource gets a dedicated 405 block; a spec without one is drift. In the example app, `/users` also covers `/users/sessions/{sessionId}` (forbidden: `POST`), and the workers block is the cleanest copy-target for new resources.
 
 ---
 
@@ -440,8 +442,8 @@ These cut across every method. Document them once per resource; don't fold them 
 
 **Contract:** every endpoint scoped by tenant must return **404, not 403** when accessed across tenants. This is the contract because 403 leaks the existence of the resource; 404 doesn't.
 
-- Tenant-scoped resources (job, worker, tenant-side user, run stats) — the **token enforces** tenancy. Tenant A's token on Tenant B's resource → 404. See `cross-tenant-isolation.spec.ts` and `cross-tenant-run-stats-isolation.spec.ts`.
-- Admin-scoped resources (admin user) — **`tenantId`-in-path enforces** tenancy. Asking under Tenant B for a user that lives in Tenant A → 404. See `cross-tenant-isolation.spec.ts` and [templates.md § 7](templates.md).
+- Tenant-scoped resources (job, worker, tenant-side user, run stats) — the **token enforces** tenancy. Tenant A's token on Tenant B's resource → 404. In the example app, `cross-tenant-isolation.spec.ts` and `cross-tenant-run-stats-isolation.spec.ts` cover it.
+- Admin-scoped resources (admin user) — **`tenantId`-in-path enforces** tenancy. Asking under Tenant B for a user that lives in Tenant A → 404. See [templates.md § 7](templates.md) (in the example app, `cross-tenant-isolation.spec.ts`).
 
 Cover **GET, PATCH, DELETE** at minimum. POST cross-tenant is implicit (you can only POST under your own token). The spec is dedicated, not folded into the per-resource CRUD spec.
 
@@ -452,8 +454,8 @@ The contract distinguishes **wrong realm** (401, gateway rejects) from **wrong s
 | Token | What it represents | Tenant-scoped path | Admin-scoped path |
 |-------|--------------------|-------------------|-------------------|
 | no `headers` | Unauthenticated | 401 + `APIErrorSchema` / `GatewayErrorSchema` | 401 + `APIErrorSchema` / `GatewayErrorSchema` |
-| `tokens.full()` | Valid tenant-scoped token | 2xx happy path | **403** (wrong scope — see `admin-tenants.spec.ts:348` `... returns 403 for tenant-scoped user`) |
-| `tokens.admin()` | Admin / master-realm token | **401** (wrong realm — see `workers.spec.ts:549` `... returns 401 with admin token (tenant-scoped endpoint)`) | 2xx happy path |
+| `tokens.full()` | Valid tenant-scoped token | 2xx happy path | **403** (wrong scope — test name `... returns 403 for tenant-scoped user`) |
+| `tokens.admin()` | Admin / master-realm token | **401** (wrong realm — test name `... returns 401 with admin token (tenant-scoped endpoint)`) | 2xx happy path |
 | `tokens.zero()` | Valid token, no permissions | 403 + `expect(body).toBeNull()` (where applicable) | 403 |
 | Wrong-realm / wrong-issuer | Real token, wrong issuer | 401 + `GatewayErrorSchema` | 401 + `GatewayErrorSchema` |
 
@@ -462,15 +464,15 @@ The contract distinguishes **wrong realm** (401, gateway rejects) from **wrong s
 - **No-token 401** — every method, every spec.
 - **Wrong-realm 401 (admin → tenant path)** — every method on every tenant-scoped spec. Use the `... returns 401 with admin token (tenant-scoped endpoint)` test-name shape.
 - **Wrong-scope 403 (tenant → admin path)** — every method on every admin-scoped spec. Use the `... returns 403 for tenant-scoped user` test-name shape.
-- **403 ZERO** — every method, every spec. Until the token is provisioned, keep the test written and commented out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` ([reference.md § Token catalog](reference.md#token-catalog)).
-- **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs (`cross-tenant-isolation.spec.ts`, `cross-tenant-run-stats-isolation.spec.ts`). If no wrong-realm token exists, write the test and comment it out under `// TODO: FIXME: <TICKET>`, naming the missing token.
+- **403 ZERO** — every method, every spec. If the token is not provisioned, keep the test written and commented out with `// TODO: FIXME: <TICKET> USER_ACCESS_TOKEN_ZERO not provisioned` — never a conditional `test.skip` ([reference.md § Token catalog](reference.md#token-catalog)).
+- **Wrong-issuer 401** — at minimum once per spec; cover thoroughly in the dedicated cross-tenant specs (in the example app, `cross-tenant-isolation.spec.ts` and `cross-tenant-run-stats-isolation.spec.ts`). If no wrong-realm token exists, write the test and comment it out under `// TODO: FIXME: <TICKET>`, naming the missing token.
 
 ### 12.3 Cascade & dependency rules
 
 | Resource pair | Rule | Cleanup ordering |
 |---------------|------|------------------|
 | Job ⤴ Worker | Job references worker via `workerIds`; deleting worker first → 409 | Jobs-first, workers-second (`cleanupWorkersAndJobs`) |
-| Tenant ⤴ Users | Deleting tenant cascades to its users (GET each user → 404) | Tenant DELETE handles user removal; explicit user-cleanup is redundant after tenant DELETE — see `tenant-cascade.spec.ts` |
+| Tenant ⤴ Users | Deleting tenant cascades to its users (GET each user → 404) | Tenant DELETE handles user removal; explicit user-cleanup is redundant after tenant DELETE (in the example app, `tenant-cascade.spec.ts` proves it) |
 | Tenant onboarding ⤴ Mailpit | POST user triggers an invite email | Cleanup order in E2E: emails → users → tenant — see [templates.md § 6](templates.md) |
 
 ### 12.4 Side-effect verification
@@ -488,7 +490,9 @@ A status-200 alone is **never** sufficient evidence that the call did what it cl
 
 ## 13. Resource × method coverage matrix
 
-State of `tests/app/api/**` today. Use as a gap report when planning new specs.
+These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
+
+Build the same matrix for your own specs and use it as a gap report when planning new ones.
 
 | Resource | Spec | List | By-id | POST-create | POST-query | PUT | PATCH | DELETE | 405 (dedicated) | Cascade |
 |----------|------|:----:|:-----:|:-----------:|:----------:|:---:|:-----:|:------:|:----:|:-------:|
@@ -515,13 +519,13 @@ State of `tests/app/api/**` today. Use as a gap report when planning new specs.
 | Tenant onboarding (E2E) | `e2e-tenant-onboarding-flow.spec.ts` | (multi-step POST tenant + POST user + Mailpit + extract link) | | | | | | | | |
 | Tenant cascade (E2E) | `tenant-cascade.spec.ts` | (DELETE tenant → 404 on each user) | | | | | | | | |
 
-**405 drift — resolved (2026-06-24).** All four specs that previously lacked a dedicated 405 block (`admin-tenants`, `admin-users`, `user`, `admin-realms`) now have one; `user` was the last, closed in this PR. No 405 drift remains across `tests/app/api/**`.
+A CRUD row without a dedicated 405 block is drift: add one (see § 11).
 
 ---
 
 ## 14. Test-name templates per verb
 
-The project's convention (encoded in [SKILL.md](SKILL.md)) is:
+The convention (encoded in [SKILL.md](SKILL.md)) is:
 
 ```
 Verify <METHOD> <path> returns <status> [with <reason>]
@@ -536,7 +540,7 @@ Verify <METHOD> <path> returns <status> [with <reason>]
 | POST-create happy | `Verify POST /<resource>s creates <resource> and GET reflects it` (or `... returns 201 with valid schema`) | ``Verify POST /jobs creates `export` job with all required fields and returns 201`` |
 | POST-create negative | `Verify POST /<resource>s returns <status> with <reason>` | `Verify POST /jobs returns 400 with empty body` |
 | POST-query | `Verify POST /<resource>s/<query-action> returns <status> for <subject>` | `Verify POST /run-stats/aggregate returns 200 for each job type` |
-| PUT | `Verify PUT /<resource>s/{id} <semantic>` | `Verify PUT /assets/{id} replaces all fields and clears omitted ones` (when added) |
+| PUT | `Verify PUT /<resource>s/{id} <semantic>` | `Verify PUT /assets/{id} replaces all fields and clears omitted ones` (hypothetical — the example app has no PUT) |
 | PATCH per-field | `Verify PATCH /<resource>s/{id} updates <field> and GET reflects change` | `Verify PATCH /jobs/{id} updates runInterval and GET reflects change` |
 | PATCH state-toggle | `Verify PATCH /<resource>s/{id} can <action> and re-<action> a <resource>` | `Verify PATCH /jobs/{id} can deactivate and re-activate a job` |
 | PATCH negative | `Verify PATCH /<resource>s/{id} returns <status> with <reason>` | `Verify PATCH /admin/tenant/{id} with empty body returns 400` |
@@ -549,7 +553,7 @@ Verify <METHOD> <path> returns <status> [with <reason>]
 
 - `should ...` / `it ...` prefixes.
 - Free-form narrative titles ("job created and visible to user").
-- Upstream's behavior-shaped `Verify <action> returns <status> with <reason>` form (used in upstream but not in this project).
+- Upstream's behavior-shaped `Verify <action> returns <status> with <reason>` form (used upstream, not in this convention).
 
 ---
 
@@ -557,7 +561,7 @@ Verify <METHOD> <path> returns <status> [with <reason>]
 
 ### GET-list
 
-- ❌ Asserting `pageInfo.totalElements === <fixed number>` — flaky on a shared dev environment.
+- ❌ Asserting `pageInfo.totalElements === <fixed number>` — flaky on a shared environment.
 - ❌ Asserting exact ordering on sort tests — DB collation differs from JS string sort.
 - ❌ Listing 405 cases inline (`PATCH /jobs`) instead of in the dedicated 405 block.
 
@@ -568,10 +572,10 @@ Verify <METHOD> <path> returns <status> [with <reason>]
 
 ### POST-create
 
-- ❌ Hardcoding the expected status (`201` vs `200`). Match the actual endpoint — admin-tenants returns `200`, jobs returns `201`.
+- ❌ Hardcoding the expected status (`201` vs `200`). Match the actual endpoint — in the example app, admin-tenants returns `200` and jobs returns `201`.
 - ❌ Skipping the GET-after step "to keep the test short." The GET-after **is** the persistence proof.
 - ❌ Pushing the created id onto `createdIds[]` only inside the success branch. Push **before** GET-after — if GET-after fails, the entity still exists and `afterAll` must clean it.
-- ❌ Using `@automation.test` or `@<alt-test-domain>` for Mailpit-bearing creates — Mailpit on test infra catches **only** `@<your-test-domain>`.
+- ❌ Using `@automation.test` or `@<alt-test-domain>` for Mailpit-bearing creates — your Mailpit catches **only** `@<your-test-domain>`.
 
 ### POST-query
 
@@ -609,7 +613,7 @@ Before declaring a CRUD spec done, walk this list. Tick boxes only when the test
 
 ### GET (list)
 
-- [ ] Default pagination assertion (page 1, pageSize 10, length ≤ pageSize).
+- [ ] Default pagination assertion (page 1, the documented default pageSize — 10 in the example app — length ≤ pageSize).
 - [ ] Custom pagination round-trip and `totalPages` math.
 - [ ] pageSize boundary happy path AND just-past-boundary 400.
 - [ ] Sort asc + sort desc (no exact-ordering assertions).
@@ -664,7 +668,7 @@ Before declaring a CRUD spec done, walk this list. Tick boxes only when the test
 - [ ] One test per updatable field with GET-before + PATCH + GET-after (per-field isolation).
 - [ ] At least one test asserts ALL non-touched fields equal `before`.
 - [ ] State toggle round-trip when applicable.
-- [ ] Empty body → 400 (annotate the realm-quirk if applicable).
+- [ ] Empty body → 400.
 - [ ] "One invalid + rest valid" per field → 400.
 - [ ] Immutable fields rejected or silently ignored (assert via GET-after).
 - [ ] Invalid id format → 400; non-existent id → 404 (annotate the jobs-quirk if applicable).
@@ -681,7 +685,7 @@ Before declaring a CRUD spec done, walk this list. Tick boxes only when the test
 - [ ] Non-existent id → 404 (distinct test from re-DELETE).
 - [ ] Cross-tenant 404 (in the dedicated cross-tenant spec).
 - [ ] PATCH-after-DELETE → 404 (one test in this block).
-- [ ] Cascade verified for parent resources (separate cascade spec, see `tenant-cascade.spec.ts`).
+- [ ] Cascade verified for parent resources (separate cascade spec, e.g. the example app's `tenant-cascade.spec.ts`).
 - [ ] 409 conflict for child-still-bound parent (worker-with-job) — and `cleanupWorkersAndJobs` is wired in `afterAll`.
 - [ ] 401 (no token), 401-or-403 per § 12.2 wrong-realm/wrong-scope row, 403 (ZERO), 405 (collection path covered in 405 block).
 

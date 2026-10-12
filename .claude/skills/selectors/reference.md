@@ -82,6 +82,8 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 
 ## 2. ARIA role catalog (most-used in this framework)
 
+These are the invented example app's role usages. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
+
 `role` argument to `getByRole`. Roles toward the top of the table are the most reliable in component libraries built on Radix primitives (used directly or through a component kit).
 
 | Role | When the UI uses it | Common `name` examples |
@@ -97,16 +99,16 @@ A `Locator` itself is lazy — it resolves on each action or assertion. The meth
 | `checkbox` | Native checkboxes / Radix checkbox primitives | scoped under a row/section (`worker-location-checkbox`) |
 | `switch` | Radix `Switch` (auto-refresh toggle) | "Auto-refresh" — toggled via `aria-checked` / `data-state` |
 | `radio` | Chart timeframe selector (`pages/app/JobsPage.ts` `getChartTimeframeButton`) | "5m", "15m", "1h", "6h", "24h", "7d" |
-| `dialog` | Confirmation / delete dialogs (Radix dialogs expose the role) | `getByRole('dialog', { name })` first; the testids (`delete-job-dialog`, `delete-worker-dialog`) are the fallback, and testid-first page objects are drift to fix on next touch |
-| `table` | Native tables — not queried by role today; table roots are anchored on the `data-table` testid (`pages/baseClasses/DataTableBase.ts`) | `getByRole('table')` first (with `{ name }` if there are several); `getByTestId('data-table')` is the anchor fallback — `DataTableBase` uses the testid today, drift to fix on next touch |
+| `dialog` | Confirmation / delete dialogs (Radix dialogs expose the role) | `getByRole('dialog', { name })` first; the testids (`delete-job-dialog`, `delete-worker-dialog`) are the fallback. If a page object leads with the testid where the role works, that is drift: switch it to the role |
+| `table` | Native tables — in the example app, table roots are anchored on the `data-table` testid (`DataTableBase`) | `getByRole('table')` first (with `{ name }` if there are several); `getByTestId('data-table')` is the anchor fallback. If a base class anchors on the testid where the role works, that is drift: switch it to the role |
 | `row` | Native `<tr>` — per-row anchors use the `table-row-<id>` testid prefix instead | `getByRole('row').filter({ has: getByRole('cell', { name: id, exact: true }) })` first; the `table-row-<id>` testid is the fallback when the business id isn't rendered in a cell |
 | `cell` | Native `<td>` (used in `pages/baseClasses/DataTableBase.ts` `noResultsMessage`) | `getByRole('cell', { name: /no results/i })` |
 | `columnheader` | Native `<th>` — `dataTable.getByRole('columnheader', { name })` in the `verifyTableColumns` methods of `pages/app/JobsPage.ts`, `WorkersPage`, `NotificationRulesPage`, `InventoryPage` | column name (`"Outcome"`, `"Status"`, `"Name"`, `"Type"`, `"Target"`, `"Interval"`, `"Action"`). The "Outcome" column renders the `job-status-<jobStatus>` badge and `outcome-filter` filters by `JobStatus`; the "Status" column, `status-filter` and `sort-header-status` are the enabled/disabled toggle. |
 | `listbox` | Radix select content / page-size dropdown content | usually closed-state assertion (`toBeHidden`) after option pick |
-| `img` | Images with `alt` — no current callers in `pages/`; prefer a testid when the first one ships | — |
+| `img` | Images with `alt` — no callers in the example app's `pages/`; prefer a testid when you add the first one | — |
 | `alert` / `status` | Validation errors announce as `alert`; Sonner toasts render as `status` | `getByRole('alert')` / `getByRole('status')` filtered by text; the `[data-sonner-toast]` attribute filter is the fallback (Recipe 5) |
 
-Roles **not** used in this framework today (don't claim them in new code without checking the markup):
+Roles the example app does **not** use (don't claim them in new code without checking the markup):
 
 - `tabpanel`, `banner`, `tablist` — tabs are present in the `export` expanded view but the panel/list roles are not consistently emitted by the Radix `Tabs` primitive. If you're tempted to write `getByRole('tabpanel')`, look for a stable `data-testid` first (e.g. `export-expanded-view`).
 
@@ -165,30 +167,32 @@ All return `Promise<void>`, all auto-retry until the configured timeout. Negate 
 | `await page.waitForLoadState('networkidle')` | Avoid. The Playwright team discourages this — long-polling/analytics traffic can keep the network busy forever. Rely on `expect(loc).toBe…` to auto-wait, including on a newly opened popup. |
 | `await page.waitForLoadState('domcontentloaded')` | OK on a freshly-opened popup before the first assertion; redundant on the main page in most flows. |
 
-`waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — see `pages/app/JobsPage.ts` `clickManualRefreshAndWaitForRefresh`.
+`waitForResponse` is the canonical pattern after a POST/PATCH/DELETE click in this framework — for example `JobsPage.clickManualRefreshAndWaitForRefresh` in the example app.
 
 ### 3.6 Assertion options
 
-All assertions accept `{ timeout?: number }`. The default is project-wide (`playwright.config.ts`). An explicit timeout is always a named budget from `appConfig.timeouts` — never a number (the full list and typical values: `config` skill § Timeout budgets). The tiers used in this framework:
+All assertions accept `{ timeout?: number }`. The default is project-wide (`playwright.config.ts`). An explicit timeout is always a named budget from `appConfig.timeouts` — never a number (the full list and typical values: `config` skill § Timeout budgets). The tiers used in this framework, with method examples from the example app's `JobsPage`:
 
 | Budget | Where it's used | Purpose |
 |-------|-----------------|---------|
 | (default) | The vast majority of assertions | Trust the project default; do not override |
-| `fastFail` | Inner clicks and assertions inside an `expect(async () => { … }).toPass()` retry block — e.g. in `pages/app/JobsPage.ts` `openRowActionMenu`; Radix select content visible after a trigger click | Fail fast inside a polling loop; the outer `retryBlock` owns the real budget |
-| `uiResponse` | Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — see `pages/app/JobsPage.ts` `verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
-| `persist` | Sheet "save enabled" / sheet-hidden after submit; new-row and toast visibility after create — see `pages/app/JobsPage.ts` `expectJobListed`, `expectSuccessToastForJob` | Backend creates that include validation + persistence + table refresh |
+| `fastFail` | Inner clicks and assertions inside an `expect(async () => { … }).toPass()` retry block — e.g. `JobsPage.openRowActionMenu`; Radix select content visible after a trigger click | Fail fast inside a polling loop; the outer `retryBlock` owns the real budget |
+| `uiResponse` | Action-revealed elements after a click that triggers an XHR (row appearing, dialog closing, side-nav loading) — e.g. `JobsPage.verifyTableHasRows`, `selectChartTimeframe` | Give a network round-trip a comfortable budget without ballooning the whole suite |
+| `persist` | Sheet "save enabled" / sheet-hidden after submit; new-row and toast visibility after create — e.g. `JobsPage.expectJobListed`, `expectSuccessToastForJob` | Backend creates that include validation + persistence + table refresh |
 | `retryBlock` | Outer budget on `expect(async () => { … }).toPass(...)` blocks that retry a small group of assertions — `expandRow`, `collapseRow` | Wraps fast-fail inner waits |
-| `longPoll` | **Reserved for `waitForResponse(...)` and long-poll run-stat assertions** — `pages/app/JobsPage.ts` `clickManualRefreshAndWaitForRefresh` | A slow endpoint, not a slow locator |
+| `longPoll` | **Reserved for `waitForResponse(...)` and long-poll run-stat assertions** — e.g. `JobsPage.clickManualRefreshAndWaitForRefresh` | A slow endpoint, not a slow locator |
 | `firstData` | The very first run-stats wait in functional detail-view specs (see [`recipes.md` § 18](recipes.md)) | An asynchronous pipeline producing its first result |
 
 Rules of thumb:
 - Don't override the timeout unless you can point at an existing assertion in `pages/**` or `tests/**` doing the same thing for the same reason.
 - If you reach for `longPoll` on a locator assertion, stop — the right tool is `waitForResponse(...)` for the underlying call, then a default-timeout `expect(...)` once it returns.
-- `expect(loc).not.toBeVisible(...)` and `expect(loc).toBeHidden(...)` already auto-retry until the timeout confirms absence; do **not** invent shorter timeouts for negative checks unless you've measured a real slowdown — there are no examples of that in the codebase.
+- `expect(loc).not.toBeVisible(...)` and `expect(loc).toBeHidden(...)` already auto-retry until the timeout confirms absence; do **not** invent shorter timeouts for negative checks unless you've measured a real slowdown.
 
 ## 4. Framework testid taxonomy
 
-Conventions observed across `pages/`. Follow the same naming when adding new test ids.
+These are the invented example app's testids. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
+
+Follow the same naming shapes when adding new test ids.
 
 ### 4.1 General building blocks
 
@@ -209,7 +213,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Pattern | Meaning |
 |---------|---------|
 | `data-table` | The table root — anchor for `tableRows` and `noResultsMessage` in `pages/baseClasses/DataTableBase.ts` |
-| `table-row-<id>` | Per-row root — a **prefix** testid, matched via `[data-testid^='table-row-']` under `dataTable` (`pages/baseClasses/DataTableBase.ts`:29). There is no bare `table-row` testid. |
+| `table-row-<id>` | Per-row root — a **prefix** testid, matched via `[data-testid^='table-row-']` under `dataTable` (`DataTableBase.tableRows`). There is no bare `table-row` testid. |
 | `table-cell-<columnId>` | Per-cell testid — `cellForRow(row, columnId)` / `getColumnTexts(columnId)` in `DataTableBase` |
 | `expanded-row` | Per-row sibling rendered when a row is expanded — exclude with `:not([data-testid="expanded-row"])` when filtering by `hasText` |
 | `job-actions-<id>` | Per-row "…" action button — selected with prefix CSS: `[data-testid^='job-actions-']` |
@@ -233,7 +237,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | Pattern | Meaning |
 |---------|---------|
 | `filter-total`, `filter-passing`, `filter-degraded`, `filter-failing`, `filter-paused` | Job-status filter cards (top of the jobs list). `filter-total` counts the jobs shown in the four job-status cards. |
-| `filter-active`, `filter-inactive` | **Deprecated** — replaced by job-status cards above; existing getters in `pages/app/JobsPage.ts` carry `@deprecated` JSDoc |
+| `filter-active`, `filter-inactive` | **Deprecated** — replaced by job-status cards above; their getters on `JobsPage` carry `@deprecated` JSDoc |
 | `status-card` | Workers-page status cards (×4, scoped by title text: "Total Workers", "Online", "Offline", "Provisioning") |
 | `status-filter`, `type-filter`, `outcome-filter` | Toolbar filter triggers (Radix select trigger; click to open; pick option via `getByRole('option')`). The "Outcome" column renders the `job-status-<jobStatus>` badge and `outcome-filter` filters by `JobStatus`; the "Status" column, `status-filter` and `sort-header-status` are the enabled/disabled toggle. |
 
@@ -284,7 +288,7 @@ Conventions observed across `pages/`. Follow the same naming when adding new tes
 | `export` record stats sub-labels | Inside `record-statistics-card`: **Scanned**, **Written**, **Skipped** (no individual testids — assert by text) |
 | `export` empty state | Text: `"No Export Run Stats Available"`, `"Run stats will appear once the job has completed its first run."` |
 | `job-details-job-status` | Job-status indicator inside the details sheet |
-| Timing segment dots | **No individual testid yet** — assertions fall back to `span.rounded-full` (brittle). FE improvement request: add `data-testid="timing-segment-{slug(label)}"` on each legend item. |
+| Timing segment dots | **No individual testid** — assertions fall back to `span.rounded-full` (brittle). Ask the frontend owners for `data-testid="timing-segment-{slug(label)}"` on each legend item. |
 
 ### 4.8 Login / auth
 
@@ -344,8 +348,8 @@ When you cannot find an element via role/label/placeholder/text/testid:
 | `[role="switch"]` | Radix `Switch` | Auto-refresh toggle (assert via `aria-checked`) |
 | `[data-state="checked"]` / `[data-state="open"]` / `[data-state="on"]` | Radix state attribute on checkboxes, selects, dialogs, toggle groups | Active-state assertion (chart timeframe `data-state="on"`); checkbox state |
 | `[data-sonner-toast]` | Sonner toast container | Toast targeting (Recipe 5) — multiple toasts stack |
-| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Testids the app's select wrapper puts on Radix `SelectContent` / `SelectItem` (Radix itself emits no testids) | Drill into an open Radix select dropdown — see `pages/app/JobsPage.ts` `selectRunIntervalOption` |
-| `[data-testid^='table-row-']` | Per-row anchor (prefix — rows carry `table-row-<id>`) | Row collection — `tableRows` getter in `pages/baseClasses/DataTableBase.ts`:29 |
+| `[data-testid="select-content"]`, `[data-testid="select-item"]` | Testids the app's select wrapper puts on Radix `SelectContent` / `SelectItem` (Radix itself emits no testids) | Drill into an open Radix select dropdown — see `JobsPage.selectRunIntervalOption` in the example app |
+| `[data-testid^='table-row-']` | Per-row anchor (prefix — rows carry `table-row-<id>`) | Row collection — the `tableRows` getter on the example app's `DataTableBase` |
 
 These are tolerated because the Radix role and state attributes and Sonner's `data-sonner-toast` are public API of those libraries, and the app-added testids are a contract with the frontend. Treat any other CSS class as private.
 
@@ -381,7 +385,7 @@ this.tableRows.first().locator('.h-10.w-full.overflow-hidden');   // tolerated o
 
 ## 6. FrameLocator API
 
-This framework does not embed iframes today. The reference below is **prescriptive** — apply when the first iframe ships (e.g. an embedded Keycloak login, third-party billing widget, in-app help docs).
+The example app embeds no iframes, so the reference below is **prescriptive** — apply it when your app embeds one (e.g. an embedded Keycloak login, third-party billing widget, in-app help docs).
 
 | Method | Returns |
 |--------|---------|
@@ -403,12 +407,14 @@ After `frameLocator` is captured, every selector inside the frame uses the same 
 
 ### 7.1 Where page objects live
 
+These are the invented example app's page objects. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
+
 | Path | Use |
 |------|-----|
-| `pages/app/<Page>.ts` | Top-level page (one URL) — 14 classes today: `JobsPage`, `WorkersPage`, `RunStatsPage`, `DashboardPage`, `CreateJobPage`, `SideNavigation`, plus the newer `NotificationsPage`, `InventoryPage`, `NotificationRulesPage`, `CreateNotificationRulePage`, `JobRunStatsViewPage`, `SettingsProfilePage`, `ProfileSettingsPage`, `ReportsPage` |
-| `pages/baseClasses/<x>.ts` | Shared base for multiple page classes — only `BasePage` and `DataTableBase` exist |
+| `pages/app/<Page>.ts` | Top-level page (one URL) — e.g. `JobsPage`, `WorkersPage`, `RunStatsPage`, `DashboardPage`, `CreateJobPage`, `SideNavigation`, `NotificationsPage`, `InventoryPage`, `NotificationRulesPage`, `CreateNotificationRulePage`, `JobRunStatsViewPage`, `SettingsProfilePage`, `ProfileSettingsPage`, `ReportsPage` |
+| `pages/baseClasses/<x>.ts` | Shared base for multiple page classes — `BasePage` and `DataTableBase` |
 | `pages/util/<x>.ts` | Cross-area utilities (`LoginPage` lives here because Keycloak login is shared across product surfaces) |
-| `pages/<area>/<feature>.iframe.ts` | iframe wrapper (none today; reserve this path for the first one) |
+| `pages/<area>/<feature>.iframe.ts` | iframe wrapper (the example app has none; use this path for the first one) |
 
 ### 7.2 Class shape
 
@@ -441,7 +447,7 @@ export class XPage extends BasePage {
 }
 ```
 
-Constructor shape — observed conventions across `pages/**`:
+Constructor shape — the conventions, with examples from the example app's `pages/**`:
 
 | Shape | When to use | Examples |
 |-------|-------------|----------|

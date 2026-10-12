@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 2.0.4
+version: 2.0.5
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -16,11 +16,11 @@ Generate new Playwright spec files that follow the project's established convent
 
 ## Why This Skill Exists
 
-Every spec file in this project follows a strict structure: specific imports, tags, Qase integration, cleanup patterns, and naming conventions. When you scaffold by hand (or let the agent freestyle), you get inconsistency — wrong imports, missing cleanup, forgotten Zod validation, incorrect tags. Then someone has to fix it in review.
+Every spec file follows a strict structure: specific imports, tags, Qase integration, cleanup patterns, and naming conventions. When you scaffold by hand (or let the agent freestyle), you get inconsistency — wrong imports, missing cleanup, forgotten Zod validation, incorrect tags. Then someone has to fix it in review.
 
 This skill exists so that **every new spec starts identical** regardless of who (or what) creates it. The templates below are not suggestions — they're the canonical starting point. Deviation means bugs that slip past CI.
 
-The steps are ordered deliberately: determine type → read the rule → study a real example → generate → create supporting files → update the routing section. Skipping "study an existing spec" (Step 3) is the #1 cause of specs that look right but violate project patterns in subtle ways.
+The steps are ordered deliberately: determine type → read the rule → explore → study an existing spec → generate → create supporting files → update the routing section. Skipping "study an existing spec" (Step 4) is the #1 cause of specs that look right but violate project patterns in subtle ways.
 
 ## Critical
 
@@ -43,7 +43,9 @@ Ask the user (or infer from context) which type of spec to create:
 | **E2E** | `tests/app/e2e/<domain>/` | `@App-E2E` | `page-objects` + `selectors` skills |
 | **Functional** | `tests/app/functional/<domain>/` | `@App-regression` | `page-objects` + `selectors` skills |
 
-Specs are grouped into **service-domain subfolders** (mirroring the API Hub): `tenant-service/`, `jobs-service/`, `notification-service/`, `shared/`. Within a domain, add a sub-subfolder (`jobs/`, `workers/`, `run-stats/`) only when that domain has 10+ specs in one test type — `jobs-service/` uses these in all three test types. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
+These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
+
+Specs are grouped into **service-domain subfolders**: one per backend service, plus `shared/`. In the example app these are `tenant-service/`, `jobs-service/`, `notification-service/` and `shared/`. Within a domain, add a sub-subfolder (in the example app, `jobs/`, `workers/`, `run-stats/` under `jobs-service/`) only when that domain has 10+ specs in one test type. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
 
 ## Step 2: Read the Convention Rule
 
@@ -61,10 +63,10 @@ This step prevents writing tests against an imagined API or UI that doesn't matc
 
 ## Step 4: Study an Existing Spec
 
-Read a comparable existing spec to match the established patterns:
+Glob your repo for the nearest spec of the same type and read it, to match the established patterns. In the example app, for instance:
 
-| For this type... | Read this reference file... |
-|------------------|-----------------------------|
+| For this type... | Nearest spec (example app) |
+|------------------|----------------------------|
 | API (jobs) | `tests/app/api/jobs-service/jobs/email-job.spec.ts` |
 | API (admin) | `tests/app/api/tenant-service/admin-tenants.spec.ts` |
 | E2E (jobs) | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
@@ -91,7 +93,7 @@ import { faker } from "@faker-js/faker";
 // 200 — happy path, schema + business values
 // 400 — per-field omission loop, per-field invalid-type loop, invalid id format
 // 401 — no token; admin token on a tenant-scoped path (wrong realm)
-// 403 — USER_ACCESS_TOKEN_ZERO (commented out under // TODO: FIXME: <TICKET> while unprovisioned)
+// 403 — USER_ACCESS_TOKEN_ZERO (if your environment has no zero-permission user, write the test and comment it out under // TODO: FIXME: <TICKET>)
 // 404 — non-existent id
 // 405 — unsupported verbs (dedicated 405 block)
 // SKIP: 500 — cannot be produced on purpose

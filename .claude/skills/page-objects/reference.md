@@ -1,10 +1,12 @@
 ---
-description: POM key-method catalog and inventory for the platform automation framework
+description: POM key-method catalog and inventory for the invented example app, as a model for your repo's own catalog
 ---
 
 # Page Objects — Reference
 
-Companion file to [`SKILL.md`](SKILL.md). This catalogs **what already exists** on each page object so authors don't reinvent locators / actions that are already there. Update this file when adding a new POM or extending an existing one.
+Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
+
+Companion file to [`SKILL.md`](SKILL.md). A catalog like this one lists what each page object already has, so authors don't reinvent locators / actions that are already there. Keep your repo's catalog in this shape and update it when adding a new POM or extending an existing one.
 
 ## Contents
 
@@ -59,7 +61,7 @@ Lives at `pages/app/JobsPage.ts`.
 - `open()` — navigate to `/jobs` and wait for list-ready signal.
 - `verifyPageLoaded()` — assert `page-jobs` root + table chrome.
 - `getRowByName(name)` → `Locator` — filter table rows by visible text. Excludes `[data-testid="expanded-row"]` to avoid strict-mode double-matches when a row is expanded.
-- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit job`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: appConfig.timeouts.retryBlock })` because the menu trigger occasionally needs a re-click on slow CI. **Drift:** `selectors` allows `toPass` only for reads of a value that legitimately keeps changing; retrying an action with `toPass` hides why the first click didn't land. Fix on next touch: wait for the menu's ready state (trigger enabled, menu visible) before acting.
+- `openRowActionMenu(row, menuItem)` — opens the per-row "…" menu and clicks the named item (`Edit job`, `View details`, `Delete`). Wrapped in `expect(async () => { … }).toPass({ timeout: appConfig.timeouts.retryBlock })` so a re-click can recover a click that didn't open the menu. If an action method retries the action itself with `toPass`, that is **drift**: `selectors` allows `toPass` only for reads of a value that legitimately keeps changing, and the retry hides why the first click didn't land. Wait for the menu's ready state (trigger enabled, menu visible) before acting instead.
 - `searchByName(name)` / `clearSearch()` — **inherited from `DataTableBase`** (debounced fill with re-fill retry + `waitForTableSettled`); `JobsPage` only overrides `get searchInput()`.
 - `expandRow(row)` / `collapseRow(row)` — toggle the expanded-row UI.
 - `getAllJobStatusCounts()` → `{ total, passing, degraded, failing, paused }` — read all 5 job-status stat cards. **Always wrap in `expect(async () => { … }).toPass(...)` when comparing across counters** (see `selectors/patterns.md` P18).
@@ -250,7 +252,7 @@ Lives at `pages/app/ReportsPage.ts`. Extends `BasePage`. Reports page at `/repor
 
 ## `LoginPage` — key methods
 
-Lives at `pages/util/LoginPage.ts`. Targets the **Keycloak login page** with the custom Keycloak theme — selectors match the custom theme at `frontend/keycloak/themes/<theme>/login/login.ftl`.
+Lives at `pages/util/LoginPage.ts`. Targets the **Keycloak login page** with the example app's custom Keycloak theme — selectors match that theme's login template (`frontend/keycloak/themes/<theme>/login/login.ftl` in the example app).
 
 - `open()` — navigate to the Keycloak login URL.
 - `login(email, password)` / `loginAndVerify(email, password)` — fill credentials, submit, wait for redirect.
@@ -260,7 +262,7 @@ Lives at `pages/util/LoginPage.ts`. Targets the **Keycloak login page** with the
 
 ## Base classes (`pages/baseClasses/`)
 
-The directory contains exactly **two** files: `BasePage.ts` and `DataTableBase.ts`.
+The example app keeps two base classes here: `BasePage.ts` and `DataTableBase.ts`.
 
 | Class | File | Used by |
 |---|---|---|
@@ -270,7 +272,7 @@ The directory contains exactly **two** files: `BasePage.ts` and `DataTableBase.t
 ### `DataTableBase` — API
 
 - Table core: `dataTable` (`data-table` testid), `tableRows` (`[data-testid^='table-row-']` under `dataTable`), `noResultsMessage`, `verifyTableHasRows()`.
-- Search: `searchByName(value)` / `clearSearch()` — debounced, URL-synced fill with re-fill retry (`toPass`) + `waitForTableSettled()`. **Drift:** retrying the fill with `toPass` hides why the first fill didn't land (`selectors` allows `toPass` only for reads of a value that keeps changing). Fix on next touch: wait for the search field's ready state before filling.
+- Search: `searchByName(value)` / `clearSearch()` — debounced, URL-synced fill with re-fill retry (`toPass`) + `waitForTableSettled()`. If a search method retries the fill with `toPass`, that is **drift**: the retry hides why the first fill didn't land (`selectors` allows `toPass` only for reads of a value that keeps changing). Wait for the search field's ready state before filling instead.
 - Cells & columns: `cellForRow(row, columnId)` (`table-cell-<columnId>`), `getColumnTexts(columnId)`.
 - Sorting: `getSortHeader(columnId)` (`sort-header-<columnId>`), `clickSortHeader(columnId)`.
 - Pagination getters: `pageSizeSelect` (`page-size-select`), `previousPageButton` / `nextPageButton` (`getByRole('button', { name: 'Previous' | 'Next' })`), `pageInfoText`, `rowCountText`, `rowsPerPageLabel`.
@@ -281,11 +283,11 @@ The directory contains exactly **two** files: `BasePage.ts` and `DataTableBase.t
 
 ## How to update this catalog
 
-When adding or extending a POM, update this file in the same edit batch:
+Your repo's catalog lives in its `CLAUDE.md` or repo-context skill. When adding or extending a POM, update it in the same edit batch:
 
-1. New POM → add a row to § Class inventory + a new section listing key methods.
+1. New POM → add a row to the class inventory + a new section listing key methods.
 2. New action method on an existing POM → add a bullet under the matching section.
 3. New constant exported from a POM file → add to the constants list (e.g., `JOB_TYPE_TITLES` for `DashboardPage`).
-4. New `pages/baseClasses/` component → add a row to § Base classes.
+4. New `pages/baseClasses/` component → add a row to the base classes.
 
-Catalog drift between this file and the actual code is the leading cause of duplicate POM methods being authored. Verify with `grep -r "<methodName>" pages/` before adding a "new" method.
+Drift between the catalog and the code is the leading cause of duplicate POM methods being authored. Verify with `grep -r "<methodName>" pages/` before adding a "new" method.

@@ -1,6 +1,6 @@
 # Fixtures — Recipes
 
-End-to-end wiring scenarios for the most common fixture-related changes. Each recipe is anchored to a real file in this repo. Rules and decisions live in `SKILL.md`; the catalog of what exists lives in `reference.md`.
+End-to-end wiring scenarios for the most common fixture-related changes. Each recipe is anchored to a file in the example app. Rules and decisions live in `SKILL.md`; the example app's catalog lives in `reference.md`.
 
 ---
 
@@ -196,7 +196,7 @@ Decision:
 Steps:
 
 1. Add credentials to `env/.env.example`, your local `env/.env.<environment>`, and the schema in `config/env.ts`.
-2. For an **env token**, extend the `tenantTokens` block in `tests/app/login.setup.ts`:
+2. For an **env token**, extend the token block in your setup file (`tenantTokens` in the example app's `tests/app/login.setup.ts`):
 
 ```typescript
 const tenantTokens = {
@@ -211,7 +211,7 @@ const tenantTokens = {
 };
 ```
 
-The existing loop writes `process.env.USER_ACCESS_TOKEN_READONLY` — writing tokens is the setup project's one sanctioned touch of `process.env`; it reads its credentials from `env` like everything else. Add a `readonly: token("USER_ACCESS_TOKEN_READONLY")` accessor to `tokens` in `config/env.ts` so specs can call `tokens.readonly()`.
+The setup file's token loop writes `process.env.USER_ACCESS_TOKEN_READONLY` — writing tokens is the setup project's one sanctioned touch of `process.env`; it reads its credentials from `env` like everything else. Add a `readonly: token("USER_ACCESS_TOKEN_READONLY")` accessor to `tokens` in `config/env.ts` so specs can call `tokens.readonly()`.
 
 3. For a **storage state**, extend the `users` block; the loop calls `createAppStorageState({...})` and writes the `storageStatePath`.
 4. Each setup test **must** call `qase.ignore()` (setup tests are not real test cases) and import `test` from `fixtures/pom/test-options`.
@@ -241,13 +241,13 @@ export const test = base.extend<{ myService: MyServiceClient }>({
 });
 ```
 
-Wire it into `test-options.ts`: add `import { test as myServiceFixture } from '../services/myservice-fixture';` and append `myServiceFixture` to `mergeTests(...)`. Declare the env vars in `env/.env.example` and the schema in `config/env.ts`, and add the fixture to `reference.md § 1.2`. This mirrors how `mailpit` builds and disposes its own context.
+Wire it into `test-options.ts`: add `import { test as myServiceFixture } from '../services/myservice-fixture';` and append `myServiceFixture` to `mergeTests(...)`. Declare the env vars in `env/.env.example` and the schema in `config/env.ts`, and add the fixture to your repo's fixture list. This mirrors how `mailpit` builds and disposes its own context.
 
 ---
 
 ## Recipe 8 — Add a fixture that depends on `apiRequest`
 
-Trigger: a typed sub-API reused across many specs *and* helpers (rare — the framework prefers helpers; `loginUser` is the only example and is currently unused).
+Trigger: a typed sub-API reused across many specs *and* helpers (rare — the framework prefers helpers; in the example app, `loginUser` is the only one, and no spec uses it).
 
 ```typescript
 // fixtures/services/somecall-fixture.ts
@@ -335,6 +335,6 @@ Promote to a **fixture** only when cleanup must run unconditionally on failure a
 ## See Also
 
 - `SKILL.md` — the rules these recipes implement (composition DAG, keep-body-trivial, teardown-on-failure decision).
-- `reference.md` — the inventory these recipes reference.
+- `reference.md` — the example app's inventory these recipes reference.
 - `api-testing` skill § Three callable shapes — `apiRequest` vs helper vs fixture.
 - `data-strategy` skill — where the seed data in Recipe 2 / 10 comes from.
