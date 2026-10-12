@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.9
+version: 1.0.10
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -153,7 +153,7 @@ User says: *"The `selectors` skill says the create-job button is wrapped in a Ra
 | The string in the i18n message catalog (e.g. `messages/en.json`) doesn't match the rendered UI | The i18n library may apply formatting / pluralization | Open the app via `npx playwright open` and capture the rendered text. Source is the starting point; live app is the final word for translated strings. |
 | The route file path doesn't translate cleanly to a URL | File-based routers have naming conventions (`.$param.tsx`, `_layout.tsx`, `index.tsx`) | Read the path string the route file registers with the router (its route declaration) — that string IS the URL. With no in-file declaration, the generated route tree / route manifest is the source. |
 | Frontend uses both inline literals AND catalog message keys | The i18n message catalog covers only part of the UI | Both are valid sources of truth until every string moves to the catalog — check each string where it is actually emitted. |
-| I want to verify a backend / API claim | Wrong skill | This skill covers the **frontend repo only**. For backend or API contracts, use the OpenAPI spec or read `<sibling-repos>/backend` (the project's `CLAUDE.md` says where its sibling repos live). |
+| I want to verify a backend / API claim | Wrong skill | This skill covers the **frontend repo only**. For backend or API contracts, use the OpenAPI spec or read `<sibling-repos>/backend` (the project's `CLAUDE.md` says where its sibling repos live, if it records them; otherwise ask). |
 
 ## See Also
 
@@ -162,4 +162,4 @@ User says: *"The `selectors` skill says the create-job button is wrapped in a Ra
 - **`playwright-cli`** — live-app exploration via `npx playwright open`. **Pair with this skill:** source for stable artifacts; live app for runtime behavior.
 - **`api-testing`** — sister concern (API specs / Zod schemas). For backend contracts use OpenAPI; this skill is frontend-only.
 - **`refactor-values`** — when a value cascades because of a frontend rename, use this skill to confirm the new value, then `refactor-values` to update QA-side consumers.
-- **The project's `CLAUDE.md`** — where the sibling repos live and how they relate; the `git pull` rule for them is in the constitution, under § Routed Skill Index. This skill is the frontend-specific application.
+- **The project's `CLAUDE.md`**, if it records them — where the sibling repos live and how they relate (otherwise ask); the `git pull` rule for them is in the constitution, under § Routed Skill Index. This skill is the frontend-specific application.
