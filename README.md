@@ -27,6 +27,7 @@ Three layers, loaded progressively:
 | **Constitution** | `.claude/CLAUDE.md` | Always. MUST / SHOULD / WON'T tables, a mandatory pre-edit checklist, and the routing index. |
 | **Skills** | `.claude/skills/<name>/SKILL.md` | On demand, when the task matches. Deep how-to for one concern each. |
 | **Personas** | `.claude/commands/*.md` | Manually, as slash commands. |
+| **Workflows** | `.claude/workflows/*.js` | When you ask Claude Code to run one by name. `review-pr` is the independent review every PR owes: critics look for problems, and a skeptic tries to refute each finding. |
 
 The constitution is deliberately short and absolute; skills carry the detail. A skill may extend a constitutional rule and may never contradict one.
 
@@ -323,6 +324,14 @@ cp -r ai-native-qa-toolkit/.claude/skills/*    ~/.claude/skills/
 ```bash
 cp -r ai-native-qa-toolkit/.claude/commands/*  ~/.claude/commands/
 ```
+
+The `review-pr` workflow is loaded from the `.claude/workflows/` folder of the repository you work in, so copy it into each repository where you want it. It needs Claude Code's Workflow tool:
+
+```bash
+mkdir -p .claude/workflows && cp <path-to>/ai-native-qa-toolkit/.claude/workflows/review-pr.js .claude/workflows/
+```
+
+Then ask Claude Code to *run the review-pr workflow for PR 66*. It is read-only: it reviews and reports, and fixing, commenting and merging stay with you. One run starts a critic per lens and a skeptic per finding, so it costs far more than a single review. Its first two runs, on #65 and #66, used 24 and 21 agents and took about 115 and 45 minutes; the longer one shared the machine with other workflows. Those numbers were measured once each and no validator checks them.
 
 If you already have a `~/.claude/CLAUDE.md`, merge rather than overwrite — the constitution is the routing table, and clobbering it loses your own rules.
 
