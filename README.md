@@ -56,7 +56,7 @@ The toolkit argues that AI output must be proven rather than asserted, so the sk
 | Four-call lifecycle spec | **3** | **0** |
 | **Total** | **17** violations / 416 lines | **0** violations / 742 lines |
 
-The skill arm produced 78% more code and broke no rule. The baseline invented a tag that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a test body, and left a test untagged — conventions it had no way to know.
+The skill arm produced 78% more code and broke no rule. The baseline invented a tag that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a test body — conventions it had no way to know.
 
 > At the time `@api` was not whitelisted; it is now the standard tag, so the tag part of this result is out of date. Not re-measured — see [BENCHMARK.md](BENCHMARK.md).
 

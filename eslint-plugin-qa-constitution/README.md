@@ -53,7 +53,7 @@ rules: {
     specPattern: '\\.spec\\.ts$',          // which files count as specs
   }],
   'qa-constitution/single-tag-on-test': ['error', {
-    whitelist: ['@critical', '@smoke', '@sanity', '@regression', '@api', '@integration', '@e2e'],  // the standard tags (test-standards)
+    whitelist: ['@critical', '@smoke', '@sanity', '@regression', '@api', '@integration', '@e2e'],  // the standard tags (test-standards); a repo that kept its own set lists that set here
   }],
   'qa-constitution/no-pom-instantiation-in-test': ['error', {
     pattern: '(Page|Component|Client)$',   // what counts as an injectable
