@@ -1,6 +1,6 @@
 ---
 name: k6-load-testing
-version: 1.1.3
+version: 1.1.4
 description: Author and run k6 load, stress, spike, and soak tests in TypeScript against the platform APIs — bundler setup, executors, thresholds, custom metrics, auth, Grafana/InfluxDB output. Use for any performance-testing request. Triggers — "load test", "stress test", "spike", "soak", "k6", "SLO", "performance benchmark". Not for functional API tests (api-testing).
 metadata:
   category: domain
@@ -228,7 +228,7 @@ Copy this checklist for every new perf test:
 
 ## Integration with this repo
 
-- **Tags (Qase / reporting):** use `tags: { testType: "load", service: "jobs-api" }` in `options` — matches the `@App-*` tagging convention for filterability.
+- **Tags (Qase / reporting):** use `tags: { testType: "load", service: "jobs-api" }` in `options` — mirrors the test suite's tags, so load results can be filtered the same way.
 - **Env loading:** mirror `env/.env.*` — perf tests read from `__ENV` (set via shell or `--env KEY=VAL`). Do **not** use `dotenv` — k6 runs in Goja and doesn't support Node modules.
 - **Fixtures:** put JSON/CSV under `tests/perf/fixtures/`. Load via `SharedArray` (never `require`/`import` runtime data).
 - **Zod validation:** skip it in perf tests — Zod schemas are heavy and distort measurements. Trust the API contract, verify only with lightweight `check()` calls on status + critical fields.

@@ -4,7 +4,7 @@ import { z } from 'zod';
 const Project = z.object({ id: z.string() });
 const token = process.env.API_TOKEN;
 
-// test('@App-regression old disabled case', async () => { await go(); });
+// test('@regression old disabled case', async () => { await go(); });
 
 test.fixme(true, 'broken until the API is fixed');
 

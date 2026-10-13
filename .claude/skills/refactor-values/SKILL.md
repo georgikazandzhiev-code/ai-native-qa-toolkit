@@ -87,9 +87,9 @@ npx eslint .
 
 Then the affected Playwright tests. In the example app, `package.json` exposes these scripts:
 
-- `npm run app-api` — runs `--grep @App-API` on `app-chromium`. Right call when the value is referenced from API specs.
-- `npm run app-e2e` — runs `--grep @App-E2E`. Right call when the value flows through end-to-end specs.
-- `npm run app-regression` — runs `--grep @App-regression` (lowercase, as the example app's `package.json` greps it). Right call for functional specs.
+- `npm run app-api` — runs `--grep @api` on `app-chromium`. Right call when the value is referenced from API specs.
+- `npm run app-e2e` — runs `--grep @e2e`. Right call when the value flows through end-to-end specs.
+- `npm run app-regression` — runs `--grep @regression`. Right call for functional specs.
 - `npx playwright test <path>` — when the change touches a single spec file, run that file directly.
 
 Do not raise timeouts, weaken a schema, or wrap in `try/catch` to make a failing test green — load the `debugging` skill.
@@ -196,7 +196,7 @@ Generic shape: a UI message enum's value changes (e.g. `"Invalid email or passwo
 | Qase report shows two separate suites after a `SUITES.*` value change | The old suite still has historical results; the new value created a fresh suite | Coordinate with the Qase project owner to merge or rename the suite directly in the Qase UI. Decide before merging the code change. |
 | Pagination test fails after editing `defaultPageSize` in `worker.json` | A spec hardcoded the integer (e.g. `expect(body.pageInfo.pageSize).toBe(10)`) instead of `workerData.defaultPageSize` | Replace the literal with the import. Add this finding to the PR description so the reviewer knows the cleanup happened. |
 | Husky pre-commit hook fails after a value rename | Lint/format/type issue in a touched file | Fix the underlying issue. Never `--no-verify`. |
-| `npm run app-api` passes but `npm run app-e2e` fails | The value also flows through end-to-end paths and the `--grep` filter on `@App-API` skipped them | Run `npm run app-e2e` and `npm run app-regression` too whenever the value spans multiple test types. |
+| `npm run app-api` passes but `npm run app-e2e` fails | The value also flows through end-to-end paths and the `--grep` filter on `@api` skipped them | Run `npm run app-e2e` and `npm run app-regression` too whenever the value spans multiple test types. |
 
 ## See Also
 

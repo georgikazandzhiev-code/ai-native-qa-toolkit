@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 2.1.2
+version: 2.1.3
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -89,7 +89,7 @@ done
 Then run it inside its own suite tag, at the worker count CI uses (from the repository's own `CLAUDE.md`):
 
 ```bash
-npx playwright test --grep "@App-regression" --workers=<CI worker count>
+npx playwright test --grep "@regression" --workers=<CI worker count>
 ```
 
 Compare results:
@@ -106,7 +106,7 @@ Compare results:
 
 ```bash
 # Split the suite at the failing spec, run only what's BEFORE
-npx playwright test --grep "@App-regression" --workers=1 \
+npx playwright test --grep "@regression" --workers=1 \
   --grep-invert "<failing-spec-name>"
 ```
 
@@ -140,7 +140,7 @@ done
 The isolated runs stay at `--workers=1` because isolating is their purpose. Then run the spec inside its tag at the worker count CI uses (the repository's own `CLAUDE.md` states it; `--workers=1` for a suite that is not parallel-safe):
 
 ```bash
-npx playwright test --grep "@App-regression" --workers=<CI worker count>
+npx playwright test --grep "@regression" --workers=<CI worker count>
 ```
 
 Only declare done when 5 consecutive isolated test runs and 1 in-suite test run all pass.
@@ -242,7 +242,7 @@ The most common per-test flake causes, most common first (rough and unmeasured �
 
 ### Example 1 — Cross-test interference (cleanup ordering)
 
-**Symptom:** `http-job-crud.spec.ts > "creates a new HTTP job"` passes in isolation but fails in `@App-regression` with a `409 Conflict` on the create POST.
+**Symptom:** `http-job-crud.spec.ts > "creates a new HTTP job"` passes in isolation but fails in `@regression` with a `409 Conflict` on the create POST.
 
 **Triage:**
 1. Step 2 isolation: 5/5 green → confirms not a per-test bug.
@@ -285,7 +285,7 @@ await expect(notificationsPage.firstNotificationRow).toBeVisible();
 |---------|-------|-----|
 | "Test passed locally 5× but still fails in CI" | CI is slower; absolute-timing assumptions fail. | Replay the CI trace (`show-trace`), look for the action that's slow in CI. Often the fix is the same as a per-test race (use `waitForResponse`). |
 | "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check the setup project (in the example app, `tests/app/login.setup.ts`). Restart Playwright workers between tags (CI does, local may not). |
-| "Spec is `@App-Critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to `@App-regression` if the run-time budget is the issue; don't retry it under Critical. |
+| "Spec is `@critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to `@regression` if the run-time budget is the issue; don't retry it under Critical. |
 | "Flake only happens while the worker resource running `export` jobs flaps between Online and Offline" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out under `// TODO: FIXME: <ENV-TICKET>`. |
 
 ## See Also

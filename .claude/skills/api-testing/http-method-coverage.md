@@ -122,7 +122,7 @@ Use this table to know up front what you owe before writing a spec. Each `✓` i
 ```typescript
 test(
   "Verify GET /<resource>s returns 200 with valid schema and default pagination",
-  { tag: "@App-API" },
+  { tag: "@api" },
   async ({ apiRequest }) => {
     qase.suite(SUITES.API_<RESOURCE>);
     // qase.id(N);
@@ -364,7 +364,7 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
 
   test(
     "Verify unsupported methods on /<resource>s return 405",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
       // qase.id(N);
@@ -386,7 +386,7 @@ test.describe("405 Method Not Allowed - Unsupported HTTP methods", () => {
 
   test(
     "Verify unsupported methods on /<resource>s/{id} return 405",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
       // qase.id(N);

@@ -289,7 +289,7 @@ Always import as `import { faker } from '@faker-js/faker'`.
 The framework does NOT globally seed faker. To pin a flaky test for diagnosis:
 
 ```typescript
-test('flaky path', { tag: '@App-API' }, async ({ apiRequest }, testInfo) => {
+test('flaky path', { tag: '@api' }, async ({ apiRequest }, testInfo) => {
     const seed = testInfo.testId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     faker.seed(seed);
     // the body below now gets the same faker values on every run

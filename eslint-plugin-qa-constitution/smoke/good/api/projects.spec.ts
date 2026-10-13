@@ -19,12 +19,12 @@ async function assertProjectListShape(body: unknown): Promise<void> {
 }
 
 // TODO: FIXME: QA-118 — re-enable once archiving twice returns 409 instead of 500.
-// test('@App-API archiving a project twice returns 409', async ({ api }) => {
+// test('@api archiving a project twice returns 409', async ({ api }) => {
 //   const second = await api.archive(projectId);
 //   expect(second.status()).toBe(409);
 // });
 
-test('@App-API creates a project and returns the created record', async ({ request }) => {
+test('@api creates a project and returns the created record', async ({ request }) => {
   const response = await request.post('/api/v1/projects', {
     headers: { Authorization: `Bearer ${tokens.full()}` },
     data: { name: 'contract check' },
@@ -34,7 +34,7 @@ test('@App-API creates a project and returns the created record', async ({ reque
   expect(Project.parse(await response.json())).toBeTruthy();
 });
 
-test('@App-API rejects each required field when it is omitted', async ({ request }) => {
+test('@api rejects each required field when it is omitted', async ({ request }) => {
   for (const field of ['name'] as const) {
     const response = await request.post('/api/v1/projects', {
       headers: { Authorization: `Bearer ${tokens.full()}` },
@@ -45,7 +45,7 @@ test('@App-API rejects each required field when it is omitted', async ({ request
   }
 });
 
-test('@App-Integration keeps the id of a project whose creation response failed', async ({ request }) => {
+test('@integration keeps the id of a project whose creation response failed', async ({ request }) => {
   let createdId: string | undefined;
 
   // eslint-allow-cleanup-capture — the id is needed for teardown even when the call throws.
@@ -63,11 +63,11 @@ test('@App-Integration keeps the id of a project whose creation response failed'
 });
 
 // eslint-asserts-via-helper — the assertion lives in assertProjectListShape().
-test('@App-Sanity the project list matches the contract', async ({ api }) => {
+test('@sanity the project list matches the contract', async ({ api }) => {
   await assertProjectListShape(await api.listProjects());
 });
 
-test('@App-Smoke renames the profile', async ({ settingsPage }) => {
+test('@smoke renames the profile', async ({ settingsPage }) => {
   await settingsPage.rename('renamed');
   await settingsPage.expectSaved();
 });
@@ -79,7 +79,7 @@ test.describe('profile journey', () => {
   test.setTimeout(timeouts.e2eJourney);
   test.use({ locale: 'en-US' });
 
-  test('@App-E2E renames the profile and sees it saved', async ({ settingsPage }) => {
+  test('@e2e renames the profile and sees it saved', async ({ settingsPage }) => {
     await settingsPage.rename('journey');
     await settingsPage.expectSaved();
   });
@@ -102,7 +102,7 @@ test.describe('archiving a seeded project', () => {
     });
   });
 
-  test('@App-API archives the seeded project', async ({ api }) => {
+  test('@api archives the seeded project', async ({ api }) => {
     const response = await test.step('WHEN: the project is archived', async () => api.archive(projectId));
     await test.step('THEN: the archive is accepted', async () => {
       expect(response.status()).toBe(200);

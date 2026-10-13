@@ -80,7 +80,7 @@ Use when the task is a multi-step procedure where the agent benefits from tracki
 - [ ] 6. Author the spec from templates.md.
 - [ ] 7. Cover the negative matrix (400, 401, 403, 404, 405, 409).
 - [ ] 8. Wire cleanup in afterEach/afterAll. Jobs before workers.
-- [ ] 9. Run: npx playwright test <spec> --grep "@App-API"; read lints.
+- [ ] 9. Run: npx playwright test <spec> --grep "@api"; read lints.
 ```
 
 ### Step 1: Confirm the path is in config
@@ -174,17 +174,17 @@ For 2-3 branches with short bodies:
 
 2. API workflow:
    - Imports from `fixtures/pom/test-options`
-   - Tag with `@App-API`
+   - Tag with `@api`
    - Read [`api-testing` skill](../../api-testing/SKILL.md) before writing.
 
 3. E2E workflow:
    - Imports from `fixtures/pom/test-options`
-   - Tag with `@App-E2E`
+   - Tag with `@e2e`
    - Read [`page-objects`](../../page-objects/SKILL.md) + [`selectors`](../../selectors/SKILL.md) + [`test-standards`](../../test-standards/SKILL.md) before writing.
 
 4. Functional workflow:
    - Same imports as E2E
-   - Tag with `@App-regression`.
+   - Tag with `@regression`.
 ````
 
 ### 3b — mermaid decision tree

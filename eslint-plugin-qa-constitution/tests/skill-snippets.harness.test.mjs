@@ -188,7 +188,7 @@ check('eslint-disable / eslint-enable directives are not inline config [mutant: 
 
 // ── virtual paths ──
 check('a header comment names the path (even after a ❌ line)', virtualPath('// ❌ BAD — drift\n// config/env.ts\nexport const env = 1;') === 'config/env.ts');
-check('a block declaring tests is a spec', virtualPath("test('@App-API a', async () => {});").endsWith('.spec.ts'));
+check('a block declaring tests is a spec', virtualPath("test('@api a', async () => {});").endsWith('.spec.ts'));
 check('a regex .test(x) call is not a test declaration', virtualPath('const ok = /x/.test(name);').startsWith('helpers/'));
 check('a block extending BasePage is a page object', virtualPath('class A extends BasePage {}').startsWith('pages/'));
 check('anything else is a helper', virtualPath('export const x = 1;').startsWith('helpers/'));
@@ -264,7 +264,7 @@ const run = (md) => {
   return { code: p.status, out: p.stdout + p.stderr };
 };
 const HARD_WAIT = 'await page.waitForTimeout(2000);';
-const CLEAN = "test('@App-API creates a job', async ({ apiRequest }) => {\n  const { status } = await createJob(apiRequest, body, tokens.full());\n  expect(status).toBe(201);\n});";
+const CLEAN = "test('@api creates a job', async ({ apiRequest }) => {\n  const { status } = await createJob(apiRequest, body, tokens.full());\n  expect(status).toBe(201);\n});";
 let r;
 r = run('### Good\n\n' + fence(HARD_WAIT));
 check('BITES: a hard wait in an example presented as good fails the run', r.code === 1 && r.out.includes('no-hard-waits'), r.out);

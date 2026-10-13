@@ -67,18 +67,18 @@ tester.run('no-page-evaluate', plugin.rules['no-page-evaluate'], {
 
 tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
   valid: [
-    `test('@App-regression creates a project', async () => { await go(); });`,
-    { code: `test('creates a project', { tag: '@App-regression' }, async () => {});`, options: [{ whitelist: ['@App-regression'] }] },
+    `test('@regression creates a project', async () => { await go(); });`,
+    { code: `test('creates a project', { tag: '@regression' }, async () => {});`, options: [{ whitelist: ['@regression'] }] },
     // describe with no tag is fine
     `describe('projects', () => { test('@smoke a', async () => {}); });`,
   ],
   invalid: [
     { code: `test('creates a project', async () => {});`, errors: [{ messageId: 'none' }] },
     { code: `test('@a @b creates', async () => {});`, errors: [{ messageId: 'many' }] },
-    { code: `describe('@App-regression projects', () => {});`, errors: [{ messageId: 'onDescribe' }] },
+    { code: `describe('@regression projects', () => {});`, errors: [{ messageId: 'onDescribe' }] },
     {
       code: `test('@nope creates', async () => {});`,
-      options: [{ whitelist: ['@App-regression', '@smoke'] }],
+      options: [{ whitelist: ['@regression', '@smoke'] }],
       errors: [{ messageId: 'notWhitelisted' }],
     },
   ],
@@ -251,7 +251,7 @@ tester.run('regression/hooks-are-not-tests', plugin.rules['single-tag-on-test'],
      });`,
     `test.setTimeout(60_000);`,
     `const extended = test.extend({ settingsPage: async ({ page }, use) => { await use(new SettingsPage(page)); } });`,
-    `test('@App-Smoke reads test info', async () => { expect(test.info().title).toBeTruthy(); });`,
+    `test('@smoke reads test info', async () => { expect(test.info().title).toBeTruthy(); });`,
   ],
   invalid: [],
 });
@@ -267,16 +267,16 @@ tester.run('regression/setup-may-branch', plugin.rules['no-conditional-in-test']
     // guarded cleanup in teardown is the sanctioned pattern
     `test.afterAll(async ({ apiRequest }) => { if (tenantId) await deleteTenant(apiRequest, tenantId); });`,
     // a ternary that SHAPES data is construction, not conditional test logic
-    `test('@App-API a', async ({ apiRequest }) => {
+    `test('@api a', async ({ apiRequest }) => {
        await apiRequest({ method, url: u, body: method === 'DELETE' ? undefined : {} });
      });`,
-    `test('@App-API a', async () => { await f(cond ? 'a' : 'b'); });`,
-    `test('@App-API a', async () => { const s = \`x\${cond ? 1 : 2}\`; });`,
+    `test('@api a', async () => { await f(cond ? 'a' : 'b'); });`,
+    `test('@api a', async () => { const s = \`x\${cond ? 1 : 2}\`; });`,
   ],
   invalid: [
     // control flow that steers around missing state is still forbidden
-    { code: `test('@App-API a', async () => { if (existing) await use(existing); else await create(); });`, errors: [{ messageId: 'conditional' }] },
-    { code: `test('@App-API a', async () => { const id = maybe ? await create() : existing; });`, errors: [{ messageId: 'conditional' }] },
+    { code: `test('@api a', async () => { if (existing) await use(existing); else await create(); });`, errors: [{ messageId: 'conditional' }] },
+    { code: `test('@api a', async () => { const id = maybe ? await create() : existing; });`, errors: [{ messageId: 'conditional' }] },
   ],
 });
 
@@ -352,26 +352,26 @@ tester.run('regression/a-used-parse-is-not-discarded', plugin.rules['schema-pars
 
 tester.run('require-assertion-in-test', plugin.rules['require-assertion-in-test'], {
   valid: [
-    `test('@App-API a', async () => { expect(status).toBe(200); });`,
+    `test('@api a', async () => { expect(status).toBe(200); });`,
     // soft assertions in a negative-case loop
-    `test('@App-API a', async () => { for (const f of fields) expect.soft(S.safeParse(b).success, f).toBe(true); });`,
+    `test('@api a', async () => { for (const f of fields) expect.soft(S.safeParse(b).success, f).toBe(true); });`,
     // assertion nested inside a step or a loop still counts
-    `test('@App-API a', async () => { await test.step('check', async () => { expect(x).toBe(1); }); });`,
+    `test('@api a', async () => { await test.step('check', async () => { expect(x).toBe(1); }); });`,
     // a page-object assertion helper counts
-    `test('@App-E2E a', async ({ p }) => { await p.expectSaved(); });`,
-    `test('@App-E2E a', async ({ p }) => { await p.verifyToastVisible(); });`,
+    `test('@e2e a', async ({ p }) => { await p.expectSaved(); });`,
+    `test('@e2e a', async ({ p }) => { await p.verifyToastVisible(); });`,
     // explicit opt-out for a test that genuinely asserts through a helper
     `// eslint-asserts-via-helper: assertProjectMatches does the checking
-     test('@App-API a', async () => { await assertProjectMatches(body); });`,
+     test('@api a', async () => { await assertProjectMatches(body); });`,
     // hooks need no assertion
     `test.beforeAll(async () => { await seed(); });`,
     // a declaration with no body
-    `test.skip('@App-API not yet');`,
+    `test.skip('@api not yet');`,
   ],
   invalid: [
     // the false green: it runs, it passes, it proves nothing
-    { code: `test('@App-API a', async ({ apiRequest }) => { await createProject(apiRequest); });`, errors: [{ messageId: 'none' }] },
-    { code: `test('@App-E2E a', async ({ page }) => { await page.goto('/'); await page.getByRole('button').click(); });`, errors: [{ messageId: 'none' }] },
+    { code: `test('@api a', async ({ apiRequest }) => { await createProject(apiRequest); });`, errors: [{ messageId: 'none' }] },
+    { code: `test('@e2e a', async ({ page }) => { await page.goto('/'); await page.getByRole('button').click(); });`, errors: [{ messageId: 'none' }] },
   ],
 });
 
@@ -391,25 +391,25 @@ tester.run('no-empty-catch', plugin.rules['no-empty-catch'], {
 
 tester.run('no-disabled-test', plugin.rules['no-disabled-test'], {
   valid: [
-    `test('@App-API a', async () => { expect(1).toBe(1); });`,
+    `test('@api a', async () => { expect(1).toBe(1); });`,
     // the sanctioned form: commented out under the one marker
     `// TODO: FIXME: QA-123 API returns 500 on empty body
-// test('@App-API b', async () => {});`,
+// test('@api b', async () => {});`,
     // test.skip inside a body is no-conditional-in-test's report — not reported twice
-    `test('@App-API a', async () => { test.skip(); expect(1).toBe(1); });`,
+    `test('@api a', async () => { test.skip(); expect(1).toBe(1); });`,
     // a page object's own skip() method is not Playwright's
     `await player.skip();`,
   ],
   invalid: [
-    { code: `test.skip('@App-API a', async () => {});`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.skip('@api a', async () => {});`, errors: [{ messageId: 'disabled' }] },
     { code: `test.fixme(true, 'broken');`, errors: [{ messageId: 'disabled' }] },
     { code: `test.skip(process.env.CI !== undefined, 'not in CI');`, errors: [{ messageId: 'disabled' }] },
     { code: `test.describe.skip('area', () => {});`, errors: [{ messageId: 'disabled' }] },
     { code: `test.describe.fixme('area', () => {});`, errors: [{ messageId: 'disabled' }] },
     { code: `it.skip('a', () => {});`, errors: [{ messageId: 'disabled' }] },
-    { code: `test.fail('@App-API a', async () => {});`, errors: [{ messageId: 'fail' }] },
-    { code: `test('@App-API a', async () => { test.fail(); expect(1).toBe(1); });`, errors: [{ messageId: 'fail' }] },
-    { code: `test('@App-API a', async () => { test.fixme(); expect(1).toBe(1); });`, errors: [{ messageId: 'disabled' }] },
+    { code: `test.fail('@api a', async () => {});`, errors: [{ messageId: 'fail' }] },
+    { code: `test('@api a', async () => { test.fail(); expect(1).toBe(1); });`, errors: [{ messageId: 'fail' }] },
+    { code: `test('@api a', async () => { test.fixme(); expect(1).toBe(1); });`, errors: [{ messageId: 'disabled' }] },
   ],
 });
 
@@ -429,20 +429,20 @@ tester.run('regression/steps-are-not-tests (assertions)', plugin.rules['require-
   valid: [`test.beforeAll(async () => { await test.step('seed', async () => { await seed(); }); });`],
   invalid: [
     // the test around the steps still needs its assertion
-    { code: `test('@App-API a', async () => { await test.step('act', async () => { await act(); }); });`, errors: [{ messageId: 'none' }] },
+    { code: `test('@api a', async () => { await test.step('act', async () => { await act(); }); });`, errors: [{ messageId: 'none' }] },
   ],
 });
 tester.run('regression/steps-are-not-tests (conditionals)', plugin.rules['no-conditional-in-test'], {
   valid: [`test.beforeAll(async () => { await test.step('seed', async () => { if (!seeded) await seed(); }); });`],
   invalid: [
     // a step inside a test is still part of the test body
-    { code: `test('@App-API a', async () => { await test.step('act', async () => { if (x) await act(); }); });`, errors: [{ messageId: 'conditional' }] },
+    { code: `test('@api a', async () => { await test.step('act', async () => { if (x) await act(); }); });`, errors: [{ messageId: 'conditional' }] },
   ],
 });
 tester.run('regression/steps-are-not-tests (try/catch)', plugin.rules['no-try-catch-in-test'], {
   valid: [`test.beforeAll(async () => { await test.step('seed', async () => { try { await seed(); } catch {} }); });`],
   invalid: [
-    { code: `test('@App-API a', async () => { await test.step('act', async () => { try { await act(); } catch {} }); });`, errors: [{ messageId: 'tryCatch' }] },
+    { code: `test('@api a', async () => { await test.step('act', async () => { try { await act(); } catch {} }); });`, errors: [{ messageId: 'tryCatch' }] },
   ],
 });
 
@@ -453,7 +453,7 @@ tester.run('regression/steps-are-not-tests (try/catch)', plugin.rules['no-try-ca
  */
 tester.run('regression/disabled-tests-are-not-untagged', plugin.rules['single-tag-on-test'], {
   valid: [
-    `test.describe('area', () => { test.fixme(true, 'broken'); test('@App-API a', async () => {}); });`,
+    `test.describe('area', () => { test.fixme(true, 'broken'); test('@api a', async () => {}); });`,
     `test.skip(process.env.CI !== undefined, 'not in CI');`,
     `test.fail('known bug', async () => {});`,
   ],

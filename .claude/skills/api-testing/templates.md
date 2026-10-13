@@ -72,7 +72,7 @@ import resourceData from "../../../../test-data/app/<resource>.json";
 // See data-strategy/reference.md §1.6 for rationale (grepability, no alias-name drift).
 // A spec with token aliases is tech debt; normalize it when next touching the file.
 
-// Tags stay inline (`{ tag: "@App-API" }`) on every test: the single-tag lint rule reads the literal,
+// Tags stay inline (`{ tag: "@api" }`) on every test: the single-tag lint rule reads the literal,
 // so a tag hoisted into a shared const reads as "no tag". The whitelist is owned by `test-standards`.
 
 // ═══════════════════════════════════════════════════════════════
@@ -82,7 +82,7 @@ import resourceData from "../../../../test-data/app/<resource>.json";
 test.describe("GET /<resource>s — List", () => {
     test(
         "Verify GET /<resource>s returns 200 with valid schema and default pagination",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(<id>);
@@ -99,7 +99,7 @@ test.describe("GET /<resource>s — List", () => {
 
     test(
         "Verify GET /<resource>s returns 401 for missing Authorization header",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -113,7 +113,7 @@ test.describe("GET /<resource>s — List", () => {
 
     test(
         "Verify GET /<resource>s returns 403 for token without permissions",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -136,7 +136,7 @@ test.describe("POST /<resource>s — Create", () => {
 
     test(
         "Verify POST /<resource>s with valid data returns 201",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(<id>);
@@ -155,7 +155,7 @@ test.describe("POST /<resource>s — Create", () => {
 
     test(
         "Verify POST /<resource>s returns 400 for invalid name",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -176,7 +176,7 @@ test.describe("POST /<resource>s — Create", () => {
 
     test(
         "Verify POST /<resource>s returns 401 for missing Authorization header",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -193,7 +193,7 @@ test.describe("POST /<resource>s — Create", () => {
 
     test(
         "Verify POST /<resource>s returns 403 for token without permissions",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -238,7 +238,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
 
     test(
         "Verify GET /<resource>s/{id} returns 200",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -253,7 +253,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
 
     test(
         "Verify GET /<resource>s/{id} returns 400 for invalid id format",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -268,7 +268,7 @@ test.describe("GET /<resource>s/:id — Single", () => {
 
     test(
         "Verify GET /<resource>s/{id} returns 404 for non-existent id",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -312,7 +312,7 @@ test.describe("PATCH /<resource>s/:id — Per-field isolation", () => {
 
     test(
         "Verify PATCH /<resource>s/{id} updates ONLY name and preserves all other fields",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -394,7 +394,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
         for (const invalid of invalidValues) {
             test(
                 `Verify PATCH /<resource>s/{id} rejects invalid ${field}: ${JSON.stringify(invalid)}`,
-                { tag: "@App-API" },
+                { tag: "@api" },
                 async ({ apiRequest }) => {
                     qase.suite(SUITES.API_<SUITE>);
                     // qase.id(N);
@@ -415,7 +415,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
 
     test(
         "Verify PATCH /<resource>s/{id} with empty body returns 400",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -444,7 +444,7 @@ test.describe("PATCH /<resource>s/:id — Validation", () => {
 test.describe("DELETE /<resource>s/:id", () => {
     test(
         "Verify DELETE /<resource>s/{id} returns 200",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -470,7 +470,7 @@ test.describe("DELETE /<resource>s/:id", () => {
 
     test(
         "Verify DELETE /<resource>s/{id} returns 404 for non-existent id",
-        { tag: "@App-API" },
+        { tag: "@api" },
         async ({ apiRequest }) => {
             qase.suite(SUITES.API_<SUITE>);
             // qase.id(N);
@@ -494,7 +494,7 @@ test.describe("DELETE /<resource>s/:id", () => {
 
 test(
     "Verify /<resource>s rejects unsupported methods with 405",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_<SUITE>);
         // qase.id(N);
@@ -910,7 +910,7 @@ export async function setup<Resource>(
 
 ## 6. Multi-endpoint API flow (`tests/app/api/<domain>/<flow>.spec.ts`)
 
-For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@App-API` tag, explicit timeout. **Note**: in the example app, `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
+For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@api` tag, explicit timeout. **Note**: in the example app, `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
 
 ```typescript
 // Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.
@@ -961,7 +961,7 @@ test.afterAll(async ({ apiRequest, mailpit }) => {
 
 test(
     "Verify tenant onboarding sends invitation email and link is extractable",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest, mailpit }) => {
         qase.suite(SUITES.API_E2E_TENANT_ONBOARDING);
         // qase.id(<id>);
@@ -1024,7 +1024,7 @@ The tenantA / tenantB tokens must be minted in `test.beforeAll` (in the example 
 
 test(
     "Verify Tenant A's token cannot read Tenant B's <resource>",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_CROSS_TENANT_ISOLATION);
         // qase.id(<id>);
@@ -1055,7 +1055,7 @@ import { tokens } from "../../../../config/env";
 
 test(
     "Verify admin GET user with mismatched tenantId returns 404",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_CROSS_TENANT_ISOLATION);
         // qase.id(<id>);
@@ -1137,7 +1137,7 @@ import { tokens } from "../../../../config/env";
 test.describe("POST /jobs — field validation", () => {
     test.beforeEach(async ({ apiRequest }) => { /* seed worker */ });
 
-    test("Verify POST /jobs returns 400 for invalid name values", { tag: "@App-API" }, async ({ apiRequest }) => {
+    test("Verify POST /jobs returns 400 for invalid name values", { tag: "@api" }, async ({ apiRequest }) => {
         qase.suite(SUITES.API_JOBS);
         // qase.id(N);
         for (const value of invalidString) {
@@ -1150,7 +1150,7 @@ test.describe("POST /jobs — field validation", () => {
         }
     });
 
-    test("Verify POST /jobs returns 400 for invalid runInterval values", { tag: "@App-API" }, async ({ apiRequest }) => {
+    test("Verify POST /jobs returns 400 for invalid runInterval values", { tag: "@api" }, async ({ apiRequest }) => {
         qase.suite(SUITES.API_JOBS);
         // qase.id(N);
         for (const value of invalidIntegerTypes) {
@@ -1175,7 +1175,7 @@ Same coverage as § 9, denser source. One `test()` covers every (field × invali
 import { invalidString, invalidIntegerTypes } from "../../../../fixtures/api/invalid-types";
 import { tokens } from "../../../../config/env";
 
-test("Verify POST /jobs returns 400 for invalid field values", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify POST /jobs returns 400 for invalid field values", { tag: "@api" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_JOBS);
     // qase.id(N);
     const validBody = buildCreateJobBody([workerId]);
@@ -1210,7 +1210,7 @@ The single test reports as one entry in Qase / the HTML report; failed iteration
 One `test()` covers every required field. The loop runs **inside** the test; each iteration is a `test.step` and uses `expect.soft` so all missing-field cases are exercised in a single run.
 
 ```typescript
-test("Verify POST /jobs returns 400 when required fields are missing", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify POST /jobs returns 400 when required fields are missing", { tag: "@api" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_JOBS);
     // qase.id(N);
     const validBody = buildCreateJobBody(workerIds);
@@ -1232,7 +1232,7 @@ test("Verify POST /jobs returns 400 when required fields are missing", { tag: "@
 One `test()` covers every invalid-id case. Labeled cases (`{ description, value }`) so each `test.step` reads cleanly. Loop is **inside** the test; `expect.soft` keeps every iteration running. `encodeURIComponent` keeps the URL well-formed.
 
 ```typescript
-test("Verify GET /jobs/{id} returns 400 for invalid id formats", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify GET /jobs/{id} returns 400 for invalid id formats", { tag: "@api" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_JOBS);
     // qase.id(N);
 
@@ -1264,7 +1264,7 @@ When API behavior diverges from the documented contract, write the test as the c
 // TODO: FIXME: PROJ-1234 — backend returns 200 instead of 400 for empty name
 // test(
 //     "Verify POST /jobs returns 400 with empty name",
-//     { tag: "@App-API" },
+//     { tag: "@api" },
 //     async ({ apiRequest }) => {
 //         qase.suite(SUITES.API_JOBS);
 //         // qase.id(N);
@@ -1291,7 +1291,7 @@ test.describe("POST /jobs", () => {
         createdWorkerIds.push(body.workerId);
     });
 
-    test("Verify POST /jobs returns 201", { tag: "@App-API" }, async ({ apiRequest }) => {
+    test("Verify POST /jobs returns 201", { tag: "@api" }, async ({ apiRequest }) => {
         const { status, body } = await createJob(apiRequest, buildCreateJobBody(createdWorkerIds), tokens.full());
         expect(status).toBe(201);
         expect(CreateJobResponseSchema.parse(body)).toBeTruthy();
@@ -1335,7 +1335,7 @@ When a test makes 2+ API calls, each must be wrapped in `test.step()`. Failures 
 **Correct:**
 
 ```typescript
-test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "@api" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_ADMIN_TENANTS);
     // qase.id(N);
     const body = buildCreateTenantBody();
@@ -1361,7 +1361,7 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
 
 ```typescript
 // FORBIDDEN: failures don't localize, trace has no structure
-test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "@api" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_ADMIN_TENANTS);
     // qase.id(N);
     const body = buildCreateTenantBody();
@@ -1384,7 +1384,7 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
 ```typescript
 test(
     "Verify GET /jobs returns 200",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
         qase.suite(SUITES.API_JOBS);
         // qase.id(N);

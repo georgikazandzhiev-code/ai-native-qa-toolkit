@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 2.1.2
+version: 2.1.3
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -60,7 +60,7 @@ Follow in order. Reuse the `api-testing` mechanics at every step; this skill onl
 - [ ] 2. Map the objects & functions — object ids the endpoint exposes (BOLA), privileged operations (BFLA), and which response properties are sensitive (BOPLA).
 - [ ] 3. Pick the risks that apply — scan api-top10.md (API endpoint) and/or web-top10.md (UI feature); most CRUD endpoints owe API1/API2/API3/API5 at minimum.
 - [ ] 4. Author the negative tests — reuse the api-testing matrix: seed as A, act as B, assert the documented deny status (403 or 404 — one, per the contract) + schema. Payload loops for injection reuse the invalid-value loop-inside-test pattern.
-- [ ] 5. Run — `npx playwright test <spec> --grep "@App-API"` (or the feature's tag). Read lints.
+- [ ] 5. Run — `npx playwright test <spec> --grep "@api"` (or the feature's tag). Read lints.
 - [ ] 6. Report findings — any 200-where-403-expected, reflected payload, or leaked field is a bug: comment out the test with // TODO: FIXME: <TICKET> and file it. Never adjust the assertion to green.
 ```
 

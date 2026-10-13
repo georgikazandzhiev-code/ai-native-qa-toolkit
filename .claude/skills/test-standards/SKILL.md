@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 2.1.3
+version: 3.0.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 ## Critical
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
-- **ALWAYS** tag every test with **exactly one** value from the framework whitelist: `@App-Critical | @App-Smoke | @App-Sanity | @App-regression | @App-API | @App-Integration | @App-E2E`. Casing must match the `package.json` `--grep` patterns **exactly**: every tag is Title-case **except `@App-regression`, which is lowercase `regression`** (the `app-regression` and `app-all` scripts grep the lowercase form). **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
+- **ALWAYS** tag every test with **exactly one** value from the framework whitelist: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`. That list is the example app's; your repo declares its own whitelist in its `CLAUDE.md` or repo-context skill. Casing must match the `package.json` `--grep` patterns **exactly**, so keep every tag lowercase. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
@@ -39,33 +39,33 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 
 | Tag | npm script | Used for |
 |-----|-----------|----------|
-| `@App-Critical` | `app-critical` | 3–5 tests whose red means the build is broken. |
-| `@App-Smoke` | `app-smoke` | Critical-path UI — login, landing, navigate to major pages. |
-| `@App-Sanity` | `app-sanity` | Quick post-deploy read-only verification. |
-| `@App-regression` | `app-regression` | Functional regression — largest bucket; lives in `tests/app/functional/`. **Lowercase `regression` — the only non-Title-case tag.** |
-| `@App-API` | `app-api` | API contract + schema validation. Lives in `tests/app/api/`. |
-| `@App-Integration` | `app-integration` | Cross-component integration that's neither pure API nor end-to-end UI. |
-| `@App-E2E` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
+| `@critical` | `app-critical` | 3–5 tests whose red means the build is broken. |
+| `@smoke` | `app-smoke` | Critical-path UI — login, landing, navigate to major pages. |
+| `@sanity` | `app-sanity` | Quick post-deploy read-only verification. |
+| `@regression` | `app-regression` | Functional regression — largest bucket; lives in `tests/app/functional/`. |
+| `@api` | `app-api` | API contract + schema validation. Lives in `tests/app/api/`. |
+| `@integration` | `app-integration` | Cross-component integration that's neither pure API nor end-to-end UI. |
+| `@e2e` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
 | (union) | `app-all` | Full nightly / pre-merge. |
 
-**Tag-casing matters.** `package.json` greps are case-sensitive and mixed-case: `app-regression` greps **lowercase** `@App-regression`, and `app-all` greps `@App-(Smoke|Sanity|Integration|E2E|API|regression)` — Title-case for everything except `regression`. Lowercase `@App-regression` **is the standard** that runs in CI; a Title-case `@App-Regression` tag would match neither script and would **never run**. In fact zero tests use `@App-Regression` — the example app uniformly uses lowercase `@App-regression` (~398 occurrences across ~34 spec files). Match the existing casing exactly; never "fix" it to Title-case.
+**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. A mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every tag lowercase removes the question; the `single-tag-on-test` lint rule, configured with your whitelist, catches a stray capital before merge.
 
 ## Test types & directories
 
 | Type | Directory | Tag | Covers | Example (example app) |
 |------|-----------|-----|--------|-------------------|
-| **API** | `tests/app/api/` | `@App-API` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/jobs-service/workers/workers.spec.ts` |
-| **E2E** | `tests/app/e2e/` | `@App-E2E` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
-| **Functional** | `tests/app/functional/` | `@App-regression` (+ rare `@App-Smoke` for landing pages) | One feature or behaviour in isolation — form validation, dropdown behavior, navigation, page-structure assertions | `tests/app/functional/jobs-service/dashboard-page.spec.ts` |
-| **Smoke (UI)** | `tests/app/e2e/` | `@App-Smoke` | Critical-path login + landing-page sanity | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
+| **API** | `tests/app/api/` | `@api` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/jobs-service/workers/workers.spec.ts` |
+| **E2E** | `tests/app/e2e/` | `@e2e` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
+| **Functional** | `tests/app/functional/` | `@regression` (+ rare `@smoke` for landing pages) | One feature or behaviour in isolation — form validation, dropdown behavior, navigation, page-structure assertions | `tests/app/functional/jobs-service/dashboard-page.spec.ts` |
+| **Smoke (UI)** | `tests/app/e2e/` | `@smoke` | Critical-path login + landing-page sanity | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
 | **Setup** | `tests/app/` | (no tag) | Storage-state generation, token bootstrap | `tests/app/login.setup.ts` |
 
-A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is still an API test: `tests/app/api/`, `@App-API`.
+A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is still an API test: `tests/app/api/`, `@api`.
 
 **Functional vs E2E** is a frequent decision point:
 
-- A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@App-regression`.**
-- An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@App-E2E`. Set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level.**
+- A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@regression`.**
+- An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@e2e`. Set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level.**
 
 **E2E `beforeAll` boundary.** `beforeAll` seeds **background infrastructure** that the journey needs but that isn't the story being tested (e.g., a worker or job that a notification-rule-crud E2E needs). The **lifecycle actions under test** must be visible `test.step()`s inside the test body. If the most interesting action is hidden in `beforeAll`, the test shape is wrong. Example: a notification-rule-crud E2E seeds a worker + job via API in `beforeAll` (infrastructure), then the test walks create → view → disable → enable → edit → delete (the journey). A notifications E2E should seed jobs + notification rule in `beforeAll` (infrastructure), then the first visible step is "wait for notification to fire" — that's where the journey starts.
 
@@ -80,7 +80,7 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 - [ ] 2. Load the matching deep skill — `api-testing` for API specs, `page-objects` + `selectors` for UI specs.
 - [ ] 3. For UI: explore the live app via `npx playwright open` (the `playwright-cli` skill). For API: read OpenAPI / Swagger first (the `api-testing` skill, Phase 1).
 - [ ] 4. Author the imports + describe + beforeEach skeleton; pull `SUITES.<RESOURCE>` from `enums/app/qase-suites.ts` (extend it if missing).
-- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing — lowercase `@App-regression`, Title-case for the rest). Add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
+- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing — every tag is lowercase). Add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
 - [ ] 6. Structure the body with `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only.
 - [ ] 7. For E2E: track created resource names in a `createdNames: string[]` array; add `test.afterAll` that deletes via the matching `helpers/app/<resource>.ts` helper.
 - [ ] 8. For data-driven tests: UI cases loop OUTSIDE the test block (one `test(...)` per case, descriptive names); API negative matrices loop INSIDE one test (`test.step` + `expect.soft` + `safeParse`, the `api-testing` skill).
@@ -91,10 +91,10 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 
 If the user request is ambiguous, decide using this ladder:
 
-1. Pure HTTP request + response assertion, no UI? → **API** (`tests/app/api/`, `@App-API`).
-2. UI happens, single behaviour, ≤ 3 phases? → **Functional** (`tests/app/functional/`, `@App-regression`).
-3. UI happens, full journey with 4+ phases (create → verify → edit → delete)? → **E2E** (`tests/app/e2e/`, `@App-E2E`).
-4. UI happens, must-pass-before-anything-else (login, landing, navigation)? → **Smoke** (`tests/app/e2e/`, `@App-Smoke`).
+1. Pure HTTP request + response assertion, no UI? → **API** (`tests/app/api/`, `@api`).
+2. UI happens, single behaviour, ≤ 3 phases? → **Functional** (`tests/app/functional/`, `@regression`).
+3. UI happens, full journey with 4+ phases (create → verify → edit → delete)? → **E2E** (`tests/app/e2e/`, `@e2e`).
+4. UI happens, must-pass-before-anything-else (login, landing, navigation)? → **Smoke** (`tests/app/e2e/`, `@smoke`).
 5. Generates storage state or auth tokens? → **Setup** (`tests/app/<name>.setup.ts`, no tag).
 
 ### Step 2 — read the matching rule
@@ -139,7 +139,7 @@ import { faker } from "@faker-js/faker";
 ```typescript
 test(
   "Verify dashboard renders all four sections",
-  { tag: "@App-regression" },           // Single tag, exact whitelist casing
+  { tag: "@regression" },           // Single tag, exact whitelist casing
   async ({ dashboardPage }) => {
     qase.suite(SUITES.APP_DASHBOARD);   // First body line
     // qase.id(N);                      // Commented out until the case is mapped in Qase
@@ -148,9 +148,9 @@ test(
 );
 ```
 
-- **One tag per test.** Never `tag: ["@App-regression", "@App-Smoke"]`.
-- **Exact casing.** Match `package.json` greps: lowercase `@App-regression`, Title-case for every other tag. A mis-cased tag silently misses CI.
-- **Tag goes on the test, not on `describe`.** `test.describe("X @App-regression", ...)` is forbidden.
+- **One tag per test.** Never `tag: ["@regression", "@smoke"]`.
+- **Exact casing.** Tags are lowercase and `--grep` is case-sensitive, so a mis-cased tag such as `@Regression` silently misses CI.
+- **Tag goes on the test, not on `describe`.** `test.describe("X @regression", ...)` is forbidden.
 - **`qase.suite()` first, then `qase.id()` (optional), then `test.step(...)` for the body.**
 
 ### Step 6 — structure with `test.step`
@@ -158,7 +158,7 @@ test(
 ```typescript
 test(
   "Verify create-job flow shows success toast",
-  { tag: "@App-E2E" },
+  { tag: "@e2e" },
   async ({ jobsPage, createJobPage }) => {
     qase.suite(SUITES.APP_JOBS);
     // qase.id(N);
@@ -221,8 +221,8 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 ## Anti-patterns
 
 - ❌ **`import { test, expect } from "@playwright/test"`.** Strips every merged fixture; `apiRequest`, page objects become `undefined`. Fix: import from `../../../../fixtures/pom/test-options`.
-- ❌ **Title-case `@App-Regression` tag.** Doesn't match `--grep @App-regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: lowercase `@App-regression`.
-- ❌ **Combined tags (`["@App-regression", "@App-E2E"]`) or non-whitelisted (`@functional`, `@destructive`, `@regression`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
+- ❌ **Mis-cased tag such as `@Regression`.** Doesn't match `--grep @regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: lowercase `@regression`.
+- ❌ **Combined tags (`["@regression", "@e2e"]`) or non-whitelisted (`@functional`, `@destructive`, `@regression`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
 - ❌ **Missing `qase.suite(...)`.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
 - ❌ **`page.waitForTimeout(1000)`.** Flake amplifier. Fix: web-first assertion / `waitForResponse` / `expect.toPass`.
@@ -240,7 +240,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 - [ ] Imports `test` / `expect` from `fixtures/pom/test-options.ts` (never `@playwright/test`).
 - [ ] File in the right directory for the type; filename is kebab-case `.spec.ts`.
-- [ ] Exactly ONE tag from the whitelist with exact casing (lowercase `@App-regression`, Title-case otherwise), on the test (not on `describe`).
+- [ ] Exactly ONE tag from the whitelist with exact casing (every tag lowercase), on the test (not on `describe`).
 - [ ] `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows — commented out until mapped. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`.
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.
@@ -256,11 +256,11 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 User says: *"Verify the Dashboard renders all four sections (Jobs, Workers, Type Breakdown, Quick Actions) when the user lands on `/`."*
 
-1. **Step 1.** Single behaviour, single phase → **Functional** (`tests/app/functional/`, `@App-regression`).
+1. **Step 1.** Single behaviour, single phase → **Functional** (`tests/app/functional/`, `@regression`).
 2. **Step 2.** Confirm imports, tag, `qase.suite` requirement against the Critical block above.
 3. **Step 3.** Open `/` via `npx playwright open`, verify all four section testids, and check that `DashboardPage` already has a locator for each before adding one.
 4. **Step 4.** Skeleton — imports + describe.
-5. **Step 5.** Tag `{ tag: "@App-regression" }`, `qase.suite(SUITES.APP_DASHBOARD)`.
+5. **Step 5.** Tag `{ tag: "@regression" }`, `qase.suite(SUITES.APP_DASHBOARD)`.
 6. **Step 6.** Structure: `GIVEN: I am on Dashboard` → `THEN: All four sections visible`. Use `dashboardPage.verifyAllSectionsVisible()`.
 
 ```typescript
@@ -278,7 +278,7 @@ test.describe("Dashboard Page — Page Structure & Navigation", () => {
 
   test(
     "Verify Dashboard renders all four sections",
-    { tag: "@App-regression" },
+    { tag: "@regression" },
     async ({ dashboardPage }) => {
       qase.suite(SUITES.APP_DASHBOARD);
       // qase.id(N);
@@ -300,7 +300,7 @@ const HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "DELETE"] as const;
 for (const method of HTTP_METHODS) {
   test(
     `Verify HTTP method dropdown supports ${method}`,
-    { tag: "@App-regression" },
+    { tag: "@regression" },
     async ({ createJobPage }) => {
       qase.suite(SUITES.APP_JOBS);
       // qase.id(N);
@@ -321,7 +321,7 @@ For larger or domain-specific data sets, see the [`data-strategy`](../data-strat
 
 User says: *"E2E test for HTTP job: create via UI → verify in grid → edit → delete via UI."*
 
-1. **Step 1.** Multi-phase journey → **E2E** (`tests/app/e2e/`, `@App-E2E`).
+1. **Step 1.** Multi-phase journey → **E2E** (`tests/app/e2e/`, `@e2e`).
 2. **Step 7.** `test.setTimeout(appConfig.timeouts.e2eJourney)`, `createdJobNames` array, `test.afterAll` cleanup via `listJobs` + `deleteJob`.
 
 ```typescript
@@ -348,7 +348,7 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
   test(
     "Create, verify, edit, delete an HTTP job",
-    { tag: "@App-E2E" },
+    { tag: "@e2e" },
     async ({ sideNavigation, jobsPage, createJobPage }) => {
       qase.suite(SUITES.APP_JOBS);
       // qase.id(N);
@@ -375,15 +375,15 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
 ### Example 4 — API + Smoke routing
 
-For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@App-API`, `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror the nearest API spec in your repo (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`).
+For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@api`, `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror the nearest API spec in your repo (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`).
 
-For a UI smoke test: pick `tests/app/e2e/`, tag `@App-Smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror your repo's nearest smoke spec (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`).
+For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror your repo's nearest smoke spec (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`).
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Test runs locally, doesn't run in CI under `npm run app-regression`. | Tag is mis-cased (e.g. Title-case `@App-Regression`) but `package.json` greps lowercase `@App-regression`. | Flip to lowercase `@App-regression`. |
+| Test runs locally, doesn't run in CI under `npm run app-regression`. | Tag is mis-cased (e.g. `@Regression`) but `package.json` greps lowercase `@regression`. | Flip to lowercase `@regression`. |
 | `Cannot find name 'apiRequest'` (or `dashboardPage`, `loginUser`, etc.) on the test context. | Spec imported `test` from `@playwright/test` instead of `fixtures/pom/test-options.ts`. | Change the import to `from "../../../../fixtures/pom/test-options"`. |
 | Qase shows the test run as orphaned / "Uncategorized". | Missing `qase.suite(SUITES.X);` as the first body line. | Add it immediately after `async (...) => {`. Extend `enums/app/qase-suites.ts` if `SUITES.X` doesn't exist. |
 | `test.describe` tag not picked up by the npm script. | Tag belongs on the test, not on the describe. | Move the `{ tag: "..." }` argument onto each individual `test(...)`. |

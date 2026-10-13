@@ -5,6 +5,6 @@
 // so the smoke run shows this rule firing on its own rather than buried under other reports.
 import { test } from 'fixtures/pom/test-options';
 
-test('@App-Smoke opens the settings page', async ({ page }) => {
+test('@smoke opens the settings page', async ({ page }) => {
   await page.goto('/settings');
 });
