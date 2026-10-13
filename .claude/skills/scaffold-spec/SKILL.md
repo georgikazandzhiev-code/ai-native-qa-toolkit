@@ -243,7 +243,7 @@ After creating the spec, update the API or UI routing section of the repository'
 ## Self-review checklist
 
 - [ ] Imports follow the project pattern exactly
-- [ ] Tags match the spec type (`@api`, `@e2e`, `@regression`)
+- [ ] Tags match the spec type, from the repo's whitelist (`@api`, `@e2e`, `@regression` in the standard set)
 - [ ] `qase.suite()` is the first line in every test
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response

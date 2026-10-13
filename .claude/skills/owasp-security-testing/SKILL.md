@@ -1,6 +1,6 @@
 ---
 name: owasp-security-testing
-version: 2.1.3
+version: 3.0.0
 description: Apply the OWASP Top 10 (2021, web) and OWASP API Security Top 10 (2023) as concrete QA test targets and a pre-release security review gate — authorization, authentication, injection, and misconfiguration coverage layered on the existing negative-test matrix. Use when adding access-control / auth / injection tests to API or UI specs, when reviewing a feature or PR for security gaps, or when a story touches roles, tenants, permissions, or user-supplied input. Reach for this whenever the user mentions security testing, OWASP, access control, BOLA/BFLA, injection, XSS, SSRF, or "is this endpoint safe". Trigger phrases — "OWASP", "security test", "access control test", "BOLA", "auth bypass", "injection test", "security review". Do NOT use for load / DoS / rate-limit performance work (use the `k6-load-testing` skill). Do NOT use for the general API negative-matrix mechanics (use the `api-testing` skill). Do NOT use for filing the resulting bug (use the `bug-helper` command).
 metadata:
   category: cross-cutting
@@ -22,7 +22,7 @@ Non-negotiable. Each rule below is what separates a real security test from secu
 - **NEVER assert on exact error text.** Assert **status + schema shape** (401 gateway shape, 403 empty body, 404 error envelope) per `api-testing` § Error envelopes. Leaked stack traces or verbose errors are themselves a finding — capture the leak, don't pin the wording.
 - **ALWAYS know the automatable boundary.** QA automates access-control, injection-payload, auth-flow, security-header/misconfiguration-surface, and object-property-exposure tests. Dependency scanning, static crypto review, and full penetration testing belong to **other tooling** — flag the gap explicitly, never fake coverage. See § Automatable-by-QA decision.
 - **NEVER put real secrets, PII, or production data into payloads, fixtures, or AI prompts.** Use faker and synthetic data (`data-strategy`). Hardcoded tokens/PII are both a framework violation and the exact leak these tests exist to catch.
-- **ALWAYS extend the existing suite, not a parallel one.** Security tests are negative tests — they use the same fixtures, tags, and cleanup as `api-testing` / UI specs. Do not invent a `@security` tag: the tags are the toolkit's standard set in `test-standards`, and a new one is a change to that skill, not to one repo.
+- **ALWAYS extend the existing suite, not a parallel one.** Security tests are negative tests — they use the same fixtures, tags, and cleanup as `api-testing` / UI specs. Do not invent a `@security` tag: reuse one from the repo's whitelist (the toolkit's standard set in `test-standards`, unless the project `CLAUDE.md` declares another); a new tag is added to that whitelist first.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -71,7 +71,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 - ❌ **Testing only as the owner/admin.** Functional specs usually do this already. Without a second, under-privileged principal there is no access-control test — add the "should-not" identity in setup.
 - ❌ **Asserting the attack "does not throw".** `await expect(...).not.toThrow()` proves nothing. Assert the concrete deny: the documented status (`403` or `404`), empty/typed error body, and (for BOPLA) that the sensitive field is **absent**.
 - ❌ **Turning a finding green.** Changing an expected `403` to `200` because "that's what the API returns" hides the vulnerability. Report it (§ Critical), comment the test out with a ticket.
-- ❌ **A parallel security suite with its own fixtures/tag.** Security tests are negative tests; they belong beside the CRUD specs with the same fixtures and the project's existing tag. New tag only after `test-standards` whitelist update.
+- ❌ **A parallel security suite with its own fixtures/tag.** Security tests are negative tests; they belong beside the CRUD specs with the same fixtures and the project's existing tag. New tag only after the repo's whitelist is updated (`test-standards` for the standard set, the project `CLAUDE.md` for a declared one).
 - ❌ **Injection tests that only check for a 400.** A stored-XSS test must assert the payload is neutralised where it is *rendered/returned*, not just rejected on input. Cover both the reject path and the safe-render path (`web-top10.md` A03).
 - ❌ **Pinning exact error strings** (`expect(body.message).toBe("Forbidden")`). Brittle and beside the point — assert status + schema shape. A verbose leaked message is a separate finding to capture, not to encode.
 - ❌ **Volumetric / brute-force loops inside a Playwright spec** to "test rate limiting". That is a load test — use `k6-load-testing` with thresholds. Here, assert only that a documented limit returns `429`.
@@ -93,7 +93,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 - [ ] Every filed finding is `EXECUTED` or `STATIC` with the reproduction attached; `INFERRED` suspicions stay review notes that name the check to run, not bugs (No Report Without Proof).
 - [ ] No real secrets/PII/prod data anywhere; faker + synthetic only.
 - [ ] Out-of-QA-scope categories (crypto, components, logging) are explicitly flagged, not silently skipped.
-- [ ] Tests reuse the project fixtures, the standard tags, and cleanup; no parallel suite.
+- [ ] Tests reuse the project fixtures, the repo's tags, and cleanup; no parallel suite.
 
 ## Examples
 
@@ -144,7 +144,7 @@ User says: _"Check the job-name field is safe against XSS."_
 - **`api-testing`** — the negative-test matrix (400/401/403/404/405/409), `apiRequest`, error envelopes, cleanup, and the comment-out-with-ticket bug convention. Security tests are negative tests; read this first.
 - **`selectors`** — locator priority and safe DOM assertions for the UI/XSS render-branch checks (no `page.evaluate`).
 - **`data-strategy`** — faker + synthetic payloads, curated invalid/malicious value arrays, no real PII.
-- **`test-standards`** — the standard tags (reuse one; a new tag such as `@security` is a `test-standards` change), `test.step`, placement.
+- **`test-standards`** — the repo's tags (reuse one; a new tag such as `@security` is added to the repo's whitelist first), `test.step`, placement.
 - **`type-safety`** — `z.strictObject` schemas and the `expect(Schema.parse(body)).toBeTruthy()` idiom used in every assertion.
 - **`k6-load-testing`** — the boundary for rate-limit / resource-consumption (API4) and any volumetric work.
 - **`debugging`** — when a security test fails in a way that looks like flake rather than a finding.
