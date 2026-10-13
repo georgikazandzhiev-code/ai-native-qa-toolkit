@@ -22,8 +22,9 @@ either reverted or recorded deliberately — see `scripts/skills-lock.mjs`.
 
 **Not vendored, and deliberately excluded from that entry:** `SKILL.md`, `references/` and
 `assets/SKILL-template.md` are this repository's own work. They carry the layered topology,
-the SKILL.md structure contract and the boundary discipline, none of which exist upstream. Tracking them as vendored would both misattribute them and make every
-legitimate edit fail the provenance check.
+the SKILL.md structure contract and the boundary discipline, none of which exist upstream.
+Tracking them as vendored would both misattribute them and make every legitimate edit fail
+the provenance check.
 
 ---
 

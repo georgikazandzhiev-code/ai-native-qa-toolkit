@@ -605,9 +605,9 @@ if (!existsSync(prTemplatePath)) {
 //
 // The constitution routes every session to this file (and so does an always-applied rule, in a
 // repository that ships .cursor/rules), so a missing or malformed one is a broken route rather
-// than a missing nicety. The cap is the point:
-// a capture file with no drain becomes a landfill, and a landfill nobody reads is worse than no
-// memory at all -- it carries the authority of "we learned this" while going unread.
+// than a missing nicety. The cap is the point: a capture file with no drain becomes a landfill,
+// and a landfill nobody reads is worse than no memory at all -- it carries the authority of "we
+// learned this" while going unread.
 
 const memoryPath = join(ROOT, '.claude', 'memories', 'learned_patterns.md');
 const MAX_MEMORY_CASES = 12;

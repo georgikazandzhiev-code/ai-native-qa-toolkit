@@ -96,7 +96,7 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. 15 
 | 1 | Every skill has a parseable `SKILL.md` with `name` matching its folder, a non-empty `description` under 1024 chars, a semver `version`, and a canonical `metadata.category` | 16 skills were missing `metadata.category` and 5 more carried a non-canonical one, and nothing noticed |
 | 2 | No duplicate skill names | |
 | 3 | All six required sections present (`Critical`, `Anti-patterns`, `Self-review checklist`, `Examples`, `Troubleshooting`, `See Also`) | |
-| 4 | `mcp.json` is valid JSON, BOM-free, every server has a `command` or `url`, and no literal secret sits in `env` | |
+| 4 | `.cursor/mcp.json` is valid JSON, BOM-free, every server has a `command` or `url`, and no literal secret sits in `env` (skipped when the repository ships no `.cursor/mcp.json`) | |
 | 5 | `.cursor/rules/*.mdc` have front matter with a `description` unless `alwaysApply: true` (skipped when the repository ships no `.cursor/rules/`; this toolkit targets Claude Code) | |
 | 6 | `.cursorignore` exists and excludes `node_modules` and `.env` | |
 | 7 | **Stated numbers match recomputed facts**, in `README.md`, `BENCHMARK.md` and `GOVERNANCE.md` alike — skills, commands, lint rules, rule suites, invalid-case assertions, measured-skill coverage with its denominator, over-length skills, this script's own check count, and every repo-relative link | In the internal toolkit this began as a README claiming 25 skills while 28 shipped. Then, in one day, it drifted on eight more numbers — including a coverage denominator copied from the other repository |
