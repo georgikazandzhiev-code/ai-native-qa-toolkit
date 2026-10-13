@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 2.0.5
+version: 3.0.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -39,9 +39,9 @@ Ask the user (or infer from context) which type of spec to create:
 
 | Type | Directory | Tag | Rule |
 |------|-----------|-----|------|
-| **API** | `tests/app/api/<domain>/` | `@App-API` | `api-testing` skill |
-| **E2E** | `tests/app/e2e/<domain>/` | `@App-E2E` | `page-objects` + `selectors` skills |
-| **Functional** | `tests/app/functional/<domain>/` | `@App-regression` | `page-objects` + `selectors` skills |
+| **API** | `tests/app/api/<domain>/` | `@api` | `api-testing` skill |
+| **E2E** | `tests/app/e2e/<domain>/` | `@e2e` | `page-objects` + `selectors` skills |
+| **Functional** | `tests/app/functional/<domain>/` | `@regression` | `page-objects` + `selectors` skills |
 
 These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
@@ -116,7 +116,7 @@ test.describe("METHOD /path - Description", () => {
 
   test(
     "Verify <METHOD> <path> returns <status> [with <reason>]",
-    { tag: "@App-API" },
+    { tag: "@api" },
     async ({ apiRequest }) => {
       qase.suite(SUITES.API_<RESOURCE>);
       // qase.id(N);
@@ -152,7 +152,7 @@ test.describe("E2E — <Feature> CRUD", () => {
 
   test(
     "Create, verify, edit, and delete <resource>",
-    { tag: "@App-E2E" },
+    { tag: "@e2e" },
     async ({ page, sideNavigation, jobsPage, createJobPage, apiRequest }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
@@ -201,7 +201,7 @@ test.describe("<Feature> — Form Validation", () => {
 
   test(
     "Validation scenario description",
-    { tag: "@App-regression" },
+    { tag: "@regression" },
     async ({ createJobPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
@@ -243,7 +243,7 @@ After creating the spec, update the API or UI routing section of the repository'
 ## Self-review checklist
 
 - [ ] Imports follow the project pattern exactly
-- [ ] Tags match the spec type (`@App-API`, `@App-E2E`, `@App-regression`)
+- [ ] Tags match the spec type, from the repo's whitelist (`@api`, `@e2e`, `@regression` in the standard set)
 - [ ] `qase.suite()` is the first line in every test
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
@@ -290,7 +290,7 @@ test("Create resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — let it throw, Playwright reports the actual error
-test("Create resource", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Create resource", { tag: "@api" }, async ({ apiRequest }) => {
   const { status, body } = await createResource(apiRequest, data, tokens.full());
   expect(status).toBe(201);
   expect(ResourceSchema.parse(body)).toBeTruthy();
@@ -298,7 +298,7 @@ test("Create resource", { tag: "@App-API" }, async ({ apiRequest }) => {
 
 // ACCEPTABLE — the one sanctioned try/catch: capturing the id of a resource a bug created, for teardown.
 // No `if` in the body (the constitution forbids it); the marker comment is what the lint accepts.
-test("Verify invalid payload returns 400", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify invalid payload returns 400", { tag: "@api" }, async ({ apiRequest }) => {
   const { status, body } = await createResource(apiRequest, invalidData, tokens.full());
   let createdId: string | undefined;
   // eslint-allow-cleanup-capture — if a bug creates the resource anyway, teardown must delete it.
@@ -325,7 +325,7 @@ test("Get resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — Zod proves the response shape is what we expect
-test("Get resource", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Get resource", { tag: "@api" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
@@ -374,7 +374,7 @@ test("Verify GET returns resource", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — Zod validates shape, then assert only business logic values
-test("Verify GET returns resource", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify GET returns resource", { tag: "@api" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, id, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
@@ -399,14 +399,14 @@ test("Verify status", async ({ apiRequest }) => {
 
 ```typescript
 // CORRECT — separate tests for separate behaviors
-test("Verify GET returns 200 for existing resource", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify GET returns 200 for existing resource", { tag: "@api" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, existingId, tokens.full());
   expect(status).toBe(200);
   expect(ResourceSchema.parse(body)).toBeTruthy();
   expect(body.name).toBe(expectedName);
 });
 
-test("Verify GET returns 404 for non-existent resource", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify GET returns 404 for non-existent resource", { tag: "@api" }, async ({ apiRequest }) => {
   const { status, body } = await getResource(apiRequest, nonExistentId, tokens.full());
   expect(status).toBe(404);
   expect(APIErrorSchema.parse(body)).toBeTruthy();
@@ -419,7 +419,7 @@ test("Verify GET returns 404 for non-existent resource", { tag: "@App-API" }, as
 // BAD — one test per method: the report and Qase fill up with near-identical tests
 const UNSUPPORTED = ["PUT", "PATCH", "DELETE"] as const;
 for (const method of UNSUPPORTED) {
-  test(`Verify ${method} /<resource>s returns 405`, { tag: "@App-API" }, async ({ apiRequest }) => {
+  test(`Verify ${method} /<resource>s returns 405`, { tag: "@api" }, async ({ apiRequest }) => {
     qase.suite(SUITES.API_<RESOURCE>);
     // qase.id(N);
     const { status } = await apiRequest({
@@ -436,7 +436,7 @@ for (const method of UNSUPPORTED) {
 ```typescript
 // CORRECT — one test, loop inside, a step and soft assertions per verb.
 // Full skeleton (collection + {id} paths, request bodies): api-testing/http-method-coverage.md § 11.
-test("Verify unsupported methods on /<resource>s return 405", { tag: "@App-API" }, async ({ apiRequest }) => {
+test("Verify unsupported methods on /<resource>s return 405", { tag: "@api" }, async ({ apiRequest }) => {
   qase.suite(SUITES.API_<RESOURCE>);
   // qase.id(N);
   const UNSUPPORTED = [
@@ -525,7 +525,7 @@ Every functional test that opens a form/sheet must close it at the end — even 
 
 **Ask:** "scaffold the spec for POST /api/v1/projects."
 
-1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@App-API`.
+1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@api`.
 2. **Conventions** — read `api-testing` and `test-standards` before writing anything.
 3. **Contract first** — the OpenAPI document is the source of truth; enumerate 201, 400, 401, 403/404, 409 as a coverage-plan comment block.
 4. **Study a sibling** — open the nearest existing API spec and copy its shape: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.

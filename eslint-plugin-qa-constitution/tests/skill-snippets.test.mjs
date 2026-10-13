@@ -262,7 +262,7 @@ function declaresHelper(node) {
   return node.type === 'VariableDeclaration' && node.declarations.some((d) => FUNCTION_LIKE.has(d.init?.type));
 }
 
-const TEST_OPEN = "test('snippet', { tag: '@App-API' }, async () => {";
+const TEST_OPEN = "test('snippet', { tag: '@api' }, async () => {";
 
 /**
  * A test-body fragment wrapped in a tagged test(), its imports hoisted above the wrapper:

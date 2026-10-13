@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 2.0.8
+version: 3.0.1
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -65,7 +65,7 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
 - [ ] 8. Cover the negative matrix (see § The negative test matrix).
 - [ ] 9. Wire cleanup (afterEach/afterAll DELETE through the helper). For jobs-with-workers use
         `cleanupWorkersAndJobs` — jobs MUST be deleted before workers (409 otherwise).
-- [ ] 10. Run: `npx playwright test <spec> --grep "@App-API"` and read lints.
+- [ ] 10. Run: `npx playwright test <spec> --grep "@api"` and read lints.
 ```
 
 ## The `apiRequest` contract
@@ -318,14 +318,14 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 - `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
 - For tests without a mapped Qase id yet, **leave `qase.suite(...)` and comment out `qase.id(...)`** — do not delete them.
 - Tags drive runtime selection (one tag per test, never combined):
-  - `@App-API` — every spec in `tests/app/api/**`, including multi-endpoint API flows (e.g. tenant onboarding over HTTP only)
-  - `@App-E2E` — UI journeys in `tests/app/e2e/**` only, never an API flow
+  - `@api` — every spec in `tests/app/api/**`, including multi-endpoint API flows (e.g. tenant onboarding over HTTP only)
+  - `@e2e` — UI journeys in `tests/app/e2e/**` only, never an API flow
 
 **Skeleton:** [templates.md § 17](templates.md).
 
 ## Multi-step & E2E API tests
 
-- Multi-endpoint onboarding API flows use the `@App-API` tag (they live in `tests/app/api/`), both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
+- Multi-endpoint onboarding API flows use the `@api` tag (they live in `tests/app/api/`), both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
 - Email tests **must** use the `@<your-test-domain>` recipient domain — the one domain your Mailpit catches.
 - Mailpit pattern: `await mailpit.deleteEmailsForRecipient(email)` **before** triggering the action and again **after** the test finishes; then `const message = await mailpit.getLastEmail(email, 10, 2000)`. **`getLastEmail` returns `MailMessage | null`** — guard with `expect(message).not.toBeNull()` before dereferencing, then read `message!.Content.Body`.
 - For invite-style flows, prefer a helper like the example app's `getInviteLinkFromEmail(mailpit, email)` from `helpers/util/mailpit.ts` — it retries, asserts non-null, and runs the body through `extractLinkFromEmail`.
@@ -369,7 +369,7 @@ Before declaring a spec done, verify:
 - [ ] Imports `test`/`expect` from `fixtures/pom/test-options`, **not** `@playwright/test`.
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
 - [ ] `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test (or commented if pending mapping).
-- [ ] Each test carries `{ tag: "@App-API" }` — multi-endpoint API flows included.
+- [ ] Each test carries the repo's API tag (`{ tag: "@api" }` in the standard set) — multi-endpoint API flows included.
 - [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
 - [ ] Jobs-with-workers specs use `cleanupWorkersAndJobs` (jobs first, workers second).
@@ -402,7 +402,7 @@ Walk the workflow:
 5. **Spec** — author `tests/app/api/jobs-service/jobs/job-pause.spec.ts` from `templates.md § 1`. Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]`.
 6. **Negative matrix** — apply: per-field validation isn't needed (no request body), but path-parameter fuzzing is mandatory (§ Path parameter fuzzing). 405 catch-all loop. 401/403 auth coverage.
 7. **Cleanup** — pause is reversible via resume; restore in `afterAll`.
-8. **Run** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@App-API"`. Verify lints clean.
+8. **Run** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@api"`. Verify lints clean.
 
 ### Example 2 — Verifying a multi-step PATCH-then-GET flow
 
@@ -422,7 +422,7 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 3. **Per-field invalid-type loops** (loop INSIDE `test()` per § convention) — one `test()` per field, iterating the matching universal array inside the body with `expect.soft` (`invalidString` for `name`/`location`, `invalidStringTypes` for any optional string, `invalidIntegerTypes` for any integer field). Test name: `Verify POST /workers returns 400 for invalid <field> values`.
 4. **Per-field omission loop** — one `test()`, loop required-field names inside the body using the destructure-and-omit pattern (§ Per-field omission). Test name: `Verify POST /workers returns 400 when required fields are missing`.
 5. **Path-parameter fuzz** — N/A on POST without a path param. Add it on `GET /workers/:id` and `DELETE /workers/:id` if not already present.
-6. **Run** — `npx playwright test tests/app/api/jobs-service/workers/workers.spec.ts --grep "@App-API"`. Coverage goes from 1 test (empty body) to N tests (one per validation concern), each running a soft loop across multiple invalid values internally.
+6. **Run** — `npx playwright test tests/app/api/jobs-service/workers/workers.spec.ts --grep "@api"`. Coverage goes from 1 test (empty body) to N tests (one per validation concern), each running a soft loop across multiple invalid values internally.
 
 ## Troubleshooting
 

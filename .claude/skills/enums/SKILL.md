@@ -1,6 +1,6 @@
 ---
 name: enums
-version: 2.0.1
+version: 2.0.2
 description: Conventions for enums/app/ — where repeated string constants live (SUITES in qase-suites.ts, job statuses, inventory labels, report messages), the `as const` pattern, naming, and barrel exports. Use when adding a Qase suite, status value, or any repeated string constant. Triggers — "enum", "SUITES", "status value", "message string". Not for changing existing values (refactor-values) or endpoint paths (config — paths live in appConfig).
 metadata:
   category: domain
@@ -149,7 +149,7 @@ User says: _"Add API tests for `/admin/sessions`."_
    Pattern matches the existing entries: `SCREAMING_SNAKE_CASE` key, `"API\t<HumanReadable>"` value with a tab separator for Qase nesting.
 5. **Barrel** — `qase-suites.ts` is already re-exported by `enums/app/index.ts`; nothing more to do.
 6. **Consumer** — in the new spec, `import { SUITES } from "../../../../enums/app/qase-suites";` then `qase.suite(SUITES.API_ADMIN_SESSIONS);` as the first body line of every test (per the `api-testing` skill's MUST rules).
-7. **Run** — `npx playwright test tests/app/api/tenant-service/admin-sessions.spec.ts --grep "@App-API"`.
+7. **Run** — `npx playwright test tests/app/api/tenant-service/admin-sessions.spec.ts --grep "@api"`.
 
 ### Example 2 — Adding a new shared job status
 

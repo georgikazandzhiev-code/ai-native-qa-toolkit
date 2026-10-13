@@ -55,13 +55,13 @@ const EXEMPT = {};
 
 /** Mirrors smoke/eslint.config.mjs — a fabricated tag must not pass the whitelist branch. */
 const TAGS = [
-  '@App-Critical',
-  '@App-Smoke',
-  '@App-Sanity',
-  '@App-regression',
-  '@App-API',
-  '@App-Integration',
-  '@App-E2E',
+  '@critical',
+  '@smoke',
+  '@sanity',
+  '@regression',
+  '@api',
+  '@integration',
+  '@e2e',
 ];
 
 const CWD = fileURLToPath(new URL('..', import.meta.url)).replace(/\\/g, '/');

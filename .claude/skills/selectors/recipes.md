@@ -735,7 +735,7 @@ import { faker } from '@faker-js/faker';
 import { SUITES } from '../../../../enums/app/qase-suites';
 
 test('Create, verify in grid, view details, edit, and delete `export` job',
-    { tag: '@App-E2E' },
+    { tag: '@e2e' },
     async ({
         page,
         sideNavigation,

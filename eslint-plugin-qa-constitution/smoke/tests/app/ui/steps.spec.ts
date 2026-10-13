@@ -37,7 +37,7 @@ test('opens the seeded project', async ({ page }) => {
   });
 });
 
-test('@App-API archives the seeded project', async ({ api }) => {
+test('@api archives the seeded project', async ({ api }) => {
   await test.step('WHEN: the project is archived', async () => {
     const response = await api.archive(projectId);
     if (response.status() === 409) return;

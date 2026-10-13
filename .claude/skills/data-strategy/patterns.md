@@ -13,7 +13,7 @@ test.afterAll(async ({ apiRequest }) => {
     await cleanupUiCreatedJobs(apiRequest, createdJobNames, tokens.full());
 });
 
-test('creates a job under a unique name', { tag: '@App-regression' }, async ({ createJobPage, jobsPage }) => {
+test('creates a job under a unique name', { tag: '@regression' }, async ({ createJobPage, jobsPage }) => {
     const jobName = `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`;
     createdJobNames.push(jobName);
     await createJobPage.createJobFromSheet({ name: jobName });
@@ -169,7 +169,7 @@ Fix: `return createWorkerData({ region: 'EU', location: 'EU-Amsterdam' });`.
 import httpJobValidation from '../../../../test-data/app/httpJobValidation.json';
 
 for (const invalidName of httpJobValidation.invalidNames) {
-    test(`rejects invalid name: '${invalidName}'`, { tag: '@App-API' }, async ({ apiRequest }) => {
+    test(`rejects invalid name: '${invalidName}'`, { tag: '@api' }, async ({ apiRequest }) => {
         // workerId is seeded in beforeAll
         const body = buildCreateHTTPJobBody([workerId], { name: invalidName });
         const { status, body: err } = await createJob(apiRequest, body, tokens.full());
@@ -266,7 +266,7 @@ Test usage:
 ```typescript
 const workerIds: string[] = [];
 
-test('seeded worker path', { tag: '@App-API' }, async ({ apiRequest }) => {
+test('seeded worker path', { tag: '@api' }, async ({ apiRequest }) => {
     const worker = await test.step('GIVEN: a seeded worker', async () => {
         const seeded = await setupTestWorker(apiRequest, tokens.full());
         workerIds.push(seeded.id);
@@ -402,7 +402,7 @@ Fix: only `tests/app/login.setup.ts` writes `process.env.USER_ACCESS_TOKEN_*` (t
 test.describe('POST /workers', () => {
     const workerIds: string[] = [];
 
-    test('creates a worker', { tag: '@App-API' }, async ({ apiRequest }) => {
+    test('creates a worker', { tag: '@api' }, async ({ apiRequest }) => {
         const { body, status } = await apiRequest<CreateWorkerResponse>({
             method: 'POST',
             url: appConfig.api.WORKERS,

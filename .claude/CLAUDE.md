@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 2.0.0 -->
+<!-- toolkit-version: 3.0.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -48,7 +48,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Schemas** | Validate every API response against a Zod schema. New schemas use `z.strictObject()`. Never loosen a schema to make a test pass |
 | **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();`. **Carve-out for negative-matrix loops** (one test iterating invalid values): `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` per value — `parse` throws and would stop the loop |
 | **Sources of Truth** | Tokens/URLs from the config module, which alone reads `process.env` and validates it with Zod once, at load — never `process.env` in a spec, helper, fixture or page object. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |
-| **Tags** | Exactly **one** tag per `test()` — never on `test.describe()`. Match the project's tag whitelist and casing exactly. See `test-standards` skill |
+| **Tags** | Exactly **one** tag per `test()` — never on `test.describe()`. Use the toolkit's standard set, lowercase, exactly as the `test-standards` skill lists it. One exception: a repo that already ran another set before adopting the toolkit keeps it (its CI jobs, Qase filters and dashboards depend on those tags) and declares it in its project `CLAUDE.md`; that set is its whitelist. A new repo uses the standard set |
 | **Qase (when used)** | Every new test gets `qase.suite(...)` as its first body line; `qase.id(N)` commented out until mapped |
 | **Assertions** | Web-first only. Prefer strict (`toBe`, `toEqual`) over loose. Exception: `toBeTruthy()` for `Schema.parse(body)` |
 | **Cleanup** | Tests that mutate state revert it in `afterEach`/`afterAll`. Capture initial state in `beforeAll` for shared mutable resources. Leave the environment exactly as found |
@@ -206,4 +206,4 @@ The bar: a second pass after "all good" must find **nothing new**.
 
 ## Adopting this in a new repo
 
-This constitution + the skills are project-agnostic. To onboard a repo: keep this file as-is, add a **project `CLAUDE.md`** at the repo root carrying that repo's folder map, fixture entry points, tag whitelist, and endpoint/test-id catalogs (mirror the shape of a dedicated repo-context skill), plus the system under test's context — architecture, vocabulary, performance targets and known issues — which `test-case-generation` and `/requirement-analyst` read. The reusable skills then apply on top without modification.
+This constitution + the skills are project-agnostic. To onboard a repo: keep this file as-is, add a **project `CLAUDE.md`** at the repo root carrying that repo's folder map, fixture entry points, its tag whitelist if it already ran another set before adopting the toolkit, and endpoint/test-id catalogs (mirror the shape of a dedicated repo-context skill), plus the system under test's context — architecture, vocabulary, performance targets and known issues — which `test-case-generation` and `/requirement-analyst` read. The reusable skills then apply on top without modification.

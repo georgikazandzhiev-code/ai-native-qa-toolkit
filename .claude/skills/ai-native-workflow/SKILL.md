@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.7
+version: 2.1.8
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -106,7 +106,7 @@ User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 3. **Audit** — `ls config/app.ts`, `ls fixtures/api/schemas/app/`, `ls helpers/app/`. Confirm whether `JOBS_PAUSE` already exists as a route constant.
 4. **Plan** — schema additions, helper need (likely none — single-spec call), coverage plan from OpenAPI (200/400/401/403/404/405/409), test-data needs.
 5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`; the spec imports it from that file (there is no `app/` schema barrel). Spec follows `Verify <METHOD> <path> returns <status>` naming.
-6. **Verify** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@App-API"` + `eslint .` + re-read from disk.
+6. **Verify** — `npx playwright test tests/app/api/jobs-service/jobs/job-pause.spec.ts --grep "@api"` + `eslint .` + re-read from disk.
 7. **Surface** — report files added, flag any drift caught (e.g. duplicated `APIErrorSchema`).
 
 ### Example 2 — Investigating a flaky UI test
