@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 2.0.0
+version: 2.0.1
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work (use the matched skill) or changing a constitution rule.
 metadata:
   category: authoring
@@ -399,10 +399,11 @@ User says: *"Our project `CLAUDE.md` has a 300-line § Run-stats API tests secti
 1. **Split the section** — only the run-stats line of the folder map stays in the project `CLAUDE.md`, because every session needs it; the per-endpoint workflow, query catalog and job-type inventory are skill content.
 2. **Phase 1 (intent)** — WHAT: test the run-stats endpoints. WHEN: editing `tests/app/api/jobs-service/run-stats/**`. Output shape: SKILL.md + `reference.md`.
 3. **Phase 2 (topology)** — Layer 2. Cluster: API authoring.
-4. **Phase 4 (progressive disclosure)** — the moved text exceeds 380 lines once it gets the standardized structure; the query catalog and inventory go to `reference.md` (one level deep).
-5. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original section was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
-6. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill, and add its row to the Routed Skill Index. Add it to `api-testing`'s See Also and back.
-7. **Phase 8 (verify)** — run the full checklist + Phase 6 subagent test.
+4. **Phase 3 (draft)** — copy `assets/SKILL-template.md` to the new skill folder as `SKILL.md`, fill the frontmatter (`version: 1.0.0`, `metadata.category`) and apply the description recipe with "Do NOT use for X" disclaimers.
+5. **Phase 4 (progressive disclosure)** — the moved text exceeds 380 lines once it gets the standardized structure; the query catalog and inventory go to `reference.md` (one level deep).
+6. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original section was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
+7. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill, and add its row to the Routed Skill Index. Add it to `api-testing`'s See Also and back.
+8. **Phase 8 (verify)** — run the full checklist + Phase 6 subagent test.
 
 ## Troubleshooting
 

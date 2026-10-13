@@ -1,8 +1,7 @@
 /**
  * Lint every code snippet in the learned-patterns memory file. `npm run test:memory`
  *
- * The memory file is read at the start of every session, by both Claude Code and Cursor, and its
- * whole purpose is to teach. A bad pattern recorded in it does not cause one bad test — it teaches
+ * The memory file is read at the start of every session, and its whole purpose is to teach. A bad pattern recorded in it does not cause one bad test — it teaches
  * every future session to write bad tests, and it carries the authority of "we learned this".
  *
  * That is not hypothetical. Two of the three snippets in the first draft of that file violated the

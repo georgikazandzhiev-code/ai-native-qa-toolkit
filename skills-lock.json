@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated": "2026-09-10",
+  "generated": "2026-10-13",
   "vendored": {
     "skill-creator/eval-harness": {
       "source": "anthropics/skills",
@@ -9,7 +9,7 @@
       "license": "Apache-2.0",
       "copyright": "Anthropic, PBC",
       "provenance": "filenameMatch",
-      "note": "SKILL.md, references/ and assets/SKILL-template.md are this repository's own work and are deliberately NOT tracked here — they carry the project's paired-rule pattern and boundary discipline, which upstream does not have.",
+      "note": "SKILL.md, references/ and assets/SKILL-template.md are this repository's own work and are deliberately NOT tracked here — they carry the project's layered topology and boundary discipline, which upstream does not have.",
       "paths": [
         ".claude/skills/skill-creator/scripts",
         ".claude/skills/skill-creator/eval-viewer",

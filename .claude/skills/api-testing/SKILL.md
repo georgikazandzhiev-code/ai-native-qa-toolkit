@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 2.0.7
+version: 2.0.8
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -10,7 +10,7 @@ metadata:
 
 This framework runs API tests with Playwright's `APIRequestContext` wrapped by the project-specific `apiRequest` fixture, and validates every response with Zod. Specs are deterministic, fixture-driven, schema-asserted, Qase-tagged, and clean up after themselves.
 
-This skill is the **single source of truth** for API-test invariants and workflow — its rules live in this `SKILL.md` + `reference.md` + `http-method-coverage.md` + `templates.md`, with no separate rule file. Always-on framework invariants (imports, type-safety, schemas) live in `~/.claude/CLAUDE.md`; everything API-specific is here.
+This skill is the **single source of truth** for API-test invariants and workflow — rules in this `SKILL.md`, catalogs in `reference.md`, skeletons in `templates.md`, the per-verb playbook in `http-method-coverage.md`; there is no separate rule file. Always-on framework invariants (imports, type-safety, schemas) live in `~/.claude/CLAUDE.md`; everything API-specific is here.
 
 ## What's in each file (read this before reaching for another file)
 

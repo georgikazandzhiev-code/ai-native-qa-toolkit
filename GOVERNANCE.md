@@ -15,7 +15,7 @@ A number in prose is a claim. A number a script recomputes is a fact. Where the 
 ```mermaid
 flowchart LR
   A["AI-driven SDLC<br/>competency model"] --> B["QA AI toolkit<br/>constitution + 30 skills"]
-  B --> C["Surfaces<br/>Cursor · Claude Code · MCP"]
+  B --> C["Surfaces<br/>Claude Code · MCP"]
   C --> D["QA engineers"]
   D --> E["Assessments<br/>merged artifacts, not quizzes"]
   E --> F["Capability matrix<br/>L1 → L4"]
@@ -31,7 +31,7 @@ The dotted edge is the part that usually goes missing. A capability matrix that 
 | **Owner** — `@georgikazandzhiev-code` | Merge; cut a version; promote a pattern to `canonical`; change what the gate refuses; grant L1–L4 | Approve their own change to a `## Critical` block without a second reviewer |
 | **Reviewer** — any engineer at L3+ | Approve or block; require a re-measure; open a falsification | Merge a rule change alone; promote to `canonical` |
 | **Contributor** — anyone | Propose any change; add a skill; add a lint rule; add an eval case | Merge; edit another skill's `## Critical` without its reviewer |
-| **Agent** — Claude Code, Cursor | Write patterns at `tier: candidate`; promote `candidate → active` on evidence | Promote anything to `canonical`; edit `CLAUDE.md`; weaken a schema or an assertion to pass |
+| **Agent** — Claude Code | Write patterns at `tier: candidate`; promote `candidate → active` on evidence | Promote anything to `canonical`; edit `CLAUDE.md`; weaken a schema or an assertion to pass |
 
 **Known risk, stated rather than hidden: the owner and the only reviewer are the same person.** Bus factor 1. Until a second person holds merge rights, every rule in this table above the Contributor row is self-enforced, and this document's authority over the owner is exactly zero. The exit condition is in Rollout Phase 1 and it gates widening past one team — not because process demands it, but because a single reviewer cannot catch the class of error this repository has already made twice: a confident, well-argued, wrong number.
 
