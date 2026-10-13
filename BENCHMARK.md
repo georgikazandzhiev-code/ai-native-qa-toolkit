@@ -122,9 +122,9 @@ The skill arm produced 78% more code and zero constitution violations. The basel
 test body, and left a test untagged — every one of them a convention it had no way to know.
 
 > **Note (2026-10, #6):** the standard tags were since renamed to lowercase, so `@api` is now the
-> whitelisted form. Not re-measured: under today's whitelist, 13 of the baseline's 17 violations would
-> not fire, and the tag dimension of this eval no longer separates the arms. The numbers above are
-> what ran.
+> whitelisted form. Not re-measured. Re-linting the recorded files with only the whitelist swapped,
+> the tag findings invert: the baseline's 13 would not fire, and the skill arm's 12 `@App-*` tags
+> would. The tag dimension of this run no longer measures what it did. The numbers above are what ran.
 
 **This is the first measured lift in the whole exercise, and the metric that produced it is the one
 that cannot flatter anybody.**
@@ -137,7 +137,7 @@ were caught by opening the flagged line instead of trusting the report.
 
 | # | Defect | What it falsely accused |
 |---|---|---|
-| 1 | Fabricated tag whitelist in the harness config | The skill arm chose `@App-API` and `@App-E2E` — both valid, both semantically right. The invented whitelist rejected them, and 29 of 41 reported violations were this one mistake. |
+| 1 | Fabricated tag whitelist in the harness config | The skill arm chose `@App-API` and `@App-E2E` — both valid under that run's whitelist, both semantically right. The invented whitelist rejected them, and 29 of 41 reported violations were this one mistake. |
 | 2 | `eslint-plugin-playwright` not registered | A generated file's `eslint-disable` for one of its rules made ESLint report "Definition for rule not found" as an error. |
 | 3 | `isTestCall` did not exclude lifecycle hooks | `test.beforeAll` / `test.afterAll` reported as "a test with no tag". |
 | 4 | `enclosingTest` did not stop at a hook | An `if` inside `beforeAll` reported as forbidden conditional logic — when seeding a precondition there is exactly what the constitution *requires*. |

@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 3.0.0
+version: 3.1.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 ## Critical
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
-- **ALWAYS** tag every test with **exactly one** value from the toolkit's standard whitelist: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`. This list is the standard every repo uses, not an example to replace. Every tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
+- **ALWAYS** tag every test with **exactly one** value from the toolkit's standard whitelist: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`. This list is the default every repo starts from; a repo that already runs another set declares it in its project `CLAUDE.md`, and that set is the whitelist there. Every tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
@@ -224,7 +224,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 - ❌ **`import { test, expect } from "@playwright/test"`.** Strips every merged fixture; `apiRequest`, page objects become `undefined`. Fix: import from `../../../../fixtures/pom/test-options`.
 - ❌ **Mis-cased tag such as `@Regression`.** Doesn't match `--grep @regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: lowercase `@regression`.
-- ❌ **Combined tags (`["@regression", "@e2e"]`) or non-whitelisted (`@functional`, `@destructive`, `@slow`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
+- ❌ **Combined tags (`["@regression", "@e2e"]`) or tags outside the repo's whitelist (with the standard set: `@functional`, `@destructive`, `@slow`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
 - ❌ **Missing `qase.suite(...)`.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
 - ❌ **`page.waitForTimeout(1000)`.** Flake amplifier. Fix: web-first assertion / `waitForResponse` / `expect.toPass`.

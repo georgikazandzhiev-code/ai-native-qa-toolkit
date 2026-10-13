@@ -1,6 +1,6 @@
 # Accessibility testing — templates
 
-Copy-paste skeletons for the [`accessibility-testing`](SKILL.md) skill. Paths, the fixtures barrel, the tag and the Qase suite are placeholders. Replace them with the project's real ones (see `test-standards`, `fixtures`, `enums`).
+Copy-paste skeletons for the [`accessibility-testing`](SKILL.md) skill. Paths, the fixtures barrel and the Qase suite are placeholders. Replace them with the project's real ones (see `fixtures`, `enums`). The tag is one from the `test-standards` whitelist.
 
 **Evidence: STATIC.** These follow Playwright's accessibility-testing guide and the `@axe-core/playwright` API. They have not been executed in this repository yet.
 

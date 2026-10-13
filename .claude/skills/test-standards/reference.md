@@ -6,6 +6,8 @@ description: The invented example app's scenario inventory — each E2E, Functio
 
 Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
+The tag names in the first table are the exception: they are the toolkit's standard set from `test-standards`.
+
 Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inventory: what each spec covers and which gaps are intentional. Keep your own list in that shape, so authors don't duplicate coverage and reviewers can spot what's missing for a new feature. Update it in the same edit batch as adding or removing a spec.
 
 ## Contents
