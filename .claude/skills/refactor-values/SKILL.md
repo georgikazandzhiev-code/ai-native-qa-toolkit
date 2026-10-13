@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.4
+version: 1.0.5
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -15,7 +15,7 @@ metadata:
 - **NEVER** edit a value, rename a key, or change a `test-data/app/*.json` field without updating every consumer **in the same commit**. No intermediate broken state on the default branch.
 - **NEVER** loosen a Zod schema (`z.literal`, `z.enum([...])`, e.g. `StatusSchema` in `fixtures/api/schemas/app/tenant.ts`) to make an updated value pass. Update the schema literal/enum to match the new value — the schema is the contract.
 - **ALWAYS** run `npx tsc --noEmit` and the lint-staged pipeline (eslint + prettier) plus the affected Playwright tests before declaring the refactor done. TypeScript catches key renames; eslint catches stale patterns; tests catch assertion drift.
-- **NEVER** use a single global find-and-replace. It misses casing variants, hardcoded copies in specs, and references inside `~/.claude/skills/*`, `.cursor/rules/*`, `README.md`, and Qase suite-name mappings. Inspect every match.
+- **NEVER** use a single global find-and-replace. It misses casing variants, hardcoded copies in specs, and references inside `~/.claude/skills/*`, `CLAUDE.md`, `README.md`, and Qase suite-name mappings. Inspect every match.
 - **ALWAYS** treat `SUITES.*` value changes as a **Qase rename** — the value is the suite name shown in the Qase UI. Coordinate with whoever owns the Qase project before merging.
 - **NEVER** bypass Husky pre-commit hooks (`--no-verify`). If the hook fails after a value rename, fix the underlying lint/type issue.
 
@@ -59,7 +59,7 @@ grep -rn "workerData.defaultPageSize" <sibling-repos>/automation/ --include="*.t
 grep -rn "defaultPageSize" <sibling-repos>/automation/test-data/app/
 ```
 
-Inspect every hit — do not auto-replace. In the example app's layout, expect matches in `tests/app/api/**`, `tests/app/e2e/**`, `tests/app/functional/**`, `pages/app/**`, `helpers/app/**`, `fixtures/api/schemas/app/**`, `enums/**`, `~/.claude/skills/**`, `.cursor/rules/**`, and `README.md`.
+Inspect every hit — do not auto-replace. In the example app's layout, expect matches in `tests/app/api/**`, `tests/app/e2e/**`, `tests/app/functional/**`, `pages/app/**`, `helpers/app/**`, `fixtures/api/schemas/app/**`, `enums/**`, `~/.claude/skills/**`, `CLAUDE.md`, and `README.md`.
 
 ### Phase 2: Update every consumer in the same commit
 
@@ -110,7 +110,7 @@ Each row shows where a value change radiates to. Check every row of your own lis
 | `fixtures/api/schemas/app/job.ts` `z.enum(["enabled", "disabled"])` | Every job create/list response parse | Same — schema rejects new value |
 | `test-data/app/worker.json` field (e.g. `invalidId`, `nonExistentId`, `defaultPageSize`) | `workerData.invalidId` references in `tests/app/api/jobs-service/workers/workers.spec.ts` and others; helper iteration over `workerData.sortFields` | Negative-test loops break or assert wrong values |
 | `test-data/app/job-common.json` field (e.g. `runIntervals`, `timeout.max`) | Any spec destructuring those keys; UI tests selecting a run-interval option | Boundary tests pass against stale ranges |
-| Documentation references (`~/.claude/skills/*`, `.cursor/rules/*`, `README.md`) | Future authors who copy old patterns | Long-term drift — new specs reproduce the stale value |
+| Documentation references (`~/.claude/skills/*`, `CLAUDE.md`, `README.md`) | Future authors who copy old patterns | Long-term drift — new specs reproduce the stale value |
 
 Helpers (`helpers/app/<resource>.ts` in the example app) do **not** declare schemas inline (rule from `api-testing`), so a value rename does not need to touch helper code unless a helper hardcoded the old value as a literal — the Phase 1 grep finds those.
 
@@ -119,7 +119,7 @@ Helpers (`helpers/app/<resource>.ts` in the example app) do **not** declare sche
 - ❌ Editing the enum but leaving a hardcoded raw string in a spec (e.g. `expect(body.status).toBe("created")` not updated when `StatusSchema` changed).
 - ❌ Loosening `StatusSchema` from `z.enum([...])` to `z.string()` "to make the test pass" — that hides the contract drift.
 - ❌ Changing `SUITES.API_JOBS = "API\tJobs"` to `"API\tScheduled Jobs"` without checking the Qase project — the suite renames in the UI, breaking dashboards and saved filters.
-- ❌ Renaming an enum key but skipping `~/.claude/skills/*` and `.cursor/rules/*` references — the next author copies the old key from documentation.
+- ❌ Renaming an enum key but skipping `~/.claude/skills/*` and `CLAUDE.md` references — the next author copies the old key from documentation.
 - ❌ Editing `test-data/app/worker.json`'s `defaultPageSize` without re-checking `workers.spec.ts` pagination assertions that hardcoded `10` (the old value) instead of importing the constant.
 - ❌ Splitting source-change and consumer-update into separate commits — leaves the default branch in a broken state mid-PR.
 - ❌ Using `git commit --no-verify` to bypass Husky after the rename triggers a lint failure. Fix the lint.
@@ -134,7 +134,7 @@ Before committing a value refactor:
 - [ ] Every Phase 1 hit was inspected and either updated or explicitly judged irrelevant (with a one-line note in the PR).
 - [ ] If the value lives in `enums/app/qase-suites.ts`, the Qase project owner is aware (a value change renames the suite in Qase).
 - [ ] If a `z.enum([...])` or `z.literal()` references the value (e.g. `StatusSchema` in `fixtures/api/schemas/app/tenant.ts`, `job.ts` `z.enum(["enabled", "disabled"])`), it was updated in the same diff.
-- [ ] `~/.claude/skills/*`, `.cursor/rules/*`, and `README.md` were checked for documentation references that name the value.
+- [ ] `~/.claude/skills/*`, `CLAUDE.md`, and `README.md` were checked for documentation references that name the value.
 - [ ] `npx tsc --noEmit` passes.
 - [ ] `npx eslint .` passes.
 - [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-regression`) or `npx playwright test <spec>` directly.
@@ -190,7 +190,7 @@ Generic shape: a UI message enum's value changes (e.g. `"Invalid email or passwo
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `Property 'API_JOBS' does not exist on type` after rename | A consumer was missed — old key still referenced | Run `npx tsc --noEmit`, fix every reported location, then re-grep `~/.claude/skills/*` and `.cursor/rules/*` for the old name in documentation. |
+| `Property 'API_JOBS' does not exist on type` after rename | A consumer was missed — old key still referenced | Run `npx tsc --noEmit`, fix every reported location, then re-grep `~/.claude/skills/*` and `CLAUDE.md` for the old name in documentation. |
 | Test fails `expect(locator).toHaveText('paused')` after a `JOB_STATUSES` value change | A spec or page object hardcoded the old raw string instead of taking it from `JOB_STATUSES` | Search for the old string under `tests/`, `pages/`. Replace with the imported enum reference. |
 | `ZodError: Invalid enum value. Expected ... received "signed_out"` | The API now returns the new value but the schema's `z.enum([...])` still has the old one | Update the literal in `fixtures/api/schemas/app/<resource>.ts`. Do **not** weaken to `z.string()`. |
 | Qase report shows two separate suites after a `SUITES.*` value change | The old suite still has historical results; the new value created a fresh suite | Coordinate with the Qase project owner to merge or rename the suite directly in the Qase UI. Decide before merging the code change. |
