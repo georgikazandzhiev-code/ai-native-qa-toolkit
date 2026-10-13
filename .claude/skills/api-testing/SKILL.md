@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 2.0.8
+version: 3.0.0
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -369,7 +369,7 @@ Before declaring a spec done, verify:
 - [ ] Imports `test`/`expect` from `fixtures/pom/test-options`, **not** `@playwright/test`.
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
 - [ ] `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test (or commented if pending mapping).
-- [ ] Each test carries `{ tag: "@api" }` — multi-endpoint API flows included.
+- [ ] Each test carries the repo's API tag (`{ tag: "@api" }` in the standard set) — multi-endpoint API flows included.
 - [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
 - [ ] Jobs-with-workers specs use `cleanupWorkersAndJobs` (jobs first, workers second).

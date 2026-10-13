@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 3.0.0
+version: 4.0.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 ## Critical
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
-- **ALWAYS** tag every test with **exactly one** value from the toolkit's standard whitelist: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`. This list is the standard every repo uses, not an example to replace. Every tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
+- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist — by default the toolkit's standard set: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`; a repo that already ran another set before adopting the toolkit keeps it (its CI jobs, Qase filters and dashboards depend on those tags), declares it in its project `CLAUDE.md`, and that set is the whitelist there. A new repo uses the standard set. Every standard tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember; a declared set is used exactly as cased in the project `CLAUDE.md`. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
@@ -50,7 +50,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 
 The tags are the standard; the `app-*` script names are the example app's, so name your scripts as your repo does.
 
-**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. A mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every tag lowercase removes the question; the `single-tag-on-test` lint rule, configured with the standard whitelist, catches a stray capital before merge.
+**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. A mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every standard tag lowercase removes the question; a repo with a declared set greps that set's own casing. The `single-tag-on-test` lint rule, configured with the repo's whitelist, catches a stray capital before merge.
 
 ## Test types & directories
 
@@ -82,7 +82,7 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 - [ ] 2. Load the matching deep skill — `api-testing` for API specs, `page-objects` + `selectors` for UI specs.
 - [ ] 3. For UI: explore the live app via `npx playwright open` (the `playwright-cli` skill). For API: read OpenAPI / Swagger first (the `api-testing` skill, Phase 1).
 - [ ] 4. Author the imports + describe + beforeEach skeleton; pull `SUITES.<RESOURCE>` from `enums/app/qase-suites.ts` (extend it if missing).
-- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing — every tag is lowercase). Add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
+- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing as the whitelist lists it — the standard set is all lowercase). Add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
 - [ ] 6. Structure the body with `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only.
 - [ ] 7. For E2E: track created resource names in a `createdNames: string[]` array; add `test.afterAll` that deletes via the matching `helpers/app/<resource>.ts` helper.
 - [ ] 8. For data-driven tests: UI cases loop OUTSIDE the test block (one `test(...)` per case, descriptive names); API negative matrices loop INSIDE one test (`test.step` + `expect.soft` + `safeParse`, the `api-testing` skill).
@@ -151,7 +151,7 @@ test(
 ```
 
 - **One tag per test.** Never `tag: ["@regression", "@smoke"]`.
-- **Exact casing.** Tags are lowercase and `--grep` is case-sensitive, so a mis-cased tag such as `@Regression` silently misses CI.
+- **Exact casing.** Standard tags are lowercase; a declared set keeps its own casing. `--grep` is case-sensitive, so a mis-cased tag such as `@Regression` silently misses CI.
 - **Tag goes on the test, not on `describe`.** `test.describe("X @regression", ...)` is forbidden.
 - **`qase.suite()` first, then `qase.id()` (optional), then `test.step(...)` for the body.**
 
@@ -224,7 +224,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 - ❌ **`import { test, expect } from "@playwright/test"`.** Strips every merged fixture; `apiRequest`, page objects become `undefined`. Fix: import from `../../../../fixtures/pom/test-options`.
 - ❌ **Mis-cased tag such as `@Regression`.** Doesn't match `--grep @regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: lowercase `@regression`.
-- ❌ **Combined tags (`["@regression", "@e2e"]`) or non-whitelisted (`@functional`, `@destructive`, `@slow`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
+- ❌ **Combined tags (`["@regression", "@e2e"]`) or tags outside the repo's whitelist (with the standard set: `@functional`, `@destructive`, `@slow`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
 - ❌ **Missing `qase.suite(...)`.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
 - ❌ **`page.waitForTimeout(1000)`.** Flake amplifier. Fix: web-first assertion / `waitForResponse` / `expect.toPass`.
@@ -242,7 +242,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 
 - [ ] Imports `test` / `expect` from `fixtures/pom/test-options.ts` (never `@playwright/test`).
 - [ ] File in the right directory for the type; filename is kebab-case `.spec.ts`.
-- [ ] Exactly ONE tag from the whitelist with exact casing (every tag lowercase), on the test (not on `describe`).
+- [ ] Exactly ONE tag from the whitelist with exact casing as the whitelist lists it (the standard set is all lowercase), on the test (not on `describe`).
 - [ ] `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows — commented out until mapped. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`.
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.

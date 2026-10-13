@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 3.0.3
+version: 3.0.4
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -17,7 +17,7 @@ The orchestrator at [~/.claude/CLAUDE.md](../../CLAUDE.md) holds the global Rout
 These rules apply to **every** generated artifact in the framework — page object, test, schema, helper, fixture, enum entry, config value, static data file. Violating any of them breaks the framework's contract. The deep skills add domain-specific rules on top.
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
-- **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps (every tag is lowercase). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
+- **ALWAYS** tag every test with **exactly one** value from the `test-standards` whitelist (its Critical block is the one owner of the list — do not copy it here, copies drift), cased exactly as listed there to match the `package.json` greps (the standard set is all lowercase). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the test run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull env-driven values through the config module — `env.X` and `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`, URLs from `appConfig` — never `process.env` at a call site, and no `!` / `??` / `||` on env values (defaults live in the schema in `config/env.ts`; see `type-safety` § Environment variables). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`MESSAGES.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
@@ -96,7 +96,7 @@ flowchart TD
 
 > **Drift to converge — test data tiering.** The three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. If your repo's `test-data/` holds only JSON files (no `test-data/factories/`, no `test-data/static/`), that is drift to converge. Routing for *new* data work points at the three-tier location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place.
 >
-> **Tags are lowercase.** The `package.json` `app-regression` and `app-all` scripts grep lowercase tags such as `@regression`; a mis-cased `@Regression` matches **nothing** and would silently drop the test from CI. The whitelist itself is owned by `test-standards`.
+> **Standard tags are lowercase; a declared set keeps its own casing.** The `package.json` `app-regression` and `app-all` scripts grep lowercase tags such as `@regression`; a mis-cased `@Regression` matches **nothing** and would silently drop the test from CI. The whitelist itself is owned by `test-standards`.
 
 ## Workflow — handle a "create / add / generate / extend / refactor" request
 
