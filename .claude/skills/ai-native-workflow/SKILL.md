@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.6
+version: 2.1.7
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -102,7 +102,7 @@ Before declaring a task done:
 User: *"Add API tests for `POST /api/v1/jobs/{id}/pause`."*
 
 1. **Understand** — new artifact: API spec for one endpoint with a path parameter.
-2. **Locate** — `tests/app/api/**` → Routed Skill Index → load `api-testing` skill (carries the previous `api-tests.mdc` invariants + workflow).
+2. **Locate** — `tests/app/api/**` → Routed Skill Index → load the `api-testing` skill (API invariants and workflow).
 3. **Audit** — `ls config/app.ts`, `ls fixtures/api/schemas/app/`, `ls helpers/app/`. Confirm whether `JOBS_PAUSE` already exists as a route constant.
 4. **Plan** — schema additions, helper need (likely none — single-spec call), coverage plan from OpenAPI (200/400/401/403/404/405/409), test-data needs.
 5. **Generate** — follow `api-testing § Authoring a new API spec` (10-step workflow) + `api-testing § Critical`. Schema goes in `fixtures/api/schemas/app/job.ts` as `z.strictObject`; the spec imports it from that file (there is no `app/` schema barrel). Spec follows `Verify <METHOD> <path> returns <status>` naming.
@@ -149,8 +149,8 @@ User: *"Add `MAILPIT_URL` env var so we can swap the Mailpit instance."*
 ## See Also
 
 - **`~/.claude/CLAUDE.md`** — the always-on orchestrator. The top rule file; a project's own `CLAUDE.md` ranks below it (see § Critical). This skill teaches how to apply it.
-- **API authoring:** [`api-testing`](../api-testing/SKILL.md) — full per-area workflow + endpoint context (consolidated from the previous `api-tests.mdc`).
-- **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`test-standards`](../test-standards/SKILL.md) — class structure, locator strategy, spec conventions (consolidated from the previous `ui-tests.mdc`).
+- **API authoring:** [`api-testing`](../api-testing/SKILL.md) — full per-area workflow and endpoint context.
+- **UI authoring:** [`page-objects`](../page-objects/SKILL.md), [`selectors`](../selectors/SKILL.md), [`test-standards`](../test-standards/SKILL.md) — class structure, locator strategy, spec conventions.
 - **Domain orientation:** the adopting repository's `CLAUDE.md`, or a platform-context skill it names — the system under test's own facts; [`test-case-generation`](../test-case-generation/SKILL.md) (manual invocations).
 - **The skill list** — `~/.claude/CLAUDE.md § Routed Skill Index`. Not repeated here on purpose.
 - [`build-alternatives`](../build-alternatives/SKILL.md) — the rule for open choices: build every way on `alt/` branches, then ask which to keep.

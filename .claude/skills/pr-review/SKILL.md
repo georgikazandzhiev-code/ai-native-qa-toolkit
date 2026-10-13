@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 3.1.1
+version: 3.1.2
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -46,7 +46,7 @@ Then group the output by **file kind** — each kind has its own checklist below
 - **Zod schemas** (`fixtures/api/schemas/app/**/*.ts`)
 - **Fixtures** (`fixtures/**/*.ts`)
 - **Enums / config / static data** (`enums/**`, `config/**`, `test-data/**`)
-- **Skills / rules** (`~/.claude/skills/**`, `.cursor/rules/**`, `CLAUDE.md`)
+- **Skills / rules** (`~/.claude/skills/**`, `CLAUDE.md`)
 
 Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fixtures/api/schemas/app/…` are the invented example app's. Map each kind to your repo's own layout from its `CLAUDE.md`.
 
@@ -135,7 +135,7 @@ Routed skills: [`enums`](../enums/SKILL.md), [`config`](../config/SKILL.md), [`d
 - [ ] Env values are read through the config module — `env.X`, `tokens.full()` / `.admin()` / `.zero()` (called at the call site, never aliased at module level), or `appConfig`. **No `process.env` outside `config/env.ts`** (the setup project's token writes excepted), **no `!`, `as string`, `??` / `||` on env values.** Defaults live in the schema in `config/env.ts`. See `type-safety` § Environment variables.
 - [ ] Changing an existing enum value, key, or `test-data/*.json` value? You should have used the [`refactor-values`](../refactor-values/SKILL.md) skill — every consumer must be updated atomically.
 
-#### Skills / rules (`~/.claude/skills/**`, `.cursor/rules/**`, `CLAUDE.md`)
+#### Skills / rules (`~/.claude/skills/**`, `CLAUDE.md`)
 
 Routed skill: [`skill-creator`](../skill-creator/SKILL.md):
 

@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 2.0.2
+version: 2.0.3
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -237,7 +237,6 @@ User says: *"`appConfig.apiUrl` is typed `string | undefined` and downstream cal
 | "I need `any` to make this generic helper compile" | The generic constraint is too loose | Use `unknown` at the input, narrow with a type guard or `Schema.parse(...)`, return a concrete type. `any` poisons every consumer. |
 | `z.object()` schema accepts a body that's missing fields the API actually returns | `z.object()` strips unknown keys silently; the missing-field side may also be from a separate cause, but `z.object()` masks the additive case | Convert the schema to `z.strictObject()`. Re-run; if a `ZodError` surfaces, you have evidence of contract drift to file. |
 | `process.env.X || "default"` returns the default when `X=""` is set explicitly | `||` falls through on every falsy value, including an empty string — and a call-site default is the wrong place regardless | Move the variable into the schema in `config/env.ts`, with `.default(...)` if a default is genuinely right, and import `env.X`. |
-| Persistent "ESLint errors in modified files" Cursor notification after every agent turn | Cursor's "Iterate on Lints" feature auto-sends lint errors. Files may already be clean (`npx eslint` exits 0). | Disable in Cursor Settings: `Cmd+,` → Features → Chat → "Iterate on Lints" → OFF. If files genuinely have `prettier/prettier` errors, run `npx eslint --fix <file>` once. |
 
 ## See Also
 

@@ -1,7 +1,7 @@
 ---
 name: skill-creator
-version: 1.1.8
-description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work or editing rules.mdc.
+version: 2.0.0
+description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work (use the matched skill) or changing a constitution rule.
 metadata:
   category: authoring
 disable-model-invocation: true
@@ -9,11 +9,11 @@ disable-model-invocation: true
 
 # Skill Creator
 
-Manual-only meta-skill for authoring and refactoring skills inside `~/.claude/skills/`. Invoke with `/skill-creator`. The built-in `~/.cursor/skills-cursor/create-skill/` covers generic Cursor format; this skill layers the project's **paired-rule pattern**, **layered topology**, **standardized SKILL.md structure**, **boundary discipline**, **project-truthful policy**, and **surface-drift policy** — all of which were learned the hard way through Tier 1 cleanup of 16 skills.
+Manual-only meta-skill for authoring and refactoring skills inside `~/.claude/skills/`. Invoke with `/skill-creator`. The generic skill format (a folder with a `SKILL.md` and its frontmatter) is Anthropic's; this skill layers the project's **layered topology**, **standardized SKILL.md structure**, **boundary discipline**, **project-truthful policy**, and **surface-drift policy** — all of which were learned the hard way through Tier 1 cleanup of 16 skills.
 
-Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic `postToolUse` hook at `.cursor/hooks/skill-validate.py`; that file never existed, so nothing was checked — which is how 16 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
+Validation is a **command, not a hook**: `npm run validate` (`scripts/validate.mjs`) checks front matter, required sections, length, duplicate names, cross-reference integrity, and every claim the docs make about tooling that must exist. Run it before opening a PR. An earlier version of this file described an automatic validation hook; that hook never existed, so nothing was checked — which is how 16 skills came to be missing `metadata.category` and the README's skill count drifted from 25 to 28.
 
-> **Truth source.** Skill topology, rule disposition, migration sequence: the Routed Skill Index in `~/.claude/CLAUDE.md`.
+> **Truth source.** Skill topology: the Routed Skill Index in `~/.claude/CLAUDE.md`.
 
 ## Critical
 
@@ -23,7 +23,7 @@ Non-negotiable. Every rule below was learned from a real drift incident in this 
 - **SURFACE DRIFT, NEVER PERPETUATE IT.** When the codebase deviates from canonical (camelCase legacy filenames, `z.object` instead of `z.strictObject`, `process.env.X` read outside the config module, etc.), name the deviation explicitly with "drift, fix on next touch" — do NOT bake the deviation in as the rule. The skill teaches the going-forward target, not the current state.
 - **STANDARDIZED STRUCTURE IS MANDATORY.** Every SKILL.md must include, in order: frontmatter (with "Do NOT use for X" disclaimers) → opener → `## Critical` block → `## What's in each file` (when multi-file) → workflow / phases / decision tables → `## Anti-patterns` → `## Self-review checklist` → `## Examples` (2-3 worked walkthroughs) → `## Troubleshooting` (symptom → cause → fix table) → `## See Also`. See § Standardized SKILL.md structure.
 - **BOUNDARY DISCIPLINE.** Rules / decisions / anti-patterns live in `SKILL.md`. Catalogs of "what exists" live in `reference.md`. Copy-paste skeletons live in `templates.md`. Per-dimension playbooks (e.g. http-method-coverage) live in their own `<topic>.md`. **No code blocks longer than ~5 lines in `SKILL.md` unless the code IS the rule** (a single `expect(SchemaName.parse(body)).toBeTruthy()` line or a `headers: tokens.full()` idiom is fine; a 30-line spec skeleton is not).
-- **NO PAIRED RULES — rule content lives in skills.** This repo retired the fat per-area glob rules — invariants and workflow live in the matching skill (`api-testing`, `selectors`, `page-objects`, `test-standards`, etc.). The always-on rule file is `~/.claude/CLAUDE.md` (orchestrator with MUST/SHOULD/WON'T tables and the Routed Skill Index); the previous `api-tests.mdc` / `ui-tests.mdc` rules were consolidated into skills, and this toolkit ships no glob rules. New skills must NOT introduce new paired glob rules with rule content; consolidate everything into the skill.
+- **NO PAIRED RULES — rule content lives in skills.** This repo retired the fat per-area glob rules — invariants and workflow live in the matching skill (`api-testing`, `selectors`, `page-objects`, `test-standards`, etc.). The always-on rule file is `~/.claude/CLAUDE.md` (orchestrator with MUST/SHOULD/WON'T tables and the Routed Skill Index); the previous per-area API and UI rules were consolidated into skills, and this toolkit ships no glob rules. New skills must NOT introduce new paired glob rules with rule content; consolidate everything into the skill.
 - **CROSS-REFERENCES MUST BE VERIFIED AND BIDIRECTIONAL.** When you cite a sibling skill in `See Also`, confirm the sibling exists (not a TBD placeholder), and update that sibling's `See Also` to mention the new skill back when relevant. Stale TBD references and one-way cross-links are the #1 source of audit churn.
 - **NO DRIFT TRIGGERS in any code example.** No `Zod 4` syntax in a Zod 3 codebase. No `schema-field-` as an input hook when the frontend puts it on the field wrapper. No `process.env` read outside the config module (`config/env.ts`; code reads `env.X` / `tokens.full()`). No `!`, `as string` or `??` defaulting on env values at call sites — defaults belong in the schema in `config/env.ts`. Verify every snippet against `type-safety` skill conventions and the actual codebase.
 - **FRONTMATTER `description` IS THE DISCOVERABILITY GATE.** Third person, "pushy" verbs, WHAT + WHEN + 3-7 quoted trigger phrases, "Do NOT use for X (use the `<other>` skill)" disclaimers at the end. `npm run validate` errors on an empty description and warns on a thin one; neither blocks a weak but present one — that's on the author.
@@ -75,7 +75,7 @@ Every skill in this repo follows this exact section order. The template encodes 
 | **`## Examples`** | Yes (2-3) | Worked walkthroughs that cite the workflow steps. Use concrete, realistic names (`UsersPage`, `createUser`) that read as illustrations — never a path the reader is expected to find in this repository. |
 | **`## Troubleshooting`** | Yes | Table: symptom → cause → fix. Lists real failure modes a future author will hit. |
 | **`## Gotchas`** | Optional, session-grown | Dated bullets of non-obvious environment quirks, API surprises, and workarounds discovered during real sessions (`- **YYYY-MM-DD:** <gotcha>`). Agents append here when a session hits one. Promote a gotcha into `## Critical` / `## Troubleshooting` once it recurs or stabilizes; prune entries that a fix upstream made obsolete. |
-| **`## See Also`** | Yes | Cross-skill links (paired rule, sibling skills in cluster, orchestration doc). Must be verified — no TBD references for now-populated skills. |
+| **`## See Also`** | Yes | Cross-skill links (sibling skills in cluster, orchestration doc). Must be verified — no TBD references for now-populated skills. |
 
 **Why this structure is non-negotiable:** every Tier 1 audit found drift caused by skills that used a different structure. Models reading skills route by section name; deviations break routing. `npm run validate` fails on a missing required section; what stays manual is whether the content under each heading earns it.
 
@@ -94,7 +94,7 @@ Every skill in this repo follows this exact section order. The template encodes 
 
 ## Description recipe
 
-Four parts in order, third person, deliberately "pushy" because Cursor agents undertrigger:
+Five parts in order, third person, deliberately "pushy" because agents undertrigger skills:
 
 1. **WHAT** — verb-led summary (no filler). "Authors / Generates / Validates / Investigates …"
 2. **WHEN** — user intents that should trigger this. "Use when adding X, refactoring Y, or generating Z."
@@ -116,23 +116,23 @@ This file's own description is a worked example.
 
 ```
 - [ ] 1. Capture intent  (5 questions)
-- [ ] 2. Position in topology  (layer + paired-rule + cluster)
+- [ ] 2. Position in topology  (layer + cluster)
 - [ ] 3. Draft from the template  (frontmatter + body skeleton)
 - [ ] 4. Progressive disclosure decisions  (need references/, assets/, scripts/?)
 - [ ] 5. Author the body  (pick patterns from references/patterns.md, follow standardized structure)
 - [ ] 6. Test via subagent  (3 prompts; discoverability + quality)
-- [ ] 7. Cross-link  (paired rule, sibling skills, orchestration doc, rules.mdc Routed Skill Index)
+- [ ] 7. Cross-link  (sibling skills, the Routed Skill Index in ~/.claude/CLAUDE.md)
 - [ ] 8. Verify  (run references/checklist.md; `npm run validate` reports zero errors)
 ```
 
 ### Phase 1: Capture intent
 
-Five questions. Use `AskQuestion` only when more than one answer is genuinely ambiguous; otherwise infer from context.
+Five questions. Infer the answers from context; ask the user only when the requirement itself is unclear, marked `[human-only: requirement]` (constitution § Alternatives, not questions).
 
 1. **What** is the skill's job in one sentence? (Verb-led, no filler.)
 2. **When** should the agent reach for it?
-3. **Where** does it land — populating an existing empty placeholder (the Routed Skill Index in `~/.claude/CLAUDE.md`), creating a new folder, or refactoring a rule via `/migrate-to-skills`?
-4. **Paired rule** — this repo has no fat per-area glob rules (they were consolidated into the matching skills; this toolkit ships no `.mdc` rules). Do NOT introduce new paired glob rules with rule content; everything lives in the skill. The always-on rule file is `~/.claude/CLAUDE.md`.
+3. **Where** does it land — populating an existing empty placeholder (the Routed Skill Index in `~/.claude/CLAUDE.md`), creating a new folder, or moving rule content into a skill (§ Moving rule content into a skill)?
+4. **Paired rule** — this repo has no fat per-area glob rules (they were consolidated into the matching skills; this toolkit ships no glob rules). Do NOT introduce new paired glob rules with rule content; everything lives in the skill. The always-on rule file is `~/.claude/CLAUDE.md`.
 5. **Output shape** — what does success look like (scaffolded spec / diagnostic / decision / refactor)?
 
 If the user asks "what skills do we still need", route directly to the Routed Skill Index in `~/.claude/CLAUDE.md` and the empty `~/.claude/skills/*` folders — that **is** the answer. The live list of populated skills is the Routed Skill Index in `~/.claude/CLAUDE.md`.
@@ -145,7 +145,7 @@ Pick the **cluster** for cross-linking siblings:
 
 - **API authoring** — `scaffold-spec → api-testing → data-strategy → helpers → fixtures → type-safety`.
 - **UI authoring** — `scaffold-spec → selectors → page-objects → playwright-cli → frontend-cross-check → enums → fixtures`.
-- **Domain orientation** — `master-context → run-stats-api-tests-context → test-case-generation`.
+- **Domain orientation** — `test-case-generation`.
 - **Failure investigation** — `debugging → playwright-cli → frontend-cross-check`.
 - **Repo hygiene** — `refactor-values → skill-creator → ai-native-workflow`.
 
@@ -199,7 +199,6 @@ Anthropic constraints: each `references/<file>.md` is **one level deep**; refere
 
 - **Architecture map** or **storage location map** (table).
 - **Mermaid decision tree** when the skill picks between modes.
-- **Paired-rule callout** in the opener: "Read that rule first."
 
 **Drift-prevention while authoring:**
 
@@ -210,7 +209,7 @@ Anthropic constraints: each `references/<file>.md` is **one level deep**; refere
 
 ### Phase 6: Test via subagent
 
-Modern alternative to a manual fresh-chat smoke test. Spawn three `generalPurpose` readonly subagents in parallel and grade their responses in-turn.
+Modern alternative to a manual fresh-chat smoke test. Spawn three read-only subagents in parallel (in Claude Code, the `Explore` agent type) and grade their responses in-turn.
 
 Author **three** prompts:
 
@@ -218,7 +217,7 @@ Author **three** prompts:
 2. **Paraphrased trigger** — same intent, different wording.
 3. **Negative case** — adjacent intent that should *not* select the new skill.
 
-Then invoke the Task tool three times in parallel with this prompt template:
+Then launch the three subagents in parallel with this prompt template:
 
 ```text
 You are simulating fresh-chat skill discovery in this repo.
@@ -251,14 +250,12 @@ If `disable-model-invocation: true`, skip Phase 6 — the skill fires only on `/
 
 **In the same edit batch as the new SKILL.md write:**
 
-1. **Update `~/.claude/CLAUDE.md § Routed Skill Index`** — add the skill row with task signal + skill name + (optional) "Pairs with" rule. Mark TBD skills as **(TBD)** so the model doesn't route to empty placeholders. This is the single human-readable index.
+1. **Update `~/.claude/CLAUDE.md § Routed Skill Index`** — add, rename or remove the skill's row (task signal + skill name) in the same edit. Mark TBD skills as **(TBD)** so the model doesn't route to empty placeholders. This is the single human-readable index; `npm run validate` check 15 fails when the index and the skill folders disagree.
 2. **Update siblings' `## See Also`** — when the new skill belongs to a cluster (per Phase 2), the existing cluster siblings should mention the new skill in their See Also. Cross-references are bidirectional.
-3. **Update the Routed Skill Index in `~/.claude/CLAUDE.md`** — add, rename or remove the skill's row in the same edit. If cluster relationships changed, update the `See Also` of the sibling skills too (bidirectional). `npm run validate` check 15 fails when the index and the skill folders disagree.
-5. **If migrating from a rule**, leave a one-line breadcrumb in the original rule pointing at the new skill (mirrors `/migrate-to-skills`).
+3. **If the content moved from somewhere else**, leave a one-line pointer at the old location naming the new skill.
 
 In the new SKILL.md `## See Also` section:
 
-- Paired rule (or `(none)` explicitly).
 - Sibling skills in the chosen cluster from Phase 2 — verify each is **populated** (not TBD).
 - Orchestration — always cite the Routed Skill Index in `~/.claude/CLAUDE.md`, the one skill index.
 
@@ -314,14 +311,14 @@ Abbreviated loop:
 
 Refactors that exceed 30% of the original `SKILL.md` line count usually mean the skill is mis-scoped — split into two or merge into a sibling.
 
-## Migrating a rule to a skill
+## Moving rule content into a skill
 
-When the source is `.cursor/rules/<name>.mdc`:
+When per-area workflow has grown inside an always-on file (a section of a project `CLAUDE.md`, or a rule file it loads):
 
-1. Confirm the rule is **apply-intelligently** (no `globs:`, `alwaysApply: false`). Always-apply and glob-attached rules stay rules — those modes don't exist for skills.
-2. Run the built-in `/migrate-to-skills` skill — copies frontmatter, drafts the new SKILL.md, updates references.
-3. Resume **Phase 4** here: migrated bodies usually exceed 380 lines and need a `references/` split.
-4. Update the rule disposition row in the Routed Skill Index in `~/.claude/CLAUDE.md`.
+1. Keep in the always-on file only the lines that must hold in every session for that repo. Everything else is skill content.
+2. Run Phases 1–5 here with the moved text as the source. With the standard sections added, a long section can pass 380 lines — then split it per Phase 4.
+3. Leave a one-line pointer at the old location naming the new skill.
+4. Add the skill's row to the Routed Skill Index (Phase 7).
 5. Run Phases 6-8.
 
 ## Anti-patterns
@@ -338,10 +335,10 @@ Each ❌ below was caught in real Tier 1 audits. The fix is named.
 - ❌ **Description without quoted trigger phrases.** Discoverability fails. Add 3-7 `"quoted phrases"` users would type.
 - ❌ **Description without "Do NOT use for X" disclaimers.** Skill catches false positives on adjacent tasks. Add 2-4 disclaimers at the end.
 - ❌ **Description in second person ("You should use this when…")** — undertriggers. Always third person.
-- ❌ **Folder name ≠ `name` field.** Cursor refuses to load. `npm run validate` catches it.
-- ❌ **Paired rule duplicated in skill body.** Invariants belong in the rule (≤ 120 lines, glob-attached). Skill says "Read that rule first" and references rule sections; it does not restate them.
+- ❌ **Folder name ≠ `name` field.** The skill is known by two names. `npm run validate` catches it.
+- ❌ **Rule content in a paired glob rule.** Invariants and workflow live in the skill (Critical § NO PAIRED RULES); the always-on rule file is `~/.claude/CLAUDE.md`.
 - ❌ **`references/` more than one level deep** (`references/foo/bar.md`). Breaks Anthropic's progressive disclosure model. Not checked mechanically — catch it in review.
-- ❌ **Skill replicates a built-in** (e.g., a project skill that just re-wraps `/migrate-to-skills`). If the skill adds no project-specific structure on top, it shouldn't exist.
+- ❌ **Skill replicates a built-in** (e.g. a project skill that only re-wraps a built-in command). If the skill adds no project-specific structure on top, it shouldn't exist.
 - ❌ **Skill body over 380 lines on first draft** — usually two skills. Split before authoring further.
 - ❌ **Reference proliferation** — > 4 reference files for a single skill is almost always the wrong shape. Inline first; split only when length forces it.
 - ❌ **Skipping `~/.claude/CLAUDE.md § Routed Skill Index` update** when adding a skill. The orchestrator's index is the live route map — if it drifts, every model loading the orchestrator routes wrong.
@@ -353,7 +350,7 @@ Each ❌ below was caught in real Tier 1 audits. The fix is named.
 High-level. The full gate is in [`references/checklist.md`](references/checklist.md).
 
 - [ ] Frontmatter: `name` matches folder, `description` ≤ 1024 chars third-person pushy with WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers, `metadata.category` set.
-- [ ] Opener: one paragraph, paired-rule callout if applicable.
+- [ ] Opener: one paragraph.
 - [ ] `## Critical` block present at top — 5–9 hard rules is the target (several skills run 11–16, a hand count on 2026-10-09, not checked by validate — a longer block is a sign some rules belong in the workflow; trim on next touch), in `**ALWAYS**` / `**NEVER**` form.
 - [ ] `## What's in each file` table present when the skill has reference / templates / topic siblings.
 - [ ] Workflow / decisions / patterns body — uses one or more of the four patterns from `references/patterns.md`. Project signature device (table / mermaid / numbered checklist) present.
@@ -361,7 +358,7 @@ High-level. The full gate is in [`references/checklist.md`](references/checklist
 - [ ] `## Self-review checklist` — checkboxes the model walks through.
 - [ ] `## Examples` — 2-3 worked walkthroughs with concrete, realistic illustrative names (not bare placeholders, not one product's files).
 - [ ] `## Troubleshooting` — symptom → cause → fix table.
-- [ ] `## See Also` — paired rule, sibling skills (verified populated, not TBD), orchestration doc.
+- [ ] `## See Also` — sibling skills (verified populated, not TBD), orchestration doc.
 - [ ] No code blocks > 5 lines in SKILL.md (boundary rule). Skeletons live in `templates.md` if needed.
 - [ ] Every codebase claim verified by grep (helpers, paths, testids, env vars, npm scripts, schemas).
 - [ ] Every code snippet matches `type-safety` conventions (`env.X` / `tokens.full()` instead of `process.env`, `z.strictObject()`, no Zod 4 in Zod 3 codebase, testid prefixes as the frontend emits them).
@@ -395,23 +392,23 @@ User says: *"`enums/SKILL.md` is missing the `## Examples` section."*
 3. **Phase 7 (cross-link)** — no orchestrator-level changes (the skill was already in the index). No sibling-See-Also updates needed (the skill name is unchanged).
 4. **Phase 8 (verify)** — re-run checklist; confirm `## Examples` is now present and `npm run validate` is green.
 
-### Example 3 — Migrating an apply-intelligently rule to a skill
+### Example 3 — Moving a project's run-stats rules into a skill
 
-User says: *"Move `run-stats-api-tests-context.mdc` (apply-intelligently rule) into a skill."* (Historical example — this conversion has already happened. Use as a template for the next manual-only domain skill.)
+User says: *"Our project `CLAUDE.md` has a 300-line § Run-stats API tests section. Move it into a skill."* (Follows § Moving rule content into a skill.)
 
-1. **Phase 1 (intent)** — confirm the rule is apply-intelligently (frontmatter shows no `globs:`, `alwaysApply: false`). Confirm via `head <sibling-repos>/automation/.cursor/rules/<rule>.mdc`.
-2. **Phase 2 (topology)** — Layer 2. Cluster: API authoring or domain orientation depending on scope.
-3. **Run `/migrate-to-skills`** — drafts the new `SKILL.md`, copies frontmatter, suggests references.
-4. **Phase 4 (progressive disclosure)** — migrated bodies usually exceed 380 lines; split out a `references/<topic>.md` per Anthropic's one-level-deep rule.
-5. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original rule was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
-6. **Phase 7 (cross-link)** — leave a one-line breadcrumb in the original rule (e.g. "Migrated to `~/.claude/skills/<name>/SKILL.md`"). Update `~/.claude/CLAUDE.md § Routed Skill Index`. Update orchestration §6.2.2 row to flip the rule disposition.
+1. **Split the section** — only the run-stats line of the folder map stays in the project `CLAUDE.md`, because every session needs it; the per-endpoint workflow, query catalog and job-type inventory are skill content.
+2. **Phase 1 (intent)** — WHAT: test the run-stats endpoints. WHEN: editing `tests/app/api/jobs-service/run-stats/**`. Output shape: SKILL.md + `reference.md`.
+3. **Phase 2 (topology)** — Layer 2. Cluster: API authoring.
+4. **Phase 4 (progressive disclosure)** — the moved text exceeds 380 lines once it gets the standardized structure; the query catalog and inventory go to `reference.md` (one level deep).
+5. **Phase 5 (author body)** — re-shape into the standardized structure (`## Critical`, Examples, Troubleshooting, See Also). The original section was MUST-style; the skill needs WORKFLOW + EXAMPLES on top.
+6. **Phase 7 (cross-link)** — replace the moved section with a one-line pointer to the new skill, and add its row to the Routed Skill Index. Add it to `api-testing`'s See Also and back.
 7. **Phase 8 (verify)** — run the full checklist + Phase 6 subagent test.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `validate` reports `name "X" must equal folder name "Y"` | Folder name ≠ frontmatter `name` field | Rename the folder OR fix the `name` field. Cursor refuses to load mismatched skills. |
+| `validate` reports `name "X" must equal folder name "Y"` | Folder name ≠ frontmatter `name` field | Rename the folder OR fix the `name` field, so the skill has one name. |
 | `validate` reports `description NN chars exceeds 1024 limit` | Description too long | Tighten — keep WHAT + WHEN + 3-7 trigger phrases + "Do NOT use for X" disclaimers. Strip filler. |
 | Review flags a description in first or second person | "You should use this when…" or "We use this for…" | Rewrite in third person: "Authors / Generates / Reach for this when…". |
 | Review flags a body with no signature device | Body missing table / mermaid / numbered checklist | Add the project signature: an architecture map, decision tree, or numbered workflow checklist. Mirror `api-testing` / `selectors` / `data-strategy`. |
@@ -443,8 +440,3 @@ User says: *"Move `run-stats-api-tests-context.mdc` (apply-intelligently rule) i
 
 - `~/.claude/CLAUDE.md` — always-on orchestrator. § Routed Skill Index lives here; every new skill updates it.
 - the Routed Skill Index in `~/.claude/CLAUDE.md` — the one skill index; every skill has exactly one row there.
-
-**Built-ins:**
-
-- `~/.cursor/skills-cursor/create-skill/` — generic Cursor skill format. This skill layers project-specific conventions on top.
-- `/migrate-to-skills` — built-in for rule → skill migration.

@@ -1,6 +1,6 @@
 ---
 name: selectors
-version: 3.0.4
+version: 3.0.5
 description: Pick, compose, and harden Playwright locators — priority hierarchy, Radix dropdown/sheet/dialog/table recipes, strict-mode fixes, parameterized locators. Use for any locator work in pages/** or UI assertions; read before ever writing page.locator('css'). Triggers — "selector", "locator", "getByRole", "data-testid", "strict mode". Not for POM class structure (page-objects) or live exploration (playwright-cli).
 metadata:
   category: domain
@@ -13,7 +13,7 @@ Single source of truth for **how UI elements are found and asserted** in this Pl
 - [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) — where the data the UI is filled with comes from.
 - [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md) — for API specs (no locators).
 
-`~/.claude/CLAUDE.md` holds the always-applied invariants for the project (framework identity, MUST/SHOULD/WON'T tables, domain glossary). UI-specific Locator Priority Hierarchy + POM Method Standards live in this skill (consolidated from the previous `ui-tests.mdc` paired rule). For POM class structure see the sister skill [`page-objects`](../page-objects/SKILL.md).
+`~/.claude/CLAUDE.md` holds the always-applied invariants for the project (framework identity, MUST/SHOULD/WON'T tables, domain glossary). UI-specific Locator Priority Hierarchy + POM Method Standards live in this skill. For POM class structure see the sister skill [`page-objects`](../page-objects/SKILL.md).
 
 ## What's in each file (read this before reaching for another file)
 
@@ -403,7 +403,7 @@ User says: *"Add a 'delete job' flow with the confirmation dialog."*
 - **`debugging`** skill — strict-mode violations, "element not found" / "not attached", and other locator-driven test failures.
 - **`api-testing`** skill — for API specs with Zod schemas (no locators); sister skill.
 - **`data-strategy`** skill — where the data the UI is filled with comes from.
-- **[`page-objects`](../page-objects/SKILL.md)** — POM Method Standards, class structure, fixture registration (consolidated from the previous `ui-tests.mdc`).
+- **[`page-objects`](../page-objects/SKILL.md)** — POM Method Standards, class structure, fixture registration.
 - **`~/.claude/CLAUDE.md`** — root orchestrator with MUST / SHOULD / WON'T tables.
 - External — [Playwright Locators](https://playwright.dev/docs/locators), [Best Practices](https://playwright.dev/docs/best-practices), [ARIA roles](https://www.w3.org/TR/wai-aria-1.2/#role_definitions).
 
@@ -412,6 +412,6 @@ User says: *"Add a 'delete job' flow with the confirmation dialog."*
 - [reference.md](reference.md) — full Locator API, role catalog, web-first assertion catalog, framework testid taxonomy, attribute filters, FrameLocator API.
 - [patterns.md](patterns.md) — side-by-side good/bad examples drawn from the example app's page objects.
 - [recipes.md](recipes.md) — end-to-end recipes for tables, sheets, dropdowns, dialogs, toasts, iframes, navigation.
-- [`page-objects`](../page-objects/SKILL.md) — POM/method standards (consolidated from the previous `ui-tests.mdc`).
+- [`page-objects`](../page-objects/SKILL.md) — POM/method standards.
 - `~/.claude/CLAUDE.md` — always-applied invariants (framework identity, MUST/SHOULD/WON'T tables, domain glossary).
 - Sister: [~/.claude/skills/data-strategy/SKILL.md](../data-strategy/SKILL.md) and [~/.claude/skills/api-testing/SKILL.md](../api-testing/SKILL.md).

@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.1.1
+version: 1.1.2
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
@@ -202,5 +202,5 @@ Walk:
 - **`config`** — `appConfig.api.X` for endpoint paths, `appConfig.apiUrl` for base URL, `appConfig.paths.X` for UI routes.
 - **`refactor-values`** — the workflow when a route constant or static `test-data/` value referenced by a helper needs to change.
 - **`debugging`** — failure-mode taxonomy when a helper-driven setup or teardown misbehaves.
-- **[`api-testing`](../api-testing/SKILL.md)** — non-negotiable invariants for API specs that consume these helpers (consolidated from the previous `api-tests.mdc`).
+- **[`api-testing`](../api-testing/SKILL.md)** — non-negotiable invariants for API specs that consume these helpers.
 - **`~/.claude/CLAUDE.md`** — root orchestrator with MUST/SHOULD/WON'T tables and File Naming Conventions (the source of truth for kebab-case).

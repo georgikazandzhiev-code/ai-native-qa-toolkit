@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.11
+version: 2.0.12
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -399,6 +399,6 @@ User says: *"`DashboardPage`, `JobsPage`, and `WorkersPage` all duplicate the su
 
 ## See Also
 
-- **Always-on rules:** [~/.claude/CLAUDE.md](../../CLAUDE.md) — framework invariants (imports, type-safety, MUST/SHOULD/WON'T). UI-specific POM Method Standards, Locator Priority, and cleanup are now in this skill (consolidated from the previous `ui-tests.mdc`).
+- **Always-on rules:** [~/.claude/CLAUDE.md](../../CLAUDE.md) — framework invariants (imports, type-safety, MUST/SHOULD/WON'T). UI-specific POM Method Standards, Locator Priority, and cleanup live in this skill.
 - **Sibling cluster (UI authoring):** [`selectors`](../selectors/SKILL.md) (locator strategy, Radix exception), [`playwright-cli`](../playwright-cli/SKILL.md) (live-app exploration tool), [`fixtures`](../fixtures/SKILL.md) (fixture DI / helper-fixture promotion), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding that consumes POMs), [`enums`](../enums/SKILL.md) (where `MESSAGES.X` lives; endpoint paths live in `config`, never in enums), [`test-standards`](../test-standards/SKILL.md) (spec-side rules — `test.step`, tags, Qase, imports), [`frontend-cross-check`](../frontend-cross-check/SKILL.md) (verifying testids against the live frontend), [`config`](../config/SKILL.md) (`appConfig.paths.X` for navigation URLs).
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.

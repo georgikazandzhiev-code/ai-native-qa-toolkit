@@ -50,11 +50,9 @@ the single sentence that captures the failure mode this skill prevents. This
 is the agent's first read after the description.
 -->
 
-The paired rule at [.cursor/rules/<rule>.mdc](../../rules/<rule>.mdc) captures
-non-negotiable invariants. **Read that rule first** if it exists. This skill
-orchestrates the full authoring workflow on top of it.
-<!-- If no paired rule exists, replace the line above with:
-"This skill has no paired rule (rule disposition: skill-only)." -->
+<One paragraph: the surface this skill covers, the skills it pairs with, and the failure mode it prevents.>
+<!-- No paired rule: the toolkit ships no glob rules, and rule content lives
+in the skill (skill-creator § Critical, NO PAIRED RULES). -->
 
 ## Critical
 
@@ -252,18 +250,15 @@ REQUIRED. Cross-skill links. Must be VERIFIED:
   folders). Mark TBD ones as *(TBD)* with a fallback note.
 - The cross-reference is BIDIRECTIONAL — when you cite a sibling skill here,
   update that sibling's See Also to mention this skill back.
-- The paired rule (if any) is named explicitly. If no paired rule, write
-  "(none)" so the absence is intentional.
 
 Cluster siblings (pick the cluster from skill-creator Phase 2):
 - API authoring: scaffold-spec, api-testing, data-strategy, helpers, fixtures, type-safety
 - UI authoring: scaffold-spec, selectors, page-objects, playwright-cli, frontend-cross-check, enums, fixtures
-- Domain orientation: master-context, run-stats-api-tests-context, test-case-generation
+- Domain orientation: test-case-generation
 - Failure investigation: debugging, playwright-cli, frontend-cross-check
 - Repo hygiene: refactor-values, skill-creator, ai-native-workflow
 -->
 
-- **Paired rule:** [.cursor/rules/<rule>.mdc](../../rules/<rule>.mdc) — non-negotiable invariants for this domain. <!-- Or: "No paired rule (skill-only)." -->
 - **Sibling cluster (<cluster name>):** [`<sibling-1>`](../<sibling-1>/SKILL.md), [`<sibling-2>`](../<sibling-2>/SKILL.md), [`<sibling-3>`](../<sibling-3>/SKILL.md).
 - **Orchestration:** the Routed Skill Index in `~/.claude/CLAUDE.md` — add this skill's row there.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.
