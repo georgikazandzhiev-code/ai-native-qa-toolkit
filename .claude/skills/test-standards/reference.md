@@ -33,7 +33,7 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 | `@e2e` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
 | (union) | `npm run app-all` | Full nightly / pre-merge |
 
-Tag casing must match `package.json` greps exactly, and every tag in the example app is lowercase, so a mis-cased tag such as `@Regression` would never run. The tags are the toolkit's standard; the `app-*` script names are the example app's.
+Tag casing must match `package.json` greps exactly, and every standard tag is lowercase, so a mis-cased tag such as `@Regression` would never run. The tags are the toolkit's standard; the `app-*` script names are the example app's.
 
 ---
 

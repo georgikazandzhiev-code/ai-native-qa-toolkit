@@ -22,7 +22,7 @@ Non-negotiable. Each rule below is what separates a real security test from secu
 - **NEVER assert on exact error text.** Assert **status + schema shape** (401 gateway shape, 403 empty body, 404 error envelope) per `api-testing` § Error envelopes. Leaked stack traces or verbose errors are themselves a finding — capture the leak, don't pin the wording.
 - **ALWAYS know the automatable boundary.** QA automates access-control, injection-payload, auth-flow, security-header/misconfiguration-surface, and object-property-exposure tests. Dependency scanning, static crypto review, and full penetration testing belong to **other tooling** — flag the gap explicitly, never fake coverage. See § Automatable-by-QA decision.
 - **NEVER put real secrets, PII, or production data into payloads, fixtures, or AI prompts.** Use faker and synthetic data (`data-strategy`). Hardcoded tokens/PII are both a framework violation and the exact leak these tests exist to catch.
-- **ALWAYS extend the existing suite, not a parallel one.** Security tests are negative tests — they use the same fixtures, tags, and cleanup as `api-testing` / UI specs. Do not invent a `@security` tag unless it is first added to the project tag whitelist (`test-standards`).
+- **ALWAYS extend the existing suite, not a parallel one.** Security tests are negative tests — they use the same fixtures, tags, and cleanup as `api-testing` / UI specs. Do not invent a `@security` tag: the tags are the toolkit's standard set in `test-standards`, and a new one is a change to that skill, not to one repo.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -93,7 +93,7 @@ For a **review instead of tests**, skip to `review-checklist.md` and walk the ga
 - [ ] Every filed finding is `EXECUTED` or `STATIC` with the reproduction attached; `INFERRED` suspicions stay review notes that name the check to run, not bugs (No Report Without Proof).
 - [ ] No real secrets/PII/prod data anywhere; faker + synthetic only.
 - [ ] Out-of-QA-scope categories (crypto, components, logging) are explicitly flagged, not silently skipped.
-- [ ] Tests reuse the project fixtures, tag whitelist, and cleanup; no parallel suite.
+- [ ] Tests reuse the project fixtures, the standard tags, and cleanup; no parallel suite.
 
 ## Examples
 
@@ -144,7 +144,7 @@ User says: _"Check the job-name field is safe against XSS."_
 - **`api-testing`** — the negative-test matrix (400/401/403/404/405/409), `apiRequest`, error envelopes, cleanup, and the comment-out-with-ticket bug convention. Security tests are negative tests; read this first.
 - **`selectors`** — locator priority and safe DOM assertions for the UI/XSS render-branch checks (no `page.evaluate`).
 - **`data-strategy`** — faker + synthetic payloads, curated invalid/malicious value arrays, no real PII.
-- **`test-standards`** — tag whitelist (reuse the existing tag; add a security tag here first if the project wants one), `test.step`, placement.
+- **`test-standards`** — the standard tags (reuse one; a new tag such as `@security` is a `test-standards` change), `test.step`, placement.
 - **`type-safety`** — `z.strictObject` schemas and the `expect(Schema.parse(body)).toBeTruthy()` idiom used in every assertion.
 - **`k6-load-testing`** — the boundary for rate-limit / resource-consumption (API4) and any volumetric work.
 - **`debugging`** — when a security test fails in a way that looks like flake rather than a finding.

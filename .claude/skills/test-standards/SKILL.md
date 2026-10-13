@@ -48,7 +48,9 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 | `@e2e` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
 | (union) | `app-all` | Full nightly / pre-merge. |
 
-**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. A mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every tag lowercase removes the question; the `single-tag-on-test` lint rule, configured with your whitelist, catches a stray capital before merge.
+The tags are the standard; the `app-*` script names are the example app's, so name your scripts as your repo does.
+
+**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. A mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every tag lowercase removes the question; the `single-tag-on-test` lint rule, configured with the standard whitelist, catches a stray capital before merge.
 
 ## Test types & directories
 
