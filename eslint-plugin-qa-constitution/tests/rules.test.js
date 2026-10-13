@@ -76,6 +76,8 @@ tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
     { code: `test('creates a project', async () => {});`, errors: [{ messageId: 'none' }] },
     { code: `test('@a @b creates', async () => {});`, errors: [{ messageId: 'many' }] },
     { code: `describe('@regression projects', () => {});`, errors: [{ messageId: 'onDescribe' }] },
+    // the whitelist is case-sensitive: a stray capital is not the standard tag
+    { code: `test('@Regression a', async () => {});`, options: [{ whitelist: ['@regression'] }], errors: [{ messageId: 'notWhitelisted' }] },
     {
       code: `test('@nope creates', async () => {});`,
       options: [{ whitelist: ['@regression', '@smoke'] }],

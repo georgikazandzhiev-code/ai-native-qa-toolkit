@@ -224,7 +224,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `@regression` and `qase.suite(SUITES.APP_SETTINGS)`.
 5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend the `MESSAGES` enum). No `waitForTimeout`.
 6. **Step 6 — generate.** Both files produced.
-7. **Step 7 — self-review.** Tag is `@regression`, lowercase `r` as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
+7. **Step 7 — self-review.** Tag is `@regression`, exactly as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
 9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `MESSAGES.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 
