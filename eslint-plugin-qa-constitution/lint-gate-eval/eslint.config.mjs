@@ -12,6 +12,8 @@ import qa from '../lib/index.js';
  *     my invention rejecting both arms â€” including the skill arm's @App-API and @App-E2E, which
  *     are BOTH valid. The whitelist below is now quoted from
  *     ~/.claude/skills/test-standards/SKILL.md Â§ Tag whitelist.
+ *     (2026-10, #6: the standard tags have since been renamed to lowercase; this eval
+ *     keeps the tags it ran with.)
  *
  *  2. MISSING PLUGIN. A generated file carried an eslint-disable for
  *     playwright/no-force-option. With that plugin unregistered, ESLint reports

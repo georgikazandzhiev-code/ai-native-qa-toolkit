@@ -24,22 +24,22 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 
 | Tag | npm script | What runs |
 |---|---|---|
-| `@App-Critical` | `npm run app-critical` | 3–5 must-pass-before-anything-else tests |
-| `@App-Smoke` | `npm run app-smoke` | Critical-path UI flows — login, landing, navigation |
-| `@App-Sanity` | `npm run app-sanity` | Quick post-deploy read-only verification |
-| `@App-regression` | `npm run app-regression` | Functional regression — largest bucket. **Lowercase `regression` — the only non-Title-case tag** |
-| `@App-API` | `npm run app-api` | API contract + schema validation |
-| `@App-Integration` | `npm run app-integration` | Cross-component integration |
-| `@App-E2E` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
+| `@critical` | `npm run app-critical` | 3–5 must-pass-before-anything-else tests |
+| `@smoke` | `npm run app-smoke` | Critical-path UI flows — login, landing, navigation |
+| `@sanity` | `npm run app-sanity` | Quick post-deploy read-only verification |
+| `@regression` | `npm run app-regression` | Functional regression — largest bucket. |
+| `@api` | `npm run app-api` | API contract + schema validation |
+| `@integration` | `npm run app-integration` | Cross-component integration |
+| `@e2e` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
 | (union) | `npm run app-all` | Full nightly / pre-merge |
 
-Tag casing must match `package.json` greps exactly: Title-case for every tag **except** `@App-regression`, which is lowercase (`app-regression` and `app-all` both grep the lowercase form). In the example app, the overwhelming majority of specs use `@App-regression` (~398 occurrences across ~34 files); zero tests use Title-case `@App-Regression`, and a Title-case tag would never run.
+Tag casing must match `package.json` greps exactly, and every standard tag is lowercase, so a mis-cased tag such as `@Regression` would never run. The tags are the toolkit's standard; the `app-*` script names are the example app's.
 
 ---
 
 ## Scenario inventory — E2E specs
 
-In the example app, these live under `tests/app/e2e/`. Each is one test per flow with multiple `test.step` phases. Tag: `@App-E2E` unless noted.
+In the example app, these live under `tests/app/e2e/`. Each is one test per flow with multiple `test.step` phases. Tag: `@e2e` unless noted.
 
 | Spec | Covers |
 |---|---|
@@ -50,7 +50,7 @@ In the example app, these live under `tests/app/e2e/`. Each is one test per flow
 | `stream-job-crud.spec.ts` | Same pattern for stream jobs + expanded-view-loads stub. |
 | `email-job-crud.spec.ts` | Email-job CRUD. |
 | `webhook-job-crud.spec.ts` | Webhook-job CRUD (outbound callback jobs). |
-| `login-smoke.spec.ts` | Login page elements, forgot-password link, successful login. **Tag:** `@App-Smoke`. |
+| `login-smoke.spec.ts` | Login page elements, forgot-password link, successful login. **Tag:** `@smoke`. |
 | `login-negative.spec.ts` | Invalid credentials, empty fields. |
 | `forgot-password.spec.ts` | Password reset flow (extracts link from Mailpit email). |
 | `terms-and-conditions.spec.ts` | Accept / decline flow. |
@@ -61,7 +61,7 @@ In the example app, these live under `tests/app/e2e/`. Each is one test per flow
 
 ## Scenario inventory — Functional specs
 
-In the example app, these live under `tests/app/functional/`. One test per validation scenario, `beforeEach` navigates to the form. Tag: `@App-regression` unless noted.
+In the example app, these live under `tests/app/functional/`. One test per validation scenario, `beforeEach` navigates to the form. Tag: `@regression` unless noted.
 
 ### Form validation specs (per job type)
 
@@ -98,7 +98,7 @@ Pattern: API-seeded job in `beforeAll`, semantic assertions on expanded-row UI, 
 
 ## Scenario inventory — API specs
 
-In the example app, these live under `tests/app/api/`. One spec per API resource. Tag: `@App-API`. The deep authoring methodology (negative-matrix, status-code coverage, per-verb playbook) lives in the [`api-testing`](../api-testing/SKILL.md) skill — this is just an index.
+In the example app, these live under `tests/app/api/`. One spec per API resource. Tag: `@api`. The deep authoring methodology (negative-matrix, status-code coverage, per-verb playbook) lives in the [`api-testing`](../api-testing/SKILL.md) skill — this is just an index.
 
 | Spec | Resource |
 |---|---|
@@ -113,7 +113,7 @@ In the example app, these live under `tests/app/api/`. One spec per API resource
 | `run-stats-query.spec.ts` | `GET /api/v1/run-stats` query endpoint. |
 | `cross-tenant-isolation.spec.ts` | Cross-tenant isolation matrix — token from tenant A cannot read/write tenant B's resources. |
 | `cross-tenant-run-stats-isolation.spec.ts` | Cross-tenant isolation specific to run-stats queries. |
-| `e2e-tenant-onboarding-flow.spec.ts` | Multi-endpoint onboarding API flow — create tenant + invite user + verify Mailpit email + UUID immutability + multi-user emails. **Tag:** `@App-API` (an API flow, not a UI journey). |
+| `e2e-tenant-onboarding-flow.spec.ts` | Multi-endpoint onboarding API flow — create tenant + invite user + verify Mailpit email + UUID immutability + multi-user emails. **Tag:** `@api` (an API flow, not a UI journey). |
 
 ---
 

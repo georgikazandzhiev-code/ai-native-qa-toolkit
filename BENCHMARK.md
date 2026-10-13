@@ -121,6 +121,11 @@ The skill arm produced 78% more code and zero constitution violations. The basel
 (`@api`) that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a
 test body, and left a test untagged — every one of them a convention it had no way to know.
 
+> **Note (2026-10, #6):** the standard tags were since renamed to lowercase, so `@api` is now the
+> whitelisted form. Not re-measured: under today's whitelist, 13 of the baseline's 17 violations would
+> not fire, and the tag dimension of this eval no longer separates the arms. The numbers above are
+> what ran.
+
 **This is the first measured lift in the whole exercise, and the metric that produced it is the one
 that cannot flatter anybody.**
 

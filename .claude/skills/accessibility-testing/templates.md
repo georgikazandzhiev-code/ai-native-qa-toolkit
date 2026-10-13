@@ -94,7 +94,7 @@ import { SUITES } from "../../../../enums/app/qase-suites";
 import { qase } from "playwright-qase-reporter";
 
 test.describe("Settings accessibility", () => {
-    test("Verify the delete-account dialog has no automated a11y violations", { tag: "@App-regression" }, async ({ settingsPage, makeAxeBuilder }, testInfo) => {
+    test("Verify the delete-account dialog has no automated a11y violations", { tag: "@regression" }, async ({ settingsPage, makeAxeBuilder }, testInfo) => {
         qase.suite(SUITES.APP_SETTINGS);
         // qase.id(N);
 
@@ -125,7 +125,7 @@ test.describe("Settings accessibility", () => {
 What no rule engine can judge: can the flow be done without a mouse, and does focus go where it should?
 
 ```typescript
-test("Verify Escape closes the delete-account dialog and returns focus to its trigger", { tag: "@App-regression" }, async ({ page, settingsPage }) => {
+test("Verify Escape closes the delete-account dialog and returns focus to its trigger", { tag: "@regression" }, async ({ page, settingsPage }) => {
     qase.suite(SUITES.APP_SETTINGS);
     // qase.id(N);
 

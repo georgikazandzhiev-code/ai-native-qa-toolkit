@@ -12,13 +12,13 @@ import tsParser from '@typescript-eslint/parser';
 import qa from '../lib/index.js';
 
 const TAGS = [
-  '@App-Critical',
-  '@App-Smoke',
-  '@App-Sanity',
-  '@App-regression',
-  '@App-API',
-  '@App-Integration',
-  '@App-E2E',
+  '@critical',
+  '@smoke',
+  '@sanity',
+  '@regression',
+  '@api',
+  '@integration',
+  '@e2e',
 ];
 
 export default [

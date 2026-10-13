@@ -53,7 +53,7 @@ rules: {
     specPattern: '\\.spec\\.ts$',          // which files count as specs
   }],
   'qa-constitution/single-tag-on-test': ['error', {
-    whitelist: ['@App-Critical', '@App-regression', '@smoke'],  // your tag whitelist
+    whitelist: ['@critical', '@smoke', '@sanity', '@regression', '@api', '@integration', '@e2e'],  // the standard tags (test-standards)
   }],
   'qa-constitution/no-pom-instantiation-in-test': ['error', {
     pattern: '(Page|Component|Client)$',   // what counts as an injectable
@@ -71,7 +71,7 @@ Two of the rules exist specifically to enforce `definition_of_done.md` § 2 — 
 
 ```ts
 // eslint-asserts-via-helper: assertProjectMatches does the checking
-test('@App-API creates a project', async ({ apiRequest }) => {
+test('@api creates a project', async ({ apiRequest }) => {
   await assertProjectMatches(apiRequest, expected);
 });
 ```
