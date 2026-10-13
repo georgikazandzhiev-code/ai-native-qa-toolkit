@@ -15,7 +15,7 @@ A number in prose is a claim. A number a script recomputes is a fact. Where the 
 ```mermaid
 flowchart LR
   A["AI-driven SDLC<br/>competency model"] --> B["QA AI toolkit<br/>constitution + 30 skills"]
-  B --> C["Surfaces<br/>Cursor · Claude Code · MCP"]
+  B --> C["Surfaces<br/>Claude Code · MCP"]
   C --> D["QA engineers"]
   D --> E["Assessments<br/>merged artifacts, not quizzes"]
   E --> F["Capability matrix<br/>L1 → L4"]
@@ -31,7 +31,7 @@ The dotted edge is the part that usually goes missing. A capability matrix that 
 | **Owner** — `@georgikazandzhiev-code` | Merge; cut a version; promote a pattern to `canonical`; change what the gate refuses; grant L1–L4 | Approve their own change to a `## Critical` block without a second reviewer |
 | **Reviewer** — any engineer at L3+ | Approve or block; require a re-measure; open a falsification | Merge a rule change alone; promote to `canonical` |
 | **Contributor** — anyone | Propose any change; add a skill; add a lint rule; add an eval case | Merge; edit another skill's `## Critical` without its reviewer |
-| **Agent** — Claude Code, Cursor | Write patterns at `tier: candidate`; promote `candidate → active` on evidence | Promote anything to `canonical`; edit `CLAUDE.md`; weaken a schema or an assertion to pass |
+| **Agent** — any AI coding agent (Claude Code is the supported surface) | Write patterns at `tier: candidate`; promote `candidate → active` on evidence | Promote anything to `canonical`; edit `CLAUDE.md`; weaken a schema or an assertion to pass |
 
 **Known risk, stated rather than hidden: the owner and the only reviewer are the same person.** Bus factor 1. Until a second person holds merge rights, every rule in this table above the Contributor row is self-enforced, and this document's authority over the owner is exactly zero. The exit condition is in Rollout Phase 1 and it gates widening past one team — not because process demands it, but because a single reviewer cannot catch the class of error this repository has already made twice: a confident, well-argued, wrong number.
 
@@ -120,7 +120,7 @@ Three jobs run on every push and every pull request (`.github/workflows/validate
 
 | Fails the CI run | Reported, never fails the run |
 |---|---|
-| `npm run validate` — front matter, required sections, semver, cross-reference integrity, `mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
+| `npm run validate` — front matter, required sections, semver, cross-reference integrity, `.cursor/mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
 | `node tests/rules.test.js` — 27 `RuleTester` suites, 58 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
 | `node tests/fault-injection.test.mjs` — every rule must fire on the known-bad tree, stay silent on the compliant tree, and stop reporting when its visitor is emptied; the pinned files must draw exactly their listed reports, rule and line | `description` under 120 chars, or missing a "Do NOT use for" disclaimer |
 | `node tests/skill-snippets.test.mjs` — every TypeScript block under `.claude/skills/` must parse and pass all 17 rules. Labelled counter-examples and reasoned `snippet-lint: skip` blocks are parsed but not linted; an `eslint-disable` without a `-- reason`, or any inline rule configuration, fails the run | |

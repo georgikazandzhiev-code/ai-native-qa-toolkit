@@ -603,16 +603,17 @@ if (!existsSync(prTemplatePath)) {
 
 // ── 10. Session memory ──────────────────────────────────────────────────────────
 //
-// The constitution and an always-applied Cursor rule both route every session to this file, so a
-// missing or malformed one is a broken route rather than a missing nicety. The cap is the point:
-// a capture file with no drain becomes a landfill, and a landfill nobody reads is worse than no
-// memory at all -- it carries the authority of "we learned this" while going unread.
+// The constitution routes every session to this file (and so does an always-applied rule, in a
+// repository that ships .cursor/rules), so a missing or malformed one is a broken route rather
+// than a missing nicety. The cap is the point: a capture file with no drain becomes a landfill,
+// and a landfill nobody reads is worse than no memory at all -- it carries the authority of "we
+// learned this" while going unread.
 
 const memoryPath = join(ROOT, '.claude', 'memories', 'learned_patterns.md');
 const MAX_MEMORY_CASES = 12;
 
 if (!existsSync(memoryPath)) {
-  err('.claude/memories/learned_patterns.md', 'missing — the constitution and a Cursor rule both route to it');
+  err('.claude/memories/learned_patterns.md', 'missing — the constitution routes every session to it');
 } else {
   const mem = read(memoryPath);
 

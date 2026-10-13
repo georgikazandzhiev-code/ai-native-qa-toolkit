@@ -21,10 +21,10 @@ either reverted or recorded deliberately — see `scripts/skills-lock.mjs`.
 **Provenance** | Established by filename match against upstream, not by byte comparison. `npm run skills:lock -- --verify-upstream` reports whether upstream has moved since. |
 
 **Not vendored, and deliberately excluded from that entry:** `SKILL.md`, `references/` and
-`assets/SKILL-template.md` are this repository's own work. They carry the paired-rule pattern,
-the layered topology, the SKILL.md structure contract and the boundary discipline, none of
-which exist upstream. Tracking them as vendored would both misattribute them and make every
-legitimate edit fail the provenance check.
+`assets/SKILL-template.md` are this repository's own work. They carry the layered topology,
+the SKILL.md structure contract and the boundary discipline, none of which exist upstream.
+Tracking them as vendored would both misattribute them and make every legitimate edit fail
+the provenance check.
 
 ---
 
