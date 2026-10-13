@@ -55,7 +55,7 @@ const VENDORED = {
     ],
     note:
       'SKILL.md, references/ and assets/SKILL-template.md are this repository\'s own work and ' +
-      'are deliberately NOT tracked here — they carry the project\'s paired-rule pattern and ' +
+      'are deliberately NOT tracked here — they carry the project\'s layered topology and ' +
       'boundary discipline, which upstream does not have.',
   },
 };
