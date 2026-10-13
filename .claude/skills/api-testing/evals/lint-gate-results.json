@@ -57,7 +57,7 @@
     "invented tag @api, absent from the house whitelist",
     "JSDoc on locator getters",
     "try/catch inside a test body",
-    "a test left untagged"
+    "an if statement inside a test body"
   ],
   "harness_defects_found_and_fixed": [
     "fabricated tag whitelist in the eval config (29 of 41 first-pass findings)",
