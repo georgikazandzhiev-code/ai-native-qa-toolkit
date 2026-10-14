@@ -53,7 +53,7 @@ rules: {
     specPattern: '\\.spec\\.ts$',          // which files count as specs
   }],
   'qa-constitution/single-tag-on-test': ['error', {
-    whitelist: ['@critical', '@smoke', '@sanity', '@regression', '@api', '@integration', '@e2e'],  // the standard tags (test-standards); a repo that kept its own set lists that set here
+    whitelist: ['@critical', '@smoke', '@sanity', '@regression', '@api', '@integration', '@e2e'],  // the standard tags (test-standards); a repo that kept its own set lists that set here; a repo still on the toolkit's earlier @App-* set keeps its @App-* whitelist until its move PR changes it
   }],
   'qa-constitution/no-pom-instantiation-in-test': ['error', {
     pattern: '(Page|Component|Client)$',   // what counts as an injectable

@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 3.0.5
+version: 3.0.6
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -17,7 +17,7 @@ The orchestrator at [~/.claude/CLAUDE.md](../../CLAUDE.md) holds the global Rout
 These rules apply to **every** generated artifact in the framework — page object, test, schema, helper, fixture, enum entry, config value, static data file. Violating any of them breaks the framework's contract. The deep skills add domain-specific rules on top.
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
-- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist: the standard set in the `test-standards` Critical block (do not copy it here, copies drift), or the set the project `CLAUDE.md` declares for a repo that already ran another set. Use it cased exactly as that whitelist lists it, to match the `package.json` greps (the standard set is all lowercase). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
+- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist: the standard set in the `test-standards` Critical block (do not copy it here, copies drift), or the set the project `CLAUDE.md` declares for a repo that already ran another set, or, in a repo not yet moved off the toolkit's earlier `@App-*` set, its current `@App-*` tag until that move lands (`test-standards`). Use it cased exactly as that whitelist lists it, to match the `package.json` greps (the standard set is all lowercase). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the test run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull env-driven values through the config module — `env.X` and `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`, URLs from `appConfig` — never `process.env` at a call site, and no `!` / `??` / `||` on env values (defaults live in the schema in `config/env.ts`; see `type-safety` § Environment variables). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`MESSAGES.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
@@ -202,7 +202,7 @@ For **every** generated artifact, regardless of category:
 - [ ] No `page.waitForTimeout(...)`. Web-first assertions only.
 - [ ] No JSDoc on locator getters. JSDoc with `@param` / `@returns` on every public action method.
 - [ ] Tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => {})` for every distinct phase (capitalized prefix, colon, single space).
-- [ ] Each test has exactly **one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`), cased exactly as that whitelist lists it. Tag on the test, not on `describe`.
+- [ ] Each test has exactly **one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`; a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands), cased exactly as that whitelist lists it. Tag on the test, not on `describe`.
 - [ ] Every test starts with `qase.suite(SUITES.<RESOURCE>);` as the first body line. `qase.id(N);` follows — commented out until mapped.
 - [ ] Page objects consumed via fixture destructuring — no `new <Page>(page)`.
 - [ ] New POMs registered in `fixtures/pom/page-object-fixture.ts` in the same edit batch.
