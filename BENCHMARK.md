@@ -118,13 +118,13 @@ the skill transmits house conventions is the thing being measured.
 | **Total** | **17** violations / 416 lines | **0** violations / 742 lines |
 
 The skill arm produced 78% more code and zero constitution violations. The baseline invented a tag
-(`@api`) that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a
-test body, and left a test untagged — every one of them a convention it had no way to know.
+(`@api`) that does not exist in the whitelist, put JSDoc on locator getters, and used `try`/`catch` and an
+`if` in a test body — every one of them a convention it had no way to know.
 
 > **Note (2026-10, #6):** the standard tags were since renamed to lowercase, so `@api` is now the
 > whitelisted form. Not re-measured. Re-linting the recorded files with only the whitelist swapped,
 > the tag findings invert: the baseline's 13 would not fire, and the skill arm's 12 `@App-*` tags
-> would. These two counts are EXECUTED (eslint re-lint of `lint-gate-eval/case*/` with only
+> would. These two counts are EXECUTED (eslint re-lint of `lint-gate-eval/case*/{baseline,skill}/` with only
 > `TAG_WHITELIST` swapped), not recomputed by `validate`. The tag dimension of this run no longer
 > measures what it did. The numbers above are what ran.
 

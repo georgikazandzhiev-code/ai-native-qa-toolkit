@@ -56,7 +56,7 @@ The toolkit argues that AI output must be proven rather than asserted, so the sk
 | Four-call lifecycle spec | **3** | **0** |
 | **Total** | **17** violations / 416 lines | **0** violations / 742 lines |
 
-The skill arm produced 78% more code and broke no rule. The baseline invented a tag that does not exist in the whitelist, put JSDoc on locator getters, used `try`/`catch` in a test body, and left a test untagged — conventions it had no way to know.
+The skill arm produced 78% more code and broke no rule. The baseline invented a tag that does not exist in the whitelist, put JSDoc on locator getters, and used `try`/`catch` and an `if` in a test body — conventions it had no way to know.
 
 > At the time `@api` was not whitelisted; it is now the standard tag, so the tag part of this result is out of date. Not re-measured — see [BENCHMARK.md](BENCHMARK.md).
 
@@ -133,7 +133,7 @@ Every skill declares a `version` in its front matter, and the meaning of a bump 
 | **minor** | a rule or section is added — nothing previously correct becomes incorrect |
 | **patch** | wording, examples, cross-references — no rule changes |
 
-Skills that have been measured carry an append-only `evals/history.json`: one entry per version per metric, with the score, the baseline arm's score in the same run, and a note on what changed.
+Skills that have been measured carry an append-only `evals/history.json` (entries are only added and scores never change; a note may gain a stated limitation): one entry per version per metric, with the score, the baseline arm's score in the same run, and a note on what changed.
 
 ```bash
 npm run eval:compare
