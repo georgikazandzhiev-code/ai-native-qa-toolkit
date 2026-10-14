@@ -288,7 +288,7 @@ No Python is needed. On Windows, run the shell commands below in Git Bash. `.git
 - `@playwright/test`, with browsers installed (`npx playwright install`), plus TypeScript in strict mode.
 - `zod` for response schemas and `@faker-js/faker` for unique test data.
 - ESLint 9 or newer, with `eslint-plugin-qa-constitution` and `eslint-plugin-playwright`.
-- Environment files `env/.env.<environment>` for tokens and URLs, kept out of git, with the committed template `env/.env.example` naming every variable.
+- Environment files `env/.env.<environment>` for tokens and URLs, kept out of git, with the committed template `env/.env.example` naming every variable the env files hold (the `config` skill lists the ones that stay out).
 - Optional: `playwright-qase-reporter`, if you use Qase for test management.
 
 **Optional integrations:**
@@ -359,7 +359,7 @@ Then ask Claude Code to *run the review-pr workflow for PR N*. It never edits, p
 
 ## Adopting it in your repo
 
-The constitution and skills are **project-agnostic on purpose**. Every example in the skills uses an invented scheduled-jobs app, described in [GOVERNANCE.md § Example domain](GOVERNANCE.md#example-domain). Its file names, specs, page objects, helpers and run stats are illustrations, not files to look for in your repo.
+The constitution and skills are **project-agnostic on purpose**. Every example in the skills uses an invented scheduled-jobs app, described in [GOVERNANCE.md § Example domain](GOVERNANCE.md#example-domain). Its services, resources, page objects, test-ids and run stats are illustrations; the folders and file names around them are the standard (the constitution's § Standard repo layout and naming).
 
 The toolkit is the standard, and a repo that adopts it aligns to it. The folder layout, file naming and npm script names are defined once, in the constitution's § Standard repo layout and naming, and the tag set in the `test-standards` skill. Tags have one deliberate exception: a repo that already ran another tag set before adopting the toolkit keeps it, because its CI jobs, Qase filters and dashboards depend on those tags, and declares it in its project `CLAUDE.md`, together with its tag map. A repo still on the toolkit's earlier `@App-*` set moves to the standard set in a change of its own, and until then new tests keep its current `@App-*` tag. To onboard a repository, keep `CLAUDE.md` as-is, move the repo to that layout (one area per PR is fine), and add a project-level `CLAUDE.md` holding only what is the repo's own, never its layout: its services, endpoint and test-id catalogs, a kept tag set and its tag map if it has one, the inventories the skills keep current (page objects, fixtures, helpers, enums, specs), whether the suite is parallel-safe and with how many workers it runs if not, the drift table, and the system under test's context (architecture, vocabulary, performance targets, known issues) that test-case generation and requirement reviews read. Where a skill shows the example app's files (`JobsPage`, `jobs-service/`), those are illustrations of the product side; your project `CLAUDE.md` names your real ones.
 

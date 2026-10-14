@@ -127,10 +127,10 @@ Consequences:
 
 ### Target
 
-Introduce paired typed factories + assertion-style setup helpers in `helpers/app/test-data-generators.ts` and the resource helpers:
+Introduce paired typed factories + assertion-style setup helpers in the resource helpers (`helpers/app/workers.ts`, `jobs.ts`, …); they move to `helpers/app/test-data-generators.ts` only once the `api-testing` extraction threshold is crossed:
 
 ```typescript
-// helpers/app/test-data-generators.ts (factory — Pattern 2)
+// helpers/app/workers.ts (factory — Pattern 2, next to the seeder)
 export type WorkerData = {
     name: string;
     location: string;
@@ -188,7 +188,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 
 ### Migration steps
 
-1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to `helpers/app/test-data-generators.ts` (create the file).
+1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to each resource's helper file.
 2. Replace each `buildCreate<X>Body` body with a delegation to the new factory; keep the existing function as a thin wrapper for backward compatibility, marked `@deprecated`.
 3. Add assertion-style `setup<X>` / `teardown<X>` to each resource helper file. The existing passthrough `create<X>` / `delete<X>` stays for advanced specs that need to assert non-2xx outcomes (negative tests).
 4. Migrate specs one resource at a time: every `beforeAll`/`beforeEach` that does `await create<X>(...)` followed by status + parse becomes `await setup<X>(...)`. Every `afterAll`/`afterEach` cleanup becomes `await teardown<X>(...)`.
@@ -197,7 +197,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 
 ### Verification
 
-- `rg "create(Worker|Job|Tenant|User)Data" helpers/` returns hits only in `helpers/app/test-data-generators.ts`.
+- `rg "create(Worker|Job|Tenant|User)Data" helpers/` returns hits only in the resource helper files (or in `test-data-generators.ts` once the threshold is crossed).
 - `rg "expect\(status\)\.toBe\(201\)" tests/app/api/` count drops as setup helpers absorb the assertion.
 - `rg "Schema\.parse\(body\)" tests/app/api/` count drops as setup helpers absorb the parse.
 - Worker / job / tenant / user CRUD specs still pass.

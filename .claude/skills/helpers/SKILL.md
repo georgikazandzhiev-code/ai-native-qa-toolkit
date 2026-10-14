@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.1.3
+version: 1.1.4
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
@@ -197,7 +197,7 @@ Walk:
 - **`api-testing`** — owns the helper-vs-`apiRequest`-vs-fixture decision (§ Helpers — three callable shapes), the assertion-style vs passthrough decision (§ Two helper styles), the `apiRequest` contract, the `expect(Schema.parse(body)).toBeTruthy()` rule, the negative-matrix coverage, and full code skeletons in `templates.md` (§ 18 Helper styles).
 - **`fixtures`** — Playwright fixture authoring with `use()` lifecycle (`mailpit`, `loginUser`, `apiRequest`); the sibling category to helpers. See also `api-testing` § Helpers — three callable shapes for the helper-vs-fixture decision rule.
 - **`type-safety`** — Zod 3 schemas, `z.strictObject()`, `z.string().uuid()` defaults, type inference (`z.infer<typeof X>`), and env access through the config module (`env.X`, `tokens.full()` — never `process.env` outside `config/env.ts`). The strictness ladder for `.optional()` / `.nullable()` lives in `api-testing` § Zod schema conventions.
-- **`data-strategy`** — when to use JSON vs faker vs env vs API seeding; the three-tier rule for invalid-value arrays. Body builders in this skill seed from faker per § 8 of that skill.
+- **`data-strategy`** — when to use JSON vs faker vs env vs API seeding. The three-tier rule for invalid-value arrays is in `api-testing` § Invalid-value arrays. Body builders in this skill seed from faker per § 8 of that skill.
 - **`enums`** — `SUITES.API_*`, statuses, message constants. Suites and messages are caller-side concerns; a helper may import a domain value it needs (e.g. a `JOB_STATUSES` member), but never a path or URL — resource path constants (`appConfig.api.X`) live in `config/app.ts` per the orchestrator's Sources of Truth rule.
 - **`config`** — `appConfig.api.X` for endpoint paths, `appConfig.apiUrl` for base URL, `appConfig.paths.X` for UI routes.
 - **`refactor-values`** — the workflow when a route constant or static `test-data/` value referenced by a helper needs to change.
