@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 3.0.6
+version: 3.0.7
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -17,7 +17,7 @@ The orchestrator at [~/.claude/CLAUDE.md](../../CLAUDE.md) holds the global Rout
 These rules apply to **every** generated artifact in the framework — page object, test, schema, helper, fixture, enum entry, config value, static data file. Violating any of them breaks the framework's contract. The deep skills add domain-specific rules on top.
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts` in spec files. **NEVER** from `@playwright/test`. Why: `test-options.ts` merges every custom fixture (`apiRequest`, `loginUser`, `mailpit`, all page objects); importing from `@playwright/test` strips them silently. See the `test-standards` skill.
-- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist: the standard set in the `test-standards` Critical block (do not copy it here, copies drift), or the set the project `CLAUDE.md` declares for a repo that already ran another set, or, in a repo not yet moved off the toolkit's earlier `@App-*` set, its current `@App-*` tag until that move lands (`test-standards`). Use it cased exactly as that whitelist lists it, to match the `package.json` greps (the standard set is all lowercase). **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
+- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist: the standard set in the `test-standards` Critical block (do not copy it here, copies drift), or the set the project `CLAUDE.md` declares for a repo that already ran another set, or, in a repo not yet moved off the toolkit's earlier `@App-*` set, its current `@App-*` tag until that move lands (`test-standards`). Use it cased exactly as that whitelist lists it, to match the `package.json` greps (the standard set is all lowercase). Every tag in the skills' examples is the standard set's; with a kept set, translate it through the tag map in the project `CLAUDE.md` (`test-standards`), and never recase a whitelisted tag. **NEVER** combine tags. **NEVER** put a tag on `test.describe(...)`. See the `test-standards` skill.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`. Then `qase.id(N);` — commented out until the case is mapped. Why: the test run is orphaned in Qase reporting otherwise.
 - **ALWAYS** pull env-driven values through the config module — `env.X` and `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`, URLs from `appConfig` — never `process.env` at a call site, and no `!` / `??` / `||` on env values (defaults live in the schema in `config/env.ts`; see `type-safety` § Environment variables). **ALWAYS** pull paths from `appConfig.api.*` (API) or `appConfig.paths.*` (UI). **ALWAYS** pull UI strings used inside `getByText(...)` from `enums/app/*` (`MESSAGES.X`). **NEVER** hardcode any of these in a spec, page object, helper, or schema. See the `config`, `type-safety`, and `enums` skills.
 - **NEVER** use `any` / `as any` / `@ts-ignore` / `@ts-expect-error`. Use Zod schemas (`z.infer<typeof Schema>`), explicit interfaces, or `unknown` + type-narrowing. See the `type-safety` skill.
@@ -28,7 +28,7 @@ These rules apply to **every** generated artifact in the framework — page obje
 - **ALWAYS** call `apiRequest` directly in API specs by default. Promote to a `helpers/app/<resource>.ts` helper only on reuse (2+ specs), multi-step flows, or precondition setup. Promote to a `helper-fixture` only when the same setup/teardown is reused across **3+** spec files. See the `helpers` and `fixtures` skills.
 - **NEVER** `test.skip` a test or omit one because the API/UI misbehaves. Write the test as the contract says, **comment out** the whole `test(...)` block, and add `// TODO: FIXME: <TICKET> <description>` directly above it. Why: a skipped test reports as not-failing and corrupts the Qase case mapping — a false green. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket. See the `test-standards` and `api-testing` skills.
 - **NEVER** commit explore-only / debug / `.only` spec files. Use `npx playwright open` for ad-hoc exploration.
-- **ALWAYS** run the affected tests and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-<tag>` for whole tag groups.
+- **ALWAYS** run the affected tests and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, the repo's tag-group script (`npm run app-<tag>` in the example app) for whole tag groups.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -96,7 +96,7 @@ flowchart TD
 
 > **Drift to converge — test data tiering.** The three-tier shape — Faker factories at `test-data/factories/<area>/`, universal invalid-type arrays at `test-data/static/util/`, domain-specific curated sets at `test-data/static/<area>/` — is what the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. If your repo's `test-data/` holds only JSON files (no `test-data/factories/`, no `test-data/static/`), that is drift to converge. Routing for *new* data work points at the three-tier location and the data-strategy skill's three-tier rule. For *existing* data work, the JSON files are accepted as-is and updated in place.
 >
-> **Standard tags are lowercase; a declared set keeps its own casing.** The `package.json` `app-regression` and `app-all` scripts grep lowercase tags such as `@regression`; a mis-cased `@Regression` matches **nothing** and would silently drop the test from CI. The whitelist itself is owned by `test-standards`.
+> **Standard tags are lowercase; a declared set keeps its own casing.** In the example app, the `package.json` `app-regression` and `app-all` scripts grep lowercase tags such as `@regression`, so there a mis-cased `@Regression` matches **nothing** and would silently drop the test from CI. In a repo with a kept set, `@Regression` may be exactly right: never recase a tag the repo's whitelist holds. The whitelist itself is owned by `test-standards`.
 
 ## Workflow — handle a "create / add / generate / extend / refactor" request
 
@@ -108,7 +108,7 @@ flowchart TD
 - [ ] 5. Re-read this skill's Critical block before generating code. The framework-wide rules take precedence if a deep-skill template appears to disagree.
 - [ ] 6. Generate the artifact. Apply both the deep skill's rules AND this skill's framework-wide rules.
 - [ ] 7. Walk the Self-review checklist below.
-- [ ] 8. Run the affected tests — `npx playwright test <spec>` for one file, `npm run app-<tag>` for tag groups. Zero failures before declaring done.
+- [ ] 8. Run the affected tests — `npx playwright test <spec>` for one file, the repo's tag-group script (`npm run app-<tag>` in the example app) for tag groups. Zero failures before declaring done.
 - [ ] 9. If a sibling artifact must change in the same edit (e.g., adding a POM requires updating `page-object-fixture.ts`; adding a `SUITES.X` requires extending `enums/app/qase-suites.ts`), do it in the same edit batch.
 ```
 
@@ -224,7 +224,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `@regression` and `qase.suite(SUITES.APP_SETTINGS)`.
 5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend the `MESSAGES` enum). No `waitForTimeout`.
 6. **Step 6 — generate.** Both files produced.
-7. **Step 7 — self-review.** Tag is `@regression`, exactly as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
+7. **Step 7 — self-review.** Tag is `@regression` (the example app uses the standard set), exactly as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
 9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `MESSAGES.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 
@@ -257,13 +257,13 @@ User says: *"Tests/app/functional/http-create-edit-job.spec.ts is flaky in CI bu
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| User asked "create something" but the request is ambiguous between functional and E2E. | Decision tree wasn't walked. | Ask one specific question — "single behaviour (Functional, `@regression`) or multi-step journey (E2E, `@e2e`)?" — never guess. |
+| User asked "create something" but the request is ambiguous between functional and E2E. | Decision tree wasn't walked. | Ask one specific question — "single behaviour (Functional) or multi-step journey (E2E)?" — never guess. |
 | Generated code uses generic Playwright conventions instead of repo conventions (e.g., kebab-case `dashboard-page.ts` instead of PascalCase `DashboardPage.ts`). | Specialized skill not loaded — generation freelanced. | Stop. Load the matching deep skill (`page-objects` for POMs, `test-standards` for specs). Regenerate using the skill's canonical examples. |
 | User says "just create the page object, skip the fixture step". | They want speed; the framework requires the fixture entry. | Push back — bypassing the fixture means the spec consumer has to do `new <Page>(page)`, breaking every other merged fixture. Either complete Step 7 of `page-objects` or document the gap. Don't ship half. |
 | Generated test fails because `SUITES.X` doesn't exist. | Sibling update skipped. | Extend `enums/app/qase-suites.ts` in the same edit batch. |
 | Generated artifact crosses two skills' boundaries (e.g., a Zod schema that lives in `api-testing` plus a factory that lives in `data-strategy`). | Routing produced two skills; they were merged improperly. | Load both deep skills, walk both workflows, generate two artifacts in two files. Don't combine schema + factory in one file. |
 | User says "I tried to create X and it doesn't work" — no skill named, no error. | Information-gathering needed. | Ask: "What does `X` look like? Show me the file you're editing or paste the failing command output." Then route via the decision tree once you know the artifact. |
-| Generated test doesn't run in `npm run app-regression`. | Likely a mis-cased tag such as `@Regression` — the `package.json` grep is lowercase `@regression`. | Flip to lowercase `@regression`. |
+| Generated test doesn't run in the repo's regression script (`npm run app-regression` in the example app). | Likely a tag cased differently from what the script greps (in the standard set, `@Regression` against `@regression`). | Use the whitelist's casing, the one the grep uses. Never recase a tag the repo's whitelist holds; in a kept set, `@Regression` may be right. |
 | User asks to "refactor an enum value used in 30 places". | Search-and-replace risk; the wrong replace breaks 30 specs at once. | Route to the `refactor-values` skill — it owns the safe-rename workflow with `git grep` and a dry-run pass. |
 
 ## See Also

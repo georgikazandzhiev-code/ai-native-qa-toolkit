@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 2.1.3
+version: 2.1.4
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -285,7 +285,7 @@ await expect(notificationsPage.firstNotificationRow).toBeVisible();
 |---------|-------|-----|
 | "Test passed locally 5× but still fails in CI" | CI is slower; absolute-timing assumptions fail. | Replay the CI trace (`show-trace`), look for the action that's slow in CI. Often the fix is the same as a per-test race (use `waitForResponse`). |
 | "Bisect doesn't isolate one spec — every preceding spec triggers the fail" | Storage-state staleness or session-level leakage. | Check the setup project (in the example app, `tests/app/login.setup.ts`). Restart Playwright workers between tags (CI does, local may not). |
-| "Spec is `@critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to `@regression` if the run-time budget is the issue; don't retry it under Critical. |
+| "Spec is `@critical` and CI runs it on a tight budget" | Critical tag has stricter timeout; spec is slow but not flaky. | Move spec to the regression tag (`@regression` in the standard set, or the tag map's Functional tag) if the run-time budget is the issue; don't retry it under Critical. |
 | "Flake only happens while the worker resource running `export` jobs flaps between Online and Offline" | External dependency; flake is environmental. | This is not a test bug — file env ticket; comment out under `// TODO: FIXME: <ENV-TICKET>`. |
 
 ## See Also
