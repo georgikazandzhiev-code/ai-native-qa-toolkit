@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 3.1.4
+version: 3.1.5
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -57,7 +57,7 @@ Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fi
 Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modified spec:
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
-- [ ] Each `test(...)` has **exactly one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`), cased exactly as that whitelist lists it — the standard set is all lowercase (`@regression`), matching the `package.json` greps. No combined tags. No tags on `test.describe(...)`.
+- [ ] Each `test(...)` has **exactly one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`; a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands), cased exactly as that whitelist lists it — the standard set is all lowercase (`@regression`), matching the `package.json` greps. No combined tags. No tags on `test.describe(...)`.
 - [ ] Each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
