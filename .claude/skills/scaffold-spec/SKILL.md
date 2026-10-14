@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 3.0.0
+version: 3.0.1
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -37,13 +37,13 @@ Non-negotiable. A scaffolded spec that breaks any of these is worse than no spec
 
 Ask the user (or infer from context) which type of spec to create:
 
-| Type | Directory | Tag | Rule |
+| Type | Directory | Tag (standard set) | Rule |
 |------|-----------|-----|------|
 | **API** | `tests/app/api/<domain>/` | `@api` | `api-testing` skill |
 | **E2E** | `tests/app/e2e/<domain>/` | `@e2e` | `page-objects` + `selectors` skills |
 | **Functional** | `tests/app/functional/<domain>/` | `@regression` | `page-objects` + `selectors` skills |
 
-These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
+These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill. The tags are the standard set's; a repo with a kept set takes each one from its tag map (`test-standards` § Kept set: the tag map).
 
 Specs are grouped into **service-domain subfolders**: one per backend service, plus `shared/`. In the example app these are `tenant-service/`, `jobs-service/`, `notification-service/` and `shared/`. Within a domain, add a sub-subfolder (in the example app, `jobs/`, `workers/`, `run-stats/` under `jobs-service/`) only when that domain has 10+ specs in one test type. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
 
@@ -525,7 +525,7 @@ Every functional test that opens a form/sheet must close it at the end — even 
 
 **Ask:** "scaffold the spec for POST /api/v1/projects."
 
-1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@api`.
+1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@api` (or, with a kept set, the tag map's API tag).
 2. **Conventions** — read `api-testing` and `test-standards` before writing anything.
 3. **Contract first** — the OpenAPI document is the source of truth; enumerate 201, 400, 401, 403/404, 409 as a coverage-plan comment block.
 4. **Study a sibling** — open the nearest existing API spec and copy its shape: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.

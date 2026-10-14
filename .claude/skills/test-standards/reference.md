@@ -24,7 +24,7 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 
 ## Tag → npm script mapping
 
-| Tag | npm script | What runs |
+| Tag (standard set) | npm script (example app) | What runs |
 |---|---|---|
 | `@critical` | `npm run app-critical` | 3–5 must-pass-before-anything-else tests |
 | `@smoke` | `npm run app-smoke` | Critical-path UI flows — login, landing, navigation |
@@ -35,7 +35,7 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 | `@e2e` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
 | (union) | `npm run app-all` | Full nightly / pre-merge |
 
-Tag casing must match `package.json` greps exactly, and every standard tag is lowercase, so a mis-cased tag such as `@Regression` would never run. The tags are the toolkit's standard; the `app-*` script names are the example app's.
+Tag casing must match the repo's greps exactly. Every standard tag is lowercase, so in a repo on the standard set a tag such as `@Regression` would never run; in a repo with a kept set it may be the correct form (see `SKILL.md` § Kept set: the tag map). The tags in this file are the toolkit's standard set; the `app-*` script names are the example app's.
 
 ---
 

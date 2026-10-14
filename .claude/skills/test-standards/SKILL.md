@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 4.2.0
+version: 4.3.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -15,7 +15,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 ## Critical
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
-- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist — by default the toolkit's standard set: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`; a repo that already ran another set before adopting the toolkit keeps it (its CI jobs, Qase filters and dashboards depend on those tags), declares it in its project `CLAUDE.md`, and that set is the whitelist there. A new repo uses the standard set. The toolkit's own earlier set (`@App-*`, up to 2.x) is not another set: a repo that adopted it moves to the standard set in a change of its own: the tags, the CI greps and the lint whitelist in one PR, with a person renaming the Qase filters in Qase. Until that change lands, a new test keeps the repo's current `@App-*` tag, so its CI grep still runs it. A repo on the standard set does not add tags of its own: a new tag such as `@security` is a change to this list, for every repo; a repo with a declared set adds it to that set. Every standard tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember; a declared set is used exactly as cased in the project `CLAUDE.md`. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
+- **ALWAYS** tag every test with **exactly one** value from the repo's whitelist — by default the toolkit's standard set: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`; a repo that already ran another set before adopting the toolkit keeps it (its CI jobs, Qase filters and dashboards depend on those tags), declares it in its project `CLAUDE.md`, and that set is the whitelist there. A new repo uses the standard set. The toolkit's own earlier set (`@App-*`, up to 2.x) is not another set: a repo that adopted it moves to the standard set in a change of its own: the tags, the CI greps and the lint whitelist in one PR, with a person renaming the Qase filters in Qase. Until that change lands, a new test keeps the repo's current `@App-*` tag, so its CI grep still runs it. A repo on the standard set does not add tags of its own: a new tag such as `@security` is a change to this list, for every repo; a repo with a declared set adds it to that set. Every standard tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember; a declared set is used exactly as cased in the project `CLAUDE.md`. A repo with a declared set also gives its **tag map**: which of its tags each spec type takes (§ Kept set: the tag map). Every tag in the toolkit's tables, examples, templates and run commands is the standard set's: in a repo with a declared set, read each one through the tag map, and in a repo still on `@App-*`, as its `@App-*` counterpart (`@api` → `@App-API`). **NEVER** recase or replace a tag the repo's whitelist holds. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
 - **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
@@ -24,7 +24,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 - **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway checks, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
 - **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
 - **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the test run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test` for `if`, `switch`, a control-flow ternary and an in-body `test.skip()`; an `&&` short-circuit is a review point — the lint can't tell it from a legitimate boolean expression.
-- **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, `npm run app-regression` / `npm run app-api` etc. for whole tag groups. A test that fails locally is not complete.
+- **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, the repo's tag-group script for whole tag groups (`npm run app-regression` / `npm run app-api` in the example app). A test that fails locally is not complete.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -37,7 +37,7 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 
 ## Tag whitelist & npm scripts
 
-| Tag | npm script | Used for |
+| Tag (standard set) | npm script (example app) | Used for |
 |-----|-----------|----------|
 | `@critical` | `app-critical` | 3–5 tests whose red means the build is broken. |
 | `@smoke` | `app-smoke` | Critical-path UI — login, landing, navigate to major pages. |
@@ -48,13 +48,27 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 | `@e2e` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
 | (union) | `app-all` | Full nightly / pre-merge. |
 
-The tags are the standard; the `app-*` script names are the example app's, so name your scripts as your repo does.
+The tags are the standard; the `app-*` script names are the example app's, so name your scripts as your repo does. A repo with a kept set reads this table through its tag map (§ Kept set: the tag map).
 
-**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. A mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every standard tag lowercase removes the question; a repo with a declared set greps that set's own casing. The `single-tag-on-test` lint rule, configured with the repo's whitelist, catches a stray capital before merge.
+**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. In a repo on the standard set, a mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every standard tag lowercase removes the question. A repo with a declared set greps that set's own casing, and there `@Regression` may be exactly right: never recase a tag the whitelist holds. The `single-tag-on-test` lint rule, configured with the repo's whitelist, catches a stray capital before merge.
+
+### Kept set: the tag map
+
+A repo that kept its own set declares two things in its project `CLAUDE.md`: the whitelist, exactly as cased, and a **tag map** that gives each spec type in § Test types & directories the tag it takes. For example:
+
+| Spec type | Tag |
+|---|---|
+| API | `@Regression` |
+| Functional | `@Regression` |
+| E2E | `@Nightly` |
+| Smoke (UI) | `@Smoke` |
+| Critical | `@Smoke` |
+
+Every tag the skills name (`@api`, `{ tag: "@e2e" }`, `--grep "@regression"`, `npm run app-api`) is then read through the map. A type the kept set has no tag of its own for still gets a row, naming the tag whose CI job should run it. If the map is missing, or has no row for the spec type, ask which tag the repo uses (`[human-only: fact]`); never fall back to a standard tag, and never recase a whitelisted one. A repo still on `@App-*` needs no map: each standard tag's counterpart is its `@App-*` tag (`@api` → `@App-API`), exactly as cased in the repo's existing specs.
 
 ## Test types & directories
 
-| Type | Directory | Tag | Covers | Example (example app) |
+| Type | Directory | Tag (standard set) | Covers | Example (example app) |
 |------|-----------|-----|--------|-------------------|
 | **API** | `tests/app/api/` | `@api` | API contracts, schema validation, status-code matrix, per-field negative coverage | `tests/app/api/jobs-service/workers/workers.spec.ts` |
 | **E2E** | `tests/app/e2e/` | `@e2e` | Full CRUD journeys — create → verify → edit → delete in one test | `tests/app/e2e/jobs-service/jobs/http-job-crud.spec.ts` |
@@ -62,12 +76,12 @@ The tags are the standard; the `app-*` script names are the example app's, so na
 | **Smoke (UI)** | `tests/app/e2e/` | `@smoke` | Critical-path login + landing-page sanity | `tests/app/e2e/tenant-service/login-smoke.spec.ts` |
 | **Setup** | `tests/app/` | (no tag) | Storage-state generation, token bootstrap | `tests/app/login.setup.ts` |
 
-A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is still an API test: `tests/app/api/`, `@api`.
+A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is still an API test: `tests/app/api/`, the API tag (`@api` in the standard set). With a kept set, every tag in this section comes from the tag map.
 
 **Functional vs E2E** is a frequent decision point:
 
-- A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@regression`.**
-- An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@e2e`. Set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level.**
+- A **functional test** isolates and verifies a single behaviour (e.g., "Dashboard renders all four sections", "form rejects invalid email"). Each test covers one thing. **Tag: `@regression` in the standard set; with a kept set, the tag map's Functional tag.**
+- An **E2E test** chains 4+ phases in a single test that mirrors a real user journey from start to finish (create → verify → edit → delete). An E2E file typically contains 1–3 high-level scenario tests. **Tag: `@e2e` in the standard set; with a kept set, the tag map's E2E tag. Set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level.**
 
 **E2E `beforeAll` boundary.** `beforeAll` seeds **background infrastructure** that the journey needs but that isn't the story being tested (e.g., a worker or job that a notification-rule-crud E2E needs). The **lifecycle actions under test** must be visible `test.step()`s inside the test body. If the most interesting action is hidden in `beforeAll`, the test shape is wrong. Example: a notification-rule-crud E2E seeds a worker + job via API in `beforeAll` (infrastructure), then the test walks create → view → disable → enable → edit → delete (the journey). A notifications E2E should seed jobs + notification rule in `beforeAll` (infrastructure), then the first visible step is "wait for notification to fire" — that's where the journey starts.
 
@@ -78,7 +92,7 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 ## Workflow — author or extend a spec
 
 ```
-- [ ] 1. Pick the test type (Functional / E2E / API / Smoke / Setup) → resolves directory + tag.
+- [ ] 1. Pick the test type (Functional / E2E / API / Smoke / Setup) → resolves directory + tag (the standard tag, or with a kept set the tag map's).
 - [ ] 2. Load the matching deep skill — `api-testing` for API specs, `page-objects` + `selectors` for UI specs.
 - [ ] 3. For UI: explore the live app via `npx playwright open` (the `playwright-cli` skill). For API: read OpenAPI / Swagger first (the `api-testing` skill, Phase 1).
 - [ ] 4. Author the imports + describe + beforeEach skeleton; pull `SUITES.<RESOURCE>` from `enums/app/qase-suites.ts` (extend it if missing).
@@ -86,17 +100,17 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 - [ ] 6. Structure the body with `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only.
 - [ ] 7. For E2E: track created resource names in a `createdNames: string[]` array; add `test.afterAll` that deletes via the matching `helpers/app/<resource>.ts` helper.
 - [ ] 8. For data-driven tests: UI cases loop OUTSIDE the test block (one `test(...)` per case, descriptive names); API negative matrices loop INSIDE one test (`test.step` + `expect.soft` + `safeParse`, the `api-testing` skill).
-- [ ] 9. Run the spec — `npx playwright test <spec>` — and confirm zero failures. For tag groups, use the matching `npm run app-<tag>` script.
+- [ ] 9. Run the spec — `npx playwright test <spec>` — and confirm zero failures. For tag groups, use the repo's script for that tag (`npm run app-<tag>` in the example app).
 ```
 
 ### Step 1 — pick the test type
 
 If the user request is ambiguous, decide using this ladder:
 
-1. Pure HTTP request + response assertion, no UI? → **API** (`tests/app/api/`, `@api`).
-2. UI happens, single behaviour, ≤ 3 phases? → **Functional** (`tests/app/functional/`, `@regression`).
-3. UI happens, full journey with 4+ phases (create → verify → edit → delete)? → **E2E** (`tests/app/e2e/`, `@e2e`).
-4. UI happens, must-pass-before-anything-else (login, landing, navigation)? → **Smoke** (`tests/app/e2e/`, `@smoke`).
+1. Pure HTTP request + response assertion, no UI? → **API** (`tests/app/api/`, `@api` or the tag map's API tag).
+2. UI happens, single behaviour, ≤ 3 phases? → **Functional** (`tests/app/functional/`, `@regression` or the tag map's Functional tag).
+3. UI happens, full journey with 4+ phases (create → verify → edit → delete)? → **E2E** (`tests/app/e2e/`, `@e2e` or the tag map's E2E tag).
+4. UI happens, must-pass-before-anything-else (login, landing, navigation)? → **Smoke** (`tests/app/e2e/`, `@smoke` or the tag map's Smoke tag).
 5. Generates storage state or auth tokens? → **Setup** (`tests/app/<name>.setup.ts`, no tag).
 
 ### Step 2 — read the matching rule
@@ -151,7 +165,7 @@ test(
 ```
 
 - **One tag per test.** Never `tag: ["@regression", "@smoke"]`.
-- **Exact casing.** Standard tags are lowercase; a declared set keeps its own casing. `--grep` is case-sensitive, so a mis-cased tag such as `@Regression` silently misses CI.
+- **Exact casing.** Standard tags are lowercase; a declared set keeps its own casing. `--grep` is case-sensitive, so a tag cased differently from the repo's whitelist silently misses CI (in the standard set, `@Regression`; in a kept set, that may be the correct form).
 - **Tag goes on the test, not on `describe`.** `test.describe("X @regression", ...)` is forbidden.
 - **`qase.suite()` first, then `qase.id()` (optional), then `test.step(...)` for the body.**
 
@@ -223,7 +237,7 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 ## Anti-patterns
 
 - ❌ **`import { test, expect } from "@playwright/test"`.** Strips every merged fixture; `apiRequest`, page objects become `undefined`. Fix: import from `../../../../fixtures/pom/test-options`.
-- ❌ **Mis-cased tag such as `@Regression`.** Doesn't match `--grep @regression` in `package.json` (or the `app-all` grep); never runs in CI. Fix: the whitelist's casing (lowercase `@regression` in the standard set).
+- ❌ **A tag cased differently from the repo's whitelist** (in the standard set, `@Regression` for `@regression`). Doesn't match the case-sensitive `--grep`; never runs in CI. Fix: the whitelist's casing. In a repo with a kept set, `@Regression` may be the whitelisted form: check the project `CLAUDE.md` before changing a tag, and never recase a whitelisted one.
 - ❌ **Combined tags (`["@regression", "@e2e"]`) or tags outside the repo's whitelist (with the standard set: `@functional`, `@destructive`, `@slow`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
 - ❌ **Missing `qase.suite(...)`.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
@@ -377,15 +391,15 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
 ### Example 4 — API + Smoke routing
 
-For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@api`, `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror the nearest API spec in your repo (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`).
+For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@api` (or the tag map's API tag), `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror the nearest API spec in your repo (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`).
 
-For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke`, `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror your repo's nearest smoke spec (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`).
+For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke tag), `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror your repo's nearest smoke spec (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`).
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Test runs locally, doesn't run in CI under `npm run app-regression`. | Tag is mis-cased (e.g. `@Regression`) but `package.json` greps lowercase `@regression`. | Flip to lowercase `@regression`. |
+| Test runs locally, doesn't run in CI under the repo's regression script (`npm run app-regression` in the example app). | The tag's casing differs from the one the script greps (in the standard set, `@Regression` against `--grep @regression`). | Use the whitelist's casing, the one the grep uses. Never recase a tag the repo's whitelist holds: in a kept set, `@Regression` may be right, and the grep is what to check. |
 | `Cannot find name 'apiRequest'` (or `dashboardPage`, `loginUser`, etc.) on the test context. | Spec imported `test` from `@playwright/test` instead of `fixtures/pom/test-options.ts`. | Change the import to `from "../../../../fixtures/pom/test-options"`. |
 | Qase shows the test run as orphaned / "Uncategorized". | Missing `qase.suite(SUITES.X);` as the first body line. | Add it immediately after `async (...) => {`. Extend `enums/app/qase-suites.ts` if `SUITES.X` doesn't exist. |
 | `test.describe` tag not picked up by the npm script. | Tag belongs on the test, not on the describe. | Move the `{ tag: "..." }` argument onto each individual `test(...)`. |

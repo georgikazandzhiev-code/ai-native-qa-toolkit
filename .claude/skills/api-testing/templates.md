@@ -1,6 +1,6 @@
 # API Testing Templates
 
-Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase), `<RESOURCE>` (UPPER_SNAKE matching `appConfig.api.X`), `<SUITE>` (matches `SUITES.API_*`), the field list, and the body builder name.
+Copy-paste skeletons. Replace `<Resource>` (PascalCase), `<resource>` (camelCase), `<RESOURCE>` (UPPER_SNAKE matching `appConfig.api.X`), `<SUITE>` (matches `SUITES.API_*`), the field list, and the body builder name. The tag is the standard set's `@api`; a repo with a kept set uses its tag map's API tag (`test-standards`).
 
 > Anchored on the jobs resource because it is the most complete CRUD example and exercises every pattern (list-with-paging, single-keyed-by-resource, create-with-status-string, update-with-echoed-entity, worker dependency, per-field PATCH isolation).
 
@@ -910,7 +910,7 @@ export async function setup<Resource>(
 
 ## 6. Multi-endpoint API flow (`tests/app/api/<domain>/<flow>.spec.ts`)
 
-For multi-endpoint flows that touch Mailpit. It is still an API test: use the `@api` tag, explicit timeout. **Note**: in the example app, `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
+For multi-endpoint flows that touch Mailpit. It is still an API test: use the API tag (`@api` in the standard set), explicit timeout. **Note**: in the example app, `helpers/app/adminUsers.ts` puts `tenantId` in the URL — every helper takes `tenantId` as the second positional argument before the body / userId.
 
 ```typescript
 // Depth assumes tests/app/<type>/<domain>/; add one "../" per extra folder.

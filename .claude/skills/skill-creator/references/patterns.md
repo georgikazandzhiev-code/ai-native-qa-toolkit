@@ -174,17 +174,17 @@ For 2-3 branches with short bodies:
 
 2. API workflow:
    - Imports from `fixtures/pom/test-options`
-   - Tag with `@api`
+   - Tag with the API tag (`@api` in the standard set; a kept set's tag map otherwise)
    - Read [`api-testing` skill](../../api-testing/SKILL.md) before writing.
 
 3. E2E workflow:
    - Imports from `fixtures/pom/test-options`
-   - Tag with `@e2e`
+   - Tag with the E2E tag (`@e2e` in the standard set; a kept set's tag map otherwise)
    - Read [`page-objects`](../../page-objects/SKILL.md) + [`selectors`](../../selectors/SKILL.md) + [`test-standards`](../../test-standards/SKILL.md) before writing.
 
 4. Functional workflow:
    - Same imports as E2E
-   - Tag with `@regression`.
+   - Tag with the Functional tag (`@regression` in the standard set; a kept set's tag map otherwise).
 ````
 
 ### 3b — mermaid decision tree

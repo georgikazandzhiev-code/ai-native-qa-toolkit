@@ -632,7 +632,7 @@ Use this pattern whenever tests touch settings, toggles, feature flags, or any s
 ## Multi-Step & E2E API tests — operational notes
 
 - Use `test.step()` for setup-then-verify flows.
-- Multi-endpoint onboarding API flows use the `@api` tag (they are API tests in `tests/app/api/`), destructure `{ apiRequest, mailpit }`, set test-level budgets (`appConfig.timeouts.asyncFlow` for single-email flows, `asyncFlowHeavy` for multi-user email flows).
+- Multi-endpoint onboarding API flows use the API tag (`@api` in the standard set; they are API tests in `tests/app/api/`), destructure `{ apiRequest, mailpit }`, set test-level budgets (`appConfig.timeouts.asyncFlow` for single-email flows, `asyncFlowHeavy` for multi-user email flows).
 - Email tests **must** use the `@<your-test-domain>` domain (not `@automation.test`) for Mailpit delivery.
 - Cleanup ordering for onboarding: Mailpit emails → Users → Tenant — each step guarded by `if (tenantId)` / `if (userId)` so partial failures still clean up.
 

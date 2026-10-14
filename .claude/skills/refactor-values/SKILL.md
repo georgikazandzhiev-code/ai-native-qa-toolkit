@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.6
+version: 1.0.7
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -137,7 +137,7 @@ Before committing a value refactor:
 - [ ] `~/.claude/skills/*`, `CLAUDE.md`, and `README.md` were checked for documentation references that name the value.
 - [ ] `npx tsc --noEmit` passes.
 - [ ] `npx eslint .` passes.
-- [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-regression`) or `npx playwright test <spec>` directly.
+- [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-regression` in the example app) or `npx playwright test <spec>` directly.
 - [ ] The change is a single atomic commit; no intermediate broken state.
 - [ ] Husky pre-commit hook passed without `--no-verify`.
 

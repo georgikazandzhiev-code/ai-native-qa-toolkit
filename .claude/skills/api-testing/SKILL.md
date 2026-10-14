@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 3.0.1
+version: 3.0.2
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -317,7 +317,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 - `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
 - For tests without a mapped Qase id yet, **leave `qase.suite(...)` and comment out `qase.id(...)`** — do not delete them.
-- Tags drive runtime selection (one tag per test, never combined):
+- Tags drive runtime selection (one tag per test, never combined). In the standard set (with a kept set, the tag map's API and E2E tags; see `test-standards`):
   - `@api` — every spec in `tests/app/api/**`, including multi-endpoint API flows (e.g. tenant onboarding over HTTP only)
   - `@e2e` — UI journeys in `tests/app/e2e/**` only, never an API flow
 
@@ -325,7 +325,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 ## Multi-step & E2E API tests
 
-- Multi-endpoint onboarding API flows use the `@api` tag (they live in `tests/app/api/`), both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
+- Multi-endpoint onboarding API flows use the API tag (`@api` in the standard set; they live in `tests/app/api/`), both `{ apiRequest, mailpit }` fixtures, and test-level budgets (`test.setTimeout(appConfig.timeouts.asyncFlow)` or `asyncFlowHeavy`).
 - Email tests **must** use the `@<your-test-domain>` recipient domain — the one domain your Mailpit catches.
 - Mailpit pattern: `await mailpit.deleteEmailsForRecipient(email)` **before** triggering the action and again **after** the test finishes; then `const message = await mailpit.getLastEmail(email, 10, 2000)`. **`getLastEmail` returns `MailMessage | null`** — guard with `expect(message).not.toBeNull()` before dereferencing, then read `message!.Content.Body`.
 - For invite-style flows, prefer a helper like the example app's `getInviteLinkFromEmail(mailpit, email)` from `helpers/util/mailpit.ts` — it retries, asserts non-null, and runs the body through `extractLinkFromEmail`.
