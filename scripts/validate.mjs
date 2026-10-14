@@ -388,11 +388,15 @@ if (!existsSync(rulesDir)) {
 
 const ignorePath = join(ROOT, '.cursorignore');
 if (!existsSync(ignorePath)) {
-  err('.cursorignore', 'missing — generated trees and secrets will be indexed');
+  warn('.cursorignore', 'not present — skipped');
 } else {
-  const ig = read(ignorePath);
+  // Only real ignore lines count: not a comment that mentions the name, not a `!` re-include.
+  const patterns = read(ignorePath)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#') && !l.startsWith('!'));
   for (const must of ['node_modules', '.env']) {
-    if (!ig.includes(must)) warn('.cursorignore', `does not exclude ${must}`);
+    if (!patterns.some((l) => l.includes(must))) warn('.cursorignore', `does not exclude ${must}`);
   }
 }
 

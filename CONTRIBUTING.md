@@ -37,6 +37,7 @@ CI runs all of these; running them locally first is faster than a round trip. Al
 | `npm run test:rules-owned` | Every constitution rule is routed to a skill that carries it |
 | `npm run test:xref` | Files that point at each other agree |
 | `npm run test:stamp` · `npm run test:bump` | A stale version stamp / a forgotten bump cannot pass |
+| `npm run test:cursorignore` | A missing `.cursorignore` is skipped; a present one still has to exclude `node_modules` and `.env` |
 | `npm run test:lock` | Vendored provenance is intact |
 | `npm run test:alternatives` · `npm run test:der` | The hooks and gates bite on the bad case and stay silent on the good one |
 | `node eslint-plugin-qa-constitution/tests/rules.test.js` | *(if you touched a lint rule)* every rule has a `RuleTester` suite |

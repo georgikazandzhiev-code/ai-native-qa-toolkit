@@ -56,6 +56,11 @@ jobs:
       - name: Version stamp — a stale stamp must not pass
         run: npm run test:stamp
 
+      # Check 6 in both states: Cursor is optional, so a missing .cursorignore is skipped, and a
+      # present one is still checked for node_modules and .env.
+      - name: Cursor ignore file — skipped when absent, checked when present
+        run: npm run test:cursorignore
+
       # The bump reminder below runs with continue-on-error, so a crash there never fails a
       # build: it just deletes the warning. This is where a crash does fail. A branch that
       # deletes a skill must still get its report, with the unbumped edits beside it named.

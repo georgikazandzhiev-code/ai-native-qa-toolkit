@@ -25,7 +25,8 @@
     "test:xref": "node scripts/tests/cross-references.test.mjs",
     "stamp": "node scripts/stamp-version.mjs",
     "audit": "node scripts/audit-installs.mjs",
-    "test:stamp": "node scripts/tests/version-stamp.test.mjs"
+    "test:stamp": "node scripts/tests/version-stamp.test.mjs",
+    "test:cursorignore": "node scripts/tests/cursorignore.test.mjs"
   },
   "engines": {
     "node": ">=18"
