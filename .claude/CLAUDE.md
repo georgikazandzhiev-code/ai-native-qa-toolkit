@@ -1,12 +1,12 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 3.1.0 -->
+<!-- toolkit-version: 4.0.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
-This file is always loaded. It is the single source of truth for **cross-project** QA-automation rules, workflow, and the skill index. Deep how-to knowledge lives in on-demand skills under `~/.claude/skills/`. Repo-specific facts (folder maps, test-ids, endpoints) live **per-project** — in that repo's own `CLAUDE.md`/rules, or in a dedicated repo-context skill for that repository. This constitution never hardcodes one repo's layout as universal truth.
+This file is always loaded. It is the single source of truth for **cross-project** QA-automation rules, workflow, and the skill index. Deep how-to knowledge lives in on-demand skills under `~/.claude/skills/`. Product-specific facts (the services, endpoints, test-ids and system under test) live **per-project** — in that repo's own `CLAUDE.md` or a dedicated repo-context skill. The repo layout and naming are not per-project: they are the standard in § Standard repo layout and naming, and every adopting repo aligns to it.
 
-Default stack: **Playwright + TypeScript + Zod**, Qase test-management integration. Adapt the concrete tooling to whatever the current project actually uses — but the principles (isolation, type-safety, no silent failures, verify before done) are universal.
+Default stack: **Playwright + TypeScript + Zod**, Qase test-management integration. A repo that adopts the toolkit uses this stack and the standard layout below; the principles behind them (isolation, type-safety, no silent failures, verify before done) are universal.
 
 ---
 
@@ -31,7 +31,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | 3 | Does teardown fail to clean up everything created in setup? | **STOP** — add cleanup; leave the environment as found |
 | 4 | Does the fix mask a real bug by changing an assertion to pass? | **STOP** — report the bug, don't fix the test |
 | 5 | Does this add `console.*`, `any`, `as any`, or `@ts-ignore`? | **STOP** — fix the type properly |
-| 6 | Does this import `test`/`expect` directly from the framework instead of the project's fixtures barrel? | **STOP** — use the project's `test-options`/fixtures entry point |
+| 6 | Does this import `test`/`expect` directly from the framework instead of the fixtures barrel? | **STOP** — import from `fixtures/pom/test-options.ts` |
 
 ---
 
@@ -41,7 +41,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 
 | Rule | Requirement |
 |------|-------------|
-| **Imports** | Import `test`/`expect` from the project's fixtures barrel (e.g. `fixtures/pom/test-options.ts`), never directly from `@playwright/test` in spec files |
+| **Imports** | Import `test`/`expect` from the fixtures barrel `fixtures/pom/test-options.ts`, never directly from `@playwright/test` in spec files |
 | **Dependency Injection** | Use fixtures for page objects / API clients. Never `new PageObject(page)` inside a test |
 | **Type Safety** | Strict TS. No `any` / `as any` / `@ts-ignore`. Explicit return types on exported functions. No `console.*` |
 | **Selectors** | Priority: `getByRole()` > `getByLabel()` > `getByPlaceholder()` > `getByText()` > `getByAltText()` > `getByTitle()` > `data-testid` (last resort). See `selectors` skill |
@@ -100,9 +100,30 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 
 ---
 
-## File Naming Conventions
+## Standard repo layout and naming
 
-For **new files**, follow the canonical pattern **of the current repo**. Never invent a new one; surface unlisted inconsistencies. Typical conventions in a Playwright POM framework: page objects `PascalCase.ts`; specs `kebab-case.spec.ts`; schemas/helpers/enums `kebab-case.ts`; static test data `kebab-case.json`. Confirm against the repo's existing files before creating — each repository keeps its own map in a dedicated repo-context skill.
+Every repo that adopts this toolkit uses this layout and naming. An existing repo aligns to it (§ Adopting this in a repo); the toolkit never adapts to a repo.
+
+| What | Where | File names |
+|---|---|---|
+| API specs | `tests/app/api/<service>/` | `kebab-case.spec.ts` |
+| End-to-end specs | `tests/app/e2e/<service>/` | `kebab-case.spec.ts` |
+| Functional specs | `tests/app/functional/<service>/` | `kebab-case.spec.ts` |
+| Auth setup | `tests/app/<name>.setup.ts` (such as `login.setup.ts`), run by the setup project `app-setup`; storage states in `.auth/app/`, which is generated and never committed | `<persona>Session.json` |
+| Page objects | `pages/app/`; base classes and reusable components in `pages/baseClasses/`; the login page in `pages/util/` | `PascalCase.ts` |
+| Helpers | `helpers/app/` for this app's API wrappers, body builders and seeders; `helpers/util/` for app-independent utilities | `kebab-case.ts` |
+| Fixtures | `fixtures/pom/`: the barrel `test-options.ts`, which every spec imports `test` and `expect` from, and `page-object-fixture.ts`; API fixtures in `fixtures/api/`; service fixtures (login, accessibility scanner) in `fixtures/services/` | `<name>-fixture.ts`; the barrel is `test-options.ts` |
+| Response schemas and invalid values | `fixtures/api/schemas/app/` per resource, `fixtures/api/schemas/util/` for shared ones; universal invalid-type arrays in `fixtures/api/invalid-types.ts` | `kebab-case.ts` |
+| Enums | `enums/app/` | `kebab-case.ts` |
+| Test data | static data in `test-data/app/`; typed factories in `helpers/app/`, next to the resource's helper until the `api-testing` extraction threshold moves them to `test-data-generators.ts` (the `data-strategy` skill owns the choice) | `kebab-case.json`; factories `kebab-case.ts` |
+| Config | `config/env.ts` (the only reader of `process.env`), `config/app.ts` (`appConfig`), and `config/util/<service>.ts` when one service needs its own | — |
+| Environment files | `env/.env.<environment>`, never committed; the committed template `env/.env.example` names every variable | — |
+| npm scripts | `app-<tag>` for each tag in the repo's whitelist (the standard set in `test-standards`, or a set the repo kept), with the tag's name in lowercase and without the `@` (`@Smoke` → `app-smoke`); `app-all` for all of them | — |
+| Load tests | `tests/perf/<test type>/`; shared k6 helpers in `tests/perf/lib/`, data files in `tests/perf/fixtures/` (`k6-load-testing`) | `kebab-case.ts` |
+
+`<service>` (some skills say `<domain>`) is one folder per backend service, plus `shared/`; a product with a single backend uses one folder per product area instead, such as `orders/` and `identity/`. Which folders exist is a product fact, so the repo's own `CLAUDE.md` lists them.
+
+A file of a kind this table lists that sits anywhere else is **drift**. The repo's `CLAUDE.md` keeps a drift table with one row per area: the table row it belongs to, where it is now, and the date it will move. A drift file moves in its area's PR or when it is next touched, whichever comes first; a new file always goes to the standard location and never copies a drift file's pattern. An npm script that CI still calls by an older name stays as an alias of its `app-<tag>` script, on the drift table, until CI is repointed. A repo still on the toolkit's earlier `@App-*` tags keeps its current scripts until its move to the standard set lands. Files of kinds the table doesn't list (`package.json`, `playwright.config.ts`, CI workflows) stay where the tools expect them.
 
 ---
 
@@ -112,7 +133,7 @@ For **new files**, follow the canonical pattern **of the current repo**. Never i
 2. **Explore before generating** — UI: `playwright-cli` skill (`npx playwright open`). API: OpenAPI first, live capture only without docs. Skip only when the user provided the exact structure.
 3. **Coverage plan (API only)** — enumerate every status code × method as a comment block before writing code.
 4. **Search before creating** — grep for existing helpers, POMs, schemas, fixtures, enums to extend.
-5. **Use fixtures** — import from the project's `test-options`; register new POMs in the fixture module.
+5. **Use fixtures** — import from `fixtures/pom/test-options.ts`; register new POMs in the fixture module.
 6. **Generate data** — faker for unique-per-run, JSON for fixed constants.
 7. **Verify compliance** — re-check the MUST and WON'T tables.
    An open choice on the way (approach, PR split) is not a stop: build each option on its own `alt/` branch and present them (`build-alternatives` skill).
@@ -206,4 +227,7 @@ The bar: a second pass after "all good" must find **nothing new**.
 
 ## Adopting this in a repo
 
-This constitution + the skills are project-agnostic. To onboard a repo: keep this file as-is, add a **project `CLAUDE.md`** at the repo root carrying that repo's folder map, fixture entry points, its tag whitelist and tag map if it already ran another set before adopting the toolkit, and endpoint/test-id catalogs (mirror the shape of a dedicated repo-context skill), plus the system under test's context — architecture, vocabulary, performance targets and known issues — which `test-case-generation` and `/requirement-analyst` read. The reusable skills then apply on top without modification.
+The constitution, the skills and the standard layout apply as they are. A repo that adopts the toolkit aligns to them, never the other way round:
+1. Keep this file as-is.
+2. Move the repo to § Standard repo layout and naming. A large repo can move one area — one row of the table — per PR; until an area has moved, it sits on the drift table described under the table. Move Config and Fixtures first, because every spec imports the barrel: that PR also updates the import line in the specs still on the drift table, which changes their imports, not their location. Tags follow `test-standards`: a new repo uses the standard set. The one deliberate exception (#73) is a repo that already ran another set before adopting the toolkit: it keeps that set, because its CI jobs, Qase filters and dashboards depend on those tags, and declares it in its project `CLAUDE.md`, together with its tag map (`test-standards` § Kept set: the tag map). A repo still on the toolkit's earlier `@App-*` set moves to the standard set in a change of its own.
+3. Add a **project `CLAUDE.md`** at the repo root that holds what is the repo's own, and never its layout or naming: the service folders under `tests/app/*/`; the endpoint and test-id catalogs; a kept tag set and its tag map, if the repo has one; the inventories the skills ask to keep current (page objects, fixtures, helpers, enums, specs); whether the suite is parallel-safe, and with how many workers it runs if not; the drift table; and the system under test's context — architecture, vocabulary, performance targets and known issues — which `test-case-generation` and `/requirement-analyst` read.

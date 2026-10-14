@@ -3,7 +3,7 @@
 The rules in this repository claim that spec-driven, Test-First delivery makes AI-written code traceable and reviewable. This page is the evidence: a real feature built through the full loop, with the artifacts quoted verbatim.
 
 **Feature:** a Todo Management API — TypeScript, Fastify, Prisma, Zod, Vitest.
-**Built by:** GitHub Spec Kit driving Claude Code, under the constitution in this repo.
+**Built by:** GitHub Spec Kit driving Claude Code, under the constitution in this repo. It is a product repo, not a QA-automation repo, and it predates the standard repo layout (toolkit 4.0.0), so its `tests/` folder is not that layout.
 **Cost:** roughly two hours end to end, including implementation and tests.
 
 ## The numbers

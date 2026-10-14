@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 3.0.1
+version: 4.0.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -43,13 +43,13 @@ Ask the user (or infer from context) which type of spec to create:
 | **E2E** | `tests/app/e2e/<domain>/` | `@e2e` | `page-objects` + `selectors` skills |
 | **Functional** | `tests/app/functional/<domain>/` | `@regression` | `page-objects` + `selectors` skills |
 
-These are the invented example app's directories. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill. The tags are the standard set's; a repo with a kept set takes each one from its tag map (`test-standards` § Kept set: the tag map).
+These directories are the standard layout (`~/.claude/CLAUDE.md § Standard repo layout and naming`); only the `<domain>` service folders inside them are your product's. The tags are the standard set's; a repo with a kept set takes each one from its tag map (`test-standards` § Kept set: the tag map).
 
 Specs are grouped into **service-domain subfolders**: one per backend service, plus `shared/`. In the example app these are `tenant-service/`, `jobs-service/`, `notification-service/` and `shared/`. Within a domain, add a sub-subfolder (in the example app, `jobs/`, `workers/`, `run-stats/` under `jobs-service/`) only when that domain has 10+ specs in one test type. Place a new spec in the folder matching its domain; e.g. `tests/app/api/jobs-service/jobs/http-job.spec.ts`, `tests/app/functional/notification-service/notification-rules-page.spec.ts`.
 
 ## Step 2: Read the Convention Rule
 
-When the repository provides a repo-context skill, read its API or UI routing section before generating any code, and follow it exactly. In any other repo, read that repo's own conventions (its `CLAUDE.md` / project rules and existing sibling specs) instead.
+When the repository provides a repo-context skill, read its API or UI routing section before generating any code, and follow it exactly. In any other repo, read its `CLAUDE.md` for the service folders and endpoint context. Placement and naming always come from `~/.claude/CLAUDE.md § Standard repo layout and naming`, never from sibling specs that sit outside it.
 
 ## Step 3: Explore First
 

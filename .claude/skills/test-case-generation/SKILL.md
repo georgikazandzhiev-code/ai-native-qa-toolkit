@@ -1,6 +1,6 @@
 ---
 name: test-case-generation
-version: 3.0.1
+version: 3.0.2
 description: >-
   Generate requirements and test cases from a user story or acceptance criteria — 6-section package:
   story analysis, functional requirements, categorized test cases, security & compliance, k6
@@ -52,7 +52,7 @@ Analyze the provided user story and generate a comprehensive set of software req
 The generator needs a picture of the system under test before it writes a case, and it comes from the project, not from this skill:
 
 1. The adopting repository's `CLAUDE.md`, or a platform-context skill that `CLAUDE.md` names.
-2. If neither carries the context — a `CLAUDE.md` with only a folder map and tags doesn't — stop after Sections 1–2 and ask the user for the context. If the user says to go on without it, write the cases from the story alone and list every missing context item in Section 6.
+2. If neither carries the context — a `CLAUDE.md` that only lists the repo's services doesn't — stop after Sections 1–2 and ask the user for the context. If the user says to go on without it, write the cases from the story alone and list every missing context item in Section 6.
 
 The context covers, where the system has them: the core business concepts and their vocabulary; the architecture and how components communicate; data stores and retention; the auth model; data pipelines and message limits; result structures; performance targets; known production issues. A context with some of these counts as present: generate, and list in Section 6 each missing item the story needs.
 

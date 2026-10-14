@@ -1,6 +1,6 @@
 ---
 name: frontend-cross-check
-version: 1.0.10
+version: 1.0.11
 description: Verify testids, message strings, routes, and component structure against the frontend source repo at <sibling-repos>/frontend (git pull first — it is the source of truth for UI contracts). Use before authoring or modifying any selector, page object, UI test, or message constant. Triggers — "does this testid exist", "what string does the UI show", "frontend source". Not for runtime behavior (playwright-cli) or API contracts (api-testing).
 metadata:
   category: cross-cutting
@@ -25,7 +25,7 @@ Open the frontend before authoring or modifying any of these, every time:
 | Author / modify | Cross-check what in frontend |
 |------------------|--------------------------------|
 | **Selector / page object** (`pages/**`) | `data-testid` emissions; component structure (Radix vs plain HTML); accessible roles and labels; `disabled` / loading state attributes |
-| **UI message constant** (a messages enum; `enums/app/messages.ts` in the example app's layout) | Message keys in the i18n message catalog (e.g. `messages/en.json`); inline string literals in `src/components/**`; toast strings; validation messages |
+| **UI message constant** (a UI-text catalog under `enums/app/` per the `enums` skill, such as `messages.ts`) | Message keys in the i18n message catalog (e.g. `messages/en.json`); inline string literals in `src/components/**`; toast strings; validation messages |
 | **Route reference** in a UI test | File-based routes in the app's route folder (e.g. `src/routes/`; file → URL mapping) |
 | **Storage-state path / auth setup** | Frontend's auth flow, Keycloak realm name, redirect targets |
 | **Schema-form field selector** | The schema-form component's emission pattern (testid prefix, error testid prefix) |
@@ -120,7 +120,7 @@ User says: *"Centralize the 'Worker registered successfully' toast text."*
 2. **Grep:** `grep -rn "Worker registered" <sibling-repos>/frontend/src/`.
 3. Observe: `src/components/settings/workers/register-worker-sheet.tsx` calls `toast.success('Worker registered successfully')` with the inline literal — **not** a catalog message key.
 4. **Decide source:** since this is an inline literal (not a catalog message key), capture the exact string from the source: `"Worker registered successfully"`. No quotes, no period, exact case.
-5. Add it to the messages enum per the `enums` skill (in the example app's layout, `enums/app/messages.ts`). If your repo has no messages enum yet, this first captured message creates it. Cross-reference the source path in the JSDoc so the next maintainer can verify.
+5. Add it to the UI-text catalog under `enums/app/` that the `enums` skill points to (such as `messages.ts`). If your repo has no messages enum yet, this first captured message creates it. Cross-reference the source path in the JSDoc so the next maintainer can verify.
 6. **Optional:** open the live app and trigger the action to confirm the rendered text matches the source — an i18n layer or formatter may transform some strings at render time, even ones written as literals.
 
 ### Example 3 — Confirm a route exists before writing a UI test
