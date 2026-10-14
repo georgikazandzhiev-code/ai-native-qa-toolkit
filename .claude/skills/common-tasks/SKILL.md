@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 4.0.1
+version: 5.0.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -112,7 +112,7 @@ flowchart TD
 
 ### Step 1 — categorize
 
-If the user prompt is ambiguous, walk the decision tree above. If still ambiguous after the tree, ask the user to clarify *one specific question*: "Should this be a Functional test (single behaviour) or an E2E test (multi-step journey)?" — never load multiple skills speculatively.
+If the user prompt is ambiguous, walk the decision tree above. If still ambiguous after the tree, decide which kind of ambiguity it is. When what to build is unclear (which endpoint, create or edit), ask *one specific question*, marked `[human-only: requirement]`. When the request is clear but two categories fit (a behaviour that could be a Functional test or part of an E2E journey), that is an implementation choice: build both on `alt/` branches and ask which to keep (`build-alternatives`). Never load multiple skills speculatively.
 
 ### Step 2 — load the deep skill
 
@@ -135,7 +135,7 @@ Skip the precondition and you produce code that compiles but is wrong against re
 
 ### Step 4 — walk the workflow
 
-Each deep skill ships a numbered workflow (steps 1..N) with precondition checks, worked examples from the invented example app, and a final verification. Walk it linearly. Do not skip "study an existing example" — every audit of this framework has caught skills that look right but violate subtle conventions because the author didn't read the nearest existing example in their repo first.
+Each deep skill ships a numbered workflow (steps 1..N) with precondition checks, worked examples from the invented example app, and a final verification. Walk it linearly. Do not skip "study an existing example" — every audit of this framework has caught skills that look right but violate subtle conventions because the author didn't read the nearest existing example in their repo first. Read a compliant one, at its standard location, as a reference: where it differs from the skill, the skill wins, and the difference is drift to name, never to copy.
 
 ### Step 5 — re-read this skill's Critical block
 
@@ -232,7 +232,7 @@ User says: *"Add API tests for `POST /workers` covering 201, 400 (each required 
 
 1. **Step 1 — categorize.** API test → API tests + Zod schema + helper.
 2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod validators per major version).
-3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Glob your repo for the nearest spec of the same type (in the example app, e.g. `tests/app/api/jobs-service/workers/workers.spec.ts`) and follow its shape.
+3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Glob your repo for the nearest compliant spec of the same type (in the example app, e.g. `tests/app/api/jobs-service/workers/workers.spec.ts`) and follow its shape where it agrees with the skills.
 4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
 5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.WORKERS`. `tokens.full()`. `@api` tag.
 6. **Step 6 — generate.** `tests/app/api/jobs-service/workers/workers.spec.ts` (extend if exists), `fixtures/api/schemas/app/worker.ts`, `helpers/app/workers.ts`.
@@ -255,7 +255,7 @@ User says: *"Tests/app/functional/http-create-edit-job.spec.ts is flaky in CI bu
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| User asked "create something" but the request is ambiguous between functional and E2E. | Decision tree wasn't walked. | Ask one specific question — "single behaviour (Functional) or multi-step journey (E2E)?" — never guess. |
+| User asked "create something" but the request is ambiguous between functional and E2E. | Decision tree wasn't walked. | Walk it. If both still fit, the request is clear and the type is an implementation choice: build both on `alt/` branches and ask which to keep — never guess, and never ask before building (unless what to test is unclear: then ask, marked `[human-only: requirement]`). |
 | Generated code uses generic Playwright conventions instead of repo conventions (e.g., kebab-case `dashboard-page.ts` instead of PascalCase `DashboardPage.ts`). | Specialized skill not loaded — generation freelanced. | Stop. Load the matching deep skill (`page-objects` for POMs, `test-standards` for specs). Regenerate using the skill's canonical examples. |
 | User says "just create the page object, skip the fixture step". | They want speed; the framework requires the fixture entry. | Push back — bypassing the fixture means the spec consumer has to do `new <Page>(page)`, breaking every other merged fixture. Either complete Step 7 of `page-objects` or document the gap. Don't ship half. |
 | Generated test fails because `SUITES.X` doesn't exist. | Sibling update skipped. | Extend `enums/app/qase-suites.ts` in the same edit batch. |

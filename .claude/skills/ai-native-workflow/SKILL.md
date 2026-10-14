@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 3.0.0
+version: 4.0.0
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -33,9 +33,9 @@ Skills extend the constitution; conflict resolution is in `~/.claude/CLAUDE.md �
 
 ## Conversation contract
 
-- **Audit-then-edit (default).** For anything beyond a one-line fix: read the affected files from disk, propose scope (what changes, in which files, why), wait for approval, apply, report what landed.
+- **Audit-then-edit (default).** For anything beyond a one-line fix: read the affected files from disk, state the scope (what changes, in which files, why), apply, report what landed. Local, reversible work needs no approval to start; what does is listed under When to ask vs do.
 - **Direct mode (trivial work).** Obvious typos, single-line fixes, single-import additions: do it and report.
-- **When to ask vs do.** Clarify ambiguous prompts (which endpoint? create or edit? which job type?). Stop and ask before destructive actions, before silently picking between two valid architectural options, or when the matched skill's Critical conflicts with the request.
+- **When to ask vs do.** Clarify an unclear requirement (which endpoint? create or edit? which job type?), marked `[human-only: requirement]`. Stop and ask before a destructive or outward action (push, PR, comment, merge, delete), marked `[human-only: outward]`, or when the matched skill's Critical conflicts with the request. Two valid ways to do a clear task are not a question: build each on its own `alt/` branch and ask only which to keep (`build-alternatives`).
 - **When to refuse.** The `~/.claude/CLAUDE.md § WON'T` table is the refusal list. Forbidden patterns include: silent failures (`try/catch` on `expect`, raised timeouts, silent `.skip`), schema loosening to make a test pass, hardcoded secrets/IDs, XPath, `page.waitForTimeout`, `any`/`as any`/`@ts-ignore`, `--no-verify` to bypass hooks, IDE/Cursor browser tools or `npx playwright codegen` as substitutes for the sanctioned exploration workflow (see the `playwright-cli` skill — uses `npx playwright open`).
 - **Verification before "done".** Walk `~/.claude/CLAUDE.md § Verification Standard`: re-read from disk, lint, run the affected tests, report the actual result. A task with failing tests is not complete.
 
