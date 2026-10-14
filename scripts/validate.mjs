@@ -1094,6 +1094,99 @@ for (const dir of CI_DIRS) {
   }
 }
 
+// ── 16. Nothing from the product the skills were extracted from comes back ───────
+//
+// The skills were written inside one monitoring product and copied out. Issue #6 rewrote them
+// around an invented scheduled-jobs app (GOVERNANCE.md § Example domain) over more than a dozen
+// pull requests: about 2,000 lines of that product's page objects, helpers, tags and stack, two
+// context skills this repository never contained, and instructions written for Cursor. A rewrite
+// like that stays finished only while nothing brings the old names back, and they come back
+// silently: a paste from an old branch, a note copied from a product repository, an agent that
+// still remembers the old vocabulary.
+//
+// The product's names come from `scripts/product-vocabulary.json`: every compound identifier,
+// test-id, file name and anchor the root commit (8abc855) still holds — `SyntheticsPage`,
+// `cleanupProbesAndSynthetics`, `register-probe-sheet`, `API_SYNTHETICS`, 259 in all. A paste from
+// an old branch brings back exactly those names, so an exact list catches it without guessing.
+// Names the product used that are also ordinary QA wording (`syntheticData`, "monitor type",
+// `synthetic-monitor`) were taken off the list, so "synthetic data", `healthProbe`, `PROBE_TIMEOUT`,
+// "HTTP probes", Datadog or New Relic Synthetics and the OpenTelemetry Collector are all legal. The
+// trade-off, stated plainly: a variant nobody wrote before (`createSyntheticMonitorV2`) and the
+// bare words in prose are not caught.
+// Cursor-only paths are refused only under `.claude/`, which adopters install into Claude Code; the
+// README documents the validator's optional Cursor checks (4–6) and keeps them. Recorded
+// measurements (a skill's `evals/history.json`, `results.json`, `lint-gate-results.json`) keep the
+// names they ran with, because a measurement rewritten afterwards no longer says what ran.
+
+{
+  // An empty list would let the whole product back in, and an entry with regex syntax in it would
+  // match something other than itself, so both fail the run instead of passing quietly.
+  const VOCAB = 'scripts/product-vocabulary.json';
+  const PLAIN = /^[\w-]+(?: [\w-]+)*$/;
+  let vocabulary = [];
+  try {
+    const listed = existsSync(join(ROOT, VOCAB)) ? JSON.parse(read(join(ROOT, VOCAB))).identifiers : [];
+    vocabulary = Array.isArray(listed) ? listed : [];
+  } catch (e) {
+    err(VOCAB, `is not valid JSON (${e.message})`);
+  }
+  if (!vocabulary.length) err(VOCAB, 'has no `identifiers` list — check 16 would refuse nothing from the original product');
+  for (const t of vocabulary.filter((t) => !PLAIN.test(t))) {
+    err(VOCAB, `"${t}" is not a plain identifier (letters, digits, - and _, single spaces)`);
+  }
+  const plain = vocabulary.filter((t) => PLAIN.test(t));
+  const LEFTOVERS = [
+    ...(plain.length
+      ? [{ re: new RegExp(`(?<![\\w-])(?:${plain.join('|')})(?![\\w-])`, 'g'), what: "one of the original product's identifiers (`" + VOCAB + '`)' }]
+      : []),
+    {
+      re: /\b(?:AlertsPage|PoliciesPage|CreatePolicyPage|MetricsPage|HealthState)\b/g,
+      what: "one of the original product's page objects or types",
+    },
+    { re: /\b(?:JetStream|VictoriaMetrics|FusionCharts)\b/g, what: "the original product's stack" },
+    { re: /\b(?:master-context|run-stats-api-tests-context)\b/g, what: 'a skill this toolkit does not contain' },
+    {
+      re: /\.cursor\/(?:rules|skills|hooks)\b|\bskills-cursor\b|\.mdc\b|\/migrate-to-skills\b|\bAskQuestion\b|\bgeneralPurpose\b/g,
+      what: 'a Cursor-only path or tool name; the installed toolkit targets Claude Code',
+      claudeOnly: true,
+    },
+  ];
+  const TEXT = /\.(?:md|mdx|json|jsonc|ya?ml|mjs|cjs|js|ts|py|html|txt|sh)$/;
+  const CLAUDE_DIR = join(ROOT, '.claude');
+  const isRecordedMeasurement = (p) =>
+    /[\\/]skills[\\/][^\\/]+[\\/]evals[\\/](?:history|results|lint-gate-results)\.json$/.test(p);
+  const walk = (d) =>
+    existsSync(d)
+      ? readdirSync(d).flatMap((f) => {
+          const p = join(d, f);
+          if (statSync(p).isDirectory()) return f === 'node_modules' ? [] : walk(p);
+          return TEXT.test(f) ? [p] : [];
+        })
+      : [];
+  const scanned = [
+    ...walk(CLAUDE_DIR),
+    ...walk(join(ROOT, 'templates')),
+    ...walk(join(ROOT, 'examples')),
+    ...['README.md', 'GOVERNANCE.md', 'CONTRIBUTING.md'].map((f) => join(ROOT, f)).filter(existsSync),
+  ];
+
+  for (const p of scanned) {
+    if (isRecordedMeasurement(p)) continue;
+    const inClaude = p.startsWith(CLAUDE_DIR + sep);
+    const rel = relative(ROOT, p).split(sep).join('/');
+    read(p)
+      .split(/\r?\n/)
+      .forEach((line, i) => {
+        for (const { re, what, claudeOnly } of LEFTOVERS) {
+          if (claudeOnly && !inClaude) continue;
+          for (const m of line.matchAll(re)) {
+            err(`${rel}:${i + 1}`, `\`${m[0]}\` is ${what} — rewrite it with the example domain (GOVERNANCE.md § Example domain)`);
+          }
+        }
+      });
+  }
+}
+
 // ── report ──────────────────────────────────────────────────────────────────────
 
 const pad = (n) => String(n).padStart(3, ' ');

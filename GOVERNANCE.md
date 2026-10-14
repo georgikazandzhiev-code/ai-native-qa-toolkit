@@ -227,7 +227,7 @@ Out of band, immediately, on any of: a `canonical` pattern falsified; an eval re
 | Skills | 30 on-demand skills — 14 domain, 6 authoring, 4 running, 6 cross-cutting |
 | Measured | 3 of 30 skills have recorded history |
 | Lint rules, blocking | **17 ESLint rules**, every one firing on the known-bad tree and silent on the compliant one |
-| Validator | 15 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
+| Validator | 16 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
 | Reviewers with merge rights | **1** |
 | Rollout phase | **0**, not yet exited |
 

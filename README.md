@@ -91,7 +91,7 @@ Four of these are worth calling out, because they are the parts most AI-QA tooli
 npm run validate
 ```
 
-Zero dependencies, so it runs on a fresh clone before anything is installed. 15 checks:
+Zero dependencies, so it runs on a fresh clone before anything is installed. 16 checks:
 
 | # | Check | Why it is here |
 |---|---|---|
@@ -110,6 +110,7 @@ Zero dependencies, so it runs on a fresh clone before anything is installed. 15 
 | 13 | **Every constitution rule is owned by a skill** — each row of the `MUST` and `WON'T` tables maps to the skill whose `Critical` block carries it, or is declared cross-cutting with what enforces it instead | The rule list is derived **from** the constitution, so a rule routed nowhere fails the build. A hand-kept list has the opposite property: forget a line and the checker reports all-clear over a rule it never looked at. First run found a MUST rule — no conditional logic in a test body — that no skill's `Critical` block stated at all |
 | 14 | **The version an install will report is the version this is** — `VERSION` and the `<!-- toolkit-version: -->` stamp in `.claude/CLAUDE.md` must agree, and so must the stamps in the product-side testability constitutions | Adoption happens by copying `.claude/` into a team repository, so root `VERSION` never travels. If the stamp lags a bump, every install taken from that tree reports the old number and `npm run audit` answers "who is current" confidently and wrongly. An absent audit is a gap; a wrong one closes the question |
 | 15 | **Files that point at each other still agree** — every `CLAUDE.md § <section>` reference in `.claude/` names a real heading or rule, the Routed Skill Index and persona list name exactly the skills and commands on disk, no file still labels a written skill "(TBD)", and every relative markdown link resolves to a real file | Skills are written at different times and cite each other. In one review nine files cited a constitution section by a name it no longer had, and an orientation skill called three fully written skills "empty placeholders". Each file was true when written; nothing re-checked it. Deliberately narrow: only references that resolve exactly are checked, because a fuzzy matcher would fire on correct ones |
+| 16 | **Nothing from the product the skills were extracted from comes back** — none of the original product's 259 identifiers, test-ids and file names (the list in `scripts/product-vocabulary.json`, taken from the root commit), its stack or a cut context skill in `.claude/`, `templates/`, `examples/`, the README, GOVERNANCE or CONTRIBUTING, and no Cursor-only path or tool name under `.claude/`. Recorded measurements (`evals/history.json`, `results.json`, `lint-gate-results.json`) are exempt, and a missing, empty or malformed list fails the run | Issue #6 rewrote the skills around an invented example over more than a dozen PRs, and a paste from an old branch brings back exactly the old names. Names the product used that are also ordinary QA wording (`syntheticData`, "monitor type") are off the list, so `healthProbe`, `synthetic-data`, `PROBE_TIMEOUT` and Datadog Synthetics stay legal; the trade-off is that a brand-new variant and the bare words in prose are not caught |
 
 Errors fail the run; warnings never do. First run on this repository: **24 errors, 17 warnings.** Now: **0 errors.**
 
