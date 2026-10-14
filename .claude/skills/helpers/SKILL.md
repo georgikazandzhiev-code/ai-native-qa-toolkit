@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.1.2
+version: 1.1.3
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
@@ -18,7 +18,7 @@ This skill governs **how** to author a helper: location, naming, signature, expo
 - **The decision of WHEN to write a helper vs call `apiRequest({...})` directly vs build a fixture lives in the `api-testing` skill (§ Helpers — three callable shapes). This skill governs how to author the helper, not when.** Do not reproduce that decision tree here.
 - **ALWAYS** make cleanup helpers tolerate 404 via `Promise.allSettled` over the per-id deletes. A cleanup helper that throws on a missing resource breaks the next test's setup.
 - **Specs that seed jobs with assigned workers MUST cleanup jobs before worker resources (409 conflict otherwise).** Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` in `helpers/app/jobs.ts` — it enforces the order. Never invent a parallel deleter.
-- **New helper files use kebab-case naming** per the orchestrator's File Naming Conventions (`helpers/app/admin-tenants.ts`, `helpers/util/date-time-format.ts`). If your repo has camelCase helper files (in the example app, `adminTenants.ts`, `adminUsers.ts`, `createStorageState.ts`, `keyCloak.ts`, …), they are legacy drift — rename when next touched, never propagate.
+- **New helper files use kebab-case naming** per the constitution's § Standard repo layout and naming (`helpers/app/admin-tenants.ts`, `helpers/util/date-time-format.ts`). If your repo has camelCase helper files (in the example app, `adminTenants.ts`, `adminUsers.ts`, `createStorageState.ts`, `keyCloak.ts`, …), they are legacy drift — rename when next touched, never propagate.
 - **Authoring a setup helper** (assertion-style — parses internally, returns typed entity) follows the contract in `api-testing` § Two helper styles. The example app's `setupTestUser` / `teardownTestUser` in `helpers/app/adminUsers.ts` is one example.
 - **`process.stderr.write` for error-path diagnostics.** The framework bans `console.*` in committed code. `process.stderr.write` in cleanup/teardown helpers is an accepted exception for surfacing resource-leak warnings in CI logs (e.g., a teardown that tolerates failure but shouldn't be silent). Keep to error/cleanup paths only — never for happy-path logging or debug output.
 
@@ -26,7 +26,7 @@ This skill governs **how** to author a helper: location, naming, signature, expo
 
 These are the invented example app's helpers. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill.
 
-The **canonical** layout (per orchestrator File Naming Conventions, kebab-case for new files):
+The **canonical** layout (per the constitution's § Standard repo layout and naming, kebab-case for new files):
 
 | Directory | Purpose |
 |-----------|---------|
@@ -61,7 +61,7 @@ The **canonical** layout (per orchestrator File Naming Conventions, kebab-case f
 | `dataGenerator.ts` | `generateRandomAmount`, `generateTestEmail`, `generateUserData`. **camelCase legacy — canonical: `data-generator.ts`.** `generateTestEmail` is the legacy overlap with `mailpit.ts:getNextTestEmail` — use `getNextTestEmail(baseEmail)` for any email a test creates. `generateUserData` overlaps `users.ts:buildCreateUserBody` — consolidate when next touched. |
 | `otpauth.ts` | `generateTOTP({ secret, algorithm?, digits?, period? })`. Already kebab-safe (single word). |
 
-> **Filename drift.** The rows marked *camelCase legacy* show what legacy drift looks like; the single-word and kebab-case files (`jobs.ts`, `run-stats.ts`, `notification-rules.ts`, `otpauth.ts`) are already fine. If your repo has camelCase helper files, treat them as a finite list: rename each when you next touch it. Do not invent new camelCase files — the orchestrator's File Naming Conventions are the source of truth.
+> **Filename drift.** The rows marked *camelCase legacy* show what legacy drift looks like; the single-word and kebab-case files (`jobs.ts`, `run-stats.ts`, `notification-rules.ts`, `otpauth.ts`) are already fine. If your repo has camelCase helper files, treat them as a finite list: rename each when you next touch it. Do not invent new camelCase files — the constitution's § Standard repo layout and naming is the source of truth.
 
 ## Helper signature rules
 
@@ -184,7 +184,7 @@ Walk:
 |---------|-------|-----|
 | My helper has a `z.object(...)` in it | Schema declared in the wrong layer | Move the schema to `fixtures/api/schemas/app/<resource>.ts`; export both the schema and the inferred type; import the inferred type back into the helper from that resource file (there is no `app/` schema barrel). See `api-testing` § Zod schema conventions. |
 | Cleanup fails with `409 Conflict` deleting a worker | The worker is still assigned to a job — wrong delete order | Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` from `helpers/app/jobs.ts`. It deletes jobs first, workers second. |
-| ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The orchestrator's File Naming Conventions section is the source of truth; if your repo has legacy camelCase files, do not propagate them (the example app's are marked in § File locations and inventory). |
+| ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The constitution's § Standard repo layout and naming is the source of truth; if your repo has legacy camelCase files, do not propagate them (the example app's are marked in § File locations and inventory). |
 | Cleanup throws and breaks the next test's setup | A delete returned 404 (already gone) and the helper threw | Wrap deletes in `Promise.allSettled`. Cleanup must tolerate 404 — never throw. See `cleanupWorkers` and `cleanupWorkersAndJobs`. |
 | `setupTestUser` returns `null` for the invite link / email never arrives | Recipient domain is not `@<your-test-domain>` — Mailpit catches only that domain, so mail to any other domain never arrives | Use the `setupTestUser` flow as-is (it already generates `qa-reset-...@<your-test-domain>`). For your own helpers, hardcode the `@<your-test-domain>` domain. If a body builder emits `@<alt-test-domain>` (or any other domain), that is a bug: fix it and do not copy that pattern. |
 | 401 test fails because `headers: ""` triggered a different error | Empty-string `headers` sends an `Authorization: Bearer ` request, not an unauthenticated request | **Omit the `headers` property entirely** in the helper call site. Never pass an empty string. |
@@ -203,4 +203,4 @@ Walk:
 - **`refactor-values`** — the workflow when a route constant or static `test-data/` value referenced by a helper needs to change.
 - **`debugging`** — failure-mode taxonomy when a helper-driven setup or teardown misbehaves.
 - **[`api-testing`](../api-testing/SKILL.md)** — non-negotiable invariants for API specs that consume these helpers.
-- **`~/.claude/CLAUDE.md`** — root orchestrator with MUST/SHOULD/WON'T tables and File Naming Conventions (the source of truth for kebab-case).
+- **`~/.claude/CLAUDE.md`** — root orchestrator with MUST/SHOULD/WON'T tables and § Standard repo layout and naming (the source of truth for kebab-case).

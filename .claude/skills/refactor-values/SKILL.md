@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.7
+version: 1.0.8
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -59,7 +59,7 @@ grep -rn "workerData.defaultPageSize" <sibling-repos>/automation/ --include="*.t
 grep -rn "defaultPageSize" <sibling-repos>/automation/test-data/app/
 ```
 
-Inspect every hit — do not auto-replace. In the example app's layout, expect matches in `tests/app/api/**`, `tests/app/e2e/**`, `tests/app/functional/**`, `pages/app/**`, `helpers/app/**`, `fixtures/api/schemas/app/**`, `enums/**`, `~/.claude/skills/**`, `CLAUDE.md`, and `README.md`.
+Inspect every hit — do not auto-replace. In the standard layout, expect matches in `tests/app/api/**`, `tests/app/e2e/**`, `tests/app/functional/**`, `pages/app/**`, `helpers/app/**`, `fixtures/api/schemas/app/**`, `enums/**`, `~/.claude/skills/**`, `CLAUDE.md`, and `README.md`.
 
 ### Phase 2: Update every consumer in the same commit
 
@@ -85,9 +85,9 @@ npx tsc --noEmit
 npx eslint .
 ```
 
-Then the affected Playwright tests. In the example app, `package.json` exposes these scripts:
+Then the affected Playwright tests, with the standard scripts (`~/.claude/CLAUDE.md § Standard repo layout and naming`):
 
-- `npm run app-api` — runs `--grep @api` on `app-chromium`. Right call when the value is referenced from API specs.
+- `npm run app-api` — runs `--grep @api`. Right call when the value is referenced from API specs.
 - `npm run app-e2e` — runs `--grep @e2e`. Right call when the value flows through end-to-end specs.
 - `npm run app-regression` — runs `--grep @regression`. Right call for functional specs.
 - `npx playwright test <path>` — when the change touches a single spec file, run that file directly.
@@ -137,7 +137,7 @@ Before committing a value refactor:
 - [ ] `~/.claude/skills/*`, `CLAUDE.md`, and `README.md` were checked for documentation references that name the value.
 - [ ] `npx tsc --noEmit` passes.
 - [ ] `npx eslint .` passes.
-- [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-regression` in the example app) or `npx playwright test <spec>` directly.
+- [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-regression`; with a kept set, the scripts of the mapped tags) or `npx playwright test <spec>` directly.
 - [ ] The change is a single atomic commit; no intermediate broken state.
 - [ ] Husky pre-commit hook passed without `--no-verify`.
 
@@ -167,7 +167,7 @@ Backend started rejecting all-zero UUIDs as malformed instead of returning 404. 
    ```
    In the example app, hits: `tests/app/api/jobs-service/workers/workers.spec.ts` plus any spec that hardcoded the literal UUID.
 2. **Phase 2**: edit `test-data/app/worker.json`'s `nonExistentId`. Find any hardcoded `"00000000-..."` strings in specs that bypassed `workerData.nonExistentId` — replace each to import the constant, in the same commit.
-3. **Phase 3**: `npx tsc --noEmit`, `npx eslint .`, then `npx playwright test tests/app/api/jobs-service/workers/workers.spec.ts --project=app-chromium`. Confirm 404 tests still pass.
+3. **Phase 3**: `npx tsc --noEmit`, `npx eslint .`, then `npx playwright test tests/app/api/jobs-service/workers/workers.spec.ts`. Confirm 404 tests still pass.
 
 ### Example 3 — `StatusSchema` enum literal change in `fixtures/api/schemas/app/tenant.ts`
 

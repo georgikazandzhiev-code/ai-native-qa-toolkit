@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 2.1.8
+version: 3.0.0
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -29,7 +29,7 @@ This skill is the **routing and onboarding layer** for AI-assisted work on this 
 | **L2 — Skills** | `~/.claude/skills/<name>/SKILL.md` (+ optional `reference.md`, `templates.md`, `<topic>.md`) | **On demand**, when the task matches the skill's description or its row in the Routed Skill Index | The rules and workflow for one area each |
 | **L3 — Personas** | `~/.claude/commands/*.md` (`/bug-helper`, `/test-case-helper`, `/requirement-analyst`, `/acceptance-criteria-writer`) | **Manually**, when a person types the slash command | A role for a whole task; the knowledge stays in the skill a persona delegates to |
 
-Skills extend the constitution; conflict resolution is in `~/.claude/CLAUDE.md § Role & Precedence`. Repo-specific facts (folder maps, test-ids, endpoints) live in that repo's own `CLAUDE.md` or a repo-context skill, never here. Single source of truth per concern.
+Skills extend the constitution; conflict resolution is in `~/.claude/CLAUDE.md § Role & Precedence`. Product-specific facts (services, test-ids, endpoints) live in that repo's own `CLAUDE.md` or a repo-context skill, never here; the folder layout is the standard in `~/.claude/CLAUDE.md § Standard repo layout and naming`. Single source of truth per concern.
 
 ## Conversation contract
 
@@ -50,7 +50,7 @@ For a generic "create / add / generate / extend / refactor" prompt, load `common
 Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and surface if a phase cannot be completed.
 
 1. **Understand** — re-read the prompt, restate the goal in one sentence, confirm the work category (new artifact / edit / refactor / debug / investigate).
-2. **Locate** — open `~/.claude/CLAUDE.md § Routed Skill Index` and identify the matching skill. If the repository has its own `CLAUDE.md` or a repo-context skill, read it too — it holds the repo's real folder map, which replaces the example app's paths in the skills.
+2. **Locate** — open `~/.claude/CLAUDE.md § Routed Skill Index` and identify the matching skill. If the repository has its own `CLAUDE.md` or a repo-context skill, read it too — it holds the repo's product facts (services, endpoints, test-ids), which replace the example app's product names in the skills. The folder layout is the standard, never the repo's own.
 3. **Audit** — read existing code from disk (`ls`, then `Read` the relevant files). Never propose from memory. For API work, also confirm the endpoint contract via OpenAPI; for UI work, run `npx playwright open` (see the `playwright-cli` skill) per `~/.claude/CLAUDE.md` MUST: Explore Before Generate.
 4. **Plan** — for multi-step or multi-file changes, write the scope: what changes, in which files, why, what's deliberately out of scope. If the work has several logical parts, name the **PR boundaries** now — one PR per part (`GOVERNANCE.md` § One logical change per PR). Wait for human approval on non-trivial work.
 5. **Generate** — author the code following the matched skill's `## Critical` rules and the relevant `~/.claude/CLAUDE.md` MUST/WON'T entries. Re-check the Critical block while generating, not after.

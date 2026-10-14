@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 3.0.2
+version: 3.0.3
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -440,7 +440,7 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 ## See Also
 
 - **`type-safety`** — Zod 3 schemas, `z.strictObject()`, the `expect(Schema.parse(body)).toBeTruthy()` pattern, type inference (`z.infer<typeof X>`), and env access through the config module (`env.X`, `tokens.full()` — never `process.env` at a call site).
-- **`data-strategy`** — when to use JSON, faker, env, or API-seeded data; the three-tier rule for negative-test arrays.
+- **`data-strategy`** — when to use JSON, faker, env, or API-seeded data. The three-tier rule for negative-test arrays is § Invalid-value arrays above.
 - **`enums`** — `SUITES.API_*`, message constants used in assertions (endpoint paths are not enums; they live in `appConfig.api.*` — see `config`).
 - **`fixtures`** — `apiRequest`, `mailpit`, `loginUser`, helper-fixture authoring.
 - **`helpers`** — auth bootstrap (`createStorageState`, login flows), helper-vs-fixture decision.
