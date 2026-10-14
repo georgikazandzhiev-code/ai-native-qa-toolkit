@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 4.1.0 -->
+<!-- toolkit-version: 4.2.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -123,7 +123,7 @@ Every repo that adopts this toolkit uses this layout and naming. An existing rep
 
 `<service>` (some skills say `<domain>`) is one folder per backend service, plus `shared/`; a product with a single backend uses one folder per product area instead, such as `orders/` and `identity/`. Which folders exist is a product fact, so the repo's own `CLAUDE.md` lists them.
 
-A file of a kind this table lists that sits anywhere else, or is named otherwise, is **drift**. The repo's `CLAUDE.md` keeps a drift table with one row per area: the table row it belongs to, where it is now, and the date it will move. A drift file moves in its area's PR or when it is next touched, whichever comes first; an import-path update made by another area's move does not oblige the file to move: it may stay on the drift table until its own area moves or it is next touched for another reason (moving it early is still allowed); a new file always goes to the standard location and never copies a drift file's pattern. An npm script that CI still calls by an older name stays as an alias of its `app-<tag>` script, on the drift table, until CI is repointed. A repo still on the toolkit's earlier `@App-*` tags keeps its current scripts until its move to the standard set lands. Files of kinds the table doesn't list (`package.json`, `playwright.config.ts`, CI workflows) stay where the tools expect them.
+A file of a kind this table lists that sits anywhere else, or is named otherwise, is **drift**. The repo's `CLAUDE.md` keeps a drift table with one row per area: the table row it belongs to, where it is now, and the date it will move. A drift file moves in its area's PR or when it is next touched, whichever comes first; an import-path update made by another area's move does not oblige the file to move: it may stay on the drift table until its own area moves or it is next touched for another reason (moving it early is still allowed); a new file always goes to the standard location and never copies a drift file's pattern. An npm script that CI still calls by an older name stays as an alias of its `app-<tag>` script, on the drift table, until CI is repointed. A repo still on the toolkit's earlier `@App-*` tags keeps its current scripts until its move to the standard set lands. The `standard-layout` lint rule fails a spec, setup file, fixture, the barrel, a page object or a k6 script that sits outside its row or is misnamed; the drift table's areas (folders or single files) go in its `drift` option, which excuses only a file that is out of place, and an area's move PR deletes both entries. Files of kinds the table doesn't list (`package.json`, `playwright.config.ts`, CI workflows) stay where the tools expect them.
 
 ---
 

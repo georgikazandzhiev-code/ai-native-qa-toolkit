@@ -3,7 +3,7 @@
  *
  * A passing `RuleTester` suite proves a rule reports on a string of source handed straight to it.
  * It does not prove the rule still fires through the real ESLint CLI, on a real file, in the flat
- * config the gate actually uses, with the other sixteen rules loaded alongside it. Those are
+ * config the gate actually uses, with every other rule loaded alongside it. Those are
  * different claims, and only the second is what "the gate blocks this" means.
  *
  * README.md and the CI workflow both used to state the suites were "fault-injected to prove they
@@ -76,7 +76,7 @@ function emptyVisitor(rule) {
 function configWith(id, rule) {
   const entry =
     id === 'single-tag-on-test' ? ['error', { whitelist: TAGS }] : 'error';
-  return [
+  const config = [
     {
       files: ['**/*.ts'],
       languageOptions: { parser: tsParser, ecmaVersion: 2022, sourceType: 'module' },
@@ -84,6 +84,13 @@ function configWith(id, rule) {
       rules: { [`qa-constitution/${id}`]: entry },
     },
   ];
+  // Mirrors smoke/eslint.config.mjs: each tree is a repo root of its own for the layout rule.
+  if (id === 'standard-layout') {
+    for (const tree of ['smoke/good', 'smoke/tests']) {
+      config.push({ files: [`${tree}/**/*.ts`], rules: { [`qa-constitution/${id}`]: ['error', { root: tree.replace('smoke/', '') }] } });
+    }
+  }
+  return config;
 }
 
 async function lint(glob, id, rule) {
@@ -161,7 +168,10 @@ const PINNED = {
   // silent under all four rules that ask "which test is this in?"; the untagged, assertion-free
   // test around a step is still reported by both test-level rules; and an if or a try/catch in a
   // step inside a test is still reported by the two in-test rules.
+  // The file also sits in tests/app/ui/, which the standard layout doesn't have, so standard-layout
+  // reports it once, at its first statement.
   'smoke/tests/app/ui/steps.spec.ts': [
+    { rule: 'standard-layout', at: "import { test, expect } from 'fixtures/pom/test-options';" },
     { rule: 'single-tag-on-test', at: "test('opens the seeded project'" },
     { rule: 'require-assertion-in-test', at: "test('opens the seeded project'" },
     { rule: 'no-conditional-in-test', at: '    if (response.status() === 409)' },

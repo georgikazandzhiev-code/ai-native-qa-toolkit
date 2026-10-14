@@ -465,4 +465,126 @@ tester.run('regression/disabled-tests-are-not-untagged', plugin.rules['single-ta
   ],
 });
 
+/**
+ * A setup file declares its steps with test(), but they are setup: test-standards gives Setup no
+ * tag, and storage-state generation has nothing to assert. Found by an adopter run, October 2026:
+ * a tests/app/login.setup.ts written as the skills prescribe failed the gate once the whole repo
+ * was linted.
+ */
+const SETUP = `import { test } from '../../fixtures/pom/test-options';\nqase.ignore();\ntest('authenticate as admin', async ({ page }) => { await page.goto('/'); });`;
+tester.run('regression/setup-files-carry-no-tag', plugin.rules['single-tag-on-test'], {
+  valid: [{ filename: 'tests/app/login.setup.ts', code: SETUP, options: [{ whitelist: ['@api'] }] }],
+  invalid: [{ filename: 'tests/app/login.spec.ts', code: SETUP, errors: [{ messageId: 'none' }] }],
+});
+tester.run('regression/setup-files-need-no-assertion', plugin.rules['require-assertion-in-test'], {
+  valid: [{ filename: 'tests/app/login.setup.ts', code: SETUP }],
+  invalid: [{ filename: 'tests/app/login.spec.ts', code: SETUP, errors: [{ messageId: 'none' }] }],
+});
+
+// standard-layout reads paths relative to the directory ESLint runs in, so cases use absolute names.
+// Every case sits in tests/fixtures/nested-repo, a folder with its own eslint.config.mjs: the rule
+// reads paths from the nearest folder holding a flat config, not from where the tests were started.
+// Its tests/perf/package.json stands for a k6 sub-project, which must not move that root.
+const NESTED = require('node:path').join(__dirname, 'fixtures', 'nested-repo').replace(/\\/g, '/');
+const at = (rel) => `${NESTED}/${rel}`;
+// A repo with a package.json but no flat config above it: the root falls back to the package.json.
+// It must sit outside this repository, whose own eslint.config.mjs would be found first.
+const BARE = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'bare-repo-')).replace(/\\/g, '/');
+require('node:fs').writeFileSync(`${BARE}/package.json`, '{ "private": true }');
+process.on('exit', () => require('node:fs').rmSync(BARE, { recursive: true, force: true }));
+const BODY = `const a = 1;`;
+const POM_CLASS = `export class SettingsPage extends BasePage {}`;
+const K6 = `import http from 'k6/http';\nimport { sleep } from 'k6';\nexport default function () { http.get('x'); sleep(1); }`;
+
+tester.run('standard-layout', plugin.rules['standard-layout'], {
+  valid: [
+    { filename: at('tests/app/api/jobs-service/workers/workers.spec.ts'), code: BODY },
+    { filename: at('tests/app/e2e/tenant-service/login-smoke.spec.ts'), code: BODY },
+    { filename: at('tests/app/functional/jobs-service/job-list.spec.ts'), code: BODY },
+    { filename: at('tests/app/login.setup.ts'), code: BODY },
+    { filename: at('fixtures/pom/test-options.ts'), code: BODY },
+    { filename: at('fixtures/pom/page-object-fixture.ts'), code: BODY },
+    { filename: at('fixtures/api/api-request-fixture.ts'), code: BODY },
+    { filename: at('fixtures/services/login-fixture.ts'), code: BODY },
+    { filename: at('pages/app/SettingsPage.ts'), code: POM_CLASS },
+    { filename: at('pages/util/LoginPage.ts'), code: `export class LoginPage extends BasePage {}` },
+    { filename: at('pages/baseClasses/DataTableBase.ts'), code: `export abstract class DataTableBase extends BasePage {}` },
+    { filename: at('tests/perf/load/jobs-list.ts'), code: K6 },
+    // kinds the rule cannot recognise from one file are not judged
+    { filename: at('src/utils/whatever.ts'), code: BODY },
+    { filename: at('lib/Thing.ts'), code: `export class Thing extends Base {}` },
+    // a file outside the root is not judged
+    { filename: at('e2e/login.spec.ts'), code: BODY, options: [{ root: at('qa') }] },
+    { filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: at('qa') }] },
+    { filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: 'qa' }] },
+    { filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: at('qa').replace(/\//g, '\\') }] },
+    // an area on the drift table is skipped until its move PR deletes the entry
+    { filename: at('e2e/login.spec.ts'), code: BODY, options: [{ drift: ['e2e'] }] },
+    { filename: at('src/pages/fooPage.ts'), code: `export class FooPage extends BasePage {}`, options: [{ drift: ['./src/pages/'] }] },
+    // a repo's own page base, declared
+    { filename: at('pages/app/Shell.ts'), code: `export class Shell extends AppShell {}`, options: [{ pageBases: ['AppShell'] }] },
+    // a single file on the drift table
+    { filename: at('auth.setup.ts'), code: BODY, options: [{ drift: ['auth.setup.ts'] }] },
+    // k6 helpers live in tests/perf/lib/
+    { filename: at('tests/perf/lib/http-helpers.ts'), code: K6 },
+    // a k6 sub-project's own package.json doesn't move the root
+    { filename: at('tests/perf/stress/jobs-burst.ts'), code: K6 },
+    // k6's types are not a k6 script
+    { filename: at('helpers/util/perf-thresholds.ts'), code: `import { type Options, type Threshold } from 'k6/options';\nexport const t: Options = {};` },
+    { filename: at('helpers/util/perf-options.ts'), code: `import type { Options } from 'k6/options';\nexport const options: Options = {};` },
+    { filename: at('types/k6-extras.d.ts'), code: `import { Counter } from 'k6/metrics';\nexport declare const c: Counter;` },
+  ],
+  invalid: [
+    { filename: at('e2e/login.spec.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('tests/app/api/projects.spec.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('tests/app/ui/x/projects.spec.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('tests/app/api/jobs-service/createJob.spec.ts'), code: BODY, errors: [{ messageId: 'name' }] },
+    { filename: at('tests/app/auth/login.setup.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('tests/app/Login.setup.ts'), code: BODY, errors: [{ messageId: 'name' }] },
+    { filename: at('support/test-options.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('support/login-fixture.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('fixtures/pom/loginFixture-fixture.ts'), code: BODY, errors: [{ messageId: 'name' }] },
+    { filename: at('src/pages/SettingsPage.ts'), code: POM_CLASS, errors: [{ messageId: 'place' }] },
+    { filename: at('pages/SettingsPage.ts'), code: POM_CLASS, errors: [{ messageId: 'place' }] },
+    { filename: at('pages/app/settingsPage.ts'), code: POM_CLASS, errors: [{ messageId: 'name' }] },
+    { filename: at('src/Grid.ts'), code: `export class Grid extends DataTableBase {}`, errors: [{ messageId: 'place' }] },
+    { filename: at('perf/jobs-list.ts'), code: K6, errors: [{ messageId: 'place' }] },
+    { filename: at('tests/perf/load/jobsList.ts'), code: K6, errors: [{ messageId: 'name' }] },
+    // the drift option skips only what it names
+    { filename: at('api-tests/x.spec.ts'), code: BODY, options: [{ drift: ['e2e'] }], errors: [{ messageId: 'place' }] },
+    { filename: at('e2e-old/x.spec.ts'), code: BODY, options: [{ drift: ['e2e'] }], errors: [{ messageId: 'place' }] },
+    // a declared page base is judged like BasePage
+    { filename: at('src/Shell.ts'), code: `export class Shell extends AppShell {}`, options: [{ pageBases: ['AppShell'] }], errors: [{ messageId: 'place' }] },
+    // inside a declared root, the layout is read from that root
+    { filename: at('qa/e2e/login.spec.ts'), code: BODY, options: [{ root: at('qa') }], errors: [{ messageId: 'place' }] },
+    { filename: at('qa/e2e/login.spec.ts'), code: BODY, options: [{ root: './qa/' }], errors: [{ messageId: 'place' }] },
+    // an absolute root is used as given, not appended to the working directory
+    { filename: at('e2e/login.spec.ts'), code: BODY, options: [{ root: NESTED }], errors: [{ messageId: 'place' }] },
+    // with no flat config above it, the nearest package.json is the root
+    { filename: `${BARE}/e2e/login.spec.ts`, code: BODY, errors: [{ messageId: 'place' }] },
+    // a class expression extending a page base is a page object too
+    { filename: at('src/Inline.ts'), code: `export const Inline = class extends BasePage {};`, errors: [{ messageId: 'place' }] },
+    // misplaced and misnamed: one report, the place — the name is fixed when the file moves
+    { filename: at('e2e/Login.spec.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    // a drift entry excuses only what is out of place: a standard folder under it is still judged
+    { filename: at('pages/app/ordersPage.ts'), code: `export class OrdersPage extends BasePage {}`, options: [{ drift: ['pages/'] }], errors: [{ messageId: 'name' }] },
+    { filename: at('tests/app/e2e/orders/CreateOrder.spec.ts'), code: BODY, options: [{ drift: ['tests/'] }], errors: [{ messageId: 'name' }] },
+    // a single-file drift entry covers that file only
+    { filename: at('global.setup.ts'), code: BODY, options: [{ drift: ['auth.setup.ts'] }], errors: [{ messageId: 'place' }] },
+    // Playwright's other spec names are specs too
+    { filename: at('integration/orders.test.ts'), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('tests/app/api/orders/orders.test.ts'), code: BODY, errors: [{ messageId: 'name' }] },
+    { filename: at('tests/app/api/orders/orders.spec.mts'), code: BODY, errors: [{ messageId: 'name' }] },
+    // a page base under another name is still a page base
+    { filename: at('src/admin/ReportsPage.ts'), code: `import { BasePage as Base } from '../base';\nexport class ReportsPage extends Base {}`, errors: [{ messageId: 'place' }] },
+    // a type import first does not hide the script's value import
+    { filename: at('perf/jobs.ts'), code: `import type { Options } from 'k6/options';\n${K6}`, errors: [{ messageId: 'place' }] },
+    // a k6 script needs its test-type folder
+    { filename: at('tests/perf/smoke.ts'), code: K6, errors: [{ messageId: 'place' }] },
+    // a drive letter in another case is the same path (Windows editors mix them)
+    { filename: at('e2e/login.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('e2e/login.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, options: [{ root: NESTED }], errors: [{ messageId: 'place' }] },
+  ],
+});
+
 console.log('all rule tests passed');

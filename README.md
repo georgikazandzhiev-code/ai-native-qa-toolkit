@@ -156,22 +156,22 @@ Verified by fault injection rather than assumption: a 13 → 6 drop across six c
 
 ## Enforcement — the rules a pipeline can refuse to merge
 
-Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **17 ESLint rules** derived from the MUST and WON'T tables plus the Definition of Done's false-green clause.
+Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-constitution/`](eslint-plugin-qa-constitution/)** is the half a CI job can enforce: **18 ESLint rules** derived from the MUST and WON'T tables, the standard repo layout, and the Definition of Done's false-green clause.
 
 | Enforced mechanically | Stays a review responsibility |
 |---|---|
-| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · no `process.env` outside the config module · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket · **no test without an assertion** · **no empty catch anywhere** | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) |
+| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · no `process.env` outside the config module · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket · **no test without an assertion** · **no empty catch anywhere** · every spec, setup file, fixture, page object and k6 script in its standard place | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) |
 
 Roughly half the constitution is mechanically checkable. The plugin claims exactly that half and says so — a linter that claims more than it checks is worse than none.
 
 ```yaml
 - name: QA constitution
-  run: npx eslint "tests/**/*.ts" "pages/**/*.ts" --max-warnings 0
+  run: npx eslint . --max-warnings 0   # the whole repo: a misplaced spec outside tests/ must be seen
 ```
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 27 `RuleTester` suites and 58 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other sixteen rules loaded alongside it.
+The rules ship with 30 `RuleTester` suites and 95 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 
@@ -181,7 +181,7 @@ So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs
 | 2 | **Silent** — lint the compliant tree with only this rule on, expect exactly 0 | The one that decides whether anyone leaves the gate switched on |
 | 3 | **Attributed** — lint the bad tree again with the rule's visitor emptied, expect exactly 0 | Assertion 1 alone passes for the wrong reason if a parse error or a leaked config produced the message |
 
-All 17 rules pass all three. A rule with no fixture case **fails** here rather than being skipped, so a new rule cannot land without something to catch and something to leave alone.
+All 18 rules pass all three. A rule with no fixture case **fails** here rather than being skipped, so a new rule cannot land without something to catch and something to leave alone.
 
 **It found a defect on its first run** — the third in one rule, and the same root cause each time. `schema-parse-idiom` reported `Project.parse(body).id`, a parse whose field is read on the spot and therefore not discarded at all. The rule had been written as an allowlist of accepted parent node types, so every shape of *using* a parsed value that its author had not enumerated read as *discarding* it. It now asks the question it actually means — is this value read by nobody? — with the house idiom on `.toBeTruthy()` split into its own message so nothing was traded away. Assertion 2 is in the harness because of exactly this: five of the six defects in the eval harness were also rules firing on correct code, and a rule that cries wolf gets the whole gate turned off within a week.
 
@@ -222,9 +222,9 @@ Two things keep it from rotting, and both are checks rather than intentions:
 npm run test:memory
 ```
 
-The skills are held to the same rules, by `npm run test:snippets`: every TypeScript example in `.claude/skills/` must parse, and must pass all 17 lint rules except in three cases. A counter-example labelled as such is parsed but not linted. A block that carries `<!-- snippet-lint: skip — <reason> -->` with a real reason is parsed but not linted. A line suppressed by an inline `eslint-disable` with a `-- reason` is linted, and the finding it hides is printed. Every counter-example, skip and suppressed finding is printed on every run. Inline rule configuration such as `/* eslint <rule>: off */` fails the run, because it would switch a rule off without leaving a trace.
+The skills are held to the same rules, by `npm run test:snippets`: every TypeScript example in `.claude/skills/` must parse, and must pass every lint rule except `standard-layout` (which judges where a repo's files sit, not what a snippet says), except in three cases. A counter-example labelled as such is parsed but not linted. A block that carries `<!-- snippet-lint: skip — <reason> -->` with a real reason is parsed but not linted. A line suppressed by an inline `eslint-disable` with a `-- reason` is linted, and the finding it hides is printed. Every counter-example, skip and suppressed finding is printed on every run. Inline rule configuration such as `/* eslint <rule>: off */` fails the run, because it would switch a rule off without leaving a trace.
 
-**Every code snippet in the file is linted against the same 17 rules as the test suite.** A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
+**Every code snippet in the file is linted against the same rules as the test suite** (every rule except `standard-layout`, which judges where a repo's files sit, not what a snippet says). A memory file that teaches `waitForTimeout` poisons every session that reads it, and this is not hypothetical — two of the three snippets in its first draft violated the constitution: a redundant `waitFor` before a web-first assertion, and a `waitForResponse` registered *after* the action that triggers it. Both are corrected in place, with the reason, so the file teaches the correction too. **Validator check 10** enforces the rest: the file exists, states its READ and WRITE rules, stays under the cap, and every case carries an evidence label.
 
 > **The sync is one-directional, and this is the part that bites.** Agents read `~/.claude/memories/learned_patterns.md` — the copy in your home directory. The copy in this repo is what travels to other people. Write to the home copy; the copy here is a snapshot of it. Editing this one directly changes nothing about how any session behaves.
 

@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "description": "A repo root for standard-layout's tests: the rule reads paths from the nearest package.json above a file."
+}

@@ -93,6 +93,11 @@ function memberPath(node) {
   return parts.join('.');
 }
 
+/** A Playwright setup file (`<name>.setup.ts`): it declares setup steps with test(), but they are not tests. */
+function isSetupFile(context) {
+  return /\.setup\.[cm]?ts$/.test(context.filename ?? context.getFilename());
+}
+
 function stringValue(node) {
   if (!node) return null;
   if (node.type === 'Literal' && typeof node.value === 'string') return node.value;
@@ -228,6 +233,8 @@ rules['single-tag-on-test'] = {
     const opt = context.options[0] ?? {};
     const whitelist = opt.whitelist ?? [];
     const requireTag = opt.requireTag !== false;
+    // A setup file (tests/app/<name>.setup.ts) runs in the setup project and carries no tag (test-standards).
+    if (isSetupFile(context)) return {};
 
     /** Tags come from the title string (@Foo) and/or the `tag` option. */
     function tagsOf(node) {
@@ -637,6 +644,8 @@ rules['require-assertion-in-test'] = {
     const names = new Set(opt.assertFunctionNames ?? ['expect', 'assert']);
     const marker = opt.allowComment ?? 'eslint-asserts-via-helper';
     const src = context.sourceCode ?? context.getSourceCode();
+    // A setup file produces storage state and tokens; it proves nothing, so it has nothing to assert.
+    if (isSetupFile(context)) return {};
 
     /** expect(...), expect.soft(...), expect.poll(...), assert(...), this.expectX(...) */
     function isAssertion(node) {
@@ -729,6 +738,118 @@ rules['no-disabled-test'] = {
         // test.skip() inside a test body is no-conditional-in-test's report; don't say it twice.
         if (m[1] === 'skip' && enclosingTest(node)) return;
         context.report({ node, messageId: m[1] === 'fail' ? 'fail' : 'disabled', data: { path } });
+      },
+    };
+  },
+};
+
+/**
+ * Constitution § Standard repo layout and naming: a file of a kind the layout table lists sits in
+ * its standard place, under its standard name. The rule judges only kinds it can identify for
+ * certain — specs, setup files, fixtures, the barrel, page objects (a class extending a page base)
+ * and k6 scripts. Helpers, enums, schemas and test data are not recognisable from one file, so
+ * they are left alone rather than guessed at.
+ *
+ * Paths are read relative to the repo root: the nearest folder above the file that holds an ESLint
+ * flat config (where the gate is configured), or failing that a `package.json`, so the result does
+ * not depend on where ESLint was started, and a k6 sub-project's own package.json in tests/perf/
+ * does not move it. `root` sets where the layout starts, absolute or relative to that repo root;
+ * a file outside it is not judged. The repo's
+ * drift table goes in `drift`, relative to the root: a folder (`e2e/`) or a single file
+ * (`auth.setup.ts`). An entry only excuses a file that is out of place — a file inside its
+ * standard folder is always judged, so `drift: ['pages/']` cannot switch off `pages/app/`.
+ * An area leaves the list the moment its move PR deletes the entry.
+ */
+const KEBAB = '[a-z0-9]+(?:-[a-z0-9]+)*';
+/** A path with forward slashes and an upper-case drive letter, so `c:` and `C:` compare equal. */
+const normPath = (p) => p.replace(/\\/g, '/').replace(/^([a-z]):/, (_, d) => `${d.toUpperCase()}:`);
+const nodePath = require('node:path');
+const nodeFs = require('node:fs');
+const FLAT_CONFIGS = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', 'eslint.config.ts', 'eslint.config.mts', 'eslint.config.cts'];
+const nearest = new Map();
+/** The nearest folder at or above `dir` holding one of `names`, or null. Cached per folder and name list. */
+function nearestHolding(dir, names) {
+  const key = `${names[0]}|${dir}`;
+  if (nearest.has(key)) return nearest.get(key);
+  const parent = nodePath.dirname(dir);
+  const found = names.some((n) => nodeFs.existsSync(nodePath.join(dir, n))) ? dir : parent === dir ? null : nearestHolding(parent, names);
+  nearest.set(key, found);
+  return found;
+}
+/** The repo root for a folder: its nearest ESLint flat config, else its nearest package.json, else null. */
+const repoRootOf = (dir) => nearestHolding(dir, FLAT_CONFIGS) ?? nearestHolding(dir, ['package.json']);
+rules['standard-layout'] = {
+  meta: meta('Keep each file the layout standard recognises in its standard place, under its standard name.', {
+    messages: {
+      place: "{{kind}} belongs in {{where}} (constitution § Standard repo layout and naming). Move it there. Only a file that was already there when the repo adopted the toolkit may wait, listed on the drift table and in this rule's `drift` option.",
+      name: '{{kind}} file name must be {{pattern}} (constitution § Standard repo layout and naming).',
+    },
+    schema: [{
+      type: 'object',
+      properties: {
+        root: { type: 'string' },
+        drift: { type: 'array', items: { type: 'string' } },
+        pageBases: { type: 'array', items: { type: 'string' } },
+      },
+      additionalProperties: false,
+    }],
+  }),
+  create(context) {
+    const opt = context.options[0] ?? {};
+    const cwd = normPath(context.cwd ?? context.getCwd()).replace(/\/+$/, '');
+    const file = normPath(context.filename ?? context.getFilename());
+    const found = repoRootOf(nodePath.dirname(file));
+    const base0 = found ? normPath(found) : cwd;
+    const rootDir = opt.root !== undefined ? normPath(nodePath.resolve(base0, opt.root)) : base0;
+    const root = `${rootDir.replace(/\/+$/, '')}/`;
+    if (!file.startsWith(root)) return {};
+    const rel = file.slice(root.length);
+    const drift = (opt.drift ?? []).map((d) => d.replace(/\\/g, '/').replace(/^\.\//, ''));
+    const onDrift = drift.some((d) => (d.endsWith('/') ? rel.startsWith(d) : rel === d || rel.startsWith(`${d}/`)));
+    const pageBases = new Set(opt.pageBases ?? ['BasePage', 'DataTableBase']);
+    const base = rel.split('/').pop();
+
+    function check(node, kind, where, placeRe, nameRe, pattern) {
+      if (!placeRe.test(rel)) {
+        if (!onDrift) context.report({ node, messageId: 'place', data: { kind, where } });
+      } else if (nameRe && !nameRe.test(base)) context.report({ node, messageId: 'name', data: { kind, pattern } });
+    }
+
+    return {
+      Program(node) {
+        if (/\.(?:spec|test)\.[cm]?ts$/.test(base)) {
+          check(node, 'A spec', '`tests/app/{api,e2e,functional}/<service>/`', /^tests\/app\/(?:api|e2e|functional)\/[^/]+\/(?:[^/]+\/)*[^/]+$/,
+            new RegExp(`^${KEBAB}\\.spec\\.ts$`), '`kebab-case.spec.ts`');
+        } else if (/\.setup\.[cm]?ts$/.test(base)) {
+          check(node, 'A setup file', '`tests/app/`', /^tests\/app\/[^/]+$/, new RegExp(`^${KEBAB}\\.setup\\.ts$`), '`<name>.setup.ts`');
+        } else if (base === 'test-options.ts') {
+          check(node, 'The fixtures barrel', '`fixtures/pom/test-options.ts`', /^fixtures\/pom\/test-options\.ts$/);
+        } else if (base.endsWith('-fixture.ts')) {
+          check(node, 'A fixture', '`fixtures/pom/`, `fixtures/api/` or `fixtures/services/`', /^fixtures\/(?:pom|api|services)\/(?:[^/]+\/)*[^/]+$/,
+            new RegExp(`^${KEBAB}-fixture\\.ts$`), '`<name>-fixture.ts`');
+        }
+      },
+      ImportDeclaration(node) {
+        // A page base imported under another name (`import { BasePage as Base }`) is still a page base.
+        for (const s of node.specifiers) {
+          if (s.type === 'ImportSpecifier' && pageBases.has(s.imported.name ?? s.imported.value)) pageBases.add(s.local.name);
+        }
+        const src = node.source.value;
+        if (src !== 'k6' && !String(src).startsWith('k6/')) return;
+        // A declaration file, or a file with only type imports from k6, uses k6's types; it is not a k6 script.
+        if (base.endsWith('.d.ts')) return;
+        // `import type {…}` and `import { type A, type B }` bring in only types.
+        const typesOnly = (n) => n.importKind === 'type' || (n.specifiers.length > 0 && n.specifiers.every((s) => s.importKind === 'type'));
+        const isK6 = (n) => n.type === 'ImportDeclaration' && !typesOnly(n) && (n.source.value === 'k6' || String(n.source.value).startsWith('k6/'));
+        if (node !== node.parent.body.find(isK6)) return;
+        check(node, 'A k6 load test', '`tests/perf/<test type>/` (shared helpers in `tests/perf/lib/`)', /^tests\/perf\/[^/]+\/(?:[^/]+\/)*[^/]+$/,
+          new RegExp(`^${KEBAB}\\.ts$`), '`kebab-case.ts`');
+      },
+      'ClassDeclaration, ClassExpression'(node) {
+        const sup = node.superClass;
+        if (!sup || sup.type !== 'Identifier' || !pageBases.has(sup.name)) return;
+        check(node, 'A page object', '`pages/app/`, `pages/util/` or `pages/baseClasses/`', /^pages\/(?:app|util|baseClasses)\/(?:[^/]+\/)*[^/]+$/,
+          /^[A-Z][A-Za-z0-9]*\.ts$/, '`PascalCase.ts`');
       },
     };
   },

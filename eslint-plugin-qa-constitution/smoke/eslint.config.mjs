@@ -29,6 +29,12 @@ export default [
     rules: {
       ...Object.fromEntries(Object.keys(qa.rules).map((r) => [`qa-constitution/${r}`, 'error'])),
       'qa-constitution/single-tag-on-test': ['error', { whitelist: TAGS }],
+      // Judged per tree, below: each tree is a repo root of its own.
+      'qa-constitution/standard-layout': 'off',
     },
   },
+  // `standard-layout` reads paths from a repo root, relative to this config's folder. smoke/good is laid out to the standard;
+  // smoke/tests is not — its specs sit in tests/app/ui/ and without a service folder.
+  { files: ['smoke/good/**/*.ts'], rules: { 'qa-constitution/standard-layout': ['error', { root: 'good' }] } },
+  { files: ['smoke/tests/**/*.ts'], rules: { 'qa-constitution/standard-layout': ['error', { root: 'tests' }] } },
 ];

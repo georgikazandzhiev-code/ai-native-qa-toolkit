@@ -3,7 +3,7 @@
 // This is the false-positive net. Five of the six defects the eval harness had in itself were
 // rules firing on correct code, and a rule that cries wolf gets the whole gate switched off
 // within a week. RuleTester `valid` cases cover that per rule, in isolation; this covers it with
-// all sixteen rules enabled at once, on a real file, through the real ESLint CLI.
+// every rule enabled at once, on a real file, through the real ESLint CLI.
 import type { Locator, Page } from '@playwright/test';
 import { expect } from 'fixtures/pom/test-options';
 

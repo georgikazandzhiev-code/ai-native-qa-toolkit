@@ -121,9 +121,9 @@ Three jobs run on every push and every pull request (`.github/workflows/validate
 | Fails the CI run | Reported, never fails the run |
 |---|---|
 | `npm run validate` — front matter, required sections, semver, cross-reference integrity, `.cursor/mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
-| `node tests/rules.test.js` — 27 `RuleTester` suites, 58 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
+| `node tests/rules.test.js` — 30 `RuleTester` suites, 95 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
 | `node tests/fault-injection.test.mjs` — every rule must fire on the known-bad tree, stay silent on the compliant tree, and stop reporting when its visitor is emptied; the pinned files must draw exactly their listed reports, rule and line | `description` under 120 chars, or missing a "Do NOT use for" disclaimer |
-| `node tests/skill-snippets.test.mjs` — every TypeScript block under `.claude/skills/` must parse and pass all 17 rules. Labelled counter-examples and reasoned `snippet-lint: skip` blocks are parsed but not linted; an `eslint-disable` without a `-- reason`, or any inline rule configuration, fails the run | |
+| `node tests/skill-snippets.test.mjs` — every TypeScript block under `.claude/skills/` must parse and pass every rule except `standard-layout`, which judges where a repo's files sit, not what a snippet says. Labelled counter-examples and reasoned `snippet-lint: skip` blocks are parsed but not linted; an `eslint-disable` without a `-- reason`, or any inline rule configuration, fails the run | |
 | `node tests/skill-snippets.harness.test.mjs` — the snippet lint's own cases: planted defects must fail the run, labelled counter-examples must pass | |
 | `node tests/skill-snippets.mutation.test.mjs` — every listed mutant of the snippet lint must be killed by the harness; a survivor, or a mutant whose target text is gone, fails the run | |
 | The known-bad fixture must still be rejected by the ESLint CLI, and the compliant one must still pass clean | Category outside the canonical four |
@@ -198,7 +198,7 @@ Two deliberate consequences. **L3 cannot be reached by writing prose** — it re
 | Gate bypasses per week | "AI adoption %", sessions run, tokens spent |
 | Time for a new engineer to reach L1 | Test count, or coverage percentage alone |
 
-Every banned metric has a cheap way to game it that makes the codebase worse. Skill count rewards splitting one good skill into three. Lines of rules rewards verbosity in the artifact whose whole design constraint is brevity. A mutation-score threshold rewards asserting on trivia until the number moves — which is why `mutation-testing` gates on regression against a recorded baseline instead, and refused an arbitrary 80% target in the one eval case where a baseline agent shipped exactly that into CI. Test count and coverage reward tests that execute code without asserting anything, the precise false green two of the seventeen lint rules exist to catch.
+Every banned metric has a cheap way to game it that makes the codebase worse. Skill count rewards splitting one good skill into three. Lines of rules rewards verbosity in the artifact whose whole design constraint is brevity. A mutation-score threshold rewards asserting on trivia until the number moves — which is why `mutation-testing` gates on regression against a recorded baseline instead, and refused an arbitrary 80% target in the one eval case where a baseline agent shipped exactly that into CI. Test count and coverage reward tests that execute code without asserting anything, the precise false green two of the eighteen lint rules exist to catch.
 
 Inventory is not achievement. The skill count may be **reported**; it may never be **targeted**.
 
@@ -226,7 +226,7 @@ Out of band, immediately, on any of: a `canonical` pattern falsified; an eval re
 |---|---|
 | Skills | 30 on-demand skills — 14 domain, 6 authoring, 4 running, 6 cross-cutting |
 | Measured | 3 of 30 skills have recorded history |
-| Lint rules, blocking | **17 ESLint rules**, every one firing on the known-bad tree and silent on the compliant one |
+| Lint rules, blocking | **18 ESLint rules**, every one firing on the known-bad tree and silent on the compliant one |
 | Validator | 15 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
 | Reviewers with merge rights | **1** |
 | Rollout phase | **0**, not yet exited |

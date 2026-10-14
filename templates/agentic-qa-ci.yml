@@ -13,9 +13,11 @@
 #   2. `cache: 'npm'` with no `package-lock.json` — hard-fails with "Dependencies lock file is not
 #      found". Same for `npm ci`. Both are correct HERE because a test repo has a lockfile; both
 #      fail in a repo that does not, which is why this file is a template and not a copy.
-#   3. `npx eslint .` — lints nothing useful without a config, and with one it lints the whole tree
-#      including build output. Point it at the directories that hold test code, and pass
-#      `--max-warnings 0` or a warning is just a comment.
+#   3. `npx eslint "tests/**/*.ts" "pages/**/*.ts"` — looks like the safe scope and isn't. The
+#      `standard-layout` rule can only fail a misplaced spec or page object it is shown, so a
+#      spec in `e2e/` would pass the gate unseen, and `helpers/` and `config/` carry rules too.
+#      Lint the whole repo with `npx eslint .`, keep build output out with `ignores` in
+#      eslint.config, and pass `--max-warnings 0` or a warning is just a comment.
 #   4. `npm run evaluate:spec || echo "DeepEval validation passed"` — **deleted, deliberately.**
 #      When the script is missing or fails, `|| echo` swallows the failure, prints the word
 #      "passed", and exits 0. That is a false-green generator, and it prints a claim about a tool
@@ -55,9 +57,11 @@ jobs:
         run: npm ci
 
       # The mechanically checkable half of the constitution. `--max-warnings 0` is what makes it a
-      # gate: without it a violation configured as a warning is a comment nobody reads.
+      # gate: without it a violation configured as a warning is a comment nobody reads. The scope
+      # is the whole repo (see note 3): a file outside the standard folders is what
+      # `standard-layout` exists to catch. Areas on the drift table go in its `drift` option.
       - name: QA constitution — lint gate
-        run: npx eslint "tests/**/*.ts" "pages/**/*.ts" "fixtures/**/*.ts" --max-warnings 0
+        run: npx eslint . --max-warnings 0
 
       # Type errors that the linter cannot see. `any` and `@ts-ignore` are constitution
       # violations, so a suite that does not typecheck is not compliant either.
