@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 4.0.0
+version: 4.0.1
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -128,7 +128,7 @@ Every deep skill in this framework starts with a precondition:
 | `api-testing`, `test-standards` (API) | OpenAPI / Swagger pull (or live exploration as fallback for undocumented endpoints). |
 | `helpers`, `fixtures` | DRY-search before adding — does the helper already exist? |
 | `enums` | Verify the UI text on the live app via `playwright-cli` before encoding. |
-| `data-strategy` | Identify which tier the new data belongs to (factory / universal / domain / inline). |
+| `data-strategy` | Pick the data source (JSON / faker / env / API seeding) and its standard location. |
 | `config` | Verify the env var actually exists in `.env` / CI; verify the path actually resolves. |
 
 Skip the precondition and you produce code that compiles but is wrong against reality.

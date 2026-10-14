@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.8
+version: 1.0.9
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -201,7 +201,7 @@ Generic shape: a UI message enum's value changes (e.g. `"Invalid email or passwo
 ## See Also
 
 - **`enums`** — naming and organization for **new** enum values (this skill is for changing existing ones).
-- **`data-strategy`** — when to use JSON vs faker vs env vs seeded API data; the three-tier rule for invalid-value arrays. Use when **adding** new static test data.
+- **`data-strategy`** — when to use JSON vs faker vs env vs seeded API data. The three-tier rule for invalid-value arrays is in `api-testing` § Invalid-value arrays. Use when **adding** new static test data.
 - **`api-testing`** — `Schema.parse(body)` invariant, error envelopes, and the `StatusSchema` cascade.
 - **`type-safety`** — Zod 3 conventions, `z.strictObject()`, `z.enum([...])` patterns referenced by this skill.
 - **`debugging`** — when a test fails after a refactor: failure-mode taxonomy, UI Mode, Trace Viewer.

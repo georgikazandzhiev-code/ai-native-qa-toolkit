@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 5.0.0
+version: 5.0.1
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -412,6 +412,6 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke
 ## See Also
 
 - **Paired skills:** [`api-testing`](../api-testing/SKILL.md) for API specs (schema validation, status-code matrix, per-field negative coverage), [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI specs (POM Method Standards, locator priority). Always-on framework invariants live in [`~/.claude/CLAUDE.md`](../../CLAUDE.md).
-- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (env via `config/env.ts`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
+- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, static data), [`type-safety`](../type-safety/SKILL.md) (env via `config/env.ts`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
 - **Failure investigation:** [`debugging`](../debugging/SKILL.md) — failure-mode taxonomy and the right Playwright tool (`npx playwright test --ui`, `npx playwright test --debug`, trace viewer) when Step 9 reports red.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.

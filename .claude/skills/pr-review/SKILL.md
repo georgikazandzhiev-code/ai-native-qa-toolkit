@@ -1,6 +1,6 @@
 ---
 name: pr-review
-version: 4.0.0
+version: 4.1.0
 description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
@@ -48,7 +48,7 @@ Then group the output by **file kind** — each kind has its own checklist below
 - **Enums / config / static data** (`enums/**`, `config/**`, `test-data/**`)
 - **Skills / rules** (`~/.claude/skills/**`, `CLAUDE.md`)
 
-Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fixtures/api/schemas/app/…` are the standard layout (`~/.claude/CLAUDE.md § Standard repo layout and naming`). A changed file of a kind the standard lists (spec, page object, helper, fixture, schema, enum, test data, config) that sits outside its standard location is a finding: drift to name, not a pattern to copy.
+Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fixtures/api/schemas/app/…` are the standard layout (`~/.claude/CLAUDE.md § Standard repo layout and naming`). A changed file of a kind the standard lists (spec, page object, helper, fixture, schema, enum, test data, config) that sits outside its standard location, or is named otherwise, is a finding: drift to name, not a pattern to copy. A file already on the repo's drift table whose only change is an import-path update from another area's move is still reported as drift, but its move belongs to its own area's PR, not this one.
 
 ### Step 2 — Per-kind checklist
 

@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-version: 2.0.4
+version: 2.0.5
 description: Author, refactor, or review skills for this repo. Owns the SKILL.md structure contract (Critical block, anti-patterns, self-review, See Also), the file-boundary rule (rules in SKILL.md, catalogs in reference.md, skeletons in templates.md), and the verify-by-grep policy. Triggers — "create a skill", "review this SKILL.md", "/skill-creator". Not for domain implementation work (use the matched skill) or changing a constitution rule.
 metadata:
   category: authoring
@@ -396,7 +396,7 @@ User says: *"`enums/SKILL.md` is missing the `## Examples` section."*
 
 User says: *"Our project `CLAUDE.md` has a 300-line § Run-stats API tests section. Move it into a skill."* (Follows § Moving rule content into a skill.)
 
-1. **Split the section** — only the run-stats entry in its list of services stays in the project `CLAUDE.md`, because every session needs it; the per-endpoint workflow, query catalog and job-type inventory are skill content.
+1. **Split the section** — only the run-stats line under `jobs-service/` in its list of service folders stays in the project `CLAUDE.md`, because every session needs it; the per-endpoint workflow, query catalog and job-type inventory are skill content.
 2. **Phase 1 (intent)** — WHAT: test the run-stats endpoints. WHEN: editing `tests/app/api/jobs-service/run-stats/**`. Output shape: SKILL.md + `reference.md`.
 3. **Phase 2 (topology)** — Layer 2. Cluster: API authoring.
 4. **Phase 3 (draft)** — copy `assets/SKILL-template.md` to the new skill folder as `SKILL.md`, fill the frontmatter (`version: 1.0.0`, `metadata.category`) and apply the description recipe with "Do NOT use for X" disclaimers.
