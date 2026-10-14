@@ -259,7 +259,7 @@ export async function teardownTestWorker(
 ): Promise<void> { /* matches setupTestWorker */ }
 ```
 
-- Factory + seeder in two files; seeder consumes the factory; create + delete are paired.
+- Factory + seeder sit in the resource's helper file (`helpers/app/workers.ts`); the factory moves to `test-data-generators.ts` only once the `api-testing` extraction threshold is crossed. The seeder consumes the factory; create + delete are paired.
 
 Test usage:
 

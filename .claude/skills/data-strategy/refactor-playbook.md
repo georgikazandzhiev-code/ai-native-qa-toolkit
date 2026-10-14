@@ -127,7 +127,7 @@ Consequences:
 
 ### Target
 
-Introduce paired typed factories + assertion-style setup helpers in the resource helpers (`helpers/app/workers.ts`, `jobs.ts`, …); they move to `helpers/app/test-data-generators.ts` only once the `api-testing` extraction threshold is crossed:
+Introduce paired typed factories + assertion-style setup helpers in the resource helpers (`helpers/app/workers.ts`, `jobs.ts`, …); the factories move to `helpers/app/test-data-generators.ts` only once the `api-testing` extraction threshold is crossed, and the setup helpers stay in the resource helpers:
 
 ```typescript
 // helpers/app/workers.ts (factory — Pattern 2, next to the seeder)
@@ -188,7 +188,7 @@ Apply the same shape to `setupJob` (and per-type Object Mothers `setupHttpJob`, 
 
 ### Migration steps
 
-1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to each resource's helper file.
+1. Add typed factories (`WorkerData`, `JobData`, `TenantData`, `UserData`) + matching `createXData(overrides?)` to each resource's helper file (to `helpers/app/test-data-generators.ts` once the `api-testing` extraction threshold is crossed).
 2. Replace each `buildCreate<X>Body` body with a delegation to the new factory; keep the existing function as a thin wrapper for backward compatibility, marked `@deprecated`.
 3. Add assertion-style `setup<X>` / `teardown<X>` to each resource helper file. The existing passthrough `create<X>` / `delete<X>` stays for advanced specs that need to assert non-2xx outcomes (negative tests).
 4. Migrate specs one resource at a time: every `beforeAll`/`beforeEach` that does `await create<X>(...)` followed by status + parse becomes `await setup<X>(...)`. Every `afterAll`/`afterEach` cleanup becomes `await teardown<X>(...)`.
