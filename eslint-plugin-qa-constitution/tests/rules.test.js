@@ -581,9 +581,10 @@ tester.run('standard-layout', plugin.rules['standard-layout'], {
     { filename: at('perf/jobs.ts'), code: `import type { Options } from 'k6/options';\n${K6}`, errors: [{ messageId: 'place' }] },
     // a k6 script needs its test-type folder
     { filename: at('tests/perf/smoke.ts'), code: K6, errors: [{ messageId: 'place' }] },
-    // a drive letter in another case is the same path (Windows editors mix them)
-    { filename: at('e2e/login.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, errors: [{ messageId: 'place' }] },
-    { filename: at('e2e/login.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, options: [{ root: NESTED }], errors: [{ messageId: 'place' }] },
+    // a drive letter in another case is the same path (Windows editors mix them; on Linux these are
+    // ordinary cases, so they get file names of their own — RuleTester rejects duplicate cases)
+    { filename: at('e2e/drive-letter.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, errors: [{ messageId: 'place' }] },
+    { filename: at('e2e/drive-letter-root.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, options: [{ root: NESTED }], errors: [{ messageId: 'place' }] },
   ],
 });
 
