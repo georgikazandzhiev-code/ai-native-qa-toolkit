@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-qa-constitution",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Turns the QA engineering constitution's MUST and WON'T rules into enforceable ESLint rules for Playwright + TypeScript test suites.",
   "keywords": [
     "eslint",
@@ -22,7 +22,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node tests/rules.test.js && node tests/fault-injection.test.mjs && node tests/memory-snippets.test.mjs && node tests/skill-snippets.test.mjs && node tests/skill-snippets.harness.test.mjs"
   },
   "peerDependencies": {
     "eslint": ">=9.0.0"

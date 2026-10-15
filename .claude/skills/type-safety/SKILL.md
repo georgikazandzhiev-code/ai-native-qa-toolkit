@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 2.0.3
+version: 2.0.4
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -75,7 +75,7 @@ Everything else imports from it: `env.APP_MAIN_EMAIL`, `tokens.admin()`, and `ap
 
 ### Migration policy
 
-Existing code that reads `process.env.X!` at call sites is drift — migrate a file to `env` / `tokens` when you next touch it. The lint rule `no-process-env-outside-config` reports every `process.env` access outside `config/`.
+Existing code that reads `process.env.X!` at call sites is drift — migrate a file to `env` / `tokens` when you next touch it. The lint rule `no-process-env-outside-config` reports every `process.env` access outside the top-level `config/`.
 
 ## Zod schema patterns
 
@@ -151,7 +151,7 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 - ❌ `: any` typed parameters or returns. Use `unknown` at boundaries, concrete types inside.
 - ❌ `as T` or `as unknown as T` to silence the type-checker. Parse the value with Zod and let the schema produce the type.
 - ❌ `@ts-ignore` / `@ts-expect-error` without a linked tracking comment AND a real plan to remove. A `grep` for them should return zero; keep it that way.
-- ❌ `process.env.X` anywhere outside `config/` — in a spec, helper, fixture or page object. Import `env.X` or `tokens.x()` from the config module.
+- ❌ `process.env.X` anywhere outside the top-level `config/` — in a spec, helper, fixture or page object (a service folder named `config` included). Import `env.X` or `tokens.x()` from the config module.
 - ❌ `process.env.X!` or `process.env.X as string`. Both silence the compiler without checking anything; the schema in `config/env.ts` is the check.
 - ❌ `process.env.X ?? "default"` / `|| "default"` at a call site. Defaults live in the schema (`.default(...)`); `||` also swallows an explicit empty string.
 - ❌ `const ADMIN_TOKEN = tokens.admin()` at module level. It runs before the setup project writes the token; call the accessor where it's used.
@@ -173,7 +173,7 @@ When you reach for `as`, ask: *"Can I parse with Zod here instead?"* The answer 
 - [ ] `id` fields default to `z.string().uuid()` unless the API has been verified to return non-UUIDs (documented inline).
 - [ ] API responses on the happy path are asserted with the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();` plus a `status` assertion (in a negative-matrix loop: `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` — the constitution's carve-out). No bare `Schema.parse(body)`.
 - [ ] Empty-body 204/403/405 responses use `expect(body).toBeNull()` instead of calling `.parse()` on `null`.
-- [ ] No `process.env` outside `config/`. Static values come from `env.X`, tokens from `tokens.x()` called where they're used, URLs and paths from `appConfig`. No `!`, `as string`, `??` or `||` on env values; any default is in the schema.
+- [ ] No `process.env` outside the top-level `config/`. Static values come from `env.X`, tokens from `tokens.x()` called where they're used, URLs and paths from `appConfig`. No `!`, `as string`, `??` or `||` on env values; any default is in the schema.
 - [ ] If the file already read `process.env` in a part I did not touch, I left it (legacy drift; migrate the file when you next touch it).
 - [ ] No `z.any()` added to silence a `ZodError`. Real divergences route through `api-testing` § Skipping a test for a real backend bug.
 - [ ] No `prettier/prettier` errors remain (your repo's Prettier config decides indent, quotes and trailing commas). Run `npx eslint --fix <file>` if the file shows formatting errors — never commit with wrong Prettier settings.
