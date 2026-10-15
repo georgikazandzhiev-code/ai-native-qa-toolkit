@@ -98,7 +98,7 @@ jobs:
       - name: Install plugin dev dependencies
         run: npm install --no-audit --no-fund
 
-      # 25 RuleTester suites, including a regression suite for every false positive the
+      # The RuleTester suites, including a regression suite for every false positive the
       # lint-gate eval and the fault-injection harness have exposed.
       - name: Run rule tests
         run: node tests/rules.test.js
@@ -123,7 +123,7 @@ jobs:
           fi
 
       # The other half, and the one that decides whether anyone keeps the gate switched on:
-      # compliant code must lint clean with all seventeen rules enabled at once.
+      # compliant code must lint clean with all eighteen rules enabled at once.
       - name: Smoke test — the compliant tree must pass the gate
         run: npx eslint --config smoke/eslint.config.mjs "smoke/good/**/*.ts" --max-warnings 0
 

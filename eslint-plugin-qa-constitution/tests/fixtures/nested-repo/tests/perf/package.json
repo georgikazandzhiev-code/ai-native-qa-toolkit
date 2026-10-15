@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "description": "A k6 sub-project's own package.json (esbuild, @types/k6). It must not move standard-layout's repo root."
+}
