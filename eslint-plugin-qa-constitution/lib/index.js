@@ -570,13 +570,14 @@ const repoRootOf = (dir) => nearestHolding(dir, FLAT_CONFIGS) ?? nearestHolding(
 /**
  * The file's path from the layout root, with forward slashes and no leading slash, or null when the
  * file sits outside it. The repo root is the nearest folder above the file that holds an ESLint flat
- * config (where the gate is configured), else a `package.json`, else the working directory, so the
- * result does not depend on where ESLint was started. `root` moves the start, absolute or relative
- * to that repo root.
+ * config (where the gate is configured), else a `package.json`, so the result does not depend on
+ * where ESLint was started; with neither above the file, the working directory is the root. `root`
+ * moves the start, absolute or relative to that repo root.
  */
 function layoutPath(context, root) {
   const cwd = normPath(context.cwd ?? context.getCwd()).replace(/\/+$/, '');
-  // ESLint passes absolute names; RuleTester may pass relative ones, read from the working directory.
+  // The ESLint class and CLI pass absolute names; Linter#verify and RuleTester pass relative ones, or
+  // <input> when there is none, read from the working directory.
   const file = normPath(nodePath.resolve(cwd, context.filename ?? context.getFilename()));
   const found = repoRootOf(nodePath.dirname(file));
   const base = found ? normPath(found) : cwd;

@@ -190,7 +190,7 @@ tester.run('no-pom-instantiation-in-test', plugin.rules['no-pom-instantiation-in
 
 tester.run('no-process-env-outside-config', plugin.rules['no-process-env-outside-config'], {
   valid: [
-    // the config module is the one reader
+    // the lint allows the whole top-level config/ folder; only config/env.ts should read process.env (config skill), the rest is review
     { code: `export const env = EnvSchema.parse(process.env);`, filename: 'config/env.ts' },
     { code: `const v = process.env[name];`, filename: 'config/util/jobs-service.ts' },
     // the runner config reads ENVIRONMENT and CI from the shell
@@ -616,7 +616,7 @@ tester.run('standard-layout', plugin.rules['standard-layout'], {
 });
 
 /**
- * `allow` is matched against the path from the repo root, not the absolute path (#83). The old
+ * `allow` is matched against the path from the layout root (the repo root, or `root` when set), not the absolute path (#83). The old
  * default, `(^|/)config/` on the absolute path, let a spec in a service folder named `config`, or
  * any file in a checkout whose path contains `/config/`, read process.env.
  */
@@ -630,6 +630,8 @@ tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-pro
   valid: [
     { filename: at('config/env.ts'), code: `export const env = EnvSchema.parse(process.env);` },
     { filename: at('playwright.config.ts'), code: `const ci = !!process.env.CI;` },
+    { filename: at('playwright.config.mts'), code: ENV_READ },
+    { filename: at('playwright.config.js'), code: ENV_READ },
     // a declared root moves the config module with the layout
     { filename: at('qa/config/env.ts'), code: ENV_READ, options: [{ root: 'qa' }] },
     // a file outside a declared root is not judged
@@ -651,6 +653,10 @@ tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-pro
     // inside a declared root, the layout is read from that root
     { filename: at('qa/tests/app/api/jobs/jobs.spec.ts'), code: ENV_READ, options: [{ root: 'qa' }], errors: [{ messageId: 'outside' }] },
     { filename: at('qa/config/env.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    // only the config/ folder and playwright.config.{js,ts,mjs,mts,cjs,cts} at the root
+    { filename: at('config.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('configs/x.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('playwright.config.tsx'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
   ],
 });
 

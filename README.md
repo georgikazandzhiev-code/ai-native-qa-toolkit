@@ -172,7 +172,7 @@ Roughly half the constitution is mechanically checkable. The plugin claims exact
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 31 `RuleTester` suites and 103 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
+The rules ship with 31 `RuleTester` suites and 106 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 

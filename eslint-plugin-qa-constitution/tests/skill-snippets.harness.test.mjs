@@ -312,6 +312,10 @@ r = run('Just prose, no code.\n');
 check('BITES: a run that lints no block at all fails (a parser that finds nothing must not pass)', r.code === 1 && r.out.includes('no TypeScript block was linted'), r.out);
 r = run('Prose.\n\n```ts\nnever closed();\n');
 check('BITES: an unclosed fence fails the run', r.code === 1 && r.out.includes('unclosed code fence'), r.out);
+r = run('Prose.\n\n' + fence('// config/env.ts\nexport const apiUrl = process.env.API_URL;'));
+check('SILENT: a block named config/env.ts may read process.env [mutant: config-module root override dropped]', r.code === 0, r.out);
+r = run('Prose.\n\n' + fence('// helpers/app/config/jobs.ts\nexport const apiUrl = process.env.API_URL;'));
+check('BITES: a block in a nested config/ folder that reads process.env fails the run', r.code === 1 && r.out.includes('no-process-env-outside-config'), r.out);
 rmSync(TMP, { recursive: true, force: true });
 
 console.log('');
