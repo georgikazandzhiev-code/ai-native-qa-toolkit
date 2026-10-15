@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 5.0.0
+version: 5.0.1
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -28,14 +28,14 @@ Non-negotiable. A scaffolded spec that breaks any of these is worse than no spec
 
 - **NEVER scaffold from memory of the conventions — read them.** The spec type decides which rule applies, and the rules differ per type. Guessing produces a file that lints clean and violates the framework.
 - **NEVER scaffold a UI spec before exploring the live app.** Locators invented from a description are placeholders wearing the costume of real selectors. Use `npx playwright open` per the `playwright-cli` skill; if it cannot reach the app, stop and say so rather than shipping guesses.
-- **ALWAYS use the nearest compliant spec of the same type as a reference**, at its standard location — never one on the drift table. Take from it what agrees with the skills: import paths, tag, `qase.suite` placement, cleanup shape. Where it differs from them (a non-strict schema built with `z.object`, a `process.env` read, a second tag, a test with no assertion), the skill wins: name the difference as drift in your summary and never copy it into the new spec. If no spec of that type sits at its standard location yet, start from the Step 5 template and the rule skill from Step 2 — never from a drift spec.
+- **ALWAYS use the nearest spec of the same type at its standard location as a reference** — never one on the drift table. Take from it what agrees with the skills: import paths, tag, `qase.suite` placement, cleanup shape. Where it differs from them (a non-strict schema built with `z.object`, a `process.env` read, a second tag, a test with no assertion), the skill wins: name the difference as drift in your summary and never copy it into the new spec. If no spec of that type sits at its standard location yet, start from the Step 5 template and the rule skill from Step 2 — never from a drift spec.
 - **ALWAYS enumerate the coverage plan before writing test bodies** for an API spec: every status code from the contract, as a comment block at the top. A scaffold that covers only the happy path has silently redefined "done".
 - **NEVER leave a scaffolded spec with placeholder assertions.** `expect(true).toBe(true)`, an empty body, or a TODO where an assertion belongs is a false green — the `require-assertion-in-test` lint rule will reject it, and it should.
 - **ALWAYS run the spec before reporting the scaffold complete.** A scaffold that has never executed is a draft. See the constitution's Verification Standard.
 
 ## Step 1: Determine Spec Type
 
-Infer the type from the request — an HTTP contract is API, one behaviour is Functional, a multi-phase journey is E2E. If the request is clear but either type fits (a behaviour that could be checked as one Functional test or inside an E2E journey), that is an implementation choice, not a question: build both on `alt/` branches and ask which to keep (`build-alternatives`). Ask first only when what to test is unclear (which endpoint, which behaviour), marked `[human-only: requirement]`.
+Infer the type from the request with the `test-standards` § Step 1 ladder. If the ladder leaves Functional vs E2E open (the request is clear, and the behaviour could be checked as one Functional test or inside an E2E journey), that is an implementation choice, not a question: build both on `alt/` branches and ask which to keep (`build-alternatives`). Ask first only when what to test is unclear (which endpoint, which behaviour), marked `[human-only: requirement]`.
 
 | Type | Directory | Tag (standard set) | Rule |
 |------|-----------|-----|------|
@@ -63,7 +63,7 @@ This step prevents writing tests against an imagined API or UI that doesn't matc
 
 ## Step 4: Study an Existing Spec
 
-Glob `tests/app/` for the nearest compliant spec of the same type and read it as a reference: keep what agrees with the skills, and name anything that differs as drift instead of copying it. A spec on the drift table is never the model. If no spec of that type sits at its standard location yet, start from the Step 5 template and the rule skill from Step 2 — never from a drift spec. In the example app, for instance:
+Glob `tests/app/` for the nearest spec of the same type at its standard location and read it as a reference: keep what agrees with the skills, and name anything that differs as drift instead of copying it. A spec on the drift table is never the model. If no spec of that type sits at its standard location yet, start from the Step 5 template and the rule skill from Step 2 — never from a drift spec. In the example app, for instance:
 
 | For this type... | Nearest spec (example app) |
 |------------------|----------------------------|
@@ -528,7 +528,7 @@ Every functional test that opens a form/sheet must close it at the end — even 
 1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@api` (or, with a kept set, the tag map's API tag).
 2. **Conventions** — read `api-testing` and `test-standards` before writing anything.
 3. **Contract first** — the OpenAPI document is the source of truth; enumerate 201, 400, 401, 403/404, 409 as a coverage-plan comment block.
-4. **Study a sibling** — open the nearest existing API spec under `tests/app/api/` (never one on the drift table) and follow its shape where it agrees with `api-testing`: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
+4. **Study a sibling** — open the nearest API spec at its standard location under `tests/app/api/` (never one on the drift table) and follow its shape where it agrees with `api-testing`: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
 5. **Negative matrix** — one test per required field omitted, plus an invalid-type loop. Not a single empty-body test.
 6. **Cleanup** — every created project deleted in `afterEach`/`afterAll`.
 7. **Run it.** Then report.

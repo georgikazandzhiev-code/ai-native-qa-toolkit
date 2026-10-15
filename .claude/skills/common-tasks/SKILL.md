@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 5.0.0
+version: 5.0.1
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -135,7 +135,7 @@ Skip the precondition and you produce code that compiles but is wrong against re
 
 ### Step 4 — walk the workflow
 
-Each deep skill ships a numbered workflow (steps 1..N) with precondition checks, worked examples from the invented example app, and a final verification. Walk it linearly. Do not skip "study an existing example" — every audit of this framework has caught skills that look right but violate subtle conventions because the author didn't read the nearest existing example in their repo first. Read a compliant one, at its standard location, as a reference: where it differs from the skill, the skill wins, and the difference is drift to name, never to copy.
+Each deep skill ships a numbered workflow (steps 1..N) with precondition checks, worked examples from the invented example app, and a final verification. Walk it linearly. Do not skip "study an existing example" — every audit of this framework has caught skills that look right but violate subtle conventions because the author didn't read the nearest existing example in their repo first. Read the nearest one at its standard location as a reference: where it differs from the skill, the skill wins, and the difference is drift to name, never to copy.
 
 ### Step 5 — re-read this skill's Critical block
 
@@ -232,7 +232,7 @@ User says: *"Add API tests for `POST /workers` covering 201, 400 (each required 
 
 1. **Step 1 — categorize.** API test → API tests + Zod schema + helper.
 2. **Step 2 — load deep skills.** `api-testing` (deep workflow), `test-standards` (structure + tag), `helpers` (per-resource helper), `type-safety` (Zod validators per major version).
-3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Glob your repo for the nearest compliant spec of the same type (in the example app, e.g. `tests/app/api/jobs-service/workers/workers.spec.ts`) and follow its shape where it agrees with the skills.
+3. **Step 3 — precondition.** Read the OpenAPI for `POST /workers`. Map every documented status code to a planned test. Glob your repo for the nearest spec of the same type at its standard location (in the example app, e.g. `tests/app/api/jobs-service/workers/workers.spec.ts`) and follow its shape where it agrees with the skills.
 4. **Step 4 — walk workflow.** `api-testing` Phase 1–8: contract → schema → helper → happy path → `test.step` for multi-call → full status-code matrix → per-field negative coverage with arrays from `fixtures/api/invalid-types.ts` → behavior-mismatch protocol → helper-fixture promotion if reused.
 5. **Step 5 — Critical block.** `z.strictObject()`. `expect(SchemaName.parse(body)).toBeTruthy();`. `appConfig.api.WORKERS`. `tokens.full()`. `@api` tag.
 6. **Step 6 — generate.** `tests/app/api/jobs-service/workers/workers.spec.ts` (extend if exists), `fixtures/api/schemas/app/worker.ts`, `helpers/app/workers.ts`.
