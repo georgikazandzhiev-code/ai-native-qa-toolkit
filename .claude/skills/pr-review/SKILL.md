@@ -43,7 +43,7 @@ Then group the output by **file kind** — each kind has its own checklist below
 - **Spec files** (`tests/app/**/*.spec.ts`)
 - **Page objects** (`pages/app/**/*.ts`, `pages/baseClasses/**/*.ts`)
 - **Helpers** (`helpers/app/**/*.ts`, `helpers/util/**/*.ts`)
-- **Zod schemas** (`fixtures/api/schemas/app/**/*.ts`)
+- **Zod schemas** (`fixtures/api/schemas/app/**/*.ts`, `fixtures/db/schemas/app/**/*.ts`)
 - **Fixtures** (`fixtures/**/*.ts`)
 - **Enums / config / static data** (`enums/**`, `config/**`, `test-data/**`)
 - **Skills / rules** (`~/.claude/skills/**`, `CLAUDE.md`)
@@ -103,8 +103,8 @@ Routed skills: [`page-objects`](../page-objects/SKILL.md), [`selectors`](../sele
 
 Routed skill: [`helpers`](../helpers/SKILL.md):
 
-- [ ] First arg of every exported helper is `apiRequest: ApiRequestFn`. Last optional arg is `headers?: string`.
-- [ ] No Zod schema authored inside a helper — schemas live only in `fixtures/api/schemas/app/`.
+- [ ] An API helper's first arg is `apiRequest: ApiRequestFn` and its last optional arg is `headers?: string`; a database helper's first arg is `db: DbClient` (`helpers` § Database helpers).
+- [ ] No Zod schema authored inside a helper — schemas live only in `fixtures/api/schemas/app/`; row schemas in `fixtures/db/schemas/app/`.
 - [ ] Cleanup helpers use `Promise.allSettled` and tolerate 404s (resource may already be gone).
 - [ ] Cleanup ordering respects FK constraints (jobs-before-workers).
 - [ ] New files use **kebab-case** filenames (`admin-tenants.ts`, not `adminTenants.ts`).

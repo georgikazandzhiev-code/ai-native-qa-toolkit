@@ -87,7 +87,7 @@ Specs, page objects, helpers and templates never contain a timeout number. Every
 4. **Add it to the schema in `config/env.ts`** — `z.string().url()`, `z.string().email()`, `z.string().min(1)` as fits. Required unless it has a real default; a genuine default (e.g. local Mailpit) goes in the schema as `.default(...)`, its one home. A missing required variable then fails the run at load, naming it.
 5. **Reference it from code** through the module, never through `process.env` (see `type-safety` § Environment variables):
    - If it's a URL the app config object should document, add a property to `appConfig` built from `env` (or the matching util config). JSDoc the property and name the backing env var.
-   - If it's a credential, add it to the schema and pass `env.X` into the helper / fixture that needs it (helpers take values as parameters; they don't read env). **Do not** surface credentials through `appConfig`.
+   - If it's a credential, add it to the schema and pass `env.X` into the helper / fixture that needs it (helpers take values as parameters and don't read env, except the two boundaries: the auth helper and `helpers/util/db-client.ts`, see `helpers` § Auth-bootstrap helpers and § Database helpers). **Do not** surface credentials through `appConfig`.
    - Forbidden at call sites: `!`, `as string`, `??` / `||` defaulting.
 
 ## Adding a new config property
@@ -175,7 +175,7 @@ User says: *"Wire up a Grafana URL so a perf-test-run annotation helper can post
    };
    ```
    The `apiUrl` comes from the validated `env` (no `!` — the schema parse fails at load if it's missing) and is JSDoc'd; the `paths` sub-object is the in-source path catalog, never env-driven (mirrors `appConfig.api`).
-4. **Keep the token env-only.** The caller passes `env.GRAFANA_API_TOKEN` into the helper that calls Grafana (helpers take it as a parameter; they don't read env) — **not** surfaced through `grafanaConfig`.
+4. **Keep the token env-only.** The caller passes `env.GRAFANA_API_TOKEN` into the helper that calls Grafana (helpers take it as a parameter and don't read env, except the two boundaries: the auth helper and `helpers/util/db-client.ts`, see `helpers` § Auth-bootstrap helpers and § Database helpers) — **not** surfaced through `grafanaConfig`.
 5. **Local `env/.env.dev`** gets the real values; `.env.test` gets the CI values.
 
 ### Example 3 — Adding a new environment file (`env/.env.staging`)

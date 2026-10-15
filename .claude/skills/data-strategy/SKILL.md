@@ -57,6 +57,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Persona credentials (email/password/TOTP)** | `env/.env.<environment>` (shape in `env/.env.example`); read only inside `login.setup.ts` | Pattern (persona) | See [reference.md §1.3](reference.md#13-user-credentials-email--password--totp-secret-triplets) |
 | **URLs and endpoint paths** | `config/app.ts` (`appConfig.apiUrl`, `appConfig.api.JOBS`, `appConfig.api.WORKERS`, …) | n/a | `appConfig.api.ADMIN_TENANT`, `appConfig.api.JOBS`, `appConfig.api.WORKERS` |
 | **Reference enums (Qase suites, job types)** | `enums/app/<topic>.ts` | n/a | `enums/app/qase-suites.ts` |
+| **Database row schemas** | `fixtures/db/schemas/app/<resource>.ts` | n/a | None in the example app; see `helpers` § Database helpers |
 | **Zod request/response schemas (the contract)** | `fixtures/api/schemas/app/<resource>.ts` | n/a | `fixtures/api/schemas/app/job.ts`, `fixtures/api/schemas/app/worker.ts`, `fixtures/api/schemas/app/tenant.ts` |
 
 ### Forbidden locations
@@ -154,7 +155,7 @@ For fixed ids and environment-pinned references (`worker.json` sentinels like `i
 
 ### Pattern 6 — API seeder helper
 
-Target shape (assertion-style `setupX`/`teardownX` pair); a passthrough seeder such as the example app's `createWorker` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. Mandatory shape:
+Target shape (assertion-style `setupX`/`teardownX` pair); a passthrough seeder such as the example app's `createWorker` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. A database seeder (`helpers/app/db/<resource>.ts`) keeps the create/delete pair but takes `db` from the `db` fixture and no token; see `helpers` § Database helpers. Mandatory shape:
 - Always exposed as a pair: `setupX` (or `createX`) + `teardownX` (or `deleteX`). The pair lives in the same file.
 - **Accepts `overrides?: Partial<T>` and forwards them to the factory** (`body: createXData(overrides)`). A seeder with no override parameter is a refactor target: a test that needs a specific field value (e.g. a fixed `name` to assert on, or a `status: 'disabled'` seed state) cannot use it without forking into a second seeder. Overrides are what make a single seeder reusable across scenarios.
 - Body is built by a Pattern-2 factory (`createXData`), never inline. If the factory does not exist, create it first.

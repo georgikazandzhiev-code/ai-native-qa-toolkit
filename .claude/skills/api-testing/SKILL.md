@@ -40,7 +40,7 @@ These rules are non-negotiable. Violating any of them breaks the framework's con
 
 ## Architecture map
 
-The full layer-by-layer map (spec / fixture / schema / config / helper / test-data / generator / Qase / Mailpit paths and responsibilities, including the shared-schema layout under `fixtures/api/schemas/util/`) lives in [reference.md § Architecture map](reference.md#architecture-map). Key invariants: specs import `test`/`expect` from `fixtures/pom/test-options.ts`; schemas live only under `fixtures/api/schemas/`; body builders (`buildCreate<X>Body`) live in the resource helper file.
+The full layer-by-layer map (spec / fixture / schema / config / helper / test-data / generator / Qase / Mailpit paths and responsibilities, including the shared-schema layout under `fixtures/api/schemas/util/`) lives in [reference.md § Architecture map](reference.md#architecture-map). Key invariants: specs import `test`/`expect` from `fixtures/pom/test-options.ts`; schemas live only under `fixtures/api/schemas/` (row schemas: `fixtures/db/schemas/app/`); body builders (`buildCreate<X>Body`) live in the resource helper file.
 
 ## Authoring a new API spec — workflow
 
@@ -178,11 +178,11 @@ The example app uses both. Both are valid; the choice depends on whether the hel
 
 ### Helper signature rules (project-wide)
 
-- First arg is always `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`).
+- An API helper's first arg is always `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`); a database helper takes `db: DbClient` (`helpers` § Database helpers).
 - Last optional arg is always `headers?: string` (the token). Pass `undefined`/omit for anonymous-call testing.
 - For URL building with query strings, expose a sibling `buildList<X>Url(params)` that takes a typed param object (in the example app, `buildListJobsUrl` in `helpers/app/jobs.ts`).
 - Cleanup helpers (e.g. `cleanupWorkers`, `cleanupWorkersAndJobs`) use `Promise.allSettled` and tolerate 404.
-- **Never declare a Zod schema inside a helper.** Schemas live only under `fixtures/api/schemas/app/`.
+- **Never declare a Zod schema inside a helper.** Schemas live only under `fixtures/api/schemas/app/` (row schemas: `fixtures/db/schemas/app/`).
 
 Before writing a new helper, grep your repo's helpers for an equivalent. [reference.md § Helper catalog](reference.md#helper-catalog) shows the example app's inventory. Good models in the example app: `helpers/app/jobs.ts` (passthrough CRUD + builders + cleanup) and `helpers/app/adminUsers.ts` (both styles, incl. assertion-style `setupTestUser`).
 
@@ -338,7 +338,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 Avoid these — they correspond to common reviewer findings and the upstream anti-pattern list adapted to the example app:
 
 - ❌ Calling `request.get` / `request.post` / `request.fetch` directly inside a spec or helper. Always go through `apiRequest`.
-- ❌ Defining a `z.object({...})` inside a spec or helper file. Schemas live only under `fixtures/api/schemas/app/`.
+- ❌ Defining a `z.object({...})` inside a spec or helper file. Schemas live only under `fixtures/api/schemas/app/` (row schemas: `fixtures/db/schemas/app/`).
 - ❌ Authoring a **new** schema as `z.object({...})` instead of `z.strictObject({...})`. New schemas must be strict; existing lax objects are drift to be closed.
 - ❌ Defaulting ids to `z.string()`. Use `z.string().uuid()` unless you have empirically verified the API returns a non-UUID and documented the case inline.
 - ❌ Asserting only `status` without `Schema.parse(body)` (or vice-versa) on success responses.
