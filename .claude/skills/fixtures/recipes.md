@@ -214,7 +214,7 @@ const tenantTokens = {
 The setup file's token loop writes `process.env.USER_ACCESS_TOKEN_READONLY` — writing tokens is the setup project's one sanctioned touch of `process.env`; it reads its credentials from `env` like everything else. Add a `readonly: token("USER_ACCESS_TOKEN_READONLY")` accessor to `tokens` in `config/env.ts` so specs can call `tokens.readonly()`.
 
 3. For a **storage state**, extend the `users` block; the loop calls `createAppStorageState({...})` and writes the `storageStatePath`.
-4. Each setup test **must** call `qase.ignore()` (setup tests are not real test cases) and import `test` from `fixtures/pom/test-options`.
+4. Each setup test imports `test` from `fixtures/pom/test-options`, and, when the repo uses Qase, **must** call `qase.ignore()` (setup tests are not real test cases).
 5. Personas are **not** fixtures — do not add a fixture surface entry.
 
 ---

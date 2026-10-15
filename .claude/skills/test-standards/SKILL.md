@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 5.0.3
+version: 5.1.0
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -8,7 +8,7 @@ metadata:
 
 # Test Standards
 
-Every spec — API, E2E or functional — lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
+Every spec — API, E2E or functional — lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line when the repo uses Qase, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and, where Qase is used, the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
 
 Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `test-data/app/…` are the standard layout (`~/.claude/CLAUDE.md § Standard repo layout and naming`). Service folders and spec file names (`jobs-service/`, `http-job-crud.spec.ts`) are the invented example app's; your repo's services are listed in its `CLAUDE.md`.
 
@@ -16,13 +16,14 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 
 - **ALWAYS** import `test` and `expect` from `fixtures/pom/test-options.ts`. **NEVER** from `@playwright/test` in a spec file. Why: `test-options.ts` merges `pageObjectFixture`, `apiRequestFixture`, `loginFixture`, `mailpitFixture` — importing from `@playwright/test` strips every custom fixture and silently breaks `apiRequest`, `loginUser`, `mailpit`, and every page-object destructure.
 - **ALWAYS** tag every test with **exactly one** value from the repo's whitelist — by default the toolkit's standard set: `@critical | @smoke | @sanity | @regression | @api | @integration | @e2e`; a repo that already ran another set before adopting the toolkit keeps it (its CI jobs, Qase filters and dashboards depend on those tags), declares it in its project `CLAUDE.md`, and that set is the whitelist there. A new repo uses the standard set. The toolkit's own earlier set (`@App-*`, up to 2.x) is not another set: a repo that adopted it moves to the standard set in a change of its own: the tags, the CI greps and the lint whitelist in one PR, with a person renaming the Qase filters in Qase. Until that change lands, a new test keeps the repo's current `@App-*` tag, so its CI grep still runs it. A repo on the standard set does not add tags of its own: a new tag such as `@security` is a change to this list, for every repo; a repo with a declared set adds it to that set. Every standard tag is lowercase, so CI's case-sensitive `--grep` patterns have no casing exception to remember; a declared set is used exactly as cased in the project `CLAUDE.md`. A repo with a declared set also gives its **tag map**: which of its tags each spec type takes (§ Kept set: the tag map). Every tag in the toolkit's tables, examples, templates and run commands is the standard set's: in a repo with a declared set, read each one through the tag map, and in a repo still on `@App-*`, as its `@App-*` counterpart (`@api` → `@App-API`). **NEVER** recase a tag the repo's whitelist holds, or swap it for a standard-set tag to match a table, example, template or run command. Moving a test to another whitelisted tag (a different spec type, a run-time budget move) and the `@App-*` move PR are deliberate retags, not fixes. **NEVER** combine tags. **NEVER** put a tag on a `test.describe(...)` block. Why: combined or mistyped tags miss the npm-script greps and never run in CI.
-- **ALWAYS** start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature.
+- **ALWAYS**, when the repo uses Qase (its project `CLAUDE.md` says so; when that file is silent, the repo already has Qase wiring; § Qase is optional), start every test body with `qase.suite(SUITES.<RESOURCE>);`, then `qase.id(N);` — commented out (`// qase.id(N);`) until the case is mapped in Qase. Why: without `qase.suite`, the test run is orphaned in Qase and the Qase pipeline can't aggregate by feature. A repo without Qase adds no `qase.*` lines and keeps any it already has (§ Qase is optional).
+- **NEVER** invent a Qase project code, case ID or traceability link. Why: an ID nobody mapped files the result against the wrong case, which is worse than no ID. Leave `// qase.id(N);` for a person to fill.
 - **ALWAYS** wrap each phase of a test in `test.step("GIVEN/WHEN/THEN/AND: description", async () => { ... })`. **REQUIRED** for any test with 2+ distinct phases (which is almost every test). Why: `test.step` is what produces the readable HTML report and the trace timeline — without it, a failing test gives a single timeout pointing at the whole body.
 - **ALWAYS** use web-first assertions (`await expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`, etc.). **NEVER** `page.waitForTimeout(...)`. Why: hard waits mask real timing bugs and are flake amplifiers under parallel execution.
 - **ALWAYS** consume page objects through fixture destructuring (`async ({ dashboardPage }) => { ... }`). **NEVER** instantiate via `new DashboardPage(page)` inside a spec. Why: bypasses every other merged fixture (api-request, login, mailpit) and produces specs that pass alone but fail in CI.
 - **ALWAYS** clean up created resources via the matching helper in `helpers/app/<resource>.ts` inside `test.afterEach` or `test.afterAll`. UI tests delete via the API, not via the UI — the helper layer owns the canonical delete. Why: UI delete adds 5–10 seconds per test and amplifies flake when CI is busy.
 - **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway checks, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
-- **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
+- **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — a skip reports green and corrupts the test-management signal (in Qase, its ID mappings). Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
 - **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the test run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test` for `if`, `switch`, a control-flow ternary and an in-body `test.skip()`; an `&&` short-circuit is a review point — the lint can't tell it from a legitimate boolean expression.
 - **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, the tag-group script for whole tag groups (`npm run app-regression` / `npm run app-api`; with a kept set, the script of the mapped tag). A test that fails locally is not complete.
 
@@ -66,6 +67,12 @@ A repo that kept its own set declares two things in its project `CLAUDE.md`: the
 
 Every tag the skills name (`@api`, `{ tag: "@e2e" }`, `--grep "@regression"`, `npm run app-api`) is then read through the map. A type the kept set has no tag of its own for still gets a row, naming the tag whose CI job should run it. If the map is missing, or has no row for the spec type, ask which tag the repo uses (`[human-only: fact]`); never fall back to a standard tag, and never recase a whitelisted one. A repo still on `@App-*` needs no map: each standard tag's counterpart is its `@App-*` tag (`@api` → `@App-API`), exactly as cased in the repo's existing specs.
 
+## Qase is optional
+
+Qase is the toolkit's default test-management integration, not a prerequisite. A repo uses it when its project `CLAUDE.md` says so; that file should also name the project code, and an explicit no there wins over leftover wiring. If the project `CLAUDE.md` says nothing, look at the repo: a Qase reporter in `playwright.config`, an `enums/app/qase-suites.ts`, or existing `qase.suite(...)` calls mean it uses Qase, so keep wiring new tests the same way and suggest adding the line to its `CLAUDE.md`; if none of those is there and you are about to write a test, ask (`[human-only: fact]`) and suggest recording the answer in its project `CLAUDE.md`. Never remove existing `qase.*` lines: a repo that declares no Qase keeps the ones it has until a change of its own removes them.
+
+In a repo that uses Qase, every test opens with `qase.suite(SUITES.<RESOURCE>)`, carries `// qase.id(N);` until the case is mapped, and `SUITES` lives in `enums/app/qase-suites.ts`. A repo that doesn't use Qase adds no `qase.*` line, `qase` import or `qase-suites.ts`, and keeps its traceability in the repo, the CI report or its own test-management tool; every other rule in the skills applies unchanged. Every `qase.*` line in the skills' examples, templates and checklists is read this way. In either case, never invent a Qase project code, a case ID or a traceability link.
+
 ## Test types & directories
 
 | Type | Directory | Tag (standard set) | Covers | Example (example app) |
@@ -95,8 +102,8 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 - [ ] 1. Pick the test type (Functional / E2E / API / Smoke / Setup) → resolves directory + tag (the standard tag, or with a kept set the tag map's).
 - [ ] 2. Load the matching deep skill — `api-testing` for API specs, `page-objects` + `selectors` for UI specs.
 - [ ] 3. For UI: explore the live app via `npx playwright open` (the `playwright-cli` skill). For API: read OpenAPI / Swagger first (the `api-testing` skill, Phase 1).
-- [ ] 4. Author the imports + describe + beforeEach skeleton; pull `SUITES.<RESOURCE>` from `enums/app/qase-suites.ts` (extend it if missing).
-- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing as the whitelist lists it — the standard set is all lowercase). Add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
+- [ ] 4. Author the imports + describe + beforeEach skeleton; when the repo uses Qase, pull `SUITES.<RESOURCE>` from `enums/app/qase-suites.ts` (extend it if missing).
+- [ ] 5. Tag with exactly ONE value from the whitelist (exact casing as the whitelist lists it — the standard set is all lowercase). When the repo uses Qase, add `qase.suite(SUITES.X)` as the first body line, then `qase.id(N)` — commented out until mapped.
 - [ ] 6. Structure the body with `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only.
 - [ ] 7. For E2E: track created resource names in a `createdNames: string[]` array; add `test.afterAll` that deletes via the matching `helpers/app/<resource>.ts` helper.
 - [ ] 8. For data-driven tests: UI cases loop OUTSIDE the test block (one `test(...)` per case, descriptive names); API negative matrices loop INSIDE one test (`test.step` + `expect.soft` + `safeParse`, the `api-testing` skill).
@@ -127,7 +134,7 @@ If the user request is ambiguous, decide using this ladder:
 
 ### Step 4 — author the skeleton
 
-Every UI spec opens with this exact import block:
+Every UI spec opens with this import block (without Qase, drop the `qase` and `SUITES` imports; § Qase is optional):
 
 ```typescript
 import { expect, test } from "../../../../fixtures/pom/test-options";
@@ -148,7 +155,7 @@ import { faker } from "@faker-js/faker";
 // + Invalid-type arrays from fixtures/api/invalid-types
 ```
 
-`SUITES.<RESOURCE>` lives in `enums/app/qase-suites.ts`. If the suite you need (`APP_SETTINGS`, `API_REPORTS`, etc.) isn't there yet, **extend the enum first** via the [`enums`](../enums/SKILL.md) skill — never inline a string literal.
+When the repo uses Qase, `SUITES.<RESOURCE>` lives in `enums/app/qase-suites.ts`. If the suite you need (`APP_SETTINGS`, `API_REPORTS`, etc.) isn't there yet, **extend the enum first** via the [`enums`](../enums/SKILL.md) skill — never inline a string literal.
 
 ### Step 5 — tag and Qase
 
@@ -167,7 +174,7 @@ test(
 - **One tag per test.** Never `tag: ["@regression", "@smoke"]`.
 - **Exact casing.** Standard tags are lowercase; a declared set keeps its own casing. `--grep` is case-sensitive, so a tag cased differently from the repo's whitelist silently misses CI (in the standard set, `@Regression`; in a kept set, that may be the correct form).
 - **Tag goes on the test, not on `describe`.** `test.describe("X @regression", ...)` is forbidden.
-- **`qase.suite()` first, then `qase.id()` (optional), then `test.step(...)` for the body.**
+- **When the repo uses Qase, `qase.suite()` first, then `qase.id()` (optional), then `test.step(...)` for the body.**
 
 ### Step 6 — structure with `test.step`
 
@@ -237,29 +244,29 @@ A test that fails locally is not complete. For the failure-mode taxonomy and the
 - ❌ **A tag cased differently from the repo's whitelist** (in the standard set, `@Regression` for `@regression`). Doesn't match the case-sensitive `--grep`; never runs in CI. Fix: the whitelist's casing. In a repo with a kept set, `@Regression` may be the whitelisted form: check the project `CLAUDE.md` before changing a tag, and never recase a whitelisted one.
 - ❌ **Combined tags (`["@regression", "@e2e"]`) or tags outside the repo's whitelist (with the standard set: `@functional`, `@destructive`, `@slow`).** Fix: exactly one tag from the whitelist; pick the heaviest applicable.
 - ❌ **Tag on `test.describe(...)`.** Tags are per-test. Fix: move onto each `test(...)`.
-- ❌ **Missing `qase.suite(...)`.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
+- ❌ **Missing `qase.suite(...)` in a repo that uses Qase.** Test run is orphaned in Qase. Fix: add as the first body line. Extend `enums/app/qase-suites.ts` if missing.
 - ❌ **`page.waitForTimeout(1000)`.** Flake amplifier. Fix: web-first assertion / `waitForResponse` / `expect.toPass`.
 - ❌ **`new DashboardPage(page)` inside a spec.** Bypasses merged fixtures. Fix: destructure from test context.
 - ❌ **E2E test deletes via the UI.** Slow + flaky. Fix: API-driven `test.afterAll` via `helpers/app/<resource>.ts`.
-- ❌ **Using `test.skip` for known bugs.** Skipped tests corrupt Qase ID mappings. Comment out the test instead and add `// TODO: FIXME: <TICKET> <description>` above. Grep for `// TODO: FIXME:` to find all deferred tests.
+- ❌ **Using `test.skip` for known bugs.** A skip reports green and corrupts the test-management signal (in Qase, its case-ID history). Comment out the test instead and add `// TODO: FIXME: <TICKET> <description>` above. Grep for `// TODO: FIXME:` to find all deferred tests.
 - ❌ **No `test.step` — body is one big block.** Trace viewer becomes useless on failure. Fix: wrap each phase.
 - ❌ **Hardcoded URL / token / endpoint / UI string.** Fix: the config module — `appConfig.*` (URLs, endpoints, routes), `env.X` / `tokens.full()` from `config/env.ts` (credentials, tokens) — `enums/app/*` (UI strings), `test-data/app/*` (fixed values).
 - ❌ **Committed `.only` / explore spec / `console.log(...)`.** Fix: delete before committing.
 - ❌ **Single-assertion test with full navigation overhead.** If a test contains one assertion and shares the same `beforeEach` navigation as its neighbors, merge it as an `AND:` step into the nearest structural test. A standalone `test()` is justified only when it has a distinct GIVEN/WHEN/THEN flow or tests an interaction (click, type, select).
 - ❌ **Back-to-back navigation calls where the second supersedes the first.** E.g., `await sideNavigation.navigateToApp(); await page.goto(notificationsUrl);` — the first navigation is wasted. Fix: remove the redundant navigation; keep only the one that lands on the target page.
-- ❌ **Disabling a whole describe when only some of its tests are blocked — and `test.describe.skip` at all.** If only 2 of 4 describes need Mailpit, disable those 2, not all 4, by commenting out their tests with `// TODO: FIXME: <TICKET> requires MAILPIT_URL`. Over-scoped disabling hides passing tests from CI; `test.describe.skip` also corrupts Qase mappings like any other skip.
+- ❌ **Disabling a whole describe when only some of its tests are blocked — and `test.describe.skip` at all.** If only 2 of 4 describes need Mailpit, disable those 2, not all 4, by commenting out their tests with `// TODO: FIXME: <TICKET> requires MAILPIT_URL`. Over-scoped disabling hides passing tests from CI; `test.describe.skip` also reports green and corrupts the test-management signal, like any other skip.
 
 ## Self-review checklist
 
 - [ ] Imports `test` / `expect` from `fixtures/pom/test-options.ts` (never `@playwright/test`).
 - [ ] File in the right directory for the type; filename is kebab-case `.spec.ts`.
 - [ ] Exactly ONE tag from the whitelist with exact casing as the whitelist lists it (the standard set is all lowercase), on the test (not on `describe`).
-- [ ] `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows — commented out until mapped. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`.
+- [ ] When the repo uses Qase: `qase.suite(SUITES.<RESOURCE>);` is the first body line; `qase.id(N);` follows — commented out until mapped, never invented. `SUITES.<RESOURCE>` exists in `enums/app/qase-suites.ts`. Without Qase: no new `qase.*` lines.
 - [ ] Multi-phase tests use `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only — no `page.waitForTimeout`.
 - [ ] Page objects destructured from test context — no `new <Page>(page)`.
 - [ ] E2E specs: `test.setTimeout(appConfig.timeouts.e2eJourney)`, explicit waits from `appConfig.timeouts` (no numbers) + `createdNames: string[]` + `test.afterAll` cleanup via `helpers/app/<resource>.ts`.
 - [ ] No hardcoded URLs / tokens / endpoints / strings — URLs from `appConfig`, credentials and tokens from `env` / `tokens` in `config/env.ts` (never `process.env` at a call site), endpoints and routes only from `appConfig.*` (never enums), UI strings / suites / statuses from `enums/app/*`, fixed values from `test-data/app/*`.
-- [ ] No `.only`. No `test.skip` — comment out the test with `// TODO: FIXME: <TICKET> <description>` instead (Qase ID preservation).
+- [ ] No `.only`. No `test.skip` — comment out the test with `// TODO: FIXME: <TICKET> <description>` instead: a skip reports green and corrupts the test-management signal, in Qase its case-ID history.
 - [ ] When assertions reference strings from a `test-data/app/*.json` file, every relevant entry in that file has a corresponding assertion. Cross-reference the data file against the test to catch missing coverage.
 - [ ] Affected tests run green before declaring done.
 
@@ -403,7 +410,7 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke
 | Spec passes alone, fails in parallel under `npm run app-all`. | Spec mutates shared state without cleanup, or uses hardcoded names that collide. | Track names with `faker.string.alphanumeric(6)` for uniqueness, and delete via API in `test.afterAll`. |
 | `TypeError: Cannot read property 'X' of undefined` mid-test. | Page-object method returned without waiting; the next assertion ran before the UI settled. | Open the POM and confirm the offending action method has a built-in wait (`page.waitForResponse(...)` / `expect(locator).toBeVisible()`). See the `page-objects` skill § Step 6. |
 | `expect(locator).toHaveText('...')` fails with the locator showing a partial / streamed value. | Missing `.toHaveText()` is an exact match by default; the value is loading. | Either await visibility first, then `.toHaveText`, or switch to `.toContainText('...')`. Don't add `waitForTimeout`. |
-| Need to disable a test for a known bug. | `test.skip` corrupts Qase ID mappings; ESLint also blocks bare `.skip`. | **Comment out** the entire `test(...)` block. Add `// TODO: FIXME: <TICKET> <description>` directly above the commented-out code. Do not use `test.skip`. |
+| Need to disable a test for a known bug. | A skip reports green and corrupts the test-management signal (in Qase, its case-ID history); ESLint also blocks bare `.skip`. | **Comment out** the entire `test(...)` block. Add `// TODO: FIXME: <TICKET> <description>` directly above the commented-out code. Do not use `test.skip`. |
 | Spec creates 50 jobs / workers per test run, never deletes. | No `test.afterAll` cleanup. | Track names in a `createdNames: string[]` and call the matching `helpers/app/<resource>.ts` `cleanup<X>` / `delete<X>` inside `test.afterAll`. |
 | Test fails with `Test timeout of 30000ms exceeded`. | An E2E journey without its test-level budget — or a real slowdown. | E2E journeys set `test.setTimeout(appConfig.timeouts.e2eJourney)` at the describe level. If the budget is already set, investigate with the `debugging` skill first: never raise a budget to turn a failure green. |
 | Functional test with many interactions times out at 30s on CI. | Specs with 6+ UI navigation steps (e.g. a notification-rule wizard with 8 type cards) can exceed the default. | Set a test-level budget (`appConfig.timeouts.asyncFlow`) **on the individual test**, not the describe, only where needed — the default is right for most single-behaviour tests. Investigate first if the test used to pass within the default. |
