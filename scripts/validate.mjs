@@ -389,7 +389,10 @@ if (!existsSync(rulesDir)) {
 
 const ignorePath = join(ROOT, '.cursorignore');
 if (!existsSync(ignorePath)) {
-  warn('.cursorignore', 'not present — skipped');
+  // Optional only where Cursor isn't used: a repository that ships `.cursor/` is indexed by Cursor,
+  // so without the file its generated trees and secrets would be too.
+  if (existsSync(join(ROOT, '.cursor'))) err('.cursorignore', 'missing — this repository ships .cursor/, so generated trees and secrets would be indexed');
+  else warn('.cursorignore', 'not present — skipped');
 } else {
   // Only real ignore lines count: not a comment that mentions the name, not a `!` re-include.
   const patterns = read(ignorePath)
