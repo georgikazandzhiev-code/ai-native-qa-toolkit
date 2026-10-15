@@ -753,11 +753,14 @@ rules['no-disabled-test'] = {
  * Paths are read relative to the repo root: the nearest folder above the file that holds an ESLint
  * flat config (where the gate is configured), or failing that a `package.json`, so the result does
  * not depend on where ESLint was started, and a k6 sub-project's own package.json in tests/perf/
- * does not move it. `root` sets where the layout starts, absolute or relative to that repo root;
- * a file outside it is not judged. The repo's
+ * does not move it as long as the repo root holds an `eslint.config.*`. With `--config <other
+ * name>`, or a config inside tests/perf/, the nearest package.json or config wins, so such a repo
+ * sets `root` to its own folder. `root` sets where the layout starts, absolute or relative to
+ * that repo root; a file outside it is not judged. The repo's
  * drift table goes in `drift`, relative to the root: a folder (`e2e/`) or a single file
- * (`auth.setup.ts`). An entry only excuses a file that is out of place — a file inside its
- * standard folder is always judged, so `drift: ['pages/']` cannot switch off `pages/app/`.
+ * (`auth.setup.ts`). An entry excuses a file that is out of place, and a misnamed file only when
+ * its own path is listed — a file inside its standard folder is otherwise always judged, so
+ * `drift: ['pages/']` cannot switch off `pages/app/`.
  * An area leaves the list the moment its move PR deletes the entry.
  */
 const KEBAB = '[a-z0-9]+(?:-[a-z0-9]+)*';
@@ -778,11 +781,14 @@ function nearestHolding(dir, names) {
 }
 /** The repo root for a folder: its nearest ESLint flat config, else its nearest package.json, else null. */
 const repoRootOf = (dir) => nearestHolding(dir, FLAT_CONFIGS) ?? nearestHolding(dir, ['package.json']);
+/** Vitest and node:test share the `*.test.ts` name, so one is a Playwright spec only when it imports Playwright or the barrel. */
+const PLAYWRIGHT_SOURCE = /^@playwright\/test$|(?:^|\/)test-options(?:\.[cm]?[jt]s)?$/;
+const importsPlaywright = (program) => program.body.some((n) => n.type === 'ImportDeclaration' && PLAYWRIGHT_SOURCE.test(String(n.source.value)));
 rules['standard-layout'] = {
   meta: meta('Keep each file the layout standard recognises in its standard place, under its standard name.', {
     messages: {
       place: "{{kind}} belongs in {{where}} (constitution § Standard repo layout and naming). Move it there. Only a file that was already there when the repo adopted the toolkit may wait, listed on the drift table and in this rule's `drift` option.",
-      name: '{{kind}} file name must be {{pattern}} (constitution § Standard repo layout and naming).',
+      name: '{{kind}} must be named {{pattern}} (constitution § Standard repo layout and naming).',
     },
     schema: [{
       type: 'object',
@@ -806,27 +812,29 @@ rules['standard-layout'] = {
     const rel = file.slice(root.length);
     const drift = (opt.drift ?? []).map((d) => d.replace(/\\/g, '/').replace(/^\.\//, ''));
     const onDrift = drift.some((d) => (d.endsWith('/') ? rel.startsWith(d) : rel === d || rel.startsWith(`${d}/`)));
+    // A misnamed file inside its standard folder waits only when its own path is listed.
+    const exactDrift = drift.includes(rel);
     const pageBases = new Set(opt.pageBases ?? ['BasePage', 'DataTableBase']);
     const base = rel.split('/').pop();
 
     function check(node, kind, where, placeRe, nameRe, pattern) {
       if (!placeRe.test(rel)) {
         if (!onDrift) context.report({ node, messageId: 'place', data: { kind, where } });
-      } else if (nameRe && !nameRe.test(base)) context.report({ node, messageId: 'name', data: { kind, pattern } });
+      } else if (nameRe && !nameRe.test(base) && !exactDrift) context.report({ node, messageId: 'name', data: { kind, pattern } });
     }
 
     return {
       Program(node) {
-        if (/\.(?:spec|test)\.[cm]?ts$/.test(base)) {
+        if (/\.spec\.[cm]?ts$/.test(base) || (/\.test\.[cm]?ts$/.test(base) && importsPlaywright(node))) {
           check(node, 'A spec', '`tests/app/{api,e2e,functional}/<service>/`', /^tests\/app\/(?:api|e2e|functional)\/[^/]+\/(?:[^/]+\/)*[^/]+$/,
             new RegExp(`^${KEBAB}\\.spec\\.ts$`), '`kebab-case.spec.ts`');
         } else if (/\.setup\.[cm]?ts$/.test(base)) {
-          check(node, 'A setup file', '`tests/app/`', /^tests\/app\/[^/]+$/, new RegExp(`^${KEBAB}\\.setup\\.ts$`), '`<name>.setup.ts`');
+          check(node, 'A setup file', '`tests/app/`', /^tests\/app\/[^/]+$/, /\.setup\.ts$/, '`<name>.setup.ts`');
         } else if (base === 'test-options.ts') {
           check(node, 'The fixtures barrel', '`fixtures/pom/test-options.ts`', /^fixtures\/pom\/test-options\.ts$/);
         } else if (base.endsWith('-fixture.ts')) {
           check(node, 'A fixture', '`fixtures/pom/`, `fixtures/api/` or `fixtures/services/`', /^fixtures\/(?:pom|api|services)\/(?:[^/]+\/)*[^/]+$/,
-            new RegExp(`^${KEBAB}-fixture\\.ts$`), '`<name>-fixture.ts`');
+            new RegExp(`^${KEBAB}-fixture\\.ts$`), '`kebab-case-fixture.ts`');
         }
       },
       ImportDeclaration(node) {

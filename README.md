@@ -122,7 +122,7 @@ What closing that gap involved, because none of it was cosmetic:
 - The validator supports **declared exemptions, never silent ones.** A skill that is genuinely a catalog (a folder map, a test-id inventory) or a pointer into another project may declare `metadata.structure: catalog|pointer`. It is still required to carry `See Also`, must state in its body why the full structure does not apply, and is **listed in every validation run** so the exemption cannot hide. The two skills using it in the internal toolkit are client-specific and are not shipped here.
 - The validator found two bugs in itself along the way: it read `description: >-` as the literal two-character value `>-` and reported a good three-line description as "only 2 chars", and it needed to be pointed at the synced repo copy rather than the live `~/.claude/skills`.
 
-Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 27 rule suites, the fault-injection harness, the skill-snippet lint with its harness and mutation sweep, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
+Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 30 rule suites, the fault-injection harness, the skill-snippet lint with its harness and mutation sweep, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
 
 ## Skill versions and regression tracking
 
@@ -161,18 +161,18 @@ Everything above is prose an agent is asked to follow. **[`eslint-plugin-qa-cons
 
 | Enforced mechanically | Stays a review responsibility |
 |---|---|
-| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · no `process.env` outside the config module · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket · **no test without an assertion** · **no empty catch anywhere** · every spec, setup file, fixture, page object and k6 script in its standard place | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) |
+| Fixtures-barrel imports · page-object injection · exactly one whitelisted tag · `z.strictObject` · the `expect(Schema.parse(body)).toBeTruthy()` idiom · no `process.env` outside the config module · no XPath · no hard waits · no `page.evaluate` · no conditionals or `test.skip` in a test body · no `try`/`catch` in tests · no `.not.toThrow()` · no JSDoc on locator getters · no commented-out test without a ticket · **no test without an assertion** · **no empty catch anywhere** · every spec, setup file, `*-fixture.ts`, `test-options.ts`, `BasePage`/`DataTableBase` subclass and k6 script in its standard place | Selector priority (needs the real DOM) · coverage-plan completeness · cleanup adequacy · explore-before-generate · search-before-creating · secret detection (use a secret scanner) · whether the tests were actually run (a CI fact) · a barrel, fixture or page object the layout rule can't recognise (other name, other base) |
 
 Roughly half the constitution is mechanically checkable. The plugin claims exactly that half and says so — a linter that claims more than it checks is worse than none.
 
 ```yaml
 - name: QA constitution
-  run: npx eslint . --max-warnings 0   # the whole repo: a misplaced spec outside tests/ must be seen
+  run: npx eslint . --max-warnings 0   # the whole repo, with eslint.config files: ['**/*.ts']: a misplaced spec outside tests/ must be seen
 ```
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 30 `RuleTester` suites and 95 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
+The rules ship with 30 `RuleTester` suites and 96 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 

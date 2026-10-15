@@ -17,14 +17,14 @@ import tsParser from '@typescript-eslint/parser';
 import qa from 'eslint-plugin-qa-constitution';
 
 export default [
-  { ignores: ['node_modules/', 'playwright-report/', 'test-results/', 'dist/'] },
+  { ignores: ['node_modules/', 'playwright-report/', 'test-results/', 'dist/', '.claude/'] },
   { files: ['**/*.ts', '**/*.mts', '**/*.cts'], languageOptions: { parser: tsParser }, ...qa.configs.recommended },
 ];
 ```
 
 The parser is not optional: without it ESLint reads TypeScript as JavaScript, and every type annotation is a parse error.
 
-Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standard-layout` can only fail a misplaced spec or page object that it is shown, and `helpers/` and `config/` carry rules too (`no-process-env-outside-config`). Keep build output out with `ignores`. `standard-layout` reads paths from the repo root: the nearest folder above each file that holds an `eslint.config.*`, or failing that a `package.json`. So the result is the same whichever folder ESLint is started from, and a k6 sub-project's own `tests/perf/package.json` doesn't move it. Set `root` only when the layout starts below that, such as a `qa/` folder.
+Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standard-layout` can only fail a misplaced spec or page object that it is shown, and `helpers/` and `config/` carry rules too (`no-process-env-outside-config`). Keep build output and `.claude/` out with `ignores`: ESLint also lints `.js` files, and `.claude/workflows/` holds workflow scripts that are not modules. A unit-test tree outside `tests/` (Vitest, node:test) goes in `ignores` too: these rules judge Playwright specs. `standard-layout` reads paths from the repo root: the nearest folder above each file that holds an `eslint.config.*`, or failing that a `package.json`. So the result is the same whichever folder ESLint is started from, and a k6 sub-project's own `tests/perf/package.json` doesn't move it, as long as the repo root holds an `eslint.config.*`. With `--config <other name>`, or a config inside `tests/perf/`, the nearest `package.json` or config wins, so set `root: import.meta.dirname` in the config (`__dirname` in a CommonJS one). Set `root` to a subfolder when the layout starts below the repo root, such as a `qa/` folder.
 
 `configs.strict` adds the core and typescript-eslint rules the constitution also mandates (`no-console`, `no-explicit-any`, `ban-ts-comment`) — it expects `@typescript-eslint/eslint-plugin` to be configured by you.
 
@@ -48,7 +48,7 @@ Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standa
 | `commented-test-needs-ticket` | WON'T No silent coverage drops | A commented-out `test(` block with no `TODO` / `FIXME` / `BUG` marker |
 | `no-disabled-test` | WON'T No silent coverage drops | `test.skip` / `test.fixme` / `test.fail` and `describe.skip`/`.fixme`, in any form — comment the test out under `// TODO: FIXME: <TICKET>` instead |
 | `require-assertion-in-test` | DoD § 2 False-Green | A test containing **no assertion at all** — it runs, it passes, it proves nothing |
-| `standard-layout` | § Standard repo layout and naming | A spec (`*.spec.ts`, or `*.test.ts`) outside `tests/app/{api,e2e,functional}/<service>/` or not `kebab-case.spec.ts`; a setup file outside `tests/app/`; the barrel anywhere but `fixtures/pom/test-options.ts`; a `*-fixture.ts` outside `fixtures/{pom,api,services}/`; a class extending `BasePage` or `DataTableBase` outside `pages/{app,util,baseClasses}/` or not `PascalCase.ts`; a k6 script outside `tests/perf/<test type>/` or `tests/perf/lib/`. Helpers, enums, schemas and test data can't be recognised from one file and are not judged |
+| `standard-layout` | § Standard repo layout and naming | A spec (`*.spec.ts`, or a `*.test.ts` that imports Playwright or the barrel) outside `tests/app/{api,e2e,functional}/<service>/` or not `kebab-case.spec.ts`; a setup file outside `tests/app/` or not `<name>.setup.ts`; the barrel anywhere but `fixtures/pom/test-options.ts`; a `*-fixture.ts` outside `fixtures/{pom,api,services}/` or not `kebab-case-fixture.ts`; a class extending `BasePage` or `DataTableBase` outside `pages/{app,util,baseClasses}/` or not `PascalCase.ts`; a k6 script outside `tests/perf/<test type>/` or `tests/perf/lib/`. Helpers, enums, schemas and test data can't be recognised from one file and are not judged |
 | `no-empty-catch` | DoD § 2 False-Green | An empty `catch` anywhere (spec, helper or page object), including one holding only a comment |
 
 ### Options worth setting
@@ -66,8 +66,8 @@ rules: {
     pattern: '(Page|Component|Client)$',   // what counts as an injectable
   }],
   'qa-constitution/standard-layout': ['error', {
-    drift: ['e2e/', 'src/pages/', 'auth.setup.ts'], // your drift table: folders or single files that haven't moved yet
-    pageBases: ['BasePage', 'DataTableBase'], // the classes a page object extends (the default)
+    drift: ['e2e/', 'src/pages/', 'auth.setup.ts'], // your drift table: folders or single files that haven't moved yet; a misnamed file is listed by its own path
+    pageBases: ['BasePage', 'DataTableBase'], // the classes a page object extends; the list replaces the default, so keep BasePage and DataTableBase in it
     root: 'qa',                            // only if the layout starts below the repo root; relative to it, or absolute
   }],
   'qa-constitution/no-process-env-outside-config': ['error', {
@@ -78,9 +78,9 @@ rules: {
 
 `single-tag-on-test` with no `whitelist` still enforces *exactly one* tag; add the whitelist to also enforce which ones. A setup file (`*.setup.ts`) is exempt from it and from `require-assertion-in-test`: its steps are declared with `test()`, but they are setup, carry no tag (`test-standards`) and have nothing to assert. The exemption goes by file name, so a real test must never be named `*.setup.ts`; `standard-layout` still fails one outside `tests/app/`.
 
-`standard-layout` and the drift table: a `drift` entry excuses only a file that is out of place. A file inside its standard folder is always judged, so `drift: ['pages/']` for a legacy `pages/` tree does not switch off `pages/app/`. A new file never goes on the list: the constitution sends it to the standard location. The rule judges what it can recognise from one file — specs (`*.spec.ts`, and `*.test.ts` named as a spec should be), setup files, the barrel, `*-fixture.ts`, a class extending a page base (also through a named import under another name, `import { BasePage as Base }`), and k6 scripts (not `.d.ts` files or type-only imports). It cannot see a legacy barrel with another name (`support/fixtures.ts`), a page object that extends another page object, or helpers, enums, schemas and test data; those stay a review responsibility.
+`standard-layout` and the drift table: a `drift` entry excuses a file that is out of place, and a misnamed file only when its own path is listed (`drift: ['tests/app/api/orders/createOrder.spec.ts']`). A file inside its standard folder is otherwise always judged, so `drift: ['pages/']` for a legacy `pages/` tree does not switch off `pages/app/`. A new file never goes on the list: the constitution sends it to the standard location. The rule judges what it can recognise from one file — specs (`*.spec.ts`, and a `*.test.ts` that imports Playwright or the barrel, named as a spec should be), setup files (any `<name>.setup.ts`), the barrel, `*-fixture.ts`, a class extending a page base (also through a named import under another name, `import { BasePage as Base }`), and k6 scripts (not `.d.ts` files or type-only imports). It cannot see a legacy barrel with another name (`support/fixtures.ts`), a page object that extends another page object, or helpers, enums, schemas and test data; those stay a review responsibility.
 
-During a migration the config module is often still a root `config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves, which is why the constitution moves Config first.
+During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves.
 
 ## False-green detection
 
