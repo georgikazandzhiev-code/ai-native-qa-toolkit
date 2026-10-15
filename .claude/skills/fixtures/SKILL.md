@@ -1,6 +1,6 @@
 ---
 name: fixtures
-version: 1.1.5
+version: 1.2.0
 description: Playwright fixture authoring — POM dependency injection, the test-options.ts merge point, apiRequest/mailpit/loginUser fixtures, scoping (test vs Playwright worker), and kebab-case naming. Use when adding a fixture, registering a page object for DI, or extending FrameworkFixtures. Triggers — "fixture", "test-options", "register page object", "Playwright worker scope". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or plain helpers (helpers).
 metadata:
   category: domain
@@ -85,14 +85,14 @@ Walk these steps in order. Stop at any step where the artifact already exists; r
 | Need | Scope | Why |
 |------|-------|-----|
 | Per-test page objects (`jobsPage`, `createJobPage`, …), per-test mailbox handle, per-test `apiRequest` | `test` (default) | Re-runs setup per test → isolation. The example app's whole inventory runs on `test` scope |
-| Genuinely expensive shared setup — auth storage state minted once per Playwright worker, full app boot, a seeded tenant the entire spec file shares read-only | `worker` | One setup per Playwright worker process. **Teardown runs once per Playwright worker, not per test.** Misuse = shared mutable state across parallel tests = silent flake |
+| Genuinely expensive shared setup — auth storage state minted once per Playwright worker, full app boot, a seeded tenant the entire spec file shares read-only, the database connection pool (`db`, `fixtures/services/db-fixture.ts`, `helpers` § Database helpers) | `worker` | One setup per Playwright worker process. **Teardown runs once per Playwright worker, not per test.** Misuse = shared mutable state across parallel tests = silent flake |
 
 The example app uses **only `test` scope** — no Playwright-worker-scoped fixture is merged into its `test-options.ts`. If you reach for Playwright worker scope, the bar is high: prove the setup is shareable AND read-only AND expensive. Auth storage minted by the setup project (`tests/app/login.setup.ts` in the example app) is the canonical fit; build per-test data with `apiRequest` directly or a helper, not a Playwright-worker-scoped fixture.
 
 ## Framework notes (rationale for existing choices)
 
 - **Why `mailpit` builds its own `APIRequestContext`.** `apiRequest` is hard-wired to send `Authorization: Bearer <token>`; Mailpit needs `Authorization: Basic <base64>`. That auth-shape mismatch is why `mailpit-fixture.ts` calls `request.newContext(...)` itself — and why it **must** `await context.dispose()` in teardown. Do not try to route mailbox calls through `apiRequest`.
-- **`login.setup.ts` conventions.** The example app's setup file imports `test` from `fixtures/pom/test-options` (same runner/fixture surface as specs, so future setup tests can reach `apiRequest`/`mailpit` without changing the import) and, because the example app uses Qase, calls `qase.ignore()` in **every** setup test — these are storage/token generators, not real test cases, and would otherwise pollute Qase signal. Any new setup test imports the same way, and calls `qase.ignore()` when the repo uses Qase (`test-standards` § Qase is optional).
+- **`login.setup.ts` conventions.** The example app's setup file imports `test` from `fixtures/pom/test-options` (same runner/fixture surface as specs, so future setup tests can reach `apiRequest`/`mailpit` without changing the import) and calls `qase.ignore()` in **every** setup test — these are storage/token generators, not real test cases, and would otherwise pollute Qase signal. Any new setup test must do both.
 - **`resetStorageState` clears cookies + permissions only — NOT `localStorage`/`sessionStorage`.** If a spec depends on client-side storage being wiped (e.g. a "first visit" banner keyed off `localStorage`), clear it explicitly; `resetStorageState` will not.
 
 ## Anti-patterns

@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 3.0.1
+version: 3.1.0
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -48,6 +48,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | None in the example app; add them next to the base factory (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`) |
 | **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | `helpers/app/workers.ts` (`buildListWorkersUrl`), `helpers/app/jobs.ts` (`buildListJobsUrl`) |
 | **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | `helpers/app/workers.ts`, `helpers/app/jobs.ts`, `helpers/app/adminTenants.ts`, `helpers/app/adminUsers.ts` |
+| **Database seeder (last resort)** | `helpers/app/db/<resource>.ts`, through the `db` fixture | Pattern 6, when no endpoint can create the state | None in the example app; see `helpers` § Database helpers |
 | **Per-test user lifecycle (admin-API + Keycloak)** | `helpers/app/adminUsers.ts` (`setupTestUser` / `teardownTestUser`); password reset via `helpers/util/keyCloak.ts` (`getAuthenticatedKcAdminClient`, `getUserIdByEmail`, `resetUserPasswordById`) | Pattern 7 | `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` |
 | **Per-test user emails (Mailpit plus-addressing)** | `helpers/util/mailpit.ts` | Pattern 7 | `getNextTestEmail(baseEmail)`, `MailpitHelper` |
 | **Personas — UI session (storage state JSON)** | `.auth/app/<persona>Session.json` (generated; not committed) | Pattern (persona) | `.auth/app/appMainUserSession.json` |
@@ -56,6 +57,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Persona credentials (email/password/TOTP)** | `env/.env.<environment>` (shape in `env/.env.example`); read only inside `login.setup.ts` | Pattern (persona) | See [reference.md §1.3](reference.md#13-user-credentials-email--password--totp-secret-triplets) |
 | **URLs and endpoint paths** | `config/app.ts` (`appConfig.apiUrl`, `appConfig.api.JOBS`, `appConfig.api.WORKERS`, …) | n/a | `appConfig.api.ADMIN_TENANT`, `appConfig.api.JOBS`, `appConfig.api.WORKERS` |
 | **Reference enums (Qase suites, job types)** | `enums/app/<topic>.ts` | n/a | `enums/app/qase-suites.ts` |
+| **Database row schemas** | `fixtures/db/schemas/app/<resource>.ts` | n/a | None in the example app; see `helpers` § Database helpers |
 | **Zod request/response schemas (the contract)** | `fixtures/api/schemas/app/<resource>.ts` | n/a | `fixtures/api/schemas/app/job.ts`, `fixtures/api/schemas/app/worker.ts`, `fixtures/api/schemas/app/tenant.ts` |
 
 ### Forbidden locations
@@ -153,7 +155,7 @@ For fixed ids and environment-pinned references (`worker.json` sentinels like `i
 
 ### Pattern 6 — API seeder helper
 
-Target shape (assertion-style `setupX`/`teardownX` pair); a passthrough seeder such as the example app's `createWorker` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. Mandatory shape:
+Target shape (assertion-style `setupX`/`teardownX` pair); a passthrough seeder such as the example app's `createWorker` is interim — code and drift examples in [patterns.md § Pattern 6](patterns.md), migration in `refactor-playbook.md § 3`. A database seeder (`helpers/app/db/<resource>.ts`) keeps the create/delete pair but takes `db` from the `db` fixture and no token; see `helpers` § Database helpers. Mandatory shape:
 - Always exposed as a pair: `setupX` (or `createX`) + `teardownX` (or `deleteX`). The pair lives in the same file.
 - **Accepts `overrides?: Partial<T>` and forwards them to the factory** (`body: createXData(overrides)`). A seeder with no override parameter is a refactor target: a test that needs a specific field value (e.g. a fixed `name` to assert on, or a `status: 'disabled'` seed state) cannot use it without forking into a second seeder. Overrides are what make a single seeder reusable across scenarios.
 - Body is built by a Pattern-2 factory (`createXData`), never inline. If the factory does not exist, create it first.

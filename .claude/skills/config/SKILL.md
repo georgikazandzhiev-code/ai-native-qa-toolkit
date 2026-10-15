@@ -1,6 +1,6 @@
 ---
 name: config
-version: 2.0.1
+version: 2.1.0
 description: Env-var and configuration conventions — env/.env.* layout, dotenv loading via ENVIRONMENT, the appConfig object in config/app.ts (URLs, api paths, UI routes, timeouts), and the optional config/util/<service>.ts per-service convention. Use when adding an env var, config property, environment file, or endpoint/route constant. Triggers — "env var", "appConfig", "config", "new URL". Not for static test data (data-strategy) or env access rules (type-safety).
 metadata:
   category: domain
@@ -12,7 +12,7 @@ metadata:
 
 - **NEVER** hardcode URLs, tokens, emails, passwords, or tenant ids anywhere in `pages/`, `tests/`, `fixtures/`, or `helpers/`. The single source of truth for env-driven values is `config/env.ts` — the only module that reads `process.env`, validating it with a Zod schema at load — backed by `env/.env.${ENVIRONMENT}` and declared in `env/.env.example`. Everything else reads `env.X`, `tokens.admin()` / `.full()` / `.zero()`, or `appConfig` (see `type-safety` § Environment variables).
 - **NEVER** add real domains, real secrets, or production URLs to `env/.env.example`. Only `env/.env.example` is tracked; all other `env/.env.*` files are gitignored (see `.gitignore` — `env/.env.dev`, `env/.env.local`, `env/.env.prod`, plus the catch-all `.env.*` with `!.env.example`).
-- **ALWAYS** add every new env variable to `env/.env.example` with the key but a blank or placeholder value, in the correct grouped section (in the example app: `KEYCLOAK CONFIGURATION`, `UI TEST USERS`, `API TEST USERS`, `QASE REPORTING`, `MAILPIT`).
+- **ALWAYS** add every new env variable to `env/.env.example` with the key but a blank or placeholder value, in the correct grouped section (in the example app: `KEYCLOAK CONFIGURATION`, `UI TEST USERS`, `API TEST USERS`, `QASE REPORTING`, `MAILPIT`; a repo with database helpers adds `DATABASE` for `DB_URL` and `DB_READONLY_URL`).
 - **ALWAYS** keep app-facing URLs/settings as properties of `appConfig` in `config/app.ts`. For utility / third-party service config, the convention is `config/util/<service>.ts` exporting a `<service>Config` object built from `env`. If your repo has no `config/util/` yet, create it when the first dedicated util config is warranted; until then a utility service such as Mailpit reads `env.MAILPIT_URL`. If a helper reads `process.env.MAILPIT_URL` directly (in the example app, `helpers/util/mailpit.ts`), that is drift — move it to `env.MAILPIT_URL` when you next touch that file. Do not invent ad-hoc config files elsewhere.
 - **NEVER** put endpoint paths, route strings, or message constants in env vars. Paths live only in `appConfig.api.*` / `appConfig.paths.*` (the in-source path catalog) — never in enums; message constants live in `enums/app/*` — see the `enums` skill. `config/` is for env-driven values and the path catalog only.
 - **NEVER** declare `ENVIRONMENT` itself inside any `.env` file. It is set at the **shell** level (`ENVIRONMENT=test npx playwright test`); declaring it in a `.env` file creates a chicken-and-egg loop because the file is selected *by* `ENVIRONMENT`.
@@ -50,7 +50,7 @@ Before adding anything, walk this table. If the value fits no row, stop and ask 
 | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | URL of the app under test (frontend, API, Keycloak)             | env var + property on `appConfig` in `config/app.ts`                        |
 | URL of a utility / third-party service (Mailpit, future tools)  | env var + schema entry in `config/env.ts`, read as `env.X` — or through a `<service>Config` in `config/util/<service>.ts` built from `env` (the first such file creates the directory; until then, read `env.X` directly, as Mailpit reads `env.MAILPIT_URL`) |
-| Credential (email, password, secret key, client secret)         | env var + schema entry in `config/env.ts`, read as `env.X` — **never** expose through `appConfig` or a `<service>Config` |
+| Credential (email, password, secret key, client secret, database URL with its password) | env var + schema entry in `config/env.ts`, read as `env.X` — **never** expose through `appConfig` or a `<service>Config` |
 | Test-user identifier (`TENANT_ID`)                              | env var + plain `appConfig.tenantId` slot                                   |
 | Dynamic auth token populated at runtime (`USER_ACCESS_TOKEN_*`) | written into `process.env` by the setup project at run time; read through `tokens.admin()` / `.full()` / `.zero()` from `config/env.ts` — **not** declared in `env/.env.example` or the schema |
 | Endpoint path (e.g. `/jobs`) or route (e.g. `/login`)           | `appConfig.api.*` or `appConfig.paths.*` in `config/app.ts` — **never** an env var or an enum |
@@ -87,7 +87,7 @@ Specs, page objects, helpers and templates never contain a timeout number. Every
 4. **Add it to the schema in `config/env.ts`** — `z.string().url()`, `z.string().email()`, `z.string().min(1)` as fits. Required unless it has a real default; a genuine default (e.g. local Mailpit) goes in the schema as `.default(...)`, its one home. A missing required variable then fails the run at load, naming it.
 5. **Reference it from code** through the module, never through `process.env` (see `type-safety` § Environment variables):
    - If it's a URL the app config object should document, add a property to `appConfig` built from `env` (or the matching util config). JSDoc the property and name the backing env var.
-   - If it's a credential, add it to the schema and pass `env.X` into the helper / fixture that needs it (helpers take values as parameters; they don't read env). **Do not** surface credentials through `appConfig`.
+   - If it's a credential, add it to the schema and pass `env.X` into the helper / fixture that needs it (helpers take values as parameters and don't read env, except the two boundaries: the auth helper and `helpers/util/db-client.ts`, see `helpers` § Auth-bootstrap helpers and § Database helpers). **Do not** surface credentials through `appConfig`.
    - Forbidden at call sites: `!`, `as string`, `??` / `||` defaulting.
 
 ## Adding a new config property
@@ -175,7 +175,7 @@ User says: *"Wire up a Grafana URL so a perf-test-run annotation helper can post
    };
    ```
    The `apiUrl` comes from the validated `env` (no `!` — the schema parse fails at load if it's missing) and is JSDoc'd; the `paths` sub-object is the in-source path catalog, never env-driven (mirrors `appConfig.api`).
-4. **Keep the token env-only.** The caller passes `env.GRAFANA_API_TOKEN` into the helper that calls Grafana (helpers take it as a parameter; they don't read env) — **not** surfaced through `grafanaConfig`.
+4. **Keep the token env-only.** The caller passes `env.GRAFANA_API_TOKEN` into the helper that calls Grafana (helpers take it as a parameter and don't read env, except the two boundaries: the auth helper and `helpers/util/db-client.ts`, see `helpers` § Auth-bootstrap helpers and § Database helpers) — **not** surfaced through `grafanaConfig`.
 5. **Local `env/.env.dev`** gets the real values; `.env.test` gets the CI values.
 
 ### Example 3 — Adding a new environment file (`env/.env.staging`)
