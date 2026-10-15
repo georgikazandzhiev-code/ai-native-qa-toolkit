@@ -26,7 +26,54 @@ The parser is not optional: without it ESLint reads TypeScript as JavaScript, an
 
 Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standard-layout` can only fail a misplaced spec or page object that it is shown, and `helpers/` and `config/` carry rules too (`no-process-env-outside-config`). Keep build output and `.claude/` out with `ignores`: ESLint also lints `.js` files, and `.claude/workflows/` holds workflow scripts that are not modules. A unit-test tree outside `tests/` (Vitest, node:test) goes in `ignores` too: these rules judge Playwright specs. `standard-layout` and `no-process-env-outside-config` read paths from the repo root: the nearest folder above each file that holds an `eslint.config.*`, or failing that a `package.json`. So the result is the same whichever folder ESLint is started from, and a k6 sub-project's own `tests/perf/package.json` doesn't move it, as long as the repo root holds an `eslint.config.*`. With `--config <other name>`, or a config inside `tests/perf/`, the nearest `package.json` or config wins, so set `root: import.meta.dirname` in the config (`__dirname` in a CommonJS one). Set `root` on both rules to a subfolder when the layout starts below the repo root, such as a `qa/` folder.
 
-`configs.strict` adds the core and typescript-eslint rules the constitution also mandates (`no-console`, `no-explicit-any`, `ban-ts-comment`) — it expects `@typescript-eslint/eslint-plugin` to be configured by you.
+`configs.strict` adds the core and typescript-eslint rules the constitution also mandates (`no-console`, `no-explicit-any`, `ban-ts-comment`). It needs `@typescript-eslint/eslint-plugin`, which is not a dependency of this plugin:
+
+```bash
+npm i -D @typescript-eslint/eslint-plugin
+```
+
+```js
+import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import qa from 'eslint-plugin-qa-constitution';
+
+export default [
+  { ignores: ['node_modules/', 'playwright-report/', 'test-results/', 'dist/', '.claude/'] },
+  {
+    files: ['**/*.ts', '**/*.mts', '**/*.cts'],
+    languageOptions: { parser: tsParser },
+    ...qa.configs.strict,
+    plugins: { ...qa.configs.strict.plugins, '@typescript-eslint': tsPlugin },
+  },
+];
+```
+
+Spread `configs.strict` first and merge its `plugins` into yours. Written the other way round, its `plugins` replaces yours, and ESLint stops with `could not find plugin "@typescript-eslint"`.
+
+### Typecheck
+
+The typecheck step in the toolkit's CI template (`templates/agentic-qa-ci.yml`) runs `npx tsc --noEmit`. It needs `typescript`, `@types/node` (`config/env.ts` reads `process`, and `@playwright/test` does not install Node's types) and a `tsconfig.json` at the repo root. The lint can't see type errors, and `any` and `@ts-ignore` are constitution violations, so a suite that does not typecheck is not compliant either.
+
+```bash
+npm i -D typescript @types/node
+```
+
+A minimal `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.mts", "**/*.cts"]
+}
+```
 
 ## The rules
 
@@ -145,6 +192,8 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 ```bash
 npm test
 ```
+
+`npm test` runs the rule tests, fault injection, and the memory- and skill-snippet lints with their harness, the same files CI runs. The snippet-lint mutation sweep is slow and runs in CI only: `node tests/skill-snippets.mutation.test.mjs`.
 
 The suite has been **fault-injected to prove it bites** — disabling a rule's report produces `Should have 1 error but had 0`, and corrupting the `require-strict-object` autofix produces `Output is incorrect`. A green run means the rules fire, not merely that the file parses.
 

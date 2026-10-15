@@ -22,7 +22,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node tests/rules.test.js && node tests/fault-injection.test.mjs && node tests/memory-snippets.test.mjs && node tests/skill-snippets.test.mjs && node tests/skill-snippets.harness.test.mjs"
   },
   "peerDependencies": {
     "eslint": ">=9.0.0"
