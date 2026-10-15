@@ -1,6 +1,6 @@
 ---
 name: type-safety
-version: 2.0.3
+version: 2.0.4
 description: TypeScript strict-mode discipline — no any/casts/@ts-ignore, explicit return types on exports, Zod 3 patterns (z.strictObject, uuid/email/url), the expect(Schema.parse(body)).toBeTruthy() idiom, and env access through the config module (never process.env at a call site). Use when authoring or reviewing any .ts file handling types, schemas, or env access. Triggers — "any", "Zod", "strictObject", "process.env". Not for per-resource schema shapes (api-testing) or env declaration (config).
 metadata:
   category: domain
@@ -75,7 +75,7 @@ Everything else imports from it: `env.APP_MAIN_EMAIL`, `tokens.admin()`, and `ap
 
 ### Migration policy
 
-Existing code that reads `process.env.X!` at call sites is drift — migrate a file to `env` / `tokens` when you next touch it. The lint rule `no-process-env-outside-config` reports every `process.env` access outside `config/`.
+Existing code that reads `process.env.X!` at call sites is drift — migrate a file to `env` / `tokens` when you next touch it. The lint rule `no-process-env-outside-config` reports every `process.env` access outside the top-level `config/`.
 
 ## Zod schema patterns
 

@@ -121,7 +121,7 @@ Three jobs run on every push and every pull request (`.github/workflows/validate
 | Fails the CI run | Reported, never fails the run |
 |---|---|
 | `npm run validate` — front matter, required sections, semver, cross-reference integrity, `.cursor/mcp.json` secrets, README counts vs the filesystem, governance artifacts | `npm run check:bump` — a `SKILL.md` changed while its `version` did not |
-| `node tests/rules.test.js` — 30 `RuleTester` suites, 96 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
+| `node tests/rules.test.js` — 31 `RuleTester` suites, 103 invalid-case assertions | Length budget — a `SKILL.md` over 380 lines is a warning |
 | `node tests/fault-injection.test.mjs` — every rule must fire on the known-bad tree, stay silent on the compliant tree, and stop reporting when its visitor is emptied; the pinned files must draw exactly their listed reports, rule and line | `description` under 120 chars, or missing a "Do NOT use for" disclaimer |
 | `node tests/skill-snippets.test.mjs` — every TypeScript block under `.claude/skills/` must parse and pass every rule except `standard-layout`, which judges where a repo's files sit, not what a snippet says. Labelled counter-examples and reasoned `snippet-lint: skip` blocks are parsed but not linted; an `eslint-disable` without a `-- reason`, or any inline rule configuration, fails the run | |
 | `node tests/skill-snippets.harness.test.mjs` — the snippet lint's own cases: planted defects must fail the run, labelled counter-examples must pass | |

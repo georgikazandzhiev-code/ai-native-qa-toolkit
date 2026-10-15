@@ -37,7 +37,7 @@ Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standa
 | `single-tag-on-test` | MUST Tags | Zero tags, two tags, a non-whitelisted tag, or a tag on `describe()` |
 | `require-strict-object` | MUST Schemas | `z.object(` — **autofixable** to `z.strictObject(` |
 | `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted, and `expect.soft(Schema.parse(body))`, which isn't soft (the loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`) |
-| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/`, `playwright.config.*`). A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
+| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/` and `playwright.config.*` at the repo root; a service folder named `config` doesn't count). A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
 | `no-xpath` | WON'T No XPath | `locator('//…')`, `locator('xpath=…')`, `locator('(//…')` |
 | `no-hard-waits` | WON'T No hard waits | `waitForTimeout(…)` |
 | `no-page-evaluate` | WON'T No page.evaluate | `page.evaluate`, `$eval`, `$$eval` for DOM work |
@@ -71,7 +71,8 @@ rules: {
     root: 'qa',                            // only if the layout starts below the repo root; relative to it, or absolute
   }],
   'qa-constitution/no-process-env-outside-config': ['error', {
-    allow: '(^|/)config/|(^|/)playwright\\.config\\.[cm]?[jt]s$|/src/config\\.ts$', // the default, plus a legacy config module until the Config move
+    allow: '^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the repo root
+    root: 'qa',                            // only if the layout starts below the repo root, as for standard-layout
   }],
 }
 ```
@@ -80,7 +81,7 @@ rules: {
 
 `standard-layout` and the drift table: a `drift` entry excuses a file that is out of place, and a misnamed file only when its own path is listed (`drift: ['tests/app/api/orders/createOrder.spec.ts']`). A file inside its standard folder is otherwise always judged, so `drift: ['pages/']` for a legacy `pages/` tree does not switch off `pages/app/`. A new file never goes on the list: the constitution sends it to the standard location. The rule judges what it can recognise from one file — specs (`*.spec.ts`, and a `*.test.ts` that imports Playwright or the barrel, named as a spec should be), setup files (any `<name>.setup.ts`), the barrel, `*-fixture.ts`, a class extending a page base (also through a named import under another name, `import { BasePage as Base }`), and k6 scripts (not `.d.ts` files or type-only imports). It cannot see a legacy barrel with another name (`support/fixtures.ts`), a page object that extends another page object, or helpers, enums, schemas and test data; those stay a review responsibility.
 
-During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves.
+During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves. `allow` is matched against the path from the repo root (forward slashes, no leading slash), the root `standard-layout` reads, so anchor it with `^`. A 0.6 pattern written against the absolute path, such as `/src/config\\.ts$`, no longer matches.
 
 ## False-green detection
 
@@ -137,7 +138,7 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-18 rules, 30 `RuleTester` suites, plus valid cases per rule. Twelve of the suites are regression suites, each holding code that a rule once got wrong. Four of them lock in the same `test.step` fix, one each for `single-tag-on-test`, `require-assertion-in-test`, `no-conditional-in-test` and `no-try-catch-in-test`.
+18 rules, 31 `RuleTester` suites, plus valid cases per rule. Thirteen of the suites are regression suites, each holding code that a rule once got wrong. Four of them lock in the same `test.step` fix, one each for `single-tag-on-test`, `require-assertion-in-test`, `no-conditional-in-test` and `no-try-catch-in-test`.
 
 ```bash
 npm test

@@ -122,7 +122,7 @@ What closing that gap involved, because none of it was cosmetic:
 - The validator supports **declared exemptions, never silent ones.** A skill that is genuinely a catalog (a folder map, a test-id inventory) or a pointer into another project may declare `metadata.structure: catalog|pointer`. It is still required to carry `See Also`, must state in its body why the full structure does not apply, and is **listed in every validation run** so the exemption cannot hide. The two skills using it in the internal toolkit are client-specific and are not shipped here.
 - The validator found two bugs in itself along the way: it read `description: >-` as the literal two-character value `>-` and reported a good three-line description as "only 2 chars", and it needed to be pointed at the synced repo copy rather than the live `~/.claude/skills`.
 
-Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 30 rule suites, the fault-injection harness, the skill-snippet lint with its harness and mutation sweep, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
+Now that it is green it runs in CI as a **blocking** gate (`.github/workflows/validate.yml`), alongside the plugin's 31 rule suites, the fault-injection harness, the skill-snippet lint with its harness and mutation sweep, and two smoke tests — one asserting that a deliberately non-compliant fixture is still rejected, the other that a compliant one still passes clean. A gate is only worth wiring once it is green — one that is red on arrival gets disabled within a week.
 
 ## Skill versions and regression tracking
 
@@ -172,7 +172,7 @@ Roughly half the constitution is mechanically checkable. The plugin claims exact
 
 Pair it with branch protection and a violation blocks the merge instead of annotating it. **Governance without an enforcement mechanism is advice.**
 
-The rules ship with 30 `RuleTester` suites and 96 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
+The rules ship with 31 `RuleTester` suites and 103 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
 
 So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
 
