@@ -110,7 +110,7 @@ The folder layout, file naming, fixtures barrel, config and env file locations, 
 
 Skills present all of this as the example app's, never as the reader's repository. A catalog opens with "These are the invented example app's specs. Your repo's own list belongs in its `CLAUDE.md` or repo-context skill." (with *specs* swapped for what the catalog lists). A file that is all catalogs says it once, at the top: "Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill." Prose says "in the example app". The example app exists only in the skills: it has no line numbers to cite, no environment, no dates and no Qase case ids, so a skill states none of them. Its one open bug is the Known Issues entry in `test-case-generation`'s example project context, which shows the shape a project's known-issues list takes; no other skill states a bug as fact. A defect becomes a conditional sentence that keeps the lesson: "If the API returns 500 for an unknown sort field, that is a bug: …".
 
-When a lesson depends on a detail the table doesn't cover, invent it inside this domain and add a row here in the same PR. Don't borrow it from a real product. The rewrite lands one skill per PR. Until every skill is done, an identifier can appear in both its old and its new form.
+When a lesson depends on a detail the table doesn't cover, invent it inside this domain and add a row here in the same PR. Don't borrow it from a real product. The rewrite is finished (#6); validator check 16 refuses the old names (`scripts/product-vocabulary.json`).
 
 ## What CI refuses, and what it cannot
 
@@ -227,7 +227,7 @@ Out of band, immediately, on any of: a `canonical` pattern falsified; an eval re
 | Skills | 30 on-demand skills — 14 domain, 6 authoring, 4 running, 6 cross-cutting |
 | Measured | 3 of 30 skills have recorded history |
 | Lint rules, blocking | **17 ESLint rules**, every one firing on the known-bad tree and silent on the compliant one |
-| Validator | 15 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
+| Validator | 16 checks, 0 errors. 6 skills are over the 380-line budget and carry a warning |
 | Reviewers with merge rights | **1** |
 | Rollout phase | **0**, not yet exited |
 
