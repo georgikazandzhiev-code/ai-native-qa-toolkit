@@ -1,6 +1,6 @@
 ---
 name: helpers
-version: 1.2.0
+version: 2.0.0
 description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers, database helpers in helpers/app/db/) and helpers/util/ — signature shape (apiRequest first, headers? last; db first for database helpers), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup", "database helper", "seed the database". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
