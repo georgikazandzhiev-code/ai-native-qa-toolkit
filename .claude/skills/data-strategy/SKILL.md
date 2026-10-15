@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 3.0.1
+version: 3.1.0
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -48,6 +48,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | None in the example app; add them next to the base factory (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`) |
 | **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | `helpers/app/workers.ts` (`buildListWorkersUrl`), `helpers/app/jobs.ts` (`buildListJobsUrl`) |
 | **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | `helpers/app/workers.ts`, `helpers/app/jobs.ts`, `helpers/app/adminTenants.ts`, `helpers/app/adminUsers.ts` |
+| **Database seeder (last resort)** | `helpers/app/db/<resource>.ts`, through the `db` fixture | Pattern 6, when no endpoint can create the state | None in the example app; see `helpers` § Database helpers |
 | **Per-test user lifecycle (admin-API + Keycloak)** | `helpers/app/adminUsers.ts` (`setupTestUser` / `teardownTestUser`); password reset via `helpers/util/keyCloak.ts` (`getAuthenticatedKcAdminClient`, `getUserIdByEmail`, `resetUserPasswordById`) | Pattern 7 | `setupTestUser(apiRequest, mailpit, tenantId, password, lastName, adminToken)` |
 | **Per-test user emails (Mailpit plus-addressing)** | `helpers/util/mailpit.ts` | Pattern 7 | `getNextTestEmail(baseEmail)`, `MailpitHelper` |
 | **Personas — UI session (storage state JSON)** | `.auth/app/<persona>Session.json` (generated; not committed) | Pattern (persona) | `.auth/app/appMainUserSession.json` |

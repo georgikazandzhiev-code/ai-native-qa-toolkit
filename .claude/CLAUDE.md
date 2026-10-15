@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 5.0.0 -->
+<!-- toolkit-version: 5.2.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -112,6 +112,7 @@ Every repo that adopts this toolkit uses this layout and naming. An existing rep
 | Auth setup | `tests/app/<name>.setup.ts` (such as `login.setup.ts`), run by the setup project `app-setup`; storage states in `.auth/app/`, which is generated and never committed | `<persona>Session.json` |
 | Page objects | `pages/app/`; base classes and reusable components in `pages/baseClasses/`; the login page in `pages/util/` | `PascalCase.ts` |
 | Helpers | `helpers/app/` for this app's API wrappers, body builders and seeders; `helpers/util/` for app-independent utilities | `kebab-case.ts` |
+| Database helpers | `helpers/app/db/<resource>.ts` for this app's queries, one file per resource; the shared connection only in `helpers/util/db-client.ts`, opened by the worker-scoped `db` fixture in `fixtures/services/db-fixture.ts`; row schemas in `fixtures/db/schemas/app/` (`helpers` § Database helpers) | `kebab-case.ts` |
 | Fixtures | `fixtures/pom/`: the barrel `test-options.ts`, which every spec imports `test` and `expect` from, and `page-object-fixture.ts`; API fixtures in `fixtures/api/`; service fixtures (login, accessibility scanner) in `fixtures/services/` | `<name>-fixture.ts`; the barrel is `test-options.ts` |
 | Response schemas and invalid values | `fixtures/api/schemas/app/` per resource, `fixtures/api/schemas/util/` for shared ones; universal invalid-type arrays in `fixtures/api/invalid-types.ts` | `kebab-case.ts` |
 | Enums | `enums/app/` | `kebab-case.ts` |
@@ -169,7 +170,7 @@ Skills live at `~/.claude/skills/{name}/SKILL.md` and are discovered by their fr
 | `selectors` | Locator work — priority hierarchy, Radix recipes, testid taxonomy |
 | `page-objects` | Page objects — POM class structure, action methods, fixture registration |
 | `fixtures` | Fixtures — DI, scoping, lifecycle, merge into `test-options` |
-| `helpers` | Helpers — CRUD wrappers, body builders, cleanup ordering |
+| `helpers` | Helpers — CRUD wrappers, body builders, cleanup ordering, database helpers |
 | `data-strategy` | Test data — JSON vs faker vs env vs API seeding |
 | `type-safety` | Any `.ts` — Zod patterns, no-`any`, env read only through the config module |
 | `enums` | Enums — naming and organization |

@@ -1,6 +1,6 @@
 ---
 name: common-tasks
-version: 5.0.1
+version: 5.2.0
 description: Routing layer — maps any "create / add / generate / extend / refactor" prompt to the matching deep skill and lists framework-wide rules every artifact must obey. Use when the user asks to add a test, page object, spec, schema, helper, fixture, or enum and no specific skill is named. Triggers — "add a test", "new API spec", "where should this go", "which skill". Not a substitute for the deep skill it routes to.
 metadata:
   category: authoring
@@ -83,6 +83,7 @@ flowchart TD
 | Add a page object class | `page-objects` | `selectors`, `playwright-cli`, `fixtures` (registration) | `pages/app/<Name>.ts` |
 | Add a reusable component | `page-objects` (§ component composition) | `selectors` | `pages/baseClasses/<Name>.ts` |
 | Add an API helper (per-resource) | `helpers` | `api-testing` | `helpers/app/<resource>.ts` |
+| Add a database helper (when no endpoint can) | `helpers` (§ Database helpers) | `data-strategy`, `fixtures`, `config` | `helpers/app/db/<resource>.ts` |
 | Add a helper fixture (3+ specs + guaranteed teardown) | `fixtures` | `helpers` | `fixtures/api/<name>-fixture.ts` (or `fixtures/services/` per the `fixtures` skill) |
 | Add a Faker factory | `data-strategy` | `type-safety` | `helpers/app/<resource>.ts`, or `helpers/app/test-data-generators.ts` once the `api-testing` extraction threshold is crossed |
 | Add static test data | `data-strategy` | — | `test-data/app/<resource>.json`; universal invalid-type arrays in `fixtures/api/invalid-types.ts` |
