@@ -36,6 +36,7 @@ CI runs all of these; running them locally first is faster than a round trip. Al
 | `npm run validate` | Structure, skill counts, version stamps, cross-references, rule ownership — 0 errors |
 | `npm run test:rules-owned` | Every constitution rule is routed to a skill that carries it |
 | `npm run test:xref` | Files that point at each other agree |
+| `npm run test:leftovers` | Check 16 bites on the original product's names and stays silent on ordinary QA wording |
 | `npm run test:stamp` · `npm run test:bump` | A stale version stamp / a forgotten bump cannot pass |
 | `npm run test:lock` | Vendored provenance is intact |
 | `npm run test:alternatives` · `npm run test:der` | The hooks and gates bite on the bad case and stay silent on the good one |

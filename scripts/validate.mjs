@@ -15,6 +15,7 @@
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname, basename, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SKILLS = join(ROOT, '.claude', 'skills');
@@ -1091,6 +1092,114 @@ for (const dir of CI_DIRS) {
         }
       }
     }
+  }
+}
+
+// ── 16. Nothing from the product the skills were extracted from comes back ───────
+//
+// The skills were written inside one monitoring product and copied out. Issue #6 rewrote them
+// around an invented scheduled-jobs app (GOVERNANCE.md § Example domain) over more than a dozen
+// pull requests: about 2,000 lines of that product's page objects, helpers, tags and stack, two
+// context skills this repository never contained, and instructions written for Cursor. A rewrite
+// like that stays finished only while nothing brings the old names back, and they come back
+// silently: a paste from an old branch, a note copied from a product repository, an agent that
+// still remembers the old vocabulary.
+//
+// The product's names come from `scripts/product-vocabulary.json`: the SHA-256 digests of every
+// compound identifier, test-id, file name and anchor the root commit (8abc855) still holds, its page
+// objects and types, its stack, and the context skills this toolkit never contained. They are
+// hashed so that refusing them does not publish the product map; the plain list stays with the
+// maintainers, and `scripts/hash-product-vocabulary.mjs` regenerates the file from it. Every token
+// in a scanned file — a run of letters, digits, `_` and `-`, with any hyphen at either end trimmed,
+// so a test-id written `name-{id}` is still caught — is hashed and looked up. A paste from an old
+// branch brings back exactly those names, so an exact list catches it without guessing. Names the
+// product used that are also ordinary QA wording were left off, so "synthetic data", `healthProbe`,
+// `PROBE_TIMEOUT`, "HTTP probes", Datadog or New Relic Synthetics and the OpenTelemetry Collector
+// are all legal. The trade-off, stated plainly: a variant nobody wrote before, a listed name inside
+// a longer token, and the bare words in prose are not caught.
+// Cursor-only paths and tool names are refused only under `.claude/`, which adopters install into
+// Claude Code; the README documents the validator's optional Cursor checks (4–6) and keeps them.
+// Recorded measurements (a skill's `evals/history.json`, `results.json`, `lint-gate-results.json`)
+// keep the names they ran with, because a measurement rewritten afterwards no longer says what ran.
+
+{
+  // An empty or malformed list would let the whole product back in, so it fails the run instead of
+  // passing quietly.
+  const VOCAB = 'scripts/product-vocabulary.json';
+  const EXAMPLE = 'rewrite it with the example domain (GOVERNANCE.md § Example domain)';
+  const KINDS = {
+    identifiers: { what: "one of the original product's identifiers", fix: EXAMPLE },
+    pageObjects: { what: "one of the original product's page objects or types", fix: EXAMPLE },
+    stack: { what: "part of the original product's stack", fix: EXAMPLE },
+    skills: {
+      what: 'a skill this toolkit does not contain',
+      fix: "point at the project's own CLAUDE.md or repo-context skill (GOVERNANCE.md § Example domain)",
+    },
+  };
+  const HEX = /^[0-9a-f]{64}$/;
+  const banned = new Map();
+  let sha256 = null;
+  try {
+    sha256 = existsSync(join(ROOT, VOCAB)) ? JSON.parse(read(join(ROOT, VOCAB))).sha256 : null;
+  } catch (e) {
+    err(VOCAB, `is not valid JSON (${e.message})`);
+  }
+  for (const kind of Object.keys(KINDS)) {
+    const digests = sha256 && typeof sha256 === 'object' ? sha256[kind] : null;
+    if (!Array.isArray(digests) || !digests.length) {
+      err(VOCAB, `has no \`sha256.${kind}\` list — check 16 would refuse nothing of that kind from the original product`);
+      continue;
+    }
+    for (const h of digests) {
+      if (typeof h !== 'string' || !HEX.test(h)) err(VOCAB, `"${h}" in \`sha256.${kind}\` is not a SHA-256 hex digest`);
+      else banned.set(h, KINDS[kind]);
+    }
+  }
+  const CURSOR = {
+    re: /\.cursor\/(?:rules|skills|hooks)\b|\bskills-cursor\b|\.mdc\b|\/migrate-to-skills\b|\bAskQuestion\b|\bgeneralPurpose\b/g,
+    what: 'a Cursor-only path or tool name; the installed toolkit targets Claude Code',
+    fix: 'use the Claude Code equivalent (AskUserQuestion, a general-purpose subagent, .claude/skills/, .claude/hooks/)',
+  };
+  const TEXT = /\.(?:md|mdx|mdc|json|jsonc|ya?ml|mjs|cjs|js|ts|py|html|txt|sh)$/;
+  const CLAUDE_DIR = join(ROOT, '.claude');
+  const isRecordedMeasurement = (p) =>
+    /[\\/]skills[\\/][^\\/]+[\\/]evals[\\/](?:history|results|lint-gate-results)\.json$/.test(p);
+  const walk = (d) =>
+    existsSync(d)
+      ? readdirSync(d).flatMap((f) => {
+          const p = join(d, f);
+          if (statSync(p).isDirectory()) return f === 'node_modules' ? [] : walk(p);
+          return TEXT.test(f) ? [p] : [];
+        })
+      : [];
+  const scanned = [
+    ...walk(CLAUDE_DIR),
+    ...walk(join(ROOT, 'templates')),
+    ...walk(join(ROOT, 'examples')),
+    ...['README.md', 'GOVERNANCE.md', 'CONTRIBUTING.md'].map((f) => join(ROOT, f)).filter(existsSync),
+  ];
+  const digestOf = new Map();
+  const digest = (t) => {
+    let h = digestOf.get(t);
+    if (!h) digestOf.set(t, (h = createHash('sha256').update(t).digest('hex')));
+    return h;
+  };
+
+  for (const p of scanned) {
+    if (isRecordedMeasurement(p)) continue;
+    const inClaude = p.startsWith(CLAUDE_DIR + sep);
+    const rel = relative(ROOT, p).split(sep).join('/');
+    read(p)
+      .split(/\r?\n/)
+      .forEach((line, i) => {
+        for (const m of line.matchAll(/[\w-]+/g)) {
+          const token = m[0].replace(/^-+|-+$/g, '');
+          const kind = token && banned.get(digest(token));
+          if (kind) err(`${rel}:${i + 1}`, `\`${token}\` is ${kind.what} — ${kind.fix}`);
+        }
+        if (!inClaude) return;
+        for (const m of line.matchAll(CURSOR.re)) err(`${rel}:${i + 1}`, `\`${m[0]}\` is ${CURSOR.what} — ${CURSOR.fix}`);
+      });
   }
 }
 
