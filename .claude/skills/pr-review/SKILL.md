@@ -1,7 +1,7 @@
 ---
 name: pr-review
-version: 4.1.0
-description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
+version: 4.2.0
+description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite where Qase is used, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
 ---
@@ -12,7 +12,7 @@ Last-line-of-defense self-review before a PR opens. The framework already has `/
 
 ## Critical
 
-- **ALWAYS run this skill BEFORE `git push`.** Husky's `lint-staged` only runs ESLint + Prettier on staged files; it cannot catch a missing `qase.suite()`, a `getByTestId` violating the Radix exception, or a leftover `console.log`. This skill closes that gap.
+- **ALWAYS run this skill BEFORE `git push`.** Husky's `lint-staged` only runs ESLint + Prettier on staged files; it cannot catch a missing `qase.suite()` in a repo that uses Qase, a `getByTestId` violating the Radix exception, or a leftover `console.log`. This skill closes that gap.
 - **ALWAYS run the affected specs before declaring the PR ready.** A passing lint is not a passing test. Run at the worker count the repository's own `CLAUDE.md` declares (`--workers=1` for a suite that is not parallel-safe). New or modified specs get 5 consecutive isolated runs plus one in-suite run — the [`flakiness-triage`](../flakiness-triage/SKILL.md) merge bar; unchanged affected specs run once.
 - **NEVER bypass this skill to ship faster.** Every shipped convention violation becomes future drift. The 5 minutes this skill takes saves a reviewer round-trip.
 - **ALWAYS check the scope before the conventions, and advise — never block.** A PR should be one logical change that can ship on its own (`GOVERNANCE.md` § One logical change per PR, a SHOULD). If the diff mixes unrelated parts, flag it and propose the split. If the author keeps the scope — for example coupled changes that cannot pass CI separately — continue the review and make sure the PR description says why. There is no size limit; the test is coherence.
@@ -58,7 +58,7 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
 - [ ] Each `test(...)` has **exactly one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`; a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands), cased exactly as that whitelist lists it — the standard set is all lowercase (`@regression`), matching the `package.json` greps. No combined tags. No tags on `test.describe(...)`.
-- [ ] Each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted).
+- [ ] When the repo uses Qase, each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted, never invented). Without Qase, there are no `qase.*` lines (`test-standards` § Qase is optional).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
 - [ ] **No `try/catch` around `expect`.** The only allowed `try/catch` is capturing an accidentally-created resource ID for cleanup.

@@ -95,7 +95,7 @@ Specific drift categories the Tier 1 audit caught. Every code example, every cla
 - [ ] **No `??` / `||` defaulting at call sites** in helpers / specs / fixtures / pages. Allowed only inside `playwright.config.ts` at the config boundary.
 - [ ] **No `as string` casts or `!` on env values** — they lie to TypeScript and mask missing vars; the schema parse in `config/env.ts` is the check.
 - [ ] **No `z.object()` for new schemas** — use `z.strictObject()`. Existing `z.object` is legacy drift; do not perpetuate.
-- [ ] **No `z.any()`** to silence ZodError on `Schema.parse(body)`. Real divergences: comment out the test with `// TODO: FIXME: <TICKET>` (api-testing § Skipping). Never `test.skip` — corrupts Qase IDs.
+- [ ] **No `z.any()`** to silence ZodError on `Schema.parse(body)`. Real divergences: comment out the test with `// TODO: FIXME: <TICKET>` (api-testing § Skipping). Never `test.skip` — it reports green and corrupts the test-management signal (in Qase, its ID mappings).
 - [ ] **No XPath selectors** in any UI code example.
 - [ ] **No `page.waitForTimeout(...)`** in test code examples.
 - [ ] **No `try/catch` wrapping `expect()`** — except for the cleanup-only exception documented in `api-testing` skill.

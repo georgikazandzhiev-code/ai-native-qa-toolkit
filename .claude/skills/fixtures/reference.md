@@ -83,7 +83,7 @@ Do not re-wrap these as fixtures — call them directly.
 
 ## 4. Storage-state & token catalog
 
-Produced by `tests/app/login.setup.ts` (the `app-setup` project). Every setup test calls `qase.ignore()` and imports `test` from `fixtures/pom/test-options`.
+Produced by `tests/app/login.setup.ts` (the `app-setup` project). Every setup test imports `test` from `fixtures/pom/test-options`, and calls `qase.ignore()` when the repo uses Qase.
 
 | Artifact | Kind | Produced by | Consumed by |
 |----------|------|-------------|-------------|

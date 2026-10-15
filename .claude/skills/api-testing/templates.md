@@ -1258,7 +1258,7 @@ For the **non-existent-but-well-formed-uuid** case (the 404 path), use `nonExist
 
 ## 13. Skipping a test for a real backend bug
 
-When API behavior diverges from the documented contract, write the test as the contract says, then **comment out the whole `test(...)` block** and put `// TODO: FIXME: <TICKET> <description>` directly above it. Do not loosen the schema, do not delete the test, do not silently change the expected status — and do **not** use `test.skip`: Qase records a skip against the case ID, which corrupts pass/fail history (see `SKILL.md` § Skipping a test for a real backend bug). Uncomment when the ticket is fixed.
+When API behavior diverges from the documented contract, write the test as the contract says, then **comment out the whole `test(...)` block** and put `// TODO: FIXME: <TICKET> <description>` directly above it. Do not loosen the schema, do not delete the test, do not silently change the expected status — and do **not** use `test.skip`: a skip reports green and corrupts the test-management signal (in Qase, it records a skip against the case ID and corrupts pass/fail history; see `SKILL.md` § Skipping a test for a real backend bug). Uncomment when the ticket is fixed.
 
 ```typescript
 // TODO: FIXME: PROJ-1234 — backend returns 200 instead of 400 for empty name
@@ -1379,7 +1379,7 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
 
 ## 17. Qase tagging skeleton
 
-`qase.suite(SUITES.<NAME>)` is the first body line of every test. `qase.id(...)` is commented out until mapped in Qase.
+When the repo uses Qase, `qase.suite(SUITES.<NAME>)` is the first body line of every test and `qase.id(...)` is commented out until mapped in Qase. Without Qase, leave out the `qase.*` lines and the `SUITES` import (`test-standards` § Qase is optional).
 
 ```typescript
 test(

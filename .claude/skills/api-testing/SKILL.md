@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 3.0.3
+version: 3.1.0
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -33,7 +33,7 @@ These rules are non-negotiable. Violating any of them breaks the framework's con
 - **NEVER** hardcode API URLs, tokens, emails, passwords, paths, or uuids. Sources of truth: `config/env.ts` — `env.X` (credentials) and `tokens.full()` / `.admin()` / `.zero()` (tokens) — and `appConfig` (URLs), `appConfig.api.X` / `config/app.ts` (paths), `test-data/app/*.json` (static ids/boundaries), `enums/app/*` (message, suite and status constants — never paths; paths live in `appConfig`, per the `enums` and `config` skills).
 - **ALWAYS** validate response bodies with Zod using the exact pattern `expect(SchemaName.parse(body)).toBeTruthy();`. Type generics alone are insufficient. `Schema.parse(body)` without the `expect(...).toBeTruthy()` wrapper is insufficient. **Named exception:** assertion-style setup helpers (§ Two helper styles, Style A) call a bare `Schema.parse(body)` and return the typed payload — the parse *is* the assertion at the helper boundary, and the caller receives a validated entity. The `expect(...).toBeTruthy()` wrapper is required in **test bodies**, not inside setup helpers that return the parsed value.
 - **ALWAYS** wrap each API call in `test.step()` when a test contains 2+ API calls.
-- **NEVER** silently drop a test because the API misbehaves. Write the test as the contract says, then **comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET> <description>` directly above. **Do NOT use `test.skip`** — it corrupts Qase ID mappings. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference.
+- **NEVER** silently drop a test because the API misbehaves. Write the test as the contract says, then **comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET> <description>` directly above. **Do NOT use `test.skip`** — it reports green and corrupts the test-management signal (in Qase, its ID mappings). Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference.
 - **NEVER** stop at empty-body (`{}`) validation. Every request-body endpoint requires per-field omission tests AND per-field invalid-type loops (see § The negative test matrix).
 - **ALWAYS** fuzz path parameters with the invalid-format data-driven loop, regardless of whether OpenAPI mentions it.
 - **ALWAYS** call `apiRequest` directly in specs by default. Promote to a helper only on reuse (2+ specs), multi-step flows, or precondition setup unrelated to the test under inspection.
@@ -55,7 +55,7 @@ Follow these steps in order. Stop at any step if the artifact already exists; **
         happy-path GETs are clearer with a direct `apiRequest({...})` call.
 - [ ] 4. Body builder (`buildCreate<X>Body` / `buildUpdate<X>Body`) using faker. Names always carry a
         `qa-` prefix and a faker suffix to be greppable in DB cleanups.
-- [ ] 5. Add `SUITES.API_<RESOURCE>` to enums/app/qase-suites.ts if it does not exist.
+- [ ] 5. When the repo uses Qase, add `SUITES.API_<RESOURCE>` to enums/app/qase-suites.ts if it does not exist.
 - [ ] 6. Add static fixtures (`invalidId`, `nonExistentId`, …) to test-data/app/<resource>.json if needed.
 - [ ] 7. Author the spec from templates.md. Test name format:
         `Verify <METHOD> <path> returns <status> [with <reason>]` — endpoint-shaped, used by every
@@ -268,7 +268,7 @@ Write the test the way the contract says it should work, then **comment out** th
 // );
 ```
 
-**Do NOT use `test.skip`.** Skipped tests corrupt Qase ID mappings — Qase records the test as "skipped" against its case ID, polluting pass/fail history and making it impossible to distinguish "not yet mapped" from "deliberately deferred". Commenting out removes the test from Playwright's runner entirely, so Qase never sees it.
+**Do NOT use `test.skip`.** A skip reports green and corrupts the test-management signal. In a repo that uses Qase, Qase records the test as "skipped" against its case ID, polluting pass/fail history and making it impossible to distinguish "not yet mapped" from "deliberately deferred". Commenting out removes the test from Playwright's runner entirely, so Qase never sees it.
 
 **`test.describe` with all tests commented out.** When every test in a describe is blocked (e.g., all depend on an unavailable service), comment out the individual tests and add `// TODO: FIXME: <TICKET>` at the describe level. Do not comment out the `beforeAll`/`afterAll` hooks — they won't run with no tests, but keeping them visible makes it clear what the describe was supposed to set up.
 
@@ -315,7 +315,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 ## Qase tagging
 
-- `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
+- When the repo uses Qase (`test-standards` § Qase is optional), `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
 - For tests without a mapped Qase id yet, **leave `qase.suite(...)` and comment out `qase.id(...)`** — do not delete them.
 - Tags drive runtime selection (one tag per test, never combined). In the standard set (with a kept set, the tag map's API and E2E tags; see `test-standards`):
   - `@api` — every spec in `tests/app/api/**`, including multi-endpoint API flows (e.g. tenant onboarding over HTTP only)
@@ -368,7 +368,7 @@ Before declaring a spec done, verify:
 
 - [ ] Imports `test`/`expect` from `fixtures/pom/test-options`, **not** `@playwright/test`.
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
-- [ ] `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test (or commented if pending mapping).
+- [ ] When the repo uses Qase, `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test, and `qase.id(N)` is commented out until mapped, never invented. Without Qase, no `qase.*` lines.
 - [ ] Each test carries the repo's API tag (`{ tag: "@api" }` in the standard set) — multi-endpoint API flows included.
 - [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
@@ -430,7 +430,7 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 |---------|-------|-----|
 | `expect(Schema.parse(body)).toBeTruthy()` throws `ZodError` | API response disagrees with the schema (extra/missing field, wrong type, wrong nullability) | If OpenAPI is the source of truth, treat as a contract violation: keep the schema strict, **comment out** the test with `// TODO: FIXME: <TICKET>`, report the bug. **Do not loosen the schema** — see § Skipping a test for a real backend bug. If no docs exist, re-inspect the live response and update the schema; never relax to `z.any()`. |
 | `Schema.parse(body)` throws `ZodError` on a 401 or 403 test | These responses have empty bodies (`null`); calling `.parse()` on `null` against an object schema fails | For 401: use `GatewayErrorSchema` (the gateway DOES return a body for 401). For 403/405: assert `expect(body).toBeNull()`, no schema needed. See § Error envelopes. |
-| `playwright/no-skipped-test` ESLint failure on a `test.skip` | The rule catches skips; `test.skip` also corrupts Qase IDs | **Comment out** the test instead and add `// TODO: FIXME: <TICKET>` above. No eslint-disable needed because the test is commented out, not skipped. |
+| `playwright/no-skipped-test` ESLint failure on a `test.skip` | The rule catches skips; `test.skip` also reports green and corrupts the test-management signal | **Comment out** the test instead and add `// TODO: FIXME: <TICKET>` above. No eslint-disable needed because the test is commented out, not skipped. |
 | 401 returns `{ error: "..." }` but `APIErrorSchema` was used | Wrong schema for 401 — the API gateway returns a different shape than app errors | Use `GatewayErrorSchema` (`{ error: string }`) for 401. Use `APIErrorSchema` (`{ message, details? }`) for 400/404/409. See the table in § Error envelopes. |
 | Cleanup fails with 409 Conflict deleting a worker | The worker is still assigned to a job | Delete jobs first, workers second. Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, token)` which enforces the order automatically. |
 | Mailpit `getLastEmail` returns `null` | Wrong recipient domain (`@automation.test`, `@example.com`) — your Mailpit catches only `@<your-test-domain>` | Switch the recipient to `@<your-test-domain>`. For e2e onboarding, use a setup helper that generates the correct domain (in the example app, `setupTestUser`). |
