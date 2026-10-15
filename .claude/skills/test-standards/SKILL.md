@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 5.0.1
+version: 5.0.3
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -388,9 +388,9 @@ test.describe("E2E — HTTP Job CRUD (single method)", () => {
 
 ### Example 4 — API + Smoke routing
 
-For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@api` (or the tag map's API tag), `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Mirror the nearest API spec in your repo (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`).
+For an API spec (`POST /workers` covering 201/400/401/403/405): pick `tests/app/api/`, tag `@api` (or the tag map's API tag), `qase.suite(SUITES.API_WORKERS)`. The deep negative-test matrix (per-field omission loop, invalid-type loop, auth matrix, 405 test) belongs in the [`api-testing`](../api-testing/SKILL.md) skill — load it for the per-verb playbook. Use the nearest API spec at its standard location in your repo as a reference (in the example app, `tests/app/api/jobs-service/workers/workers.spec.ts`); where it differs from this skill, the skill wins: name the difference as drift, never copy it.
 
-For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke tag), `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Mirror your repo's nearest smoke spec (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`).
+For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke tag), `qase.suite(SUITES.APP_LOGIN)`, use `resetStorageState` in `beforeEach`. Use your repo's nearest smoke spec at its standard location as a reference (in the example app, `tests/app/e2e/tenant-service/login-smoke.spec.ts`); where it differs from this skill, the skill wins: name the difference as drift, never copy it.
 
 ## Troubleshooting
 

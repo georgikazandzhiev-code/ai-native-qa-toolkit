@@ -1,6 +1,6 @@
 ---
 name: ai-native-workflow
-version: 3.0.0
+version: 4.0.1
 description: Orientation for AI-assisted work in this repo. Use for "how should I work with AI here?", "which skill applies?", or planning a multi-step change that crosses several skills. Read before diving into a specific skill when routing is unclear. Not for implementation (use the matched skill) or skill authoring (use skill-creator).
 metadata:
   category: cross-cutting
@@ -33,9 +33,9 @@ Skills extend the constitution; conflict resolution is in `~/.claude/CLAUDE.md �
 
 ## Conversation contract
 
-- **Audit-then-edit (default).** For anything beyond a one-line fix: read the affected files from disk, propose scope (what changes, in which files, why), wait for approval, apply, report what landed.
+- **Audit-then-edit (default).** For anything beyond a one-line fix: read the affected files from disk, state the scope (what changes, in which files, why), apply, report what landed. Local, reversible work needs no approval to start; what does is listed under When to ask vs do.
 - **Direct mode (trivial work).** Obvious typos, single-line fixes, single-import additions: do it and report.
-- **When to ask vs do.** Clarify ambiguous prompts (which endpoint? create or edit? which job type?). Stop and ask before destructive actions, before silently picking between two valid architectural options, or when the matched skill's Critical conflicts with the request.
+- **When to ask vs do.** Clarify an unclear requirement (which endpoint? create or edit? which job type?), marked `[human-only: requirement]`. Stop and ask before a destructive or outward action (push, PR, comment, merge, delete), marked `[human-only: outward]`, or when the matched skill's Critical conflicts with the request. Two valid ways to do a clear task are not a question: build each on its own `alt/` branch and ask only which to keep (`build-alternatives`). Ask for a fact only a person has (a ticket key, which account), marked `[human-only: fact]`.
 - **When to refuse.** The `~/.claude/CLAUDE.md § WON'T` table is the refusal list. Forbidden patterns include: silent failures (`try/catch` on `expect`, raised timeouts, silent `.skip`), schema loosening to make a test pass, hardcoded secrets/IDs, XPath, `page.waitForTimeout`, `any`/`as any`/`@ts-ignore`, `--no-verify` to bypass hooks, IDE/Cursor browser tools or `npx playwright codegen` as substitutes for the sanctioned exploration workflow (see the `playwright-cli` skill — uses `npx playwright open`).
 - **Verification before "done".** Walk `~/.claude/CLAUDE.md § Verification Standard`: re-read from disk, lint, run the affected tests, report the actual result. A task with failing tests is not complete.
 
@@ -52,10 +52,10 @@ Each phase ties back to a `~/.claude/CLAUDE.md` rule. Walk in order; stop and su
 1. **Understand** — re-read the prompt, restate the goal in one sentence, confirm the work category (new artifact / edit / refactor / debug / investigate).
 2. **Locate** — open `~/.claude/CLAUDE.md § Routed Skill Index` and identify the matching skill. If the repository has its own `CLAUDE.md` or a repo-context skill, read it too — it holds the repo's product facts (services, endpoints, test-ids), which replace the example app's product names in the skills. The folder layout is the standard, never the repo's own.
 3. **Audit** — read existing code from disk (`ls`, then `Read` the relevant files). Never propose from memory. For API work, also confirm the endpoint contract via OpenAPI; for UI work, run `npx playwright open` (see the `playwright-cli` skill) per `~/.claude/CLAUDE.md` MUST: Explore Before Generate.
-4. **Plan** — for multi-step or multi-file changes, write the scope: what changes, in which files, why, what's deliberately out of scope. If the work has several logical parts, name the **PR boundaries** now — one PR per part (`GOVERNANCE.md` § One logical change per PR). Wait for human approval on non-trivial work.
+4. **Plan** — for multi-step or multi-file changes, write the scope: what changes, in which files, why, what's deliberately out of scope. If the work has several logical parts, name the **PR boundaries** now — one PR per part (`GOVERNANCE.md` § One logical change per PR). State the scope and carry on; local, reversible work needs no approval — ask only in the cases under § Conversation contract → When to ask vs do.
 5. **Generate** — author the code following the matched skill's `## Critical` rules and the relevant `~/.claude/CLAUDE.md` MUST/WON'T entries. Re-check the Critical block while generating, not after.
 6. **Verify** — walk `~/.claude/CLAUDE.md § Verification Standard`: re-read from disk, run the linter, run the affected tests (`npx playwright test [path]`), report actual results. On red, load the `debugging` skill — failure-mode taxonomy, UI Mode / Trace Viewer / Inspector workflow.
-7. **Surface** — report what changed (files, substantive edits), flag any drift discovered (legacy filename inconsistency, schema duplication, dead code), and ask whether to commit. When a shippable unit is done, propose opening its PR rather than continuing on the same branch.
+7. **Surface** — report what changed (files, substantive edits), flag any drift discovered (legacy filename inconsistency, schema duplication, dead code), and say the work is ready to commit; commit when the person asks. When a shippable unit is done, propose opening its PR rather than continuing on the same branch.
 
 ## Principles that make this scaffold AI-native
 
