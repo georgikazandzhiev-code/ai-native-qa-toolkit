@@ -53,6 +53,8 @@ Thumbs.db
 # eslint-plugin-qa-constitution/smoke/ holds a deliberately non-compliant spec, and
 # lint-gate-eval/ holds generated files kept as evidence. Both are correct as artifacts
 # and wrong as examples — an agent must not learn locator or assertion style from them.
+# Claude Code doesn't read this file. For it, every fixture in smoke/tests/ opens with a
+# "deliberately non-compliant" header, and lint-gate-eval/README.md says the same.
 eslint-plugin-qa-constitution/smoke/
 eslint-plugin-qa-constitution/lint-gate-eval/
 

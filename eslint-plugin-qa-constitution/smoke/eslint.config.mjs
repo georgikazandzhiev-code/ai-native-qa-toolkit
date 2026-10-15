@@ -33,9 +33,16 @@ export default [
       'qa-constitution/standard-layout': 'off',
     },
   },
-  // `standard-layout` reads paths from a repo root: this config's folder, smoke/. smoke/good is laid out to the
-  // standard from root 'good'. smoke/tests is read from smoke/ itself, so its files read tests/app/…, and it is not:
-  // its specs sit in tests/app/ui/, which the layout doesn't have, and in tests/app/api/ without a service folder.
-  { files: ['smoke/good/**/*.ts'], rules: { 'qa-constitution/standard-layout': ['error', { root: 'good' }] } },
+  // `standard-layout` and `no-process-env-outside-config` read paths from a repo root: this config's folder,
+  // smoke/. smoke/good is laid out to the standard from root 'good', so its config/env.ts is the config module.
+  // smoke/tests is read from smoke/ itself, so its files read tests/app/…, and it is not: its specs sit in
+  // tests/app/ui/, which the layout doesn't have, and in tests/app/api/ without a service folder.
+  {
+    files: ['smoke/good/**/*.ts'],
+    rules: {
+      'qa-constitution/standard-layout': ['error', { root: 'good' }],
+      'qa-constitution/no-process-env-outside-config': ['error', { root: 'good' }],
+    },
+  },
   { files: ['smoke/tests/**/*.ts'], rules: { 'qa-constitution/standard-layout': 'error' } },
 ];

@@ -24,9 +24,56 @@ export default [
 
 The parser is not optional: without it ESLint reads TypeScript as JavaScript, and every type annotation is a parse error.
 
-Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standard-layout` can only fail a misplaced spec or page object that it is shown, and `helpers/` and `config/` carry rules too (`no-process-env-outside-config`). Keep build output and `.claude/` out with `ignores`: ESLint also lints `.js` files, and `.claude/workflows/` holds workflow scripts that are not modules. A unit-test tree outside `tests/` (Vitest, node:test) goes in `ignores` too: these rules judge Playwright specs. `standard-layout` reads paths from the repo root: the nearest folder above each file that holds an `eslint.config.*`, or failing that a `package.json`. So the result is the same whichever folder ESLint is started from, and a k6 sub-project's own `tests/perf/package.json` doesn't move it, as long as the repo root holds an `eslint.config.*`. With `--config <other name>`, or a config inside `tests/perf/`, the nearest `package.json` or config wins, so set `root: import.meta.dirname` in the config (`__dirname` in a CommonJS one). Set `root` to a subfolder when the layout starts below the repo root, such as a `qa/` folder.
+Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standard-layout` can only fail a misplaced spec or page object that it is shown, and `helpers/` and `config/` carry rules too (`no-process-env-outside-config`). Keep build output and `.claude/` out with `ignores`: ESLint also lints `.js` files, and `.claude/workflows/` holds workflow scripts that are not modules. A unit-test tree outside `tests/` (Vitest, node:test) goes in `ignores` too: these rules judge Playwright specs. `standard-layout` and `no-process-env-outside-config` read paths from the repo root: the nearest folder above each file that holds an `eslint.config.*`, or failing that a `package.json`. So the result is the same whichever folder ESLint is started from, and a k6 sub-project's own `tests/perf/package.json` doesn't move it, as long as the repo root holds an `eslint.config.*`. With `--config <other name>`, or a config inside `tests/perf/`, the nearest `package.json` or config wins, so set `root: import.meta.dirname` in the config (`__dirname` in a CommonJS one). Set `root` on both rules to a subfolder when the layout starts below the repo root, such as a `qa/` folder.
 
-`configs.strict` adds the core and typescript-eslint rules the constitution also mandates (`no-console`, `no-explicit-any`, `ban-ts-comment`) — it expects `@typescript-eslint/eslint-plugin` to be configured by you.
+`configs.strict` adds the core and typescript-eslint rules the constitution also mandates (`no-console`, `no-explicit-any`, `ban-ts-comment`). It needs `@typescript-eslint/eslint-plugin`, which is not a dependency of this plugin:
+
+```bash
+npm i -D @typescript-eslint/eslint-plugin
+```
+
+```js
+import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import qa from 'eslint-plugin-qa-constitution';
+
+export default [
+  { ignores: ['node_modules/', 'playwright-report/', 'test-results/', 'dist/', '.claude/'] },
+  {
+    files: ['**/*.ts', '**/*.mts', '**/*.cts'],
+    languageOptions: { parser: tsParser },
+    ...qa.configs.strict,
+    plugins: { ...qa.configs.strict.plugins, '@typescript-eslint': tsPlugin },
+  },
+];
+```
+
+Spread `configs.strict` first and merge its `plugins` into yours. Written the other way round, its `plugins` replaces yours, and ESLint stops with `could not find plugin "@typescript-eslint"`.
+
+### Typecheck
+
+The typecheck step in the toolkit's CI template (`templates/agentic-qa-ci.yml`) runs `npx tsc --noEmit`. It needs `typescript`, `@types/node` (`config/env.ts` reads `process`, and `@playwright/test` does not install Node's types) and a `tsconfig.json` at the repo root. The lint can't see type errors, and `any` and `@ts-ignore` are constitution violations, so a suite that does not typecheck is not compliant either.
+
+```bash
+npm i -D typescript @types/node
+```
+
+A minimal `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.mts", "**/*.cts"]
+}
+```
 
 ## The rules
 
@@ -37,7 +84,7 @@ Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standa
 | `single-tag-on-test` | MUST Tags | Zero tags, two tags, a non-whitelisted tag, or a tag on `describe()` |
 | `require-strict-object` | MUST Schemas | `z.object(` — **autofixable** to `z.strictObject(` |
 | `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted, and `expect.soft(Schema.parse(body))`, which isn't soft (the loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`) |
-| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/`, `playwright.config.*`). A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
+| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/` and `playwright.config.*` at the layout root: the repo root, or `root` when it is set; a service folder named `config` doesn't count). Which file inside `config/` reads it (`config/env.ts` only) stays a review responsibility. A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
 | `no-xpath` | WON'T No XPath | `locator('//…')`, `locator('xpath=…')`, `locator('(//…')` |
 | `no-hard-waits` | WON'T No hard waits | `waitForTimeout(…)` |
 | `no-page-evaluate` | WON'T No page.evaluate | `page.evaluate`, `$eval`, `$$eval` for DOM work |
@@ -71,7 +118,8 @@ rules: {
     root: 'qa',                            // only if the layout starts below the repo root; relative to it, or absolute
   }],
   'qa-constitution/no-process-env-outside-config': ['error', {
-    allow: '(^|/)config/|(^|/)playwright\\.config\\.[cm]?[jt]s$|/src/config\\.ts$', // the default, plus a legacy config module until the Config move
+    allow: '^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the layout root (root when set, else the repo root)
+    root: 'qa',                            // only if the layout starts below the repo root, as for standard-layout
   }],
 }
 ```
@@ -80,7 +128,9 @@ rules: {
 
 `standard-layout` and the drift table: a `drift` entry excuses a file that is out of place, and a misnamed file only when its own path is listed (`drift: ['tests/app/api/orders/createOrder.spec.ts']`). A file inside its standard folder is otherwise always judged, so `drift: ['pages/']` for a legacy `pages/` tree does not switch off `pages/app/`. A new file never goes on the list: the constitution sends it to the standard location. The rule judges what it can recognise from one file — specs (`*.spec.ts`, and a `*.test.ts` that imports Playwright or the barrel, named as a spec should be), setup files (any `<name>.setup.ts`), the barrel, `*-fixture.ts`, a class extending a page base (also through a named import under another name, `import { BasePage as Base }`), and k6 scripts (not `.d.ts` files or type-only imports). It cannot see a legacy barrel with another name (`support/fixtures.ts`), a page object that extends another page object, or helpers, enums, schemas and test data; those stay a review responsibility.
 
-During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves.
+During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves. `allow` is matched against the path from the layout root — the repo root, or `root` when it is set — with forward slashes and no leading slash, so anchor it with `^` (with `root: 'qa'`, `qa/src/config.ts` is `^src/config\\.ts$`). A `root` that names no folder of the layout switches the rule off for every file; check it with a file you know is wrong.
+
+Upgrading from 0.6: replace a custom `allow` copied from the 0.6 README as a whole, starting from the 0.7 default: `^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$`. Re-anchoring only its `/src/config\\.ts$` entry leaves `(^|/)config/` and `(^|/)playwright…`, which still let any nested `config/` folder or `playwright.config.*` read `process.env`, and nothing reports it. A layout that starts below the repo root (a `qa/` folder, or a Playwright package in a monorepo whose `eslint.config.*` sits at the monorepo root) passes this rule the same `root` it passes `standard-layout`, or its own config module is reported.
 
 ## False-green detection
 
@@ -137,11 +187,13 @@ Pair it with branch protection so a violation blocks the merge rather than merel
 
 ## Tests
 
-18 rules, 30 `RuleTester` suites, plus valid cases per rule. Twelve of the suites are regression suites, each holding code that a rule once got wrong. Four of them lock in the same `test.step` fix, one each for `single-tag-on-test`, `require-assertion-in-test`, `no-conditional-in-test` and `no-try-catch-in-test`.
+18 rules, 31 `RuleTester` suites, plus valid cases per rule. Thirteen of the suites are regression suites, each holding code that a rule once got wrong. Four of them lock in the same `test.step` fix, one each for `single-tag-on-test`, `require-assertion-in-test`, `no-conditional-in-test` and `no-try-catch-in-test`.
 
 ```bash
 npm test
 ```
+
+`npm test` runs the rule tests, fault injection, and the memory- and skill-snippet lints with their harness, the same files CI runs. The snippet-lint mutation sweep is slow and runs in CI only: `node tests/skill-snippets.mutation.test.mjs`.
 
 The suite has been **fault-injected to prove it bites** — disabling a rule's report produces `Should have 1 error but had 0`, and corrupting the `require-strict-object` autofix produces `Output is incorrect`. A green run means the rules fire, not merely that the file parses.
 
@@ -156,7 +208,7 @@ The rules also hold the toolkit's own teaching to account. `node tests/skill-sni
 - **A test-body fragment** (a block that calls `expect()`, declares no function, class or export, and declares no test or hook — `test.step(...)` calls are allowed, because a step is not a test) is linted a second time inside a tagged `test()`, so the rules that need an enclosing test (no conditionals, no try/catch, no page-object instantiation) apply to it. A fragment that also declares a function is linted as a helper module, so those rules do not reach its body.
 - Fences follow CommonMark. An unclosed fence fails the run, and so does a run that finds no block at all.
 
-`node tests/skill-snippets.harness.test.mjs` tests that lint itself: 124 cases at the time of writing, with planted defects that must fail next to labelled ones that must pass. `node tests/skill-snippets.mutation.test.mjs` measures how strong those cases are instead of trusting them: 75 mutants at the time of writing, each breaking one condition of the lint, and the harness must fail against every one. A surviving mutant, or one whose target text no longer exists, fails the run. A pass means every listed mutant is killed. It does not prove that every branch of the lint is tested, only the conditions on the list.
+`node tests/skill-snippets.harness.test.mjs` tests that lint itself: 126 cases at the time of writing, with planted defects that must fail next to labelled ones that must pass. `node tests/skill-snippets.mutation.test.mjs` measures how strong those cases are instead of trusting them: 76 mutants at the time of writing, each breaking one condition of the lint, and the harness must fail against every one. A surviving mutant, or one whose target text no longer exists, fails the run. A pass means every listed mutant is killed. It does not prove that every branch of the lint is tested, only the conditions on the list.
 
 ## License
 
