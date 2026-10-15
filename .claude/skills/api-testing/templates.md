@@ -1379,7 +1379,7 @@ test("Verify POST /admin/tenants creates a tenant and GET reflects it", { tag: "
 
 ## 17. Qase tagging skeleton
 
-When the repo uses Qase, `qase.suite(SUITES.<NAME>)` is the first body line of every test and `qase.id(...)` is commented out until mapped in Qase. Without Qase, leave out the `qase.*` lines and the `SUITES` import (`test-standards` § Qase is optional).
+When the repo uses Qase, `qase.suite(SUITES.<NAME>)` is the first body line of every test and `qase.id(...)` is commented out until mapped in Qase. Without Qase, leave out the `qase.*` lines, the `qase` import and the `SUITES` import (`test-standards` § Qase is optional).
 
 ```typescript
 test(

@@ -58,7 +58,7 @@ Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modifie
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
 - [ ] Each `test(...)` has **exactly one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`; a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands), cased exactly as that whitelist lists it — the standard set is all lowercase (`@regression`), matching the `package.json` greps. No combined tags. No tags on `test.describe(...)`.
-- [ ] When the repo uses Qase, each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted, never invented). Without Qase, there are no `qase.*` lines (`test-standards` § Qase is optional).
+- [ ] When the repo uses Qase, each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted, never invented). Without Qase, the diff adds no `qase.*` lines (`test-standards` § Qase is optional).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
 - [ ] **No `try/catch` around `expect`.** The only allowed `try/catch` is capturing an accidentally-created resource ID for cleanup.

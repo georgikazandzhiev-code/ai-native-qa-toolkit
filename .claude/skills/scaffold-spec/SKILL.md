@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 5.0.2
+version: 5.1.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -244,7 +244,7 @@ After creating the spec, update the API or UI routing section of the repository'
 
 - [ ] Imports follow the project pattern exactly
 - [ ] Tags match the spec type, from the repo's whitelist (`@api`, `@e2e`, `@regression` in the standard set)
-- [ ] When the repo uses Qase, `qase.suite()` is the first line in every test; without it, no `qase.*` lines
+- [ ] When the repo uses Qase, `qase.suite()` is the first line in every test; without it, no new `qase.*` lines
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
 - [ ] API test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (variants: `api-testing/http-method-coverage.md` § 14); E2E names describe the flow

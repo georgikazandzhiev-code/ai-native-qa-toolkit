@@ -368,7 +368,7 @@ Before declaring a spec done, verify:
 
 - [ ] Imports `test`/`expect` from `fixtures/pom/test-options`, **not** `@playwright/test`.
 - [ ] Every `apiRequest` is typed with the response generic and parsed with the matching schema.
-- [ ] When the repo uses Qase, `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test, and `qase.id(N)` is commented out until mapped, never invented. Without Qase, no `qase.*` lines.
+- [ ] When the repo uses Qase, `qase.suite(SUITES.API_<RESOURCE>)` is the first body line of every test, and `qase.id(N)` is commented out until mapped, never invented. Without Qase, no new `qase.*` lines.
 - [ ] Each test carries the repo's API tag (`{ tag: "@api" }` in the standard set) — multi-endpoint API flows included.
 - [ ] Test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (project convention — e.g. `Verify GET /jobs returns 200 with valid schema and default pagination`). Free-form titles, upstream-style action-only titles, and "should" / "it" prefixes are forbidden.
 - [ ] All created entities have a matching cleanup in `afterEach`/`afterAll` via the helper.
