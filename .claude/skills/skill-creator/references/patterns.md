@@ -76,7 +76,7 @@ Use when the task is a multi-step procedure where the agent benefits from tracki
         up preconditions. Single happy-path GETs are clearer inline.
 - [ ] 4. Body builder buildCreate<X>Body / buildUpdate<X>Body via faker.
         Names always carry a "qa-" prefix.
-- [ ] 5. Add SUITES.API_<RESOURCE> to enums/app/qase-suites.ts if missing.
+- [ ] 5. When the repo uses Qase, add SUITES.API_<RESOURCE> to enums/app/qase-suites.ts if missing.
 - [ ] 6. Author the spec from templates.md.
 - [ ] 7. Cover the negative matrix (400, 401, 403, 404, 405, 409).
 - [ ] 8. Wire cleanup in afterEach/afterAll. Jobs before workers.

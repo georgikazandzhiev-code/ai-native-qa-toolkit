@@ -863,7 +863,7 @@ Use the parameterized `verifyInlineMsLabels` helper on `JobsPage` — works for 
 ### Do NOT
 
 - ❌ **Create a separate `tests/app/e2e/<domain>/{type}-job-view.spec.ts`.** The CRUD stub + functional detail-view already cover that ground; a third layer duplicates UI-creation setup (~60s) and slows CI without adding unique coverage.
-- ❌ **Split the mega-test into one-test-per-section without keeping a shared `beforeAll` job.** The 90 s wait for the job's first run is too expensive to repeat per test. If you split, annotate each sub-test with its own `qase.id()`.
+- ❌ **Split the mega-test into one-test-per-section without keeping a shared `beforeAll` job.** The 90 s wait for the job's first run is too expensive to repeat per test. If you split and the repo uses Qase, give each sub-test its own commented `// qase.id(N);` for a person to map.
 - ❌ **Use UI creation (`createJobPage`) inside the detail-view functional spec.** API seeding is mandatory for speed and determinism.
 
 ### Anti-pattern reference
