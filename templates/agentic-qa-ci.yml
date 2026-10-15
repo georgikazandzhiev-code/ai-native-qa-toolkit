@@ -29,6 +29,14 @@
 #      `continue-on-error: true` so the log says "this did not gate" instead of "this passed".
 #   5. No artifact upload — a failed Playwright run whose trace is discarded costs a second run to
 #      diagnose. The report is uploaded on failure, which is when it is worth having.
+#
+# What the repo needs for this file to run:
+#   - a `package-lock.json` (note 2);
+#   - `eslint`, `eslint-plugin-qa-constitution` and `@typescript-eslint/parser`, configured as in
+#     eslint-plugin-qa-constitution/README.md § Install; `configs.strict` also needs
+#     `@typescript-eslint/eslint-plugin`, wired as that section shows;
+#   - `typescript` and a `tsconfig.json` for the Typecheck step (a minimal one is in the same README,
+#     § Typecheck).
 
 name: Agentic QA quality gate
 
@@ -68,7 +76,8 @@ jobs:
         run: npx eslint . --max-warnings 0
 
       # Type errors that the linter cannot see. `any` and `@ts-ignore` are constitution
-      # violations, so a suite that does not typecheck is not compliant either.
+      # violations, so a suite that does not typecheck is not compliant either. Needs `typescript`
+      # and a `tsconfig.json` (see the header).
       - name: Typecheck
         run: npx tsc --noEmit
 
