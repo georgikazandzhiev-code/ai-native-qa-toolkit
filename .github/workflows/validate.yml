@@ -48,6 +48,13 @@ jobs:
       - name: Cross-references — files that point at each other must agree
         run: npm run test:xref
 
+      # Check 16 the same way. Issue #6 rewrote the skills away from the product they were
+      # extracted from; a paste from an old branch brings its names back silently. Every banned
+      # kind must fail, every scanned place must be scanned, and ordinary QA writing ("synthetic data",
+      # healthProbe) must not fail, or the check gets switched off.
+      - name: Product leftovers — the original product's names must not come back
+        run: npm run test:leftovers
+
       # Check 14 the same way. VERSION never travels to a consumer - they copy .claude/, not
       # the repo - so the version lives as a stamp inside the constitution. If the stamp lags a
       # bump, every install reports the old number and `npm run audit` answers "who is current"
