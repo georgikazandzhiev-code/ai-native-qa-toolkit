@@ -222,7 +222,7 @@ Fix: every "non-existent" or "invalid" sentinel lives in `test-data/app/<resourc
 ### Good (the shape we want — assertion-style)
 
 ```typescript
-// helpers/app/test-data-generators.ts (factory — Pattern 2)
+// helpers/app/workers.ts (factory — Pattern 2, next to the seeder)
 export type WorkerData = { name: string; location: string; region: string };
 export function createWorkerData(overrides: Partial<WorkerData> = {}): WorkerData {
     return {
@@ -259,7 +259,7 @@ export async function teardownTestWorker(
 ): Promise<void> { /* matches setupTestWorker */ }
 ```
 
-- Factory + seeder in two files; seeder consumes the factory; create + delete are paired.
+- Factory + seeder sit in the resource's helper file (`helpers/app/workers.ts`); the factory moves to `test-data-generators.ts` only once the `api-testing` extraction threshold is crossed. The seeder consumes the factory; create + delete are paired.
 
 Test usage:
 

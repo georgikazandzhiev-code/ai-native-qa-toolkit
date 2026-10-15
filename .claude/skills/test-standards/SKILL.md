@@ -1,6 +1,6 @@
 ---
 name: test-standards
-version: 4.3.0
+version: 5.0.1
 description: Spec-file conventions — test-options.ts imports, the single-tag whitelist, Qase wiring (qase.suite + qase.id), API vs E2E vs functional placement, GIVEN/WHEN/THEN steps, web-first assertions, cleanup. Use when creating any spec, choosing a tag/directory, or reviewing compliance. Triggers — "create a test", "which tag", "qase suite", "test.step". Not for the API negative-test matrix (api-testing) or locators (selectors).
 metadata:
   category: domain
@@ -10,7 +10,7 @@ metadata:
 
 Every spec — API, E2E or functional — lands on the same shape: imports from `test-options.ts`, exactly one tag drawn from the framework whitelist, `qase.suite()` as the first body line, `test.step()` for Given/When/Then, web-first assertions, and API-driven cleanup. The shape is enforced because deviations break the npm scripts (a misspelled tag means `npm run app-regression` skips the test) and the Qase reporter (a missing `qase.suite` orphans the test run). This skill is the **single source of truth** for spec-file conventions — for the deeper API-test workflow (negative matrix, per-verb coverage, schema patterns) load [`api-testing`](../api-testing/SKILL.md); for POM class structure load [`page-objects`](../page-objects/SKILL.md); for locator strategy load [`selectors`](../selectors/SKILL.md).
 
-Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `test-data/app/…`, and every spec file name, are the invented example app's. Your repo's own layout belongs in its `CLAUDE.md` or repo-context skill.
+Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `test-data/app/…` are the standard layout (`~/.claude/CLAUDE.md § Standard repo layout and naming`). Service folders and spec file names (`jobs-service/`, `http-job-crud.spec.ts`) are the invented example app's; your repo's services are listed in its `CLAUDE.md`.
 
 ## Critical
 
@@ -24,20 +24,20 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 - **NEVER** commit explore-only or debug spec files (`console.log(await page.content())`, throwaway checks, `.only`). Why: they bloat CI, get committed by accident, and rot the test surface.
 - **NEVER** silently drop a test because the API or UI misbehaves. **Comment out** the entire `test(...)` block and add `// TODO: FIXME: <TICKET-NUMBER> <description>` directly above the commented-out code. **Do NOT use `test.skip`** — skipped tests corrupt Qase ID mappings and pollute reporting. Every status code in the OpenAPI spec must be a passing test, a failing test, or a commented-out test with a ticket reference. Why: silent omission hides regressions; the `// TODO: FIXME:` + ticket annotation leaves a searchable paper trail. **The marker for a disabled test is always the same string,** `// TODO: FIXME: <TICKET>` `<description>`, so one search finds every disabled test. Elsewhere in code, `// FIXME: <ticket>` marks a broken thing that needs a fix, and `// TODO: <description>` marks planned work.
 - **NEVER** put conditional logic in a test body — no `if/else`, no ternary, no `&&` short-circuit, no `test.skip()`. Seed the precondition in `beforeAll`/`beforeEach` instead. Why: a conditional steers around missing data, so the test passes without exercising the behaviour and the test run is recorded as coverage of something it never touched. Enforced by `qa-constitution/no-conditional-in-test` for `if`, `switch`, a control-flow ternary and an in-body `test.skip()`; an `&&` short-circuit is a review point — the lint can't tell it from a legitimate boolean expression.
-- **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, the repo's tag-group script for whole tag groups (`npm run app-regression` / `npm run app-api` in the example app). A test that fails locally is not complete.
+- **ALWAYS** run the affected spec(s) and confirm zero failures before declaring the task done — `npx playwright test <spec>` for one file, the tag-group script for whole tag groups (`npm run app-regression` / `npm run app-api`; with a kept set, the script of the mapped tag). A test that fails locally is not complete.
 
 ## What's in each file (read this before reaching for another file)
 
 | File | Purpose | Load When |
 |------|---------|-----------|
 | **`SKILL.md`** (this file) | Rules, tag whitelist, structural workflow, anti-patterns, examples for spec authoring across all four test types. | **Always** — on any task that creates / extends / refactors a spec. |
-| **[`reference.md`](reference.md)** | The example app's catalog: tag → npm-script mapping, every spec with what it covers, the setup spec, intentional gaps. The model for your repo's own scenario inventory. | **Load on lookup** — "What does a detail-view spec cover?" / "What's the npm command for the smoke tag?" |
+| **[`reference.md`](reference.md)** | The standard tag → npm-script mapping, and the example app's catalog: every spec with what it covers, the setup spec, intentional gaps. The model for your repo's own scenario inventory. | **Load on lookup** — "What does a detail-view spec cover?" / "What's the npm command for the smoke tag?" |
 
 **Boundary rule:** rules, decisions, and anti-patterns live in this `SKILL.md`. POM class structure is the [`page-objects`](../page-objects/SKILL.md) skill. Locator priority is the [`selectors`](../selectors/SKILL.md) skill. The deep API negative-test matrix and per-verb coverage live in [`api-testing`](../api-testing/SKILL.md) — **do not duplicate them here**. Spec scaffolding (templates) lives in [`scaffold-spec`](../scaffold-spec/SKILL.md). If you find rule content in a sibling skill (or vice versa), it's drift — fix it before adding more.
 
 ## Tag whitelist & npm scripts
 
-| Tag (standard set) | npm script (example app) | Used for |
+| Tag (standard set) | npm script (standard) | Used for |
 |-----|-----------|----------|
 | `@critical` | `app-critical` | 3–5 tests whose red means the build is broken. |
 | `@smoke` | `app-smoke` | Critical-path UI — login, landing, navigate to major pages. |
@@ -48,9 +48,9 @@ Folder paths such as `tests/app/…`, `helpers/app/…`, `enums/app/…` and `te
 | `@e2e` | `app-e2e` | End-to-end UI journey (create → verify → edit → delete). Lives in `tests/app/e2e/`. |
 | (union) | `app-all` | Full nightly / pre-merge. |
 
-The tags are the standard; the `app-*` script names are the example app's, so name your scripts as your repo does. A repo with a kept set reads this table through its tag map (§ Kept set: the tag map).
+The tags and the `app-*` script names are both standard (`~/.claude/CLAUDE.md § Standard repo layout and naming`). A repo with a kept set reads this table through its tag map (§ Kept set: the tag map), and names its scripts after its own tags.
 
-**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(smoke|sanity|integration|e2e|api|regression)`. In a repo on the standard set, a mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every standard tag lowercase removes the question. A repo with a declared set greps that set's own casing, and there `@Regression` may be exactly right: never recase a tag the whitelist holds. The `single-tag-on-test` lint rule, configured with the repo's whitelist, catches a stray capital before merge.
+**Tag casing matters.** `--grep` is case-sensitive: `app-regression` greps `@regression`, and `app-all` greps `@(critical|smoke|sanity|integration|e2e|api|regression)`. In a repo on the standard set, a mis-cased tag such as `@Regression` matches neither script and **never runs**. Keeping every standard tag lowercase removes the question. A repo with a declared set greps that set's own casing, and there `@Regression` may be exactly right: never recase a tag the whitelist holds. The `single-tag-on-test` lint rule, configured with the repo's whitelist, catches a stray capital before merge.
 
 ### Kept set: the tag map
 
@@ -100,7 +100,7 @@ A multi-endpoint API flow (e.g. create → read → delete over HTTP only) is st
 - [ ] 6. Structure the body with `test.step("GIVEN/WHEN/THEN/AND: ...", async () => { ... })`. Web-first assertions only.
 - [ ] 7. For E2E: track created resource names in a `createdNames: string[]` array; add `test.afterAll` that deletes via the matching `helpers/app/<resource>.ts` helper.
 - [ ] 8. For data-driven tests: UI cases loop OUTSIDE the test block (one `test(...)` per case, descriptive names); API negative matrices loop INSIDE one test (`test.step` + `expect.soft` + `safeParse`, the `api-testing` skill).
-- [ ] 9. Run the spec — `npx playwright test <spec>` — and confirm zero failures. For tag groups, use the repo's script for that tag (`npm run app-<tag>` in the example app).
+- [ ] 9. Run the spec — `npx playwright test <spec>` — and confirm zero failures. For tag groups, use the script for that tag (`npm run app-<tag>`; with a kept set, the script of the mapped tag).
 ```
 
 ### Step 1 — pick the test type
@@ -205,12 +205,9 @@ E2E describes set `test.setTimeout(appConfig.timeouts.e2eJourney)` and take ever
 
 ### Step 8 — data-driven tests
 
-**UI cases** loop **outside** the `test()` block, so each case is its own selectable test (see Example 2). **API negative matrices** — invalid values, omitted fields, unsupported verbs — loop **inside** one `test()`, a `test.step` per value and `expect.soft` with `safeParse` ([`api-testing`](../api-testing/SKILL.md) § Per-field invalid-type loop): one test per validation concern, not one per value. The static-data tier rule (universal invalid-type arrays vs domain-specific curated sets vs inline boundaries) lives in the [`data-strategy`](../data-strategy/SKILL.md) skill — read it before adding a new file under `test-data/`.
+**UI cases** loop **outside** the `test()` block, so each case is its own selectable test (see Example 2). **API negative matrices** — invalid values, omitted fields, unsupported verbs — loop **inside** one `test()`, a `test.step` per value and `expect.soft` with `safeParse` ([`api-testing`](../api-testing/SKILL.md) § Per-field invalid-type loop): one test per validation concern, not one per value. The invalid-value tier rule (universal invalid-type arrays vs domain-specific curated sets vs inline boundaries) lives in [`api-testing` § Invalid-value arrays](../api-testing/SKILL.md#invalid-value-arrays--three-tier-rule) — read it before adding a new file under `test-data/`.
 
-> **Test data without the three tiers.** The three-tier shape — `test-data/factories/<area>/`, `test-data/static/util/`, `test-data/static/<area>/` — is the canonical pattern that the [`data-strategy`](../data-strategy/SKILL.md) skill teaches. If your repo's `test-data/` holds only JSON files (no factories, no tiered static data), that is drift to converge, and new tests authored through this skill should:
-> - Use `faker.<...>` directly inline for happy-path values until factories exist (e.g. `faker.string.alphanumeric(6)`).
-> - Import existing JSON directly, e.g. `import workerData from "../../../../test-data/app/worker.json";`.
-> - Avoid creating *new* JSON files — open an issue to add the matching tiered TS file instead.
+> **Where test data goes.** Static data lives in `test-data/app/<resource>.json` and typed factories in `helpers/app/`, in `test-data-generators.ts` once the `api-testing` extraction threshold is crossed (`~/.claude/CLAUDE.md § Standard repo layout and naming`); the [`data-strategy`](../data-strategy/SKILL.md) skill decides which one a value needs.
 
 ### Locale / i18n tests
 
@@ -232,7 +229,7 @@ npm run app-e2e
 npm run app-all
 ```
 
-A test that fails locally is not complete. For the failure-mode taxonomy and the right Playwright tool (UI Mode `npm run app-ui`, debug `npm run app-debug`, trace viewer), read the [`debugging`](../debugging/SKILL.md) skill. Do not raise timeouts, wrap in `try/catch`, or loosen a schema to make a failure go away.
+A test that fails locally is not complete. For the failure-mode taxonomy and the right Playwright tool (UI Mode `npx playwright test --ui`, debug `npx playwright test --debug`, trace viewer), read the [`debugging`](../debugging/SKILL.md) skill. Do not raise timeouts, wrap in `try/catch`, or loosen a schema to make a failure go away.
 
 ## Anti-patterns
 
@@ -331,7 +328,7 @@ for (const method of HTTP_METHODS) {
 }
 ```
 
-For larger or domain-specific data sets, see the [`data-strategy`](../data-strategy/SKILL.md) skill's three-tier rule.
+For larger or domain-specific data sets, see [`api-testing` § Invalid-value arrays](../api-testing/SKILL.md#invalid-value-arrays--three-tier-rule) and the [`data-strategy`](../data-strategy/SKILL.md) skill.
 
 ### Example 3 — E2E CRUD with API cleanup
 
@@ -399,7 +396,7 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Test runs locally, doesn't run in CI under the repo's regression script (`npm run app-regression` in the example app). | The tag's casing differs from the one the script greps (in the standard set, `@Regression` against `--grep @regression`). | Use the whitelist's casing, the one the grep uses. Never recase a tag the repo's whitelist holds: in a kept set, `@Regression` may be right, and the grep is what to check. |
+| Test runs locally, doesn't run in CI under the regression script (`npm run app-regression`; with a kept set, the script of the mapped tag). | The tag's casing differs from the one the script greps (in the standard set, `@Regression` against `--grep @regression`). | Use the whitelist's casing, the one the grep uses. Never recase a tag the repo's whitelist holds: in a kept set, `@Regression` may be right, and the grep is what to check. |
 | `Cannot find name 'apiRequest'` (or `dashboardPage`, `loginUser`, etc.) on the test context. | Spec imported `test` from `@playwright/test` instead of `fixtures/pom/test-options.ts`. | Change the import to `from "../../../../fixtures/pom/test-options"`. |
 | Qase shows the test run as orphaned / "Uncategorized". | Missing `qase.suite(SUITES.X);` as the first body line. | Add it immediately after `async (...) => {`. Extend `enums/app/qase-suites.ts` if `SUITES.X` doesn't exist. |
 | `test.describe` tag not picked up by the npm script. | Tag belongs on the test, not on the describe. | Move the `{ tag: "..." }` argument onto each individual `test(...)`. |
@@ -415,6 +412,6 @@ For a UI smoke test: pick `tests/app/e2e/`, tag `@smoke` (or the tag map's Smoke
 ## See Also
 
 - **Paired skills:** [`api-testing`](../api-testing/SKILL.md) for API specs (schema validation, status-code matrix, per-field negative coverage), [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI specs (POM Method Standards, locator priority). Always-on framework invariants live in [`~/.claude/CLAUDE.md`](../../CLAUDE.md).
-- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, three-tier static data), [`type-safety`](../type-safety/SKILL.md) (env via `config/env.ts`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
-- **Failure investigation:** [`debugging`](../debugging/SKILL.md) — failure-mode taxonomy and the right Playwright tool (`npm run app-ui`, `npm run app-debug`, trace viewer) when Step 9 reports red.
+- **Sibling cluster (UI authoring + API authoring):** [`page-objects`](../page-objects/SKILL.md) (POM class structure), [`selectors`](../selectors/SKILL.md) (locator strategy), [`api-testing`](../api-testing/SKILL.md) (deep API workflow + per-verb coverage), [`scaffold-spec`](../scaffold-spec/SKILL.md) (spec scaffolding starting points), [`fixtures`](../fixtures/SKILL.md) (DI + helper-fixture promotion), [`helpers`](../helpers/SKILL.md) (per-resource API helpers used in cleanup), [`enums`](../enums/SKILL.md) (`SUITES.X`, `MESSAGES.X`, `JOB_STATUSES`; paths live in `config`), [`data-strategy`](../data-strategy/SKILL.md) (factories, static data), [`type-safety`](../type-safety/SKILL.md) (env via `config/env.ts`, no `any`, Zod), [`config`](../config/SKILL.md) (`appConfig.api.*`, `appConfig.paths.*`).
+- **Failure investigation:** [`debugging`](../debugging/SKILL.md) — failure-mode taxonomy and the right Playwright tool (`npx playwright test --ui`, `npx playwright test --debug`, trace viewer) when Step 9 reports red.
 - **Orchestrator:** [`~/.claude/CLAUDE.md`](../../CLAUDE.md) — § Routed Skill Index lists this skill.

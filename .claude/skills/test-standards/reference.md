@@ -6,7 +6,7 @@ description: The invented example app's scenario inventory — each E2E, Functio
 
 Every catalog in this file is the invented example app's. Your repo's own lists belong in its `CLAUDE.md` or repo-context skill.
 
-The tag names in the first table are the exception: they are the toolkit's standard set from `test-standards`.
+The first table is the exception: its tag names are the toolkit's standard set from `test-standards`, and its script names are the standard ones from `~/.claude/CLAUDE.md § Standard repo layout and naming`.
 
 Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inventory: what each spec covers and which gaps are intentional. Keep your own list in that shape, so authors don't duplicate coverage and reviewers can spot what's missing for a new feature. Update it in the same edit batch as adding or removing a spec.
 
@@ -24,7 +24,7 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 
 ## Tag → npm script mapping
 
-| Tag (standard set) | npm script (example app) | What runs |
+| Tag (standard set) | npm script (standard) | What runs |
 |---|---|---|
 | `@critical` | `npm run app-critical` | 3–5 must-pass-before-anything-else tests |
 | `@smoke` | `npm run app-smoke` | Critical-path UI flows — login, landing, navigation |
@@ -35,7 +35,7 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 | `@e2e` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
 | (union) | `npm run app-all` | Full nightly / pre-merge |
 
-Tag casing must match the repo's greps exactly. Every standard tag is lowercase, so in a repo on the standard set a tag such as `@Regression` would never run; in a repo with a kept set it may be the correct form (see `SKILL.md` § Kept set: the tag map). The tags in this file are the toolkit's standard set; the `app-*` script names are the example app's.
+Tag casing must match the repo's greps exactly. Every standard tag is lowercase, so in a repo on the standard set a tag such as `@Regression` would never run; in a repo with a kept set it may be the correct form (see `SKILL.md` § Kept set: the tag map). The tags in this file are the toolkit's standard set, and the `app-*` script names are standard too.
 
 ---
 
@@ -121,11 +121,11 @@ In the example app, these live under `tests/app/api/`. One spec per API resource
 
 ## Setup specs
 
-In the example app, setup specs live at `tests/app/`. Filename pattern: `*.setup.ts`. No tag.
+Setup specs live at `tests/app/` (the standard layout). Filename pattern: `*.setup.ts`. No tag.
 
 | Spec | What it generates |
 |---|---|
-| `login.setup.ts` | Storage states (`.auth/app/<persona>Session.json`) via Keycloak UI login + API tokens via Keycloak admin client, written into `process.env.USER_ACCESS_TOKEN_*` (the setup project's one sanctioned touch of `process.env`; specs read them via `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`). Runs first; downstream projects (`app-chromium`, `api`, `keycloak`) depend on it. |
+| `login.setup.ts` | Storage states (`.auth/app/<persona>Session.json`) via Keycloak UI login + API tokens via Keycloak admin client, written into `process.env.USER_ACCESS_TOKEN_*` (the setup project's one sanctioned touch of `process.env`; specs read them via `tokens.full()` / `.admin()` / `.zero()` from `config/env.ts`). Runs first; downstream projects (in the example app, `app-chromium`, `api` and `keycloak`) depend on it. |
 
 ---
 

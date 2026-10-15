@@ -86,7 +86,8 @@ jobs:
         run: npx playwright test
         env:
           # Never commit these. Set them as repository or environment secrets; the suite reads
-          # them via `process.env.X!` so a missing one fails at startup rather than mid-test.
+          # them only through `config/env.ts`, which validates them at load, so a missing one fails at
+          # startup rather than mid-test.
           API_URL: ${{ vars.API_URL }}
           API_TOKEN: ${{ secrets.API_TOKEN }}
 

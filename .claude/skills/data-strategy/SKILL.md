@@ -1,6 +1,6 @@
 ---
 name: data-strategy
-version: 2.0.5
+version: 3.0.1
 description: Decide where every piece of test data comes from — JSON files vs faker vs env vs API seeding, per-test users, storage states. Use when a spec or helper creates payloads, seeds entities, picks credentials, or loads JSON; check here before adding any new generator. Triggers — "test data", "faker", "seed", "payload", "credentials", "test-data/". Not for env config/tokens (config) or changing existing cascading values (refactor-values).
 metadata:
   category: domain
@@ -44,7 +44,7 @@ One canonical home per kind of data. Adding a file outside these locations is a 
 | **Static — sentinels & lookup ids** | `test-data/app/<resource>.json` (keys: `invalidId`, `nonExistentId`, `sqlInjectionId`, `xssId`, etc.) | Pattern 5 | `test-data/app/worker.json`, `test-data/app/job-common.json`, `test-data/app/http-job.json`, `test-data/app/email-job.json` |
 | **Static — frontend mock payloads** | `test-data/app/<resource>.json` (used in `route.fulfill`) | Pattern 5 (route stub) | None in the example app; the slot is for a frontend-only stub — see `refactor-playbook.md §4` |
 | **Static loader (JSON + transformation)** | `helpers/app/<topic>Loader.ts` (or `testDataLoader.ts`) | Pattern 5 wrapper | None in the example app; add one when a JSON file needs a transformation |
-| **Dynamic — typed factory (`createXData`)** | `helpers/app/test-data-generators.ts` (the target), OR co-located in `helpers/app/<topic>.ts` for topic-specific data if the repo has no shared generators file | Pattern 2 | `helpers/app/workers.ts` (`buildCreateWorkerBody`, `buildUpdateWorkerBody`), `helpers/app/jobs.ts` (`buildCreateJobBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
+| **Dynamic — typed factory (`createXData`)** | Co-located in `helpers/app/<topic>.ts` next to the resource's helper, until the extraction threshold in `api-testing` moves them to `helpers/app/test-data-generators.ts` | Pattern 2 | `helpers/app/workers.ts` (`buildCreateWorkerBody`, `buildUpdateWorkerBody`), `helpers/app/jobs.ts` (`buildCreateJobBody` + 6 sibling per-type builders), `helpers/app/adminUsers.ts` (`generateUserPayload`) |
 | **Dynamic — Object Mother (named scenarios)** | Same file as the base factory | Pattern 3 | None in the example app; add them next to the base factory (e.g. `createWorkerForRegion`, `createMatchedWorkerAndJobPair`) |
 | **Dynamic — request-shape builders (URLs / query strings)** | `helpers/app/<topic>.ts` | Pattern 2 (request shaping) | `helpers/app/workers.ts` (`buildListWorkersUrl`), `helpers/app/jobs.ts` (`buildListJobsUrl`) |
 | **API seeder (`createX` + `deleteX`)** | `helpers/app/<topic>.ts` (paired) | Pattern 6 | `helpers/app/workers.ts`, `helpers/app/jobs.ts`, `helpers/app/adminTenants.ts`, `helpers/app/adminUsers.ts` |
@@ -124,7 +124,7 @@ Target shape — code in [patterns.md § Pattern 2](patterns.md). Mandatory shap
 - Function returns the type, takes `Partial<T> = {}` last.
 - Defaults are realistic and pass server validation.
 - `...options` spread must be the LAST property (overrides win).
-- One factory per entity. Per-entity files in `helpers/app/test-data-generators.ts` (target) or, if the repo has no shared generators file, in the topic-specific helper (in the example app, `buildCreateWorkerBody` in `helpers/app/workers.ts`, `buildCreateJobBody` + 6 sibling per-type builders in `helpers/app/jobs.ts`).
+- One factory per entity. Per-entity factories sit in the topic-specific helper until the `api-testing` extraction threshold moves them to `helpers/app/test-data-generators.ts` (in the example app, `buildCreateWorkerBody` in `helpers/app/workers.ts`, `buildCreateJobBody` + 6 sibling per-type builders in `helpers/app/jobs.ts`).
 
 > Drift: if your `buildCreate<X>Body` builders return `Record<string, unknown>` instead of an exported `XData` type (as the example app's do), refactor playbook §§ 1 + 3 cover the migration.
 
