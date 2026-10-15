@@ -1,7 +1,7 @@
 ---
 name: pr-review
-version: 4.1.0
-description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (single tag, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
+version: 5.0.0
+description: Pre-push self-review — walks every changed file against the matching skill's Critical block plus framework MUSTs (one type tag plus declared tags, qase.suite, schema.parse, test-options import, no any/XPath/waitForTimeout, cleanup). Use before opening a PR or pushing a branch. Triggers — "review my PR", "ready to push", "pre-push check". Not a bug/efficiency review (/code-review) and not a substitute for running the specs.
 metadata:
   category: running
 ---
@@ -57,7 +57,7 @@ Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fi
 Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modified spec:
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
-- [ ] Each `test(...)` has **exactly one** tag from the repo's whitelist (`test-standards`; a repo that already ran another set declares it in its project `CLAUDE.md`; a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands), cased exactly as that whitelist lists it — the standard set is all lowercase (`@regression`), matching the `package.json` greps. No combined tags. No tags on `test.describe(...)`.
+- [ ] Each `test(...)` has **exactly one** type tag, matching its folder, plus only declared suite and trait tags (`test-standards` § Tag taxonomy & npm scripts); a repo that already ran another set has exactly one tag from the set its project `CLAUDE.md` declares, and a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands. Every tag is cased exactly as declared — the standard taxonomy is all lowercase (`@regression`), matching the lint and Qase's exact filters. No tags on `test.describe(...)`.
 - [ ] Each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
@@ -233,7 +233,7 @@ git diff --name-status main...HEAD
 ```
 
 Walk:
-1. **`notifications.spec.ts`** — spec-file checklist: import ✓, single tag (`@api`) ✓, `qase.suite(SUITES.API_NOTIFICATIONS)` ✓, `test.step` ✓, web-first assertions ✓, no `try/catch` ✓, no `if`, no UI cleanup, schema validation idiom ✓.
+1. **`notifications.spec.ts`** — spec-file checklist: import ✓, one type tag (`@api`) plus `@regression` ✓, `qase.suite(SUITES.API_NOTIFICATIONS)` ✓, `test.step` ✓, web-first assertions ✓, no `try/catch` ✓, no `if`, no UI cleanup, schema validation idiom ✓.
 2. **`NotificationsPage.ts`** — POM checklist: extends `BasePage` ✓, locator getters ✓, no JSDoc on getters ✓, action methods have waits ✓, feedback locators present ✓, registered in `page-object-fixture.ts` ✓.
 3. **`notifications.ts`** (new helper) — helper checklist: `apiRequest` first arg ✓, no Zod schema inside ✓, cleanup `Promise.allSettled` ✓, kebab-case filename ✓.
 4. **Run:** `npx playwright test tests/app/api/notification-service/notifications/notifications.spec.ts --workers=1` 5× in a row (new spec, isolated) — 5/5 green; then once inside `@api` at the repo's declared worker count — green.

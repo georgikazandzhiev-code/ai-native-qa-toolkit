@@ -1,6 +1,6 @@
 ---
 name: accessibility-testing
-version: 1.0.6
+version: 2.0.0
 description: Automate accessibility checks in Playwright with @axe-core/playwright — WCAG-tagged axe scans per meaningful page state, keyboard and focus checks, ARIA structure snapshots, and a known-violations policy that never turns a scan green by disabling rules. Use when adding accessibility coverage to a page or feature, when a story or acceptance criterion mentions WCAG, screen readers or keyboard use, when a role-based locator fails because the markup has no accessible name, or when setting up an a11y gate in CI. Trigger phrases — "accessibility test", "a11y", "axe", "WCAG", "screen reader", "keyboard navigation", "color contrast". Do NOT use for picking locators (use the `selectors` skill). Do NOT use for the markup rules the frontend must follow (that is `constitutions/web-testability.md`, for the product repo). Do NOT use for filing the defect a scan finds (use the `bug-helper` command).
 metadata:
   category: domain
@@ -25,7 +25,7 @@ This skill has no paired rule (rule disposition: skill-only).
 - **ALWAYS** scan every meaningful state, not just the first render: dialogs open, form validation errors shown, empty state, error state, expanded menus. These are exactly the states `web-testability.md` requires the product to make addressable — and where most real a11y defects live.
 - **NEVER** treat a clean axe scan as "accessible". Automated rules can check only part of WCAG. Pair scans with keyboard and focus checks (Tab order, focus trap in dialogs, Escape returns focus to the trigger) and ARIA structure assertions (§ Beyond the scan).
 - **ALWAYS** report a missing accessible name or label as a **product** defect (via `bug-helper`), never route around it with a test-id. A role locator that cannot find a control is the test doing its job.
-- **ALWAYS** follow the framework rules for the spec itself: fixtures barrel import, exactly one tag from the repo's whitelist (`test-standards`; do not invent `@a11y`), `qase.suite(...)` first, `test.step` phases, WCAG tag list from a constant — not inline.
+- **ALWAYS** follow the framework rules for the spec itself: fixtures barrel import, exactly one type tag plus declared suite and trait tags (`test-standards`; do not use `@a11y` unless the repo declares it), `qase.suite(...)` first, `test.step` phases, WCAG tag list from a constant — not inline.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -85,7 +85,7 @@ Everything else (meaningful alt text, sensible reading order, error messages tha
 - ❌ **`exclude(selector)` for a known violation of your own.** Removes that region from every rule, so a new missing label or ARIA error there goes unseen. Fix: scan the whole page and filter the (rule, element) pair with `unexpectedViolations`.
 - ❌ **`new AxeBuilder({ page })` in every spec.** Tags and exclusions drift per file. Fix: the `makeAxeBuilder` fixture.
 - ❌ **Injecting axe by hand with `page.evaluate`.** Forbidden by the constitution and unnecessary — `AxeBuilder` injects itself.
-- ❌ **A new `@a11y` or `@accessibility` tag.** Not in the whitelist, so no CI job runs it. Fix: a tag from the repo's whitelist (`test-standards`).
+- ❌ **An undeclared `@a11y` or `@accessibility` tag.** It fails the lint, and no CI job selects it. Fix: the test's type tag plus its suites (`test-standards`); declare an `@a11y` trait first if the repo wants a job to select accessibility tests.
 - ❌ **Switching to `getByTestId` because `getByRole` cannot find a control.** That is an accessibility defect being routed around. Fix: file it, keep the role locator.
 - ❌ **Calling a clean scan "WCAG compliant" in a report.** Overclaims what automation covers. Fix: report "no automated violations at <level>" and list the manual checks separately.
 
@@ -98,7 +98,7 @@ Everything else (meaningful alt text, sensible reading order, error messages tha
 - [ ] No `disableRules`, no dropped tags, no spec-local exclusions; `exclude` is used only for third-party regions; known violations are (rule, element) entries in the one list, with ticket + expiry.
 - [ ] Keyboard path and dialog focus are checked for the primary flow.
 - [ ] Missing names / labels found along the way were filed as product defects, not worked around.
-- [ ] Spec follows `test-standards`: barrel import, one whitelisted tag, `qase.suite` first, `test.step` phases.
+- [ ] Spec follows `test-standards`: barrel import, one type tag plus declared suites and traits, `qase.suite` first, `test.step` phases.
 - [ ] Ran the spec; results attached; first real run recorded in `memories/learned_patterns.md`.
 
 ## Examples
@@ -132,7 +132,7 @@ Refuse the global disable. Check whether the footer is owned by this team. If it
 - **`selectors`** — role-first locators double as accessibility checks; a failing `getByRole` is often an a11y defect.
 - **`page-objects`** — action methods that reach each state and wait for it.
 - **`fixtures`** — how `makeAxeBuilder` is registered and merged into the barrel.
-- **`test-standards`** — spec placement, the tag whitelist, Qase wiring.
+- **`test-standards`** — spec placement, the tag taxonomy, Qase wiring.
 - **`enums`** — where the WCAG tag constant lives.
 - **`flakiness-triage`** — the quarantine-with-expiry policy the known-violations list mirrors.
 - **`bug-helper`** command — filing what a scan finds.

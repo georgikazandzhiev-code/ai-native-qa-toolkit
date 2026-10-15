@@ -34,7 +34,7 @@ Lint every TypeScript file, not only `tests/`, `pages/` and `fixtures/`. `standa
 |------|--------------------|----------|
 | `no-direct-playwright-import` | MUST Imports | `import { test } from '@playwright/test'` in a spec file — bypasses fixture injection |
 | `no-pom-instantiation-in-test` | MUST Dependency Injection | `new SettingsPage(page)` inside a test body |
-| `single-tag-on-test` | MUST Tags | Zero tags, two tags, a non-whitelisted tag, or a tag on `describe()` |
+| `single-tag-on-test` | MUST Tags | No tag, no type tag, two type tags, a tag in no declared category, the same tag twice, or a tag on `describe()`. With a `whitelist` (a kept set or an `@App-*` repo): anything but exactly one tag from it. The id predates composable tags and is kept so existing configs keep working |
 | `require-strict-object` | MUST Schemas | `z.object(` — **autofixable** to `z.strictObject(` |
 | `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted, and `expect.soft(Schema.parse(body))`, which isn't soft (the loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`) |
 | `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/`, `playwright.config.*`). A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
@@ -60,7 +60,8 @@ rules: {
     specPattern: '\\.spec\\.ts$',          // which files count as specs
   }],
   'qa-constitution/single-tag-on-test': ['error', {
-    whitelist: ['@critical', '@smoke', '@sanity', '@regression', '@api', '@integration', '@e2e'],  // the standard tags (test-standards); a repo that kept its own set lists that set here; a repo still on the toolkit's earlier @App-* set keeps its @App-* whitelist until its move PR changes it
+    categories: { trait: ['@security'] },  // added to the standard taxonomy (test-standards); suite and trait only, the type tags are fixed
+    // whitelist: ['@Smoke', '@Regression'],  // instead of categories, never with it: a repo that kept its own set, or is still on @App-*, one tag per test
   }],
   'qa-constitution/no-pom-instantiation-in-test': ['error', {
     pattern: '(Page|Component|Client)$',   // what counts as an injectable
@@ -76,7 +77,7 @@ rules: {
 }
 ```
 
-`single-tag-on-test` with no `whitelist` still enforces *exactly one* tag; add the whitelist to also enforce which ones. A setup file (`*.setup.ts`) is exempt from it and from `require-assertion-in-test`: its steps are declared with `test()`, but they are setup, carry no tag (`test-standards`) and have nothing to assert. The exemption goes by file name, so a real test must never be named `*.setup.ts`; `standard-layout` still fails one outside `tests/app/`.
+`single-tag-on-test` with no options checks the standard taxonomy. This is a breaking change from 0.6: before, no options meant "any one tag" (moving from 4.x: `test-standards` § Tag taxonomy & npm scripts). `categories` adds suite and trait tags to the standard ones and cannot remove any (an organisation plugin configures the same option); `whitelist` switches to one tag per test for a kept set, and setting both is a config error. CI selects tests with tag expressions over the result, such as `--grep "@regression" --grep-invert "@slow"`. A setup file (`*.setup.ts`) is exempt from it and from `require-assertion-in-test`: its steps are declared with `test()`, but they are setup, carry no tag (`test-standards`) and have nothing to assert. The exemption goes by file name, so a real test must never be named `*.setup.ts`; `standard-layout` still fails one outside `tests/app/`.
 
 `standard-layout` and the drift table: a `drift` entry excuses a file that is out of place, and a misnamed file only when its own path is listed (`drift: ['tests/app/api/orders/createOrder.spec.ts']`). A file inside its standard folder is otherwise always judged, so `drift: ['pages/']` for a legacy `pages/` tree does not switch off `pages/app/`. A new file never goes on the list: the constitution sends it to the standard location. The rule judges what it can recognise from one file — specs (`*.spec.ts`, and a `*.test.ts` that imports Playwright or the barrel, named as a spec should be), setup files (any `<name>.setup.ts`), the barrel, `*-fixture.ts`, a class extending a page base (also through a named import under another name, `import { BasePage as Base }`), and k6 scripts (not `.d.ts` files or type-only imports). It cannot see a legacy barrel with another name (`support/fixtures.ts`), a page object that extends another page object, or helpers, enums, schemas and test data; those stay a review responsibility.
 

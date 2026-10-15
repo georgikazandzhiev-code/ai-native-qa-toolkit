@@ -1,6 +1,6 @@
 ---
 name: debugging
-version: 2.0.2
+version: 2.0.4
 description: Investigate any Playwright test failure — failure-mode taxonomy (TimeoutError, strict mode, ZodError, detachment, network race, stale storage state), trace capture/replay, and choosing UI Mode vs Trace Viewer vs Inspector. Load whenever a test fails or behaves unexpectedly. Triggers — "test fails", "timeout", "ZodError", "trace". Never to silence a failure; for intermittent failures use flakiness-triage first.
 metadata:
   category: running
@@ -189,5 +189,5 @@ Before declaring a failure resolved:
 - **`fixtures`** — "fixture is undefined" failures; storage-state fixtures; the `apiRequest` and `mailpit` lifecycle.
 - **`refactor-values`** — when an `expect()` mismatch traces to a `MESSAGES.*` enum value or `test-data/app/*.json` value drift.
 - **`data-strategy`** — when test data has drifted from the live API contract or from the UI's rendered strings.
-- **[`test-standards`](../test-standards/SKILL.md)** — test independence, single-tag rule, structure conventions; many "passes alone, fails in suite" failures originate here. Pair with [`api-testing`](../api-testing/SKILL.md) for API-spec failures, [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI-spec failures.
+- **[`test-standards`](../test-standards/SKILL.md)** — test independence, the tag taxonomy, structure conventions; many "passes alone, fails in suite" failures originate here. Pair with [`api-testing`](../api-testing/SKILL.md) for API-spec failures, [`page-objects`](../page-objects/SKILL.md) + [`selectors`](../selectors/SKILL.md) for UI-spec failures.
 - **[`../../CLAUDE.md`](../../CLAUDE.md)** — the constitution: § When You're Stuck; WON'T (no `try/catch`, no XPath, no `waitForTimeout`); MUST § Schemas (never loosen); AI Workflow step 8 (never raise timeouts).

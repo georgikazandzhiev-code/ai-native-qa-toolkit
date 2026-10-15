@@ -67,16 +67,43 @@ tester.run('no-page-evaluate', plugin.rules['no-page-evaluate'], {
 
 tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
   valid: [
-    `test('@regression creates a project', async () => { await go(); });`,
-    { code: `test('creates a project', { tag: '@regression' }, async () => {});`, options: [{ whitelist: ['@regression'] }] },
+    // composable (the default): one type tag, any declared suite and trait tags, in the title or the option
+    `test('@api creates a project', async () => { await go(); });`,
+    `test('creates a project', { tag: '@functional' }, async () => {});`,
+    `test('creates a project', { tag: ['@functional', '@regression'] }, async () => {});`,
+    `test('@api @regression @slow lists ten thousand projects', async () => {});`,
+    `test('logs in', { tag: ['@e2e', '@smoke', '@critical'] }, async () => {});`,
+    // a repo extends a category; it keeps the type tags
+    { code: `test('@api @security rejects a foreign id', async () => {});`, options: [{ categories: { trait: ['@security'] } }] },
+    // extending keeps every standard tag: adding a trait drops nothing
+    { code: `test('@api @regression @slow @security a', async () => {});`, options: [{ categories: { trait: ['@security'] } }] },
+    { code: `test('@functional @nightly a', async () => {});`, options: [{ categories: { suite: ['@nightly'] } }] },
+    // a tag the rule cannot read may be the type tag: no guess
+    { code: `test('a', { tag: ['@regression', Tags.API] }, async () => {});` },
+    // single-tag mode, for a kept set or an @App-* repo
+    { code: `test('creates a project', { tag: '@Regression' }, async () => {});`, options: [{ whitelist: ['@Regression', '@Smoke'] }] },
     // describe with no tag is fine
-    `describe('projects', () => { test('@smoke a', async () => {}); });`,
+    `describe('projects', () => { test('@e2e @smoke a', async () => {}); });`,
   ],
   invalid: [
     { code: `test('creates a project', async () => {});`, errors: [{ messageId: 'none' }] },
-    { code: `test('@a @b creates', async () => {});`, errors: [{ messageId: 'many' }] },
+    // a suite or trait tag alone says which runs include the test, not what it is
+    { code: `test('@regression creates', async () => {});`, errors: [{ messageId: 'noType' }] },
+    { code: `test('creates', { tag: ['@smoke', '@critical'] }, async () => {});`, errors: [{ messageId: 'noType' }] },
+    { code: `test('@api @e2e creates', async () => {});`, errors: [{ messageId: 'manyTypes' }] },
+    { code: `test('@api @nope creates', async () => {});`, errors: [{ messageId: 'unknown' }] },
+    { code: `test('creates', { tag: ['@api', '@slow', '@slow'] }, async () => {});`, errors: [{ messageId: 'duplicate' }] },
+    // tags are case-sensitive: a stray capital is not the standard tag
+    { code: `test('@API creates', async () => {});`, errors: [{ messageId: 'unknown' }, { messageId: 'noType' }] },
+    // an extended category does not let an undeclared tag through
+    { code: `test('@api @perf a', async () => {});`, options: [{ categories: { trait: ['@security'] } }], errors: [{ messageId: 'unknown' }] },
+    // the type tags are fixed: an extension cannot add one
+    { code: `test('@ui a', async () => {});`, options: [{ categories: { trait: ['@ui'] } }], errors: [{ messageId: 'noType' }] },
+    // an unknown tag twice is one unknown and one duplicate, not two unknowns
+    { code: `test('@api @nope @nope a', async () => {});`, errors: [{ messageId: 'unknown' }, { messageId: 'duplicate' }] },
     { code: `describe('@regression projects', () => {});`, errors: [{ messageId: 'onDescribe' }] },
-    // the whitelist is case-sensitive: a stray capital is not the standard tag
+    // single-tag mode keeps its old rules
+    { code: `test('@a @b creates', async () => {});`, options: [{ whitelist: ['@a', '@b'] }], errors: [{ messageId: 'many' }] },
     { code: `test('@Regression a', async () => {});`, options: [{ whitelist: ['@regression'] }], errors: [{ messageId: 'notWhitelisted' }] },
     {
       code: `test('@nope creates', async () => {});`,
@@ -253,7 +280,7 @@ tester.run('regression/hooks-are-not-tests', plugin.rules['single-tag-on-test'],
      });`,
     `test.setTimeout(60_000);`,
     `const extended = test.extend({ settingsPage: async ({ page }, use) => { await use(new SettingsPage(page)); } });`,
-    `test('@smoke reads test info', async () => { expect(test.info().title).toBeTruthy(); });`,
+    `test('@e2e @smoke reads test info', async () => { expect(test.info().title).toBeTruthy(); });`,
   ],
   invalid: [],
 });

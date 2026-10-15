@@ -1,6 +1,6 @@
 ---
 name: refactor-values
-version: 1.0.9
+version: 1.0.11
 description: Safe workflow for changing values that already cascade — enum string values, enum key renames, appConfig route constants, fixed test-data JSON. Use BEFORE editing any existing shared value so every consumer updates atomically. Triggers — "rename enum", "change SUITES value", "update test-data value", "change route constant". Not for adding new enums (enums) or new test data (data-strategy).
 metadata:
   category: authoring
@@ -89,7 +89,7 @@ Then the affected Playwright tests, with the standard scripts (`~/.claude/CLAUDE
 
 - `npm run app-api` — runs `--grep @api`. Right call when the value is referenced from API specs.
 - `npm run app-e2e` — runs `--grep @e2e`. Right call when the value flows through end-to-end specs.
-- `npm run app-regression` — runs `--grep @regression`. Right call for functional specs.
+- `npm run app-functional` — runs `--grep @functional`. Right call for functional specs.
 - `npx playwright test <path>` — when the change touches a single spec file, run that file directly.
 
 Do not raise timeouts, weaken a schema, or wrap in `try/catch` to make a failing test green — load the `debugging` skill.

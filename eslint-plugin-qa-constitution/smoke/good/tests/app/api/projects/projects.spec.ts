@@ -24,7 +24,7 @@ async function assertProjectListShape(body: unknown): Promise<void> {
 //   expect(second.status()).toBe(409);
 // });
 
-test('@api creates a project and returns the created record', async ({ request }) => {
+test('@api @regression @security creates a project and returns the created record', async ({ request }) => {
   const response = await request.post('/api/v1/projects', {
     headers: { Authorization: `Bearer ${tokens.full()}` },
     data: { name: 'contract check' },
@@ -63,11 +63,11 @@ test('@integration keeps the id of a project whose creation response failed', as
 });
 
 // eslint-asserts-via-helper — the assertion lives in assertProjectListShape().
-test('@sanity the project list matches the contract', async ({ api }) => {
+test('@api @sanity the project list matches the contract', async ({ api }) => {
   await assertProjectListShape(await api.listProjects());
 });
 
-test('@smoke renames the profile', async ({ settingsPage }) => {
+test('@functional @smoke renames the profile', async ({ settingsPage }) => {
   await settingsPage.rename('renamed');
   await settingsPage.expectSaved();
 });

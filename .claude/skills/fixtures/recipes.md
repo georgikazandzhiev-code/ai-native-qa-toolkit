@@ -90,7 +90,7 @@ test.describe('Backup job detail view', () => {
         );
     });
 
-    test('detail view renders the seeded job', { tag: '@regression' }, async ({ jobsPage }) => {
+    test('detail view renders the seeded job', { tag: ['@functional', '@regression'] }, async ({ jobsPage }) => {
         await jobsPage.open();
         await jobsPage.searchByName(name);
         await jobsPage.openRowActionMenu(jobsPage.getRowByName(name), 'View details');
@@ -149,7 +149,7 @@ test.describe('Guest navigation', () => {
         await loginPage.open();
     });
 
-    test('guest sees the login form', { tag: '@regression' }, async ({ loginPage }) => {
+    test('guest sees the login form', { tag: ['@functional', '@regression'] }, async ({ loginPage }) => {
         await expect(loginPage.emailInput).toBeVisible();
     });
 });
@@ -167,7 +167,7 @@ Trigger: one block of tests needs a different persona than the project default.
 test.describe('<persona> view', () => {
     test.use({ storageState: '.auth/app/<persona>Session.json' });
 
-    test('<persona> sees the persona-only view of the jobs page', { tag: '@regression' }, async ({ sideNavigation, jobsPage }) => {
+    test('<persona> sees the persona-only view of the jobs page', { tag: ['@functional', '@regression'] }, async ({ sideNavigation, jobsPage }) => {
         await sideNavigation.navigateToJobs();
         await jobsPage.verifyPageLoaded();
         await expect(jobsPage.<personaOnlyLocator>).toBeVisible();

@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 5.0.0 -->
+<!-- toolkit-version: 6.0.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -48,7 +48,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Schemas** | Validate every API response against a Zod schema. New schemas use `z.strictObject()`. Never loosen a schema to make a test pass |
 | **Response Validation** | Exact pattern in test bodies: `expect(SchemaName.parse(body)).toBeTruthy();`. **Carve-out for negative-matrix loops** (one test iterating invalid values): `expect.soft(SchemaName.safeParse(body).success, label).toBe(true)` per value — `parse` throws and would stop the loop |
 | **Sources of Truth** | Tokens/URLs from the config module, which alone reads `process.env` and validates it with Zod once, at load — never `process.env` in a spec, helper, fixture or page object. Fixed constants from test-data files. Endpoint/route paths from a central config module. Messages/suites/roles/statuses from enums. **Never hardcode** |
-| **Tags** | Exactly **one** tag per `test()` — never on `test.describe()`. Use the toolkit's standard set, lowercase, exactly as the `test-standards` skill lists it. One exception: a repo that already ran another set before adopting the toolkit keeps it (its CI jobs, Qase filters and dashboards depend on those tags) and declares it in its project `CLAUDE.md`; that set is its whitelist. A new repo uses the standard set. A repo still on the toolkit's earlier `@App-*` set (up to 2.x) keeps its current `@App-*` tag on new tests until its move to the standard set lands (`test-standards`) |
+| **Tags** | Tags describe the test, not the CI job: every `test()` carries exactly **one** type tag (`@api`, `@functional`, `@e2e`, `@integration`) plus any declared suite tags (`@smoke`, `@sanity`, `@regression`) and trait tags (`@critical`, `@slow`), lowercase, exactly as the `test-standards` skill's taxonomy lists them — never on `test.describe()`. CI jobs select tests with tag expressions. A repo or organisation plugin extends the suite and trait categories in its config and project `CLAUDE.md`; an undeclared tag fails the lint; nothing replaces the type tags. One exception: a repo that already ran another set before adopting the toolkit keeps it, one tag per test (its CI jobs, Qase filters and dashboards depend on those tags), and declares it with its tag map in its project `CLAUDE.md`. A repo still on the toolkit's earlier `@App-*` set (up to 2.x) keeps its current `@App-*` tag on new tests until its move to the standard taxonomy lands (`test-standards`) |
 | **Qase (when used)** | Every new test gets `qase.suite(...)` as its first body line; `qase.id(N)` commented out until mapped |
 | **Assertions** | Web-first only. Prefer strict (`toBe`, `toEqual`) over loose. Exception: `toBeTruthy()` for `Schema.parse(body)` |
 | **Cleanup** | Tests that mutate state revert it in `afterEach`/`afterAll`. Capture initial state in `beforeAll` for shared mutable resources. Leave the environment exactly as found |
@@ -85,7 +85,7 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **No conditional test logic** | No `if/else`, ternary, or `test.skip()` in test bodies. Seed preconditions in setup. Skips give false green and corrupt test-management signal |
 | **No `try/catch` in tests** | Let assertions throw. Only exception: capturing an accidentally-created resource ID for cleanup |
 | **No `await expect(...).not.toThrow()`** | Just call the function |
-| **No tags on `describe` / no multi-tag** | Exactly one tag, on `test()` only |
+| **No tags on `describe` / no second type tag** | Tags go on `test()` only, and a test is exactly one type |
 | **No magic numbers** | Timeouts live in config (named budgets on `appConfig.timeouts`); fixed test values in test-data files; named sets of app strings and statuses in enums |
 | **No JSDoc on locator getters** | Action methods only |
 | **No commented-out code** | Delete dead code. `// TODO:` / `// FIXME:` / `// BUG:` annotations only, with context. The two sanctioned exceptions: a disabled `test(...)` block under `// TODO: FIXME: <TICKET>` (see No silent coverage drops), and the `// qase.id(N);` placeholder |
@@ -118,7 +118,7 @@ Every repo that adopts this toolkit uses this layout and naming. An existing rep
 | Test data | static data in `test-data/app/`; typed factories in `helpers/app/`, next to the resource's helper until the `api-testing` extraction threshold moves them to `test-data-generators.ts` (the `data-strategy` skill owns the choice) | `kebab-case.json`; factories `kebab-case.ts` |
 | Config | `config/env.ts` (the only reader of `process.env`), `config/app.ts` (`appConfig`), and `config/util/<service>.ts` when one service needs its own | — |
 | Environment files | `env/.env.<environment>`, never committed; the committed template `env/.env.example` names every variable the env files hold (the `config` skill lists the ones that stay out) | — |
-| npm scripts | `app-<tag>` for each tag in the repo's whitelist (the standard set in `test-standards`, or a set the repo kept), with the tag's name in lowercase and without the `@` (`@Smoke` → `app-smoke`); `app-all` for all of them | — |
+| npm scripts | `app-<tag>` for each declared tag (the standard taxonomy in `test-standards`, or a set the repo kept), with the tag's name in lowercase and without the `@` (`@Smoke` → `app-smoke`); `app-all` for every test with a type tag (a kept set: every tag in it) | — |
 | Load tests | `tests/perf/<test type>/`; shared k6 helpers in `tests/perf/lib/`, data files in `tests/perf/fixtures/` (`k6-load-testing`) | `kebab-case.ts` |
 
 `<service>` (some skills say `<domain>`) is one folder per backend service, plus `shared/`; a product with a single backend uses one folder per product area instead, such as `orders/` and `identity/`. Which folders exist is a product fact, so the repo's own `CLAUDE.md` lists them.
