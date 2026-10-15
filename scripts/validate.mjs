@@ -389,11 +389,18 @@ if (!existsSync(rulesDir)) {
 
 const ignorePath = join(ROOT, '.cursorignore');
 if (!existsSync(ignorePath)) {
-  err('.cursorignore', 'missing — generated trees and secrets will be indexed');
+  // Optional only where Cursor isn't used: a repository that ships `.cursor/` is indexed by Cursor,
+  // so without the file its generated trees and secrets would be too.
+  if (existsSync(join(ROOT, '.cursor'))) err('.cursorignore', 'missing — this repository ships .cursor/, so generated trees and secrets would be indexed');
+  else warn('.cursorignore', 'not present — skipped');
 } else {
-  const ig = read(ignorePath);
+  // Only real ignore lines count: not a comment that mentions the name, not a `!` re-include.
+  const patterns = read(ignorePath)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#') && !l.startsWith('!'));
   for (const must of ['node_modules', '.env']) {
-    if (!ig.includes(must)) warn('.cursorignore', `does not exclude ${must}`);
+    if (!patterns.some((l) => l.includes(must))) warn('.cursorignore', `does not exclude ${must}`);
   }
 }
 
