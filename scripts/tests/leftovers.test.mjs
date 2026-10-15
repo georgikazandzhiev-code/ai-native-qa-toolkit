@@ -93,6 +93,7 @@ const CASES = [
   bites('a file name', SKILL, 'Load `http-zz-leftover.json`.', 'http-zz-leftover'),
   bites('a constant', SKILL, 'Read `ZZ_LEFTOVER_TITLES`.', 'ZZ_LEFTOVER_TITLES'),
   bites('a test-id written with a placeholder after a hyphen', SKILL, 'Click `zzprobe-view-{id}`.', 'zzprobe-view'),
+  bites('a test-id written with a placeholder before a hyphen', SKILL, 'Click `{id}-zzprobe-view`.', 'zzprobe-view'),
 
   // Each kind carries its own message.
   bites('a page object or type', SKILL, 'Assert the `ZzState` badge.', 'ZzState', 'pageObjects', "`ZzState` is one of the original product's page objects or types"),
