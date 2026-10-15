@@ -35,8 +35,8 @@
 #   - `eslint`, `eslint-plugin-qa-constitution` and `@typescript-eslint/parser`, configured as in
 #     eslint-plugin-qa-constitution/README.md § Install; `configs.strict` also needs
 #     `@typescript-eslint/eslint-plugin`, wired as that section shows;
-#   - `typescript` and a `tsconfig.json` for the Typecheck step (a minimal one is in the same README,
-#     § Typecheck).
+#   - `typescript`, `@types/node` and a `tsconfig.json` for the Typecheck step (a minimal one is
+#     in the same README, § Typecheck).
 
 name: Agentic QA quality gate
 
@@ -76,8 +76,8 @@ jobs:
         run: npx eslint . --max-warnings 0
 
       # Type errors that the linter cannot see. `any` and `@ts-ignore` are constitution
-      # violations, so a suite that does not typecheck is not compliant either. Needs `typescript`
-      # and a `tsconfig.json` (see the header).
+      # violations, so a suite that does not typecheck is not compliant either. Needs `typescript`,
+      # `@types/node` and a `tsconfig.json` (see the header).
       - name: Typecheck
         run: npx tsc --noEmit
 

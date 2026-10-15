@@ -52,10 +52,10 @@ Spread `configs.strict` first and merge its `plugins` into yours. Written the ot
 
 ### Typecheck
 
-The CI template's typecheck step (`npx tsc --noEmit`) needs `typescript` and a `tsconfig.json` at the repo root. The lint can't see type errors, and `any` and `@ts-ignore` are constitution violations, so a suite that does not typecheck is not compliant either.
+The typecheck step in the toolkit's CI template (`templates/agentic-qa-ci.yml`) runs `npx tsc --noEmit`. It needs `typescript`, `@types/node` (`config/env.ts` reads `process`, and `@playwright/test` does not install Node's types) and a `tsconfig.json` at the repo root. The lint can't see type errors, and `any` and `@ts-ignore` are constitution violations, so a suite that does not typecheck is not compliant either.
 
 ```bash
-npm i -D typescript
+npm i -D typescript @types/node
 ```
 
 A minimal `tsconfig.json`:
@@ -68,9 +68,10 @@ A minimal `tsconfig.json`:
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts", "**/*.mts", "**/*.cts"]
 }
 ```
 
