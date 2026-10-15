@@ -1,3 +1,5 @@
+// Deliberately non-compliant fixture: every line breaks a rule the lint gate must catch, through
+// the real ESLint CLI. Nothing in this file is an example to copy.
 import { test, expect } from '@playwright/test';
 import { z } from 'zod';
 
