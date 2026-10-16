@@ -33,7 +33,8 @@
 # What the repo needs for this file to run:
 #   - a `package-lock.json` (note 2);
 #   - `eslint`, `eslint-plugin-qa-constitution` and `@typescript-eslint/parser`, configured as in
-#     eslint-plugin-qa-constitution/README.md § Install; `configs.strict` also needs
+#     eslint-plugin-qa-constitution/README.md § Install (the plugin is not on npm yet: § Install
+#     installs it from a packed tarball the repo keeps, which `npm ci` reads); `configs.strict` also needs
 #     `@typescript-eslint/eslint-plugin`, wired as that section shows;
 #   - `typescript`, `@types/node` and a `tsconfig.json` for the Typecheck step (a minimal one is
 #     in the same README, § Typecheck).
