@@ -100,30 +100,38 @@ A minimal `tsconfig.json`:
 
 ### Options worth setting
 
+Options go in a config object of their own, after the preset's object from § Install. Flat config merges `rules` across objects one rule at a time, so the preset's other rules stay on. Written into the preset's object, after `...qa.configs.recommended` or `...qa.configs.strict`, a `rules` key replaces the preset's whole `rules`: every rule the block doesn't name is switched off, and the gate stays green. To keep one object, merge instead: `rules: { ...qa.configs.recommended.rules, 'qa-constitution/…': [...] }`.
+
 ```js
-rules: {
-  'qa-constitution/no-direct-playwright-import': ['error', {
-    barrel: 'fixtures/pom/test-options',   // your barrel path, for the message
-    specPattern: '\\.spec\\.ts$',          // which files count as specs
-  }],
-  'qa-constitution/single-tag-on-test': ['error', {
-    categories: { trait: ['@security'] },  // added to the standard taxonomy (test-standards); suite and trait only, the type tags are fixed
-    // whitelist: ['@Smoke', '@Regression'],  // instead of categories, never with it: a repo that kept its own set, or is still on @App-*, one tag per test
-  }],
-  'qa-constitution/no-pom-instantiation-in-test': ['error', {
-    pattern: '(Page|Component|Client)$',   // what counts as an injectable
-  }],
-  'qa-constitution/standard-layout': ['error', {
-    drift: ['e2e/', 'src/pages/', 'auth.setup.ts'], // your drift table: folders or single files that haven't moved yet; a misnamed file is listed by its own path
-    pageBases: ['BasePage', 'DataTableBase'], // the classes a page object extends; the list replaces the default, so keep BasePage and DataTableBase in it
-    root: 'qa',                            // only if the layout starts below the repo root; relative to it, or absolute
-  }],
-  'qa-constitution/no-process-env-outside-config': ['error', {
-    allow: '^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the layout root (root when set, else the repo root)
-    root: 'qa',                            // only if the layout starts below the repo root, as for standard-layout
-  }],
+// eslint.config.js: after the ignores and the preset's object from § Install
+{
+  files: ['**/*.ts', '**/*.mts', '**/*.cts'],
+  rules: {
+    'qa-constitution/no-direct-playwright-import': ['error', {
+      barrel: 'fixtures/pom/test-options',   // your barrel path, for the message
+      specPattern: '\\.spec\\.ts$',          // which files count as specs
+    }],
+    'qa-constitution/single-tag-on-test': ['error', {
+      categories: { trait: ['@security'] },  // added to the standard taxonomy (test-standards); suite and trait only, the type tags are fixed
+      // whitelist: ['@Smoke', '@Regression'],  // instead of categories, never with it: a repo that kept its own set, or is still on @App-*, one tag per test
+    }],
+    'qa-constitution/no-pom-instantiation-in-test': ['error', {
+      pattern: '(Page|Component|Client)$',   // what counts as an injectable
+    }],
+    'qa-constitution/standard-layout': ['error', {
+      drift: ['e2e/', 'src/pages/', 'auth.setup.ts'], // your drift table: folders or single files that haven't moved yet; a misnamed file is listed by its own path
+      pageBases: ['BasePage', 'DataTableBase'], // the classes a page object extends; the list replaces the default, so keep BasePage and DataTableBase in it
+      root: 'qa',                            // only if the layout starts below the repo root; relative to it, or absolute
+    }],
+    'qa-constitution/no-process-env-outside-config': ['error', {
+      allow: '^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the layout root (root when set, else the repo root)
+      root: 'qa',                            // only if the layout starts below the repo root, as for standard-layout
+    }],
+  },
 }
 ```
+
+`tests/fault-injection.test.mjs` runs this block as written: next to the preset's object, a rule it doesn't name still reports, and merged into the preset's object with a plain `rules` key, that rule goes silent.
 
 `single-tag-on-test` with no options checks the standard taxonomy. This is a breaking change from 0.7: before, no options meant "any one tag" (moving from 5.x: `test-standards` § Tag taxonomy & npm scripts). `categories` adds suite and trait tags to the standard ones and cannot remove any (an organisation plugin configures the same option); `whitelist` switches to one tag per test for a kept set, and setting both is a config error: ESLint reports it as "Value {…} should NOT be valid", even with an empty whitelist, so remove one of the two options. CI selects tests with tag expressions over the result, such as `--grep "@regression" --grep-invert "@slow"`. A setup file (`*.setup.ts`) is exempt from it and from `require-assertion-in-test`: its steps are declared with `test()`, but they are setup, carry no tag (`test-standards`) and have nothing to assert. The exemption goes by file name, so a real test must never be named `*.setup.ts`; `standard-layout` still fails one outside `tests/app/`.
 
