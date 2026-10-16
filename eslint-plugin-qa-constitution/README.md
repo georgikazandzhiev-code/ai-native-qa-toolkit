@@ -6,9 +6,26 @@ The rest of this toolkit is prose that an agent is asked to follow. This is the 
 
 ## Install
 
-```bash
-npm i -D eslint eslint-plugin-qa-constitution @typescript-eslint/parser
-```
+The plugin is not on npm yet, so `npm i eslint-plugin-qa-constitution` fails. Until it is published, install it from this repository as a packed tarball that your repo keeps; `npm ci` then installs it in CI without a clone of the toolkit.
+
+1. Clone the toolkit and pack the plugin:
+
+   ```bash
+   git clone https://github.com/georgikazandzhiev-code/ai-native-qa-toolkit.git
+   cd ai-native-qa-toolkit/eslint-plugin-qa-constitution && npm pack
+   ```
+
+   This writes `eslint-plugin-qa-constitution-<version>.tgz`.
+2. Copy the tarball into your repo, for example into `vendor/`, and commit it.
+3. Install it with ESLint and the parser:
+
+   ```bash
+   npm i -D eslint @typescript-eslint/parser ./vendor/eslint-plugin-qa-constitution-<version>.tgz
+   ```
+
+   `package.json` and the lockfile now point at the file (`"file:vendor/eslint-plugin-qa-constitution-<version>.tgz"`).
+
+To upgrade, pack the new version, replace the tarball, and run step 3 again. Once the plugin is on npm, `npm i -D eslint eslint-plugin-qa-constitution @typescript-eslint/parser` replaces all three steps.
 
 Flat config (`eslint.config.js`):
 
