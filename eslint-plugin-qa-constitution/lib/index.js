@@ -645,8 +645,16 @@ const repoRootOf = (dir) => nearestHolding(dir, FLAT_CONFIGS) ?? nearestHolding(
  * file sits outside it. The repo root is the nearest folder above the file that holds an ESLint flat
  * config (where the gate is configured), else a `package.json`, so the result does not depend on
  * where ESLint was started; with neither above the file, the working directory is the root. `root`
- * moves the start, absolute or relative to that repo root.
+ * moves the start, absolute or relative to that repo root. A `root` that names no folder is a
+ * configuration error (#96): it would put every file outside the layout, so both rules that read it
+ * would skip every file and the gate would stay green.
  */
+const folders = new Map();
+/** Whether `p` is an existing folder. Cached per path, as the repo-root lookup is. */
+function isFolder(p) {
+  if (!folders.has(p)) folders.set(p, nodeFs.existsSync(p) && nodeFs.statSync(p).isDirectory());
+  return folders.get(p);
+}
 function layoutPath(context, root) {
   const cwd = normPath(context.cwd ?? context.getCwd()).replace(/\/+$/, '');
   // The ESLint class and CLI pass absolute names; Linter#verify and RuleTester pass relative ones, or
@@ -655,6 +663,9 @@ function layoutPath(context, root) {
   const found = repoRootOf(nodePath.dirname(file));
   const base = found ? normPath(found) : cwd;
   const rootDir = root !== undefined ? normPath(nodePath.resolve(base, root)) : base;
+  if (root !== undefined && !isFolder(rootDir)) {
+    throw new Error(`The \`root\` option "${root}" resolves to ${rootDir}, which is not a folder. A root that names no folder would skip every file, so the lint stops here instead: fix the path, or remove the option.`);
+  }
   const prefix = `${rootDir.replace(/\/+$/, '')}/`;
   return file.startsWith(prefix) ? file.slice(prefix.length) : null;
 }

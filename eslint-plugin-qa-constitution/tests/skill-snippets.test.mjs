@@ -293,8 +293,11 @@ const inTestRule = (m) => IN_TEST_RULES.has(m.ruleId);
 // `eslint-disable` for one of its rules, and an unregistered rule in a directive is itself an error.
 // Unused directives are not reported (the playwright rules are off here); suppressions are, below.
 const { default: playwright } = await import('eslint-plugin-playwright');
-// Per process, defensively: lintText never creates this folder, but parallel runs must not share a work dir.
+// Per process, defensively: parallel runs must not share a work dir. lintText never creates it, and it is
+// the env rule's root, which must be a folder (#96), so it exists for as long as this module is loaded.
 const WORK_DIR = `.skill-snippets-${process.pid}`;
+mkdirSync(join(PLUGIN_DIR, WORK_DIR), { recursive: true });
+process.on('exit', () => rmSync(join(PLUGIN_DIR, WORK_DIR), { recursive: true, force: true }));
 const eslint = new ESLint({
   cwd: PLUGIN_DIR,
   overrideConfigFile: 'smoke/eslint.config.mjs',
@@ -388,7 +391,6 @@ export async function parseSnippet(code) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  mkdirSync(join(PLUGIN_DIR, WORK_DIR), { recursive: true });
   const report = { linted: 0, counter: [], marked: [], suppressed: [], parse: [], violations: [], errors: [] };
   const checkParses = async (rel, block, kind) => {
     const { parse } = await parseSnippet(block.code);

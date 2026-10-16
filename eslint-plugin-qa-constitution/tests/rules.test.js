@@ -566,8 +566,8 @@ tester.run('standard-layout', plugin.rules['standard-layout'], {
     // inside a declared root, the layout is read from that root
     { filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: at('qa') }] },
     { filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: 'qa' }] },
-    // Windows-only: on Linux a backslash root is not a path, and this case passes because the file is outside it
-    { filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: at('qa').replace(/\//g, '\\') }] },
+    // Windows-only: on Linux a backslash root names no folder, which is a configuration error (#96)
+    ...(process.platform === 'win32' ? [{ filename: at('qa/tests/app/api/x/a.spec.ts'), code: BODY, options: [{ root: at('qa').replace(/\//g, '\\') }] }] : []),
     // a k6 sub-project's package.json with no flat config above it: the declared root keeps the layout
     { filename: `${PERF}/tests/perf/load/jobs-load.ts`, code: K6, options: [{ root: PERF }] },
     // an area on the drift table is skipped until its move PR deletes the entry
@@ -706,6 +706,27 @@ tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-pro
   assert.throws(() => configError({ categories: { type: ['@ui'] } }), /Unexpected property "type"/);
   assert.doesNotThrow(() => configError({ categories: { trait: ['@security'] } }));
   assert.doesNotThrow(() => configError({ whitelist: ['@Smoke'] }));
+}
+
+/**
+ * A `root` that names no folder is a configuration error (#96): before, it put every file outside the
+ * layout, so standard-layout and no-process-env-outside-config skipped every file and the gate stayed
+ * green. Checked through Linter, since the rule throws before RuleTester could compare reports.
+ */
+{
+  const assert = require('node:assert');
+  const { Linter } = require('eslint');
+  const lintWith = (rule, options, filename) => new Linter().verify('const a = 1;', {
+    plugins: { qa: plugin },
+    rules: { [`qa/${rule}`]: ['error', options] },
+  }, filename);
+  for (const rule of ['standard-layout', 'no-process-env-outside-config']) {
+    assert.throws(() => lintWith(rule, { root: 'no-such-folder' }, at('tests/app/api/x/a.spec.js')), /"no-such-folder" resolves to .*, which is not a folder/, `${rule}: a missing root`);
+    assert.throws(() => lintWith(rule, { root: 'package.json' }, at('tests/app/api/x/a.spec.js')), /which is not a folder/, `${rule}: a root that is a file`);
+    assert.throws(() => lintWith(rule, { root: at('qa/missing') }, at('qa/x.spec.js')), /which is not a folder/, `${rule}: an absolute root that is missing`);
+    assert.doesNotThrow(() => lintWith(rule, { root: 'qa' }, at('qa/tests/app/api/x/a.spec.js')), `${rule}: an existing root`);
+    assert.doesNotThrow(() => lintWith(rule, {}, at('tests/app/api/x/a.spec.js')), `${rule}: no root`);
+  }
 }
 
 console.log('all rule tests passed');
