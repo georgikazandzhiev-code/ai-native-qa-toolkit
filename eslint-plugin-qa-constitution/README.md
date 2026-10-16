@@ -121,11 +121,11 @@ Options go in a config object of their own, after the preset's object from § In
     'qa-constitution/standard-layout': ['error', {
       drift: ['e2e/', 'src/pages/', 'auth.setup.ts'], // your drift table: folders or single files that haven't moved yet; a misnamed file is listed by its own path
       pageBases: ['BasePage', 'DataTableBase'], // the classes a page object extends; the list replaces the default, so keep BasePage and DataTableBase in it
-      root: 'qa',                            // only if the layout starts below the repo root; relative to it, or absolute
+      // root: 'qa',                         // only if the layout starts below the repo root (relative to it, or absolute); a root that names no folder stops the lint
     }],
     'qa-constitution/no-process-env-outside-config': ['error', {
       allow: '^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the layout root (root when set, else the repo root)
-      root: 'qa',                            // only if the layout starts below the repo root, as for standard-layout
+      // root: 'qa',                         // only if the layout starts below the repo root, as for standard-layout
     }],
   },
 }
@@ -137,7 +137,7 @@ Options go in a config object of their own, after the preset's object from § In
 
 `standard-layout` and the drift table: a `drift` entry excuses a file that is out of place, and a misnamed file only when its own path is listed (`drift: ['tests/app/api/orders/createOrder.spec.ts']`). A file inside its standard folder is otherwise always judged, so `drift: ['pages/']` for a legacy `pages/` tree does not switch off `pages/app/`. A new file never goes on the list: the constitution sends it to the standard location. The rule judges what it can recognise from one file — specs (`*.spec.ts`, and a `*.test.ts` that imports Playwright or the barrel, named as a spec should be), setup files (any `<name>.setup.ts`), the barrel, `*-fixture.ts`, a class extending a page base (also through a named import under another name, `import { BasePage as Base }`), and k6 scripts (not `.d.ts` files or type-only imports). It cannot see a legacy barrel with another name (`support/fixtures.ts`), a page object that extends another page object, or helpers, enums, schemas and test data; those stay a review responsibility.
 
-During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves. `allow` is matched against the path from the layout root — the repo root, or `root` when it is set — with forward slashes and no leading slash, so anchor it with `^` (with `root: 'qa'`, `qa/src/config.ts` is `^src/config\\.ts$`). A `root` that names no folder of the layout switches the rule off for every file; check it with a file you know is wrong.
+During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves. `allow` is matched against the path from the layout root — the repo root, or `root` when it is set — with forward slashes and no leading slash, so anchor it with `^` (with `root: 'qa'`, `qa/src/config.ts` is `^src/config\\.ts$`). A `root` that names no folder is a configuration error: the lint run stops and names the option, rather than skip every file and stay green.
 
 Upgrading from 0.6: replace a custom `allow` copied from the 0.6 README as a whole, starting from the 0.7 default: `^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$`. Re-anchoring only its `/src/config\\.ts$` entry leaves `(^|/)config/` and `(^|/)playwright…`, which still let any nested `config/` folder or `playwright.config.*` read `process.env`, and nothing reports it. A layout that starts below the repo root (a `qa/` folder, or a Playwright package in a monorepo whose `eslint.config.*` sits at the monorepo root) passes this rule the same `root` it passes `standard-layout`, or its own config module is reported.
 
