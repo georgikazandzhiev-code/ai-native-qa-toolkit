@@ -212,6 +212,32 @@ for (const [file, expected] of Object.entries(PINNED)) {
   rows.push({ id: name, status: 'PINNED', detail: `exactly ${got.join(', ')}` });
 }
 
+// The README's options block (#94), run as written: next to the preset's object, a rule it doesn't name
+// (no-hard-waits) still reports; spread into the preset's object with a plain rules key, that rule goes
+// silent, which is the warning the README gives.
+let OPTIONS_OK = false;
+{
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const section = readme.slice(readme.indexOf('### Options worth setting'));
+  const fence = section.match(/```js\n([\s\S]*?)\n```/);
+  if (!fence) failures.push('README § Options worth setting: no js block found');
+  else {
+    const options = new Function(`return (${fence[1]});`)();
+    const preset = { files: ['**/*.ts'], languageOptions: { parser: tsParser, ecmaVersion: 2022, sourceType: 'module' }, ...plugin.configs.recommended };
+    const code = "import { test, expect } from 'fixtures/pom/test-options';\ntest('@api waits', async ({ page }) => {\n  await page.waitForTimeout(500);\n  expect(1).toBe(1);\n});\n";
+    const reports = async (config) => {
+      const eslint = new ESLint({ cwd: CWD, overrideConfigFile: true, overrideConfig: config });
+      const [r] = await eslint.lintText(code, { filePath: `${CWD}smoke/tests/app/api/options/options.spec.ts` });
+      return r.messages.map((m) => m.ruleId);
+    };
+    const kept = await reports([preset, options]);
+    const replaced = await reports([{ ...preset, rules: options.rules }]);
+    if (!kept.includes('qa-constitution/no-hard-waits')) failures.push(`README options next to the preset: no-hard-waits did not report (${kept})`);
+    if (replaced.includes('qa-constitution/no-hard-waits')) failures.push('README options merged with a plain rules key: no-hard-waits still reported, so the README warning is wrong');
+    OPTIONS_OK = !failures.some((f) => f.startsWith('README'));
+  }
+}
+
 let WHITELIST_OK = false;
 // Whitelist mode (a kept set, or a repo still on @App-*) through the real ESLint class (#90 review F15): the
 // smoke config runs the taxonomy, so this mode needs its own pass. One whitelisted tag per test is silent;
@@ -259,6 +285,7 @@ console.log(
     `; ${pinned} pinned file(s)`
 );
 console.log(`  single-tag-on-test whitelist mode through the ESLint class: ${WHITELIST_OK ? 'OK' : 'FAIL'}`);
+console.log(`  README § Options worth setting, run as written: ${OPTIONS_OK ? 'OK' : 'FAIL'}`);
 
 if (failures.length) {
   console.log('');
