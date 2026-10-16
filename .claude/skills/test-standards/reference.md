@@ -24,18 +24,22 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 
 ## Tag → npm script mapping
 
-| Tag (standard set) | npm script (standard) | What runs |
-|---|---|---|
-| `@critical` | `npm run app-critical` | 3–5 must-pass-before-anything-else tests |
-| `@smoke` | `npm run app-smoke` | Critical-path UI flows — login, landing, navigation |
-| `@sanity` | `npm run app-sanity` | Quick post-deploy read-only verification |
-| `@regression` | `npm run app-regression` | Functional regression — largest bucket. |
-| `@api` | `npm run app-api` | API contract + schema validation |
-| `@integration` | `npm run app-integration` | Cross-component integration |
-| `@e2e` | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
-| (union) | `npm run app-all` | Full nightly / pre-merge |
+| Tag (standard) | Category | npm script (standard) | What runs |
+|---|---|---|---|
+| `@api` | type | `npm run app-api` | API contract + schema validation |
+| `@functional` | type | `npm run app-functional` | One UI behaviour in isolation |
+| `@e2e` | type | `npm run app-e2e` | End-to-end UI journey (create → verify → edit → delete) |
+| `@integration` | type | `npm run app-integration` | Cross-component integration |
+| `@smoke` | suite | `npm run app-smoke` | Critical-path UI flows — login, landing, navigation |
+| `@sanity` | suite | `npm run app-sanity` | Quick post-deploy read-only verification |
+| `@regression` | suite | `npm run app-regression` | The full regression run — the largest suite |
+| `@critical` | trait | `npm run app-critical` | 3–5 tests whose red means the build is broken |
+| `@slow` | trait | `npm run app-slow` | Tests slower than the run's time budget |
+| (all types) | | `npm run app-all` | Full nightly |
 
-Tag casing must match the repo's greps exactly. Every standard tag is lowercase, so in a repo on the standard set a tag such as `@Regression` would never run; in a repo with a kept set it may be the correct form (see `SKILL.md` § Kept set: the tag map). The tags in this file are the toolkit's standard set, and the `app-*` script names are standard too.
+Every test carries one type tag and any suite and trait tags it needs (`SKILL.md` § Tag taxonomy & npm scripts).
+
+Tag casing must match the declared tags exactly. Every standard tag is lowercase; `@Regression` in a repo on the standard taxonomy fails the lint and misses Qase's exact filters (Playwright's `--grep` ignores case, so it still runs); in a repo with a kept set it may be the correct form (see `SKILL.md` § Kept set: the tag map). The tags in this file are the toolkit's standard taxonomy, and the `app-*` script names are standard too.
 
 ---
 
@@ -52,7 +56,7 @@ In the example app, these live under `tests/app/e2e/`. Each is one test per flow
 | `stream-job-crud.spec.ts` | Same pattern for stream jobs + expanded-view-loads stub. |
 | `email-job-crud.spec.ts` | Email-job CRUD. |
 | `webhook-job-crud.spec.ts` | Webhook-job CRUD (outbound callback jobs). |
-| `login-smoke.spec.ts` | Login page elements, forgot-password link, successful login. **Tag:** `@smoke`. |
+| `login-smoke.spec.ts` | Login page elements, forgot-password link, successful login. **Tags:** `@e2e`, `@smoke`. |
 | `login-negative.spec.ts` | Invalid credentials, empty fields. |
 | `forgot-password.spec.ts` | Password reset flow (extracts link from Mailpit email). |
 | `terms-and-conditions.spec.ts` | Accept / decline flow. |
@@ -63,7 +67,7 @@ In the example app, these live under `tests/app/e2e/`. Each is one test per flow
 
 ## Scenario inventory — Functional specs
 
-In the example app, these live under `tests/app/functional/`. One test per validation scenario, `beforeEach` navigates to the form. Tag: `@regression` unless noted.
+In the example app, these live under `tests/app/functional/`. One test per validation scenario, `beforeEach` navigates to the form. Tags: `@functional`, `@regression` unless noted.
 
 ### Form validation specs (per job type)
 

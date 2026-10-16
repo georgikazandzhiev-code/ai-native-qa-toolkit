@@ -214,18 +214,54 @@ rules['no-page-evaluate'] = {
   },
 };
 
-/** MUST — Tags: exactly one per test(), never on describe(). */
+/**
+ * The toolkit's tag taxonomy (`test-standards` § Tag taxonomy). A test carries exactly one type tag,
+ * which says what it is, and any suite or trait tags it needs, which say which runs include it and
+ * what it is like. CI jobs select tests with tag expressions, so the categories, not the job names,
+ * define the tags. A repo or an organisation plugin extends a category through the `categories`
+ * option; it never replaces the type tags.
+ */
+const STANDARD_TAGS = {
+  type: ['@api', '@functional', '@e2e', '@integration'],
+  suite: ['@smoke', '@sanity', '@regression'],
+  trait: ['@critical', '@slow'],
+};
+
+/**
+ * MUST — Tags. The id predates composable tags and is kept so existing configs keep working.
+ * Composable mode (the default, or `categories`): exactly one type tag, any declared suite and
+ * trait tags, nothing undeclared, nothing twice. Single-tag mode (`whitelist`): exactly one tag
+ * from the list — for a repo that kept its own set or is still on `@App-*`. Never on describe().
+ */
 rules['single-tag-on-test'] = {
-  meta: meta('Exactly one tag per test(); never tag a describe block.', {
+  meta: meta('Tag every test() with one type tag plus any declared suite or trait tags (or, with a whitelist, exactly one tag); never tag a describe block.', {
     messages: {
       onDescribe: 'Tags belong on test(), never on describe(). Move "{{tag}}" to each test.',
-      none: 'This test has no tag. Every test carries exactly one tag from the whitelist.',
+      none: 'This test has no tag. {{need}}',
       many: 'This test has {{count}} tags ({{tags}}). Exactly one is allowed.',
       notWhitelisted: 'Tag "{{tag}}" is not in the whitelist: {{whitelist}}.',
+      noType: 'This test has no type tag. It needs exactly one of {{types}}, next to {{tags}}.',
+      manyTypes: 'This test has {{count}} type tags ({{tags}}). A test is exactly one type.',
+      unknown: 'Tag "{{tag}}" is in no declared category. Declared: {{declared}}. Add it to the `categories` option (and the repo\'s tag list) first.',
+      duplicate: 'Tag "{{tag}}" appears more than once on this test.',
     },
     schema: [{
       type: 'object',
-      properties: { whitelist: { type: 'array', items: { type: 'string' } }, requireTag: { type: 'boolean' } },
+      properties: {
+        whitelist: { type: 'array', items: { type: 'string' } },
+        // Extends the standard suite and trait categories; the type tags are fixed and not configurable.
+        categories: {
+          type: 'object',
+          properties: {
+            suite: { type: 'array', items: { type: 'string' } },
+            trait: { type: 'array', items: { type: 'string' } },
+          },
+          additionalProperties: false,
+        },
+        requireTag: { type: 'boolean' },
+      },
+      // A kept set's whitelist and the taxonomy's categories are two models; a config may choose one.
+      not: { required: ['whitelist', 'categories'] },
       additionalProperties: false,
     }],
   }),
@@ -233,51 +269,88 @@ rules['single-tag-on-test'] = {
     const opt = context.options[0] ?? {};
     const whitelist = opt.whitelist ?? [];
     const requireTag = opt.requireTag !== false;
+    const single = whitelist.length > 0;
+    const ext = opt.categories ?? {};
+    const types = new Set(STANDARD_TAGS.type);
+    const declared = new Set([...STANDARD_TAGS.type, ...STANDARD_TAGS.suite, ...STANDARD_TAGS.trait, ...(ext.suite ?? []), ...(ext.trait ?? [])]);
+    const need = single
+      ? 'Every test carries exactly one tag from the whitelist.'
+      : `Every test carries exactly one type tag (${STANDARD_TAGS.type.join(', ')}), plus any suite or trait tags it needs.`;
     // A setup file (tests/app/<name>.setup.ts) runs in the setup project and carries no tag (test-standards).
     if (isSetupFile(context)) return {};
 
-    /** Tags come from the title string (@Foo) and/or the `tag` option. */
+    /**
+     * Tags come from the title string (@Foo) and/or the `tag` option. `dynamic` is true when the
+     * title is a template literal with expressions, or the option holds something the rule cannot
+     * read (a variable, a member, a spread); it only skips the missing-type check, and a test with no
+     * readable tag is still reported as having none.
+     */
     function tagsOf(node) {
       const found = [];
+      let dynamic = false;
       const title = stringValue(node.arguments[0]);
       if (title) for (const m of title.matchAll(/@[\w-]+/g)) found.push(m[0]);
+      // `@functional supports ${m}`: the type tag may sit in a part the rule cannot read.
+      else if (node.arguments[0] && node.arguments[0].type === 'TemplateLiteral') dynamic = true;
       for (const arg of node.arguments.slice(1)) {
         if (arg.type !== 'ObjectExpression') continue;
         for (const p of arg.properties) {
           if (p.type !== 'Property' || (p.key.name ?? p.key.value) !== 'tag') continue;
           const one = stringValue(p.value);
           if (one) found.push(one);
-          if (p.value.type === 'ArrayExpression') {
+          else if (p.value.type === 'ArrayExpression') {
             for (const el of p.value.elements) {
               const s = stringValue(el);
               if (s) found.push(s);
+              else dynamic = true;
             }
-          }
+          } else dynamic = true;
         }
       }
-      return found;
+      return { found, dynamic };
     }
 
     return {
       CallExpression(node) {
         if (isDescribeCall(node)) {
-          const t = tagsOf(node);
+          const { found: t } = tagsOf(node);
           if (t.length) context.report({ node: node.arguments[0] ?? node, messageId: 'onDescribe', data: { tag: t[0] } });
           return;
         }
         if (!isTestCall(node)) return;
         if (enclosingTest(node)) return; // nested helper call, not a declaration
-        const t = tagsOf(node);
+        const { found: t, dynamic } = tagsOf(node);
+        const at = node.arguments[0] ?? node;
         if (t.length === 0) {
-          if (requireTag) context.report({ node: node.arguments[0] ?? node, messageId: 'none' });
+          // A tag hoisted into a variable reads as no tag, as the api-testing templates say: keep tags inline.
+          if (requireTag) context.report({ node: at, messageId: 'none', data: { need } });
           return;
         }
-        if (t.length > 1) {
-          context.report({ node: node.arguments[0] ?? node, messageId: 'many', data: { count: t.length, tags: t.join(', ') } });
+        if (single) {
+          if (t.length > 1) {
+            context.report({ node: at, messageId: 'many', data: { count: t.length, tags: t.join(', ') } });
+            return;
+          }
+          if (!whitelist.includes(t[0])) {
+            context.report({ node: at, messageId: 'notWhitelisted', data: { tag: t[0], whitelist: whitelist.join(', ') } });
+          }
           return;
         }
-        if (whitelist.length && !whitelist.includes(t[0])) {
-          context.report({ node: node.arguments[0] ?? node, messageId: 'notWhitelisted', data: { tag: t[0], whitelist: whitelist.join(', ') } });
+        const seen = new Set();
+        for (const tag of t) {
+          if (seen.has(tag)) {
+            context.report({ node: at, messageId: 'duplicate', data: { tag } });
+            continue;
+          }
+          seen.add(tag);
+          if (!declared.has(tag)) context.report({ node: at, messageId: 'unknown', data: { tag, declared: [...declared].join(', ') } });
+        }
+        const typed = [...seen].filter((tag) => types.has(tag));
+        if (typed.length === 0) {
+          // A tag the rule cannot read may be the type tag; say nothing rather than guess.
+          if (!dynamic) context.report({ node: at, messageId: 'noType', data: { types: STANDARD_TAGS.type.join(', '), tags: [...seen].join(', ') } });
+        } else if (typed.length > 1) {
+          context.report({ node: at, messageId: 'manyTypes', data: { count: typed.length, tags: typed.join(', ') } });
         }
       },
     };

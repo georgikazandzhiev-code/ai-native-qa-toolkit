@@ -794,7 +794,7 @@ for (const dir of CI_DIRS) {
     'No conditional test logic': { skill: 'test-standards', token: 'conditional' },
     'No `try/catch` in tests': { skill: 'test-standards' },
     'No `await expect(...).not.toThrow()`': { skill: 'api-testing' },
-    'No tags on `describe` / no multi-tag': { skill: 'test-standards', token: 'describe' },
+    'No tags on `describe` / no second type tag': { skill: 'test-standards', token: 'describe' },
     'No magic numbers': { skill: 'enums' },
     'No JSDoc on locator getters': { skill: 'page-objects', token: 'JSDoc' },
     'No commented-out code': { skill: 'api-testing', token: 'TODO' },

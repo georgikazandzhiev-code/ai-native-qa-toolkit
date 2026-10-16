@@ -4,22 +4,15 @@
 //   smoke/tests/  the known-bad tree  — must be REJECTED, every rule firing at least once
 //   smoke/good/   the compliant tree  — must PASS with zero errors
 //
-// The tag whitelist is passed explicitly rather than left empty so the whitelist branch of
-// `single-tag-on-test` is exercised too. With no options the rule only requires *a* tag and
-// accepts any string, which would let a fabricated tag through — the exact defect that produced
-// 29 of the 41 false findings in the first pass of eval run 3.
+// The tag rule gets an extension, not the bare default, so the option a repo actually configures
+// is what this exercises: smoke/good uses the declared @security trait, smoke/tests/app/api/tags/tags.spec.ts
+// breaks the taxonomy every way the rule reports. A fabricated tag must not get through: that is
+// the defect that produced 29 of the 41 false findings in the first pass of eval run 3.
 import tsParser from '@typescript-eslint/parser';
 import qa from '../lib/index.js';
 
-const TAGS = [
-  '@critical',
-  '@smoke',
-  '@sanity',
-  '@regression',
-  '@api',
-  '@integration',
-  '@e2e',
-];
+// The standard taxonomy is the rule's default; this extends it the way a repo would, with one trait.
+const CATEGORIES = { trait: ['@security'] };
 
 export default [
   {
@@ -28,7 +21,7 @@ export default [
     plugins: { 'qa-constitution': qa },
     rules: {
       ...Object.fromEntries(Object.keys(qa.rules).map((r) => [`qa-constitution/${r}`, 'error'])),
-      'qa-constitution/single-tag-on-test': ['error', { whitelist: TAGS }],
+      'qa-constitution/single-tag-on-test': ['error', { categories: CATEGORIES }],
       // Judged per tree, below: each tree is a repo root of its own.
       'qa-constitution/standard-layout': 'off',
     },

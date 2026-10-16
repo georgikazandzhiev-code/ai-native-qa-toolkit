@@ -53,16 +53,9 @@ import plugin from '../lib/index.js';
  */
 const EXEMPT = {};
 
-/** Mirrors smoke/eslint.config.mjs — a fabricated tag must not pass the whitelist branch. */
-const TAGS = [
-  '@critical',
-  '@smoke',
-  '@sanity',
-  '@regression',
-  '@api',
-  '@integration',
-  '@e2e',
-];
+/** Mirrors smoke/eslint.config.mjs — a fabricated tag must not get through. */
+// The standard taxonomy is the rule's default; this extends it the way a repo would, with one trait.
+const CATEGORIES = { trait: ['@security'] };
 
 const CWD = fileURLToPath(new URL('..', import.meta.url)).replace(/\\/g, '/');
 const BAD = 'smoke/tests/**/*.ts';
@@ -75,7 +68,7 @@ function emptyVisitor(rule) {
 
 function configWith(id, rule) {
   const entry =
-    id === 'single-tag-on-test' ? ['error', { whitelist: TAGS }] : 'error';
+    id === 'single-tag-on-test' ? ['error', { categories: CATEGORIES }] : 'error';
   const config = [
     {
       files: ['**/*.ts'],
@@ -162,6 +155,14 @@ for (const id of ids) {
  * does not break the pin.
  */
 const PINNED = {
+  // The composable tag taxonomy: each test breaks it one way, and only the tag rule answers —
+  // no type tag, two type tags, an undeclared tag, the same tag twice.
+  'smoke/tests/app/api/tags/tags.spec.ts': [
+    { rule: 'single-tag-on-test', at: "test('@regression a suite tag alone" },
+    { rule: 'single-tag-on-test', at: "test('@api @e2e two type tags'" },
+    { rule: 'single-tag-on-test', at: "test('@api @nope an undeclared tag'" },
+    { rule: 'single-tag-on-test', at: "test('the same tag twice'" },
+  ],
   // test.step declares no test (lib/index.js, CONFIG_CALLS). Steps in hooks are setup and stay
   // silent under all four rules that ask "which test is this in?"; the untagged, assertion-free
   // test around a step is still reported by both test-level rules; and an if or a try/catch in a
@@ -211,6 +212,34 @@ for (const [file, expected] of Object.entries(PINNED)) {
   rows.push({ id: name, status: 'PINNED', detail: `exactly ${got.join(', ')}` });
 }
 
+let WHITELIST_OK = false;
+// Whitelist mode (a kept set, or a repo still on @App-*) through the real ESLint class (#90 review F15): the
+// smoke config runs the taxonomy, so this mode needs its own pass. One whitelisted tag per test is silent;
+// two tags, or a tag outside the whitelist, are reported.
+{
+  const eslint = new ESLint({
+    cwd: CWD,
+    overrideConfigFile: true,
+    overrideConfig: [{
+      files: ['**/*.ts'],
+      languageOptions: { parser: tsParser, ecmaVersion: 2022, sourceType: 'module' },
+      plugins: { 'qa-constitution': plugin },
+      rules: { 'qa-constitution/single-tag-on-test': ['error', { whitelist: ['@Smoke', '@Regression'] }] },
+    }],
+  });
+  const msgIds = async (code) => (await eslint.lintText(code, { filePath: `${CWD}smoke/tests/app/api/whitelist-mode.spec.ts` }))[0].messages.map((m) => m.messageId ?? m.message);
+  const checks = [
+    ["test('@Regression lists jobs', async () => {});", []],
+    ["test('@Regression @Smoke lists jobs', async () => {});", ['many']],
+    ["test('@regression lists jobs', async () => {});", ['notWhitelisted']],
+  ];
+  for (const [code, want] of checks) {
+    const got = await msgIds(code);
+    if (JSON.stringify(got) !== JSON.stringify(want)) failures.push(`single-tag-on-test whitelist mode: ${code} gave [${got}], want [${want}]`);
+  }
+  WHITELIST_OK = !failures.some((f) => f.includes('whitelist mode'));
+}
+
 const pad = Math.max(...rows.map((r) => r.id.length));
 console.log('');
 console.log('Fault injection — each rule must bite the bad tree, stay silent on the good one,');
@@ -229,6 +258,7 @@ console.log(
     (exempted ? `, ${exempted} declared exemption(s)` : '') +
     `; ${pinned} pinned file(s)`
 );
+console.log(`  single-tag-on-test whitelist mode through the ESLint class: ${WHITELIST_OK ? 'OK' : 'FAIL'}`);
 
 if (failures.length) {
   console.log('');

@@ -1,6 +1,6 @@
 ---
 name: page-objects
-version: 2.0.15
+version: 2.0.16
 description: Author Page Object classes under pages/** — extends BasePage, locator-getter convention, action methods with built-in waits, component composition, fixture registration. Use when creating a POM, adding locators or actions to an existing page class, or extracting a component. Triggers — "page object", "POM", "extend BasePage", "extract component". Not for locator priority (selectors), live exploration (playwright-cli), or spec structure (test-standards).
 metadata:
   category: authoring
@@ -270,7 +270,7 @@ test.describe("Settings — Profile", () => {
 
   test(
     "Verify a saved first name survives a reload",
-    { tag: "@regression" },
+    { tag: ["@functional", "@regression"] },
     async ({ page, settingsPage }) => {
       qase.suite(SUITES.APP_SETTINGS);
       // qase.id(N);
@@ -286,7 +286,7 @@ test.describe("Settings — Profile", () => {
 
 `saveProfile()` persists through `PATCH /api/v1/user` on the main session user, and every spec under the main-user storage state (`appMainUserSession` in the example app) shares that user. So the spec reads the first name before each test and writes it back in `afterEach`. `settingsPage` is test-scoped, so the capture and the restore live in `beforeEach` / `afterEach`, not in `beforeAll` / `afterAll`. To leave the shared user untouched altogether, run the spec under a per-test user (`data-strategy` Pattern 7, `setupTestUser` / `teardownTestUser`).
 
-For tag rules (one tag from the repo's whitelist, cased exactly as listed — `@regression` for functional specs in the standard set; single-tag rule; never on `describe`), `test.step` structure, fixture imports, and Qase wiring, read the [`test-standards`](../test-standards/SKILL.md) skill. **Never** `new SettingsPage(page)` inside a test — that bypasses every other merged fixture.
+For tag rules (one type tag plus declared suite and trait tags, cased exactly as declared — `@functional` plus `@regression` for functional specs in the standard taxonomy; never on `describe`), `test.step` structure, fixture imports, and Qase wiring, read the [`test-standards`](../test-standards/SKILL.md) skill. **Never** `new SettingsPage(page)` inside a test — that bypasses every other merged fixture.
 
 ## Anti-patterns
 
@@ -336,7 +336,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `MESSAGES.PROFILE_SAVED` from `enums/app` for the toast text.
 6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PATCH /api/v1/user` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
 7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `runStatsPage`.
-8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
+8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `["@functional", "@regression"]` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
 
 ### Example 2 — add `forgotPasswordLink` and `clickForgotPassword()` to `LoginPage`
 

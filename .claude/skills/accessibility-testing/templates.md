@@ -1,6 +1,6 @@
 # Accessibility testing — templates
 
-Copy-paste skeletons for the [`accessibility-testing`](SKILL.md) skill. Paths, the fixtures barrel and the Qase suite are placeholders. Replace them with the project's real ones (see `fixtures`, `enums`). The tag is `@regression` from the standard set; a repo that declared its own set, or one still on the toolkit's earlier `@App-*` set (see `test-standards`), swaps in one from that set.
+Copy-paste skeletons for the [`accessibility-testing`](SKILL.md) skill. Paths, the fixtures barrel and the Qase suite are placeholders. Replace them with the project's real ones (see `fixtures`, `enums`). The tags are `["@functional", "@regression"]` from the standard taxonomy; a repo that declared its own set takes the one tag its tag map gives a functional test; a repo still on the toolkit's earlier `@App-*` set takes `@App-regression` (see `test-standards`).
 
 **Evidence: STATIC.** These follow Playwright's accessibility-testing guide and the `@axe-core/playwright` API. They have not been executed in this repository yet.
 
@@ -94,7 +94,7 @@ import { SUITES } from "../../../../enums/app/qase-suites";
 import { qase } from "playwright-qase-reporter";
 
 test.describe("Settings accessibility", () => {
-    test("Verify the delete-account dialog has no automated a11y violations", { tag: "@regression" }, async ({ settingsPage, makeAxeBuilder }, testInfo) => {
+    test("Verify the delete-account dialog has no automated a11y violations", { tag: ["@functional", "@regression"] }, async ({ settingsPage, makeAxeBuilder }, testInfo) => {
         qase.suite(SUITES.APP_SETTINGS);
         // qase.id(N);
 
@@ -125,7 +125,7 @@ test.describe("Settings accessibility", () => {
 What no rule engine can judge: can the flow be done without a mouse, and does focus go where it should?
 
 ```typescript
-test("Verify Escape closes the delete-account dialog and returns focus to its trigger", { tag: "@regression" }, async ({ page, settingsPage }) => {
+test("Verify Escape closes the delete-account dialog and returns focus to its trigger", { tag: ["@functional", "@regression"] }, async ({ page, settingsPage }) => {
     qase.suite(SUITES.APP_SETTINGS);
     // qase.id(N);
 

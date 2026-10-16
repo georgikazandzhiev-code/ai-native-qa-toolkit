@@ -66,6 +66,17 @@
       "baseline": null,
       "verdict": "held",
       "note": "skill arm only, three runs. Lint-gate case 1 (POST /api/v1/projects) re-run for the 3.1.0 bump (#71: Qase is optional; never invent a Qase ID). Two runs were told the repo's project CLAUDE.md says it uses Qase, one that it does not. Machine-graded: zero violations each under the plugin's smoke config. Checked by hand, since no lint rule reads qase.* lines: the Qase runs open every test with qase.suite and leave qase.id commented out; the no-Qase run has no qase lines; none invents a case ID. Unverified: the generated specs (328, 302 and 332 lines) are not committed. Limits: one case, and the repo's Qase status was given in the prompt, not read from a real repo."
+    },
+    {
+      "version": "4.0.0",
+      "date": "2026-10-15",
+      "metric": "lint-gate-violations",
+      "cases": 1,
+      "max": null,
+      "score": 0,
+      "baseline": null,
+      "verdict": "held",
+      "note": "skill arm only, two runs. Lint-gate case 1 (POST /api/v1/projects) re-run for the 4.0.0 bump (#71: composable tags, one type tag plus suite and trait tags). Machine-graded: zero violations each under the plugin's smoke config, whose single-tag-on-test now checks the standard taxonomy. Checked by hand: every test carries @api plus @regression; in the run whose prompt said the large-payload cases are slow, one test also carries @slow and one @smoke. The prompt stated that the repo uses the standard taxonomy, so this shows the skill applies it, not that it would choose it unprompted. Unverified: the generated specs (330 and 285 lines) are not committed. Limits: one case. Measured on the text before #88 (Qase optional); #88 changes no line the lint gate reads."
     }
   ]
 }

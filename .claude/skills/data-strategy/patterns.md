@@ -13,7 +13,7 @@ test.afterAll(async ({ apiRequest }) => {
     await cleanupUiCreatedJobs(apiRequest, createdJobNames, tokens.full());
 });
 
-test('creates a job under a unique name', { tag: '@regression' }, async ({ createJobPage, jobsPage }) => {
+test('creates a job under a unique name', { tag: ['@functional', '@regression'] }, async ({ createJobPage, jobsPage }) => {
     const jobName = `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`;
     createdJobNames.push(jobName);
     await createJobPage.createJobFromSheet({ name: jobName });

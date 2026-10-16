@@ -1,6 +1,6 @@
 ---
 name: scaffold-spec
-version: 5.1.0
+version: 6.0.0
 description: >-
   Scaffold new Playwright test spec files following project conventions. Use when
   creating a new API spec, E2E spec, or functional spec file, or when the user
@@ -37,11 +37,11 @@ Non-negotiable. A scaffolded spec that breaks any of these is worse than no spec
 
 Infer the type from the request with the `test-standards` § Step 1 ladder. If the ladder leaves Functional vs E2E open (the request is clear, and the behaviour could be checked as one Functional test or inside an E2E journey), that is an implementation choice, not a question: build both on `alt/` branches and ask which to keep (`build-alternatives`). Ask first only when what to test is unclear (which endpoint, which behaviour), marked `[human-only: requirement]`.
 
-| Type | Directory | Tag (standard set) | Rule |
+| Type | Directory | Type tag (standard) | Rule |
 |------|-----------|-----|------|
 | **API** | `tests/app/api/<domain>/` | `@api` | `api-testing` skill |
 | **E2E** | `tests/app/e2e/<domain>/` | `@e2e` | `page-objects` + `selectors` skills |
-| **Functional** | `tests/app/functional/<domain>/` | `@regression` | `page-objects` + `selectors` skills |
+| **Functional** | `tests/app/functional/<domain>/` | `@functional` | `page-objects` + `selectors` skills |
 
 These directories are the standard layout (`~/.claude/CLAUDE.md § Standard repo layout and naming`); only the `<domain>` service folders inside them are your product's. The tags are the standard set's; a repo with a kept set takes each one from its tag map (`test-standards` § Kept set: the tag map).
 
@@ -201,7 +201,7 @@ test.describe("<Feature> — Form Validation", () => {
 
   test(
     "Validation scenario description",
-    { tag: "@regression" },
+    { tag: ["@functional", "@regression"] },
     async ({ createJobPage }) => {
       qase.suite(SUITES.APP_<RESOURCE>);
       // qase.id(N);
@@ -243,7 +243,7 @@ After creating the spec, update the API or UI routing section of the repository'
 ## Self-review checklist
 
 - [ ] Imports follow the project pattern exactly
-- [ ] Tags match the spec type, from the repo's whitelist (`@api`, `@e2e`, `@regression` in the standard set)
+- [ ] One type tag matching the spec type (`@api`, `@e2e`, `@functional`) plus only declared suite and trait tags; with a kept set, exactly one tag from its whitelist
 - [ ] When the repo uses Qase, `qase.suite()` is the first line in every test; without it, no new `qase.*` lines
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
@@ -528,7 +528,7 @@ Every functional test that opens a form/sheet must close it at the end — even 
 1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@api` (or, with a kept set, the tag map's API tag).
 2. **Conventions** — read `api-testing` and `test-standards` before writing anything.
 3. **Contract first** — the OpenAPI document is the source of truth; enumerate 201, 400, 401, 403/404, 409 as a coverage-plan comment block.
-4. **Study a sibling** — open the nearest API spec at its standard location under `tests/app/api/` (never one on the drift table) and follow its shape where it agrees with `api-testing`: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
+4. **Study a sibling** — open the nearest API spec at its standard location under `tests/app/api/` (never one on the drift table) and follow its shape where it agrees with `api-testing`: barrel import, one type tag plus its suites, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
 5. **Negative matrix** — one test per required field omitted, plus an invalid-type loop. Not a single empty-body test.
 6. **Cleanup** — every created project deleted in `afterEach`/`afterAll`.
 7. **Run it.** Then report.
@@ -545,7 +545,7 @@ Report the blocker with the exact failure, and offer what can be done without th
 
 ## See Also
 
-- [`test-standards`](../test-standards/SKILL.md) — spec-file conventions: barrel imports, the single-tag whitelist, Qase wiring, placement by type. Read before scaffolding anything.
+- [`test-standards`](../test-standards/SKILL.md) — spec-file conventions: barrel imports, the tag taxonomy, Qase wiring, placement by type. Read before scaffolding anything.
 - [`api-testing`](../api-testing/SKILL.md) — the negative matrix, schema validation idiom and cleanup rules an API scaffold must satisfy.
 - [`selectors`](../selectors/SKILL.md) — locator priority for any UI scaffold.
 - [`page-objects`](../page-objects/SKILL.md) — when the scaffold needs a POM alongside the spec.

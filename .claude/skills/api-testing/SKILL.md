@@ -1,6 +1,6 @@
 ---
 name: api-testing
-version: 3.1.1
+version: 4.0.0
 description: Write and maintain API specs under tests/app/api/**, Zod schemas in fixtures/api/schemas/, and API helpers. Use for apiRequest calls, response validation, the negative-test matrix (400/401/403/404/405/409), seeding, and cleanup. Triggers — "API test", "endpoint", "schema", "status code". Not for UI selectors (selectors) or POMs (page-objects).
 metadata:
   category: domain
@@ -317,7 +317,7 @@ When a test makes 2+ API calls, **each must be wrapped in `test.step("<message>"
 
 - When the repo uses Qase (`test-standards` § Qase is optional), `qase.suite(SUITES.<NAME>)` is the **first body line** of every test. Imported from `enums/app/qase-suites.ts`. Use `\t` (tab character) inside the value for nested suites (e.g. `"API\tJobs"`).
 - For tests without a mapped Qase id yet, **leave `qase.suite(...)` and comment out `qase.id(...)`** — do not delete them.
-- Tags drive runtime selection (one tag per test, never combined). In the standard set (with a kept set, the tag map's API and E2E tags; see `test-standards`):
+- Tags drive runtime selection: one type tag per test, plus the suites it belongs to (`@regression`, `@smoke`) and traits such as `@slow` (`test-standards` § Tag taxonomy & npm scripts). The type tag in the standard taxonomy (with a kept set, the tag map's API and E2E tags):
   - `@api` — every spec in `tests/app/api/**`, including multi-endpoint API flows (e.g. tenant onboarding over HTTP only)
   - `@e2e` — UI journeys in `tests/app/e2e/**` only, never an API flow
 
@@ -444,7 +444,7 @@ User says: _"We only have `{}` → 400 for `POST /workers`. Add full per-field v
 - **`enums`** — `SUITES.API_*`, message constants used in assertions (endpoint paths are not enums; they live in `appConfig.api.*` — see `config`).
 - **`fixtures`** — `apiRequest`, `mailpit`, `loginUser`, helper-fixture authoring.
 - **`helpers`** — auth bootstrap (`createStorageState`, login flows), helper-vs-fixture decision.
-- **`test-standards`** — tag whitelist, `test.step` requirements, single-tag rule, structure conventions.
+- **`test-standards`** — the tag taxonomy, `test.step` requirements, structure conventions.
 - **`refactor-values`** — workflow when an enum value, route constant, or static `test-data/` value needs to change.
 - **`scaffold-spec`** — sibling skill for greenfield spec scaffolding (templates and conventions).
 - **`debugging`** — failure-mode taxonomy, UI Mode / Trace Viewer / Inspector, CI-only-failure replay.

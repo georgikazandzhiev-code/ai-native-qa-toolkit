@@ -13,7 +13,7 @@
         "There is an invalid-type negative test",
         "There is a 401 unauthenticated test",
         "test and expect are imported from the project's fixtures barrel (a test-options path), never directly from @playwright/test",
-        "Each test carries exactly one tag, and no tag is placed on describe",
+        "Each test carries exactly one type tag (@api) plus only declared suite and trait tags, and no tag is placed on describe",
         "Created resources are cleaned up in afterEach or afterAll",
         "The output contains no if/else, no ternary, and no test.skip inside test bodies"
       ]
