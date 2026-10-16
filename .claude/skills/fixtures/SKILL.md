@@ -85,7 +85,7 @@ Walk these steps in order. Stop at any step where the artifact already exists; r
 | Need | Scope | Why |
 |------|-------|-----|
 | Per-test page objects (`jobsPage`, `createJobPage`, …), per-test mailbox handle, per-test `apiRequest` | `test` (default) | Re-runs setup per test → isolation. The example app's whole inventory runs on `test` scope |
-| Genuinely expensive shared setup — auth storage state minted once per Playwright worker, full app boot, a seeded tenant the entire spec file shares read-only | `worker` | One setup per Playwright worker process. **Teardown runs once per Playwright worker, not per test.** Misuse = shared mutable state across parallel tests = silent flake |
+| Genuinely expensive shared setup — auth storage state minted once per Playwright worker, full app boot, a seeded tenant the entire spec file shares read-only, the database connection pool (`db`, `fixtures/services/db-fixture.ts`, `helpers` § Database helpers) | `worker` | One setup per Playwright worker process. **Teardown runs once per Playwright worker, not per test.** Misuse = shared mutable state across parallel tests = silent flake |
 
 The example app uses **only `test` scope** — no Playwright-worker-scoped fixture is merged into its `test-options.ts`. If you reach for Playwright worker scope, the bar is high: prove the setup is shareable AND read-only AND expensive. Auth storage minted by the setup project (`tests/app/login.setup.ts` in the example app) is the canonical fit; build per-test data with `apiRequest` directly or a helper, not a Playwright-worker-scoped fixture.
 

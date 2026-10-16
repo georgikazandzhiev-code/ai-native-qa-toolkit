@@ -1,6 +1,6 @@
 ---
 name: flakiness-triage
-version: 2.1.4
+version: 2.1.5
 description: Classify a failing test as real bug, cross-test interference, or per-test flake — and hunt flakes proactively before CI finds them, via repeat-run detection, static flake-risk scoring, and a quarantine policy with expiry. Use when a test fails intermittently, passes locally but fails in CI, passes alone but fails in the suite, or before merging new and modified specs. Triggers — "flaky", "intermittent", "passes locally fails in CI", "passes alone", "is this test stable", "flake risk", "quarantine this test". Not for first-time diagnosis of a single failure (use the `debugging` skill). Not for whether a test asserts anything real (use the `mutation-testing` skill).
 metadata:
   category: running
@@ -18,7 +18,7 @@ Sister skill to `debugging`. `debugging` covers "this test just failed — what'
 - **ALWAYS reproduce N times before declaring a test "fixed".** A single green test run after a flake fix means nothing — the bar is **5 consecutive green isolated runs** of the affected spec (`--workers=1`, because isolating is their purpose) plus **one in-suite run** at the worker count CI uses — § Step 5.
 - **ALWAYS isolate the test before debugging.** Run the spec alone (`npx playwright test <spec> --workers=1`). If it passes alone but fails in the suite, the cause is **cross-test interference** (shared tenant state, leaked fixture, cleanup ordering). If it fails alone too, it's a **per-test bug** (race, missing wait, stale storage state).
 - **ALWAYS check the storage-state age for `401` flakes.** The setup project writes storage-state files (in the example app, `tests/app/login.setup.ts`); long-running local sessions may use expired tokens. Re-run setup before assuming a code bug.
-- **NEVER skip a flaky test with `test.skip`.** Per the orchestrator, `test.skip` corrupts Qase ID mappings. Comment out under `// TODO: FIXME: <TICKET> flaky — investigating` and report the ticket.
+- **NEVER skip a flaky test with `test.skip`.** Per the constitution, a skip gives a false green and corrupts the test-management signal (in Qase, its case-ID mappings). Comment out under `// TODO: FIXME: <TICKET> flaky — investigating` and report the ticket.
 - **ALWAYS repeat-run a new or modified spec before merging it.** 5 consecutive green isolated runs (`--workers=1`) plus one in-suite run is the merge bar — the same bar as verifying a flake fix. A spec that has only ever run once is unverified, not stable — and the cheapest flake to fix is the one that never reached main.
 - **NEVER quarantine without a ticket and an expiry date.** A quarantine with no expiry is silent coverage loss that nobody ever revisits. See § Quarantine policy.
 
@@ -195,7 +195,7 @@ The failure mode this catches: a suite where everyone knows "those three always 
 
 Quarantine is a last resort — the constitution prefers fixing over isolating, and forbids `test.skip` outright. When a flake is blocking a release and the fix is not same-day, all four of these are required together:
 
-1. **Comment out the whole `test(...)` block** under `// TODO: FIXME: <TICKET> flaky — quarantined <YYYY-MM-DD>, expires <YYYY-MM-DD>`. Never `test.skip` — it corrupts Qase ID mapping.
+1. **Comment out the whole `test(...)` block** under `// TODO: FIXME: <TICKET> flaky — quarantined <YYYY-MM-DD>, expires <YYYY-MM-DD>`. Never `test.skip` — it reports green and corrupts the test-management signal (in Qase, its ID mapping).
 2. **A ticket exists** and names the suspected cause, not just "flaky".
 3. **An expiry date**, default 14 days. On expiry the test is fixed or the ticket is escalated — it does not lapse quietly.
 4. **The coverage loss is reported** in the release notes or gate decision. A quarantined test is a documented gap, not an invisible one — this is the same discipline as a `CONCERNS` gate.
@@ -220,7 +220,7 @@ The most common per-test flake causes, most common first (rough and unmeasured �
 - ❌ Raising `expect.timeout` in `playwright.config.ts` globally. Every test eats the new timeout; flakes elsewhere now take 3× longer to surface.
 - ❌ `test.describe.configure({ retries: 3 })` on the flaky describe block. Hides the underlying race; CI passes but production user hits the same race.
 - ❌ Calling a test "fixed" after one green test run. One green proves nothing about an intermittent failure.
-- ❌ Marking the test `test.skip` with no ticket. Loses Qase ID mapping and removes visibility.
+- ❌ Marking the test `test.skip` with no ticket. Reports green, corrupts the test-management signal and removes visibility.
 - ❌ Bisecting flakes by sprinkling `console.log`. Use the trace (the example app's `playwright.config.ts` sets `trace: 'on-first-retry'`, so the first retry already captures one).
 
 ## Self-review checklist

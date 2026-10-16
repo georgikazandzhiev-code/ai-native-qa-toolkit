@@ -25,7 +25,7 @@ This skill has no paired rule (rule disposition: skill-only).
 - **ALWAYS** scan every meaningful state, not just the first render: dialogs open, form validation errors shown, empty state, error state, expanded menus. These are exactly the states `web-testability.md` requires the product to make addressable — and where most real a11y defects live.
 - **NEVER** treat a clean axe scan as "accessible". Automated rules can check only part of WCAG. Pair scans with keyboard and focus checks (Tab order, focus trap in dialogs, Escape returns focus to the trigger) and ARIA structure assertions (§ Beyond the scan).
 - **ALWAYS** report a missing accessible name or label as a **product** defect (via `bug-helper`), never route around it with a test-id. A role locator that cannot find a control is the test doing its job.
-- **ALWAYS** follow the framework rules for the spec itself: fixtures barrel import, exactly one type tag plus declared suite and trait tags (`test-standards`; do not use `@a11y` unless the repo declares it), `qase.suite(...)` first, `test.step` phases, WCAG tag list from a constant — not inline.
+- **ALWAYS** follow the framework rules for the spec itself: fixtures barrel import, exactly one type tag plus declared suite and trait tags (`test-standards`; do not use `@a11y` unless the repo declares it), `qase.suite(...)` first when the repo uses Qase, `test.step` phases, WCAG tag list from a constant — not inline.
 
 ## What's in each file (read this before reaching for another file)
 
@@ -98,7 +98,7 @@ Everything else (meaningful alt text, sensible reading order, error messages tha
 - [ ] No `disableRules`, no dropped tags, no spec-local exclusions; `exclude` is used only for third-party regions; known violations are (rule, element) entries in the one list, with ticket + expiry.
 - [ ] Keyboard path and dialog focus are checked for the primary flow.
 - [ ] Missing names / labels found along the way were filed as product defects, not worked around.
-- [ ] Spec follows `test-standards`: barrel import, one type tag plus declared suites and traits, `qase.suite` first, `test.step` phases.
+- [ ] Spec follows `test-standards`: barrel import, one type tag plus declared suites and traits, `qase.suite` first when the repo uses Qase, `test.step` phases.
 - [ ] Ran the spec; results attached; first real run recorded in `memories/learned_patterns.md`.
 
 ## Examples

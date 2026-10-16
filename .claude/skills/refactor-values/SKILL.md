@@ -16,7 +16,7 @@ metadata:
 - **NEVER** loosen a Zod schema (`z.literal`, `z.enum([...])`, e.g. `StatusSchema` in `fixtures/api/schemas/app/tenant.ts`) to make an updated value pass. Update the schema literal/enum to match the new value — the schema is the contract.
 - **ALWAYS** run `npx tsc --noEmit` and the lint-staged pipeline (eslint + prettier) plus the affected Playwright tests before declaring the refactor done. TypeScript catches key renames; eslint catches stale patterns; tests catch assertion drift.
 - **NEVER** use a single global find-and-replace. It misses casing variants, hardcoded copies in specs, and references inside `~/.claude/skills/*`, `CLAUDE.md`, `README.md`, and Qase suite-name mappings. Inspect every match.
-- **ALWAYS** treat `SUITES.*` value changes as a **Qase rename** — the value is the suite name shown in the Qase UI. Coordinate with whoever owns the Qase project before merging.
+- **ALWAYS**, when the repo uses Qase, treat `SUITES.*` value changes as a **Qase rename** — the value is the suite name shown in the Qase UI. Coordinate with whoever owns the Qase project before merging.
 - **NEVER** bypass Husky pre-commit hooks (`--no-verify`). If the hook fails after a value rename, fix the underlying lint/type issue.
 
 ## When to use this skill

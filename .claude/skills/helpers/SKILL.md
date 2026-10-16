@@ -1,7 +1,7 @@
 ---
 name: helpers
-version: 1.1.4
-description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers) and helpers/util/ — signature shape (apiRequest first, headers? last), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
+version: 2.0.0
+description: Helper authoring under helpers/app/ (CRUD wrappers, body builders, cleanup helpers, database helpers in helpers/app/db/) and helpers/util/ — signature shape (apiRequest first, headers? last; db first for database helpers), passthrough vs assertion styles, cleanup ordering, kebab-case naming. Use when adding or editing any helper. Triggers — "helper", "CRUD wrapper", "body builder", "cleanup", "database helper", "seed the database". Not for the fixture-vs-helper decision (api-testing § Three callable shapes) or fixture authoring (fixtures).
 metadata:
   category: domain
 ---
@@ -12,9 +12,9 @@ This skill governs **how** to author a helper: location, naming, signature, expo
 
 ## Critical
 
-- **ALWAYS** put resource-scoped helpers in `helpers/app/<resource>.ts` and cross-resource utilities in `helpers/util/<name>.ts`. Nothing else under `helpers/`.
-- **ALWAYS** make the first parameter `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`) and the last optional parameter `headers?: string` (the bearer token). Never read tokens or other env values inside a helper (not `process.env`, not `tokens.x()`) — the caller controls auth and passes `tokens.full()` etc.
-- **NEVER** declare a Zod schema inside a helper. Schemas live only under `fixtures/api/schemas/app/` (and `fixtures/api/schemas/util/` for shared shapes). Helpers import the inferred response types from those files.
+- **ALWAYS** put resource-scoped helpers in `helpers/app/<resource>.ts`, database helpers in `helpers/app/db/<resource>.ts` (§ Database helpers) and cross-resource utilities in `helpers/util/<name>.ts`. Nothing else under `helpers/`.
+- **ALWAYS** make an API helper's first parameter `apiRequest: ApiRequestFn` (typed from `fixtures/api/api-types`) and its last optional parameter `headers?: string` (the bearer token); a database helper takes `db: DbClient` first instead (§ Database helpers). Never read tokens or other env values inside a helper (not `process.env`, not `tokens.x()`) — the caller controls auth and passes `tokens.full()` etc. The two exceptions are the boundaries themselves: the auth helper and the database connection (§ Auth-bootstrap helpers, § Database helpers).
+- **NEVER** declare a Zod schema inside a helper. Schemas live only under `fixtures/api/schemas/app/` (and `fixtures/api/schemas/util/` for shared shapes), and row schemas under `fixtures/db/schemas/app/`. Helpers import the inferred response types from those files.
 - **The decision of WHEN to write a helper vs call `apiRequest({...})` directly vs build a fixture lives in the `api-testing` skill (§ Helpers — three callable shapes). This skill governs how to author the helper, not when.** Do not reproduce that decision tree here.
 - **ALWAYS** make cleanup helpers tolerate 404 via `Promise.allSettled` over the per-id deletes. A cleanup helper that throws on a missing resource breaks the next test's setup.
 - **Specs that seed jobs with assigned workers MUST cleanup jobs before worker resources (409 conflict otherwise).** Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` in `helpers/app/jobs.ts` — it enforces the order. Never invent a parallel deleter.
@@ -31,7 +31,8 @@ The **canonical** layout (per the constitution's § Standard repo layout and nam
 | Directory | Purpose |
 |-----------|---------|
 | `helpers/app/<resource>.ts` | Resource-scoped API helpers (CRUD wrappers, body builders, URL builders, cleanup) |
-| `helpers/util/<name>.ts` | Cross-resource utilities (auth bootstrap, Mailpit, Keycloak, formatters, generators) |
+| `helpers/app/db/<resource>.ts` | Database helpers for one resource (§ Database helpers) |
+| `helpers/util/<name>.ts` | Cross-resource utilities (auth bootstrap, Mailpit, Keycloak, formatters, generators); `db-client.ts`, the database connection |
 
 ### Resource helpers — `helpers/app/`
 
@@ -55,7 +56,7 @@ The **canonical** layout (per the constitution's § Standard repo layout and nam
 | File | Purpose |
 |------|---------|
 | `mailpit.ts` | `MailpitHelper` class (`getLastEmail`, `deleteAllEmails`, `deleteEmailsForRecipient`); `getInviteLinkFromEmail`, `extractLinkFromEmail`, `extractOtpFromEmail`, `getNextTestEmail`. Recipient must be `@<your-test-domain>`. |
-| `keyCloak.ts` | Auth bootstrap: `getAuthenticatedKcAdminClient`, `getAuthenticatedKcUserClient`, `getUserIdByEmail`, `resetUserPasswordById`, token retrieval. Reads Keycloak credentials as `env.KEYCLOAK_*` from `config/env.ts` — this file is the **one sanctioned** place for env access in helpers (it is the auth boundary; everywhere else, the caller passes the token via `headers`). **camelCase legacy — canonical: `key-cloak.ts` (or fold into `keycloak.ts`).** |
+| `keyCloak.ts` | Auth bootstrap: `getAuthenticatedKcAdminClient`, `getAuthenticatedKcUserClient`, `getUserIdByEmail`, `resetUserPasswordById`, token retrieval. Reads Keycloak credentials as `env.KEYCLOAK_*` from `config/env.ts` — this file is one of the **two sanctioned** places for env access in helpers (it is the auth boundary; the other is the database connection, `helpers/util/db-client.ts`; everywhere else, the caller passes the token via `headers`). **camelCase legacy — canonical: `key-cloak.ts` (or fold into `keycloak.ts`).** |
 | `dateTimeFormat.ts` | ISO → `MM/DD/YYYY h:mm:ss AM/PM` formatters with timezone offset. **camelCase legacy — canonical: `date-time-format.ts`.** |
 | `balanceFormat.ts` | Number → `1,234,567.89` formatter. **camelCase legacy — canonical: `balance-format.ts`.** |
 | `dataGenerator.ts` | `generateRandomAmount`, `generateTestEmail`, `generateUserData`. **camelCase legacy — canonical: `data-generator.ts`.** `generateTestEmail` is the legacy overlap with `mailpit.ts:getNextTestEmail` — use `getNextTestEmail(baseEmail)` for any email a test creates. `generateUserData` overlaps `users.ts:buildCreateUserBody` — consolidate when next touched. |
@@ -67,14 +68,14 @@ The **canonical** layout (per the constitution's § Standard repo layout and nam
 
 Apply these to every new helper. They are project-wide invariants — `api-testing` cites them, this skill enforces them.
 
-- **First parameter is `apiRequest: ApiRequestFn`** typed from `fixtures/api/api-types`. Never close over a request context, never instantiate one inside the helper.
+- **First parameter is `apiRequest: ApiRequestFn`** for an API helper, typed from `fixtures/api/api-types`; a database helper takes `db: DbClient` first instead (§ Database helpers). Never close over a request context, never instantiate one inside the helper.
 - **Last optional parameter is `headers?: string`** (the bearer token). For unauthenticated calls (testing 401), the caller omits it entirely — never pass an empty string. For form-encoded calls (Keycloak token endpoint), pass the literal string `"form-urlencoded"` — see `api-testing` § Common request recipes.
 - **Return shape — passthrough style:** `Promise<ApiRequestResponse<T>>` where `T` is the schema-inferred response type. The caller owns status assertion and `Schema.parse(body)`. This is the default for CRUD helpers used across positive AND negative tests.
 - **Return shape — assertion-style:** the typed entity itself (`Promise<{ email: string; userId: string }>` for `setupTestUser`). The helper asserts `status` and runs `Schema.parse(body)` once internally. Only for setup helpers that exist to seed a precondition. **Decision rule lives in `api-testing` § Two helper styles.**
 - **Sync URL builders** — for query-string endpoints, expose a sibling `buildList<X>Url(params)` that takes a typed param object and returns the path string. In the example app: `buildListJobsUrl`, `buildListWorkersUrl`, `buildListUsersUrl`, `buildRunStatsQueryUrl`. Keep these synchronous — they are pure path-shapers.
-- **Sync body builders** — `buildCreate<X>Body(overrides?)` / `buildUpdate<X>Body(overrides?)` returning a plain object literal seeded from `faker`. Always splat `...overrides` last so callers can override any field. Names always carry a `qa-` prefix and a faker-suffix to be greppable in DB cleanups (e.g. `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`).
+- **Sync body builders** — `buildCreate<X>Body(overrides?)` / `buildUpdate<X>Body(overrides?)` returning a plain object literal seeded from `faker`. Always splat `...overrides` last so callers can override any field. Names always carry a `qa-` prefix and a faker-suffix so leftovers are easy to spot (cleanup deletes by id, never by the prefix; e.g. `qa-export-${faker.string.alphanumeric(8).toLowerCase()}`).
 - **Cleanup helpers** — accept arrays of ids (typed `string[]`), iterate via `Promise.allSettled` over per-id deletes, never throw. The shape is `cleanup<Resource>(apiRequest, ids: string[], headers?: string): Promise<void>`. For multi-resource cleanups with ordering constraints, name the helper after both resources in dependency order (`cleanupWorkersAndJobs` deletes jobs first **despite the name reading workers-first** — the name is descriptive of the inputs, the order is enforced by the implementation).
-- **Schemas import-only.** A helper file imports response types from `fixtures/api/schemas/app/<resource>.ts` (`type CreateJobResponse`); it never declares a `z.object` / `z.strictObject`. If you find yourself reaching for `z`, the schema belongs in `fixtures/api/schemas/app/`.
+- **Schemas import-only.** A helper file imports response types from `fixtures/api/schemas/app/<resource>.ts` (`type CreateJobResponse`); it never declares a `z.object` / `z.strictObject`. If you find yourself reaching for `z`, the schema belongs in `fixtures/api/schemas/app/` (a database row's in `fixtures/db/schemas/app/`).
 - **Configuration via `appConfig`.** Endpoint paths come from `appConfig.api.X` (`config/app.ts`); base URL comes from `appConfig.apiUrl`. Never hardcode a path string in a helper.
 
 ## Setup-style vs passthrough helpers
@@ -98,20 +99,40 @@ These are the cleanup invariants for helper authors. Generic guidance lives in `
 ## Body-builder patterns
 
 - One file per resource, alongside the CRUD helpers (in the example app, `jobs.ts` co-locates seven `buildCreate*Body` variants for the seven job types).
-- `qa-` prefix + faker suffix is the convention for greppable cleanup. Do not drop the prefix.
+- `qa-` prefix + faker suffix is the convention, so leftovers are easy to spot; cleanup deletes by id, never by the prefix. Do not drop the prefix.
 - In the example app, seven job types live in `helpers/app/jobs.ts`: `buildCreateJobBody` (defaults to type `export`), `buildCreateHTTPJobBody`, `buildCreateStreamJobBody`, `buildCreateSFTPJobBody`, `buildCreateEmailJobBody`, `buildCreateBackupJobBody`, `buildCreateWebhookJobBody`. Adding an 8th job type goes in the same file. **The 10th-job-type-or-5th-builder-on-another-file trigger** decides when to extract body builders to a shared `helpers/app/test-data-generators.ts` — below it, per-resource is fine.
 - Recipient-domain rule for any builder that emits an email: it MUST be `@<your-test-domain>` (Mailpit catches only that). If a body builder emits an address outside your Mailpit domain (e.g. `@<alt-test-domain>`), that is a bug: fix the builder and do not pattern after it.
 
 ## Auth-bootstrap helpers
 
-- **The Keycloak admin client (`helpers/util/keyCloak.ts` in the example app) is the one sanctioned place for env reads in helpers** — and even it reads `env.KEYCLOAK_*` from `config/env.ts`, never `process.env` (see `type-safety` § Environment variables). It is the auth boundary — everywhere else, the caller passes the token via the `headers` parameter.
+- **The Keycloak admin client (`helpers/util/keyCloak.ts` in the example app) is one of the two sanctioned places for env reads in helpers** (the other is the database connection, `helpers/util/db-client.ts`) — and even it reads `env.KEYCLOAK_*` from `config/env.ts`, never `process.env` (see `type-safety` § Environment variables). It is the auth boundary — everywhere else, the caller passes the token via the `headers` parameter.
 - **The UI auth bootstrap (`helpers/app/createStorageState.ts` in the example app)** logs in via the Keycloak UI, optionally enters a TOTP, waits for the app sidebar, and writes the storage state to a path. It is consumed from the setup project (`tests/app/login.setup.ts`), not from regular specs.
 - **`setupTestUser`** is the bridge between the admin API and Keycloak: it creates the user via the admin API, resets the password directly via the Keycloak admin client (bypassing the invite-link / email-reset UX), purges the Mailpit mailbox, and returns `{ email, userId }`. It does **not** mint or return access tokens, and it does **not** drive the invite-link flow end-to-end. For tests that need the invite-link UX, write the steps inline (purge → create user → `getInviteLinkFromEmail` → follow the link) — see `api-testing` § Multi-step & E2E API tests.
 
+## Database helpers
+
+Reach for the database only when the API cannot do the job: a state no endpoint can create, a side effect no endpoint exposes, or a row no endpoint can delete. API seeding stays the default (`data-strategy`), because it goes through the same rules a user's request does.
+
+| What | Where |
+|---|---|
+| This app's queries, one file per resource | `helpers/app/db/<resource>.ts` |
+| The connection code: the factory that opens and closes the pools | `helpers/util/db-client.ts` |
+| Row schemas | `fixtures/db/schemas/app/<resource>.ts` |
+| The `db` fixture, worker-scoped | `fixtures/services/db-fixture.ts` |
+
+- **One canonical location.** Queries live only in `helpers/app/db/`; the connection only in `db-client.ts`. The shared client never holds an app's queries, and a query file never opens a connection.
+- **Signature: the client first.** A database helper takes `db: DbClient` (exported by `db-client.ts`) as its first parameter, as an API helper takes `apiRequest`, and gets it from the `db` fixture. It never imports a connection itself. `DbClient` has two sides: `db.write` for seeding and cleanup, and `db.read` for verification, which uses the read-only user where one exists and is the same as `db.write` where it doesn't.
+- **The connection is the second sanctioned env reader.** `db-client.ts` reads `env.DB_URL` (seeding and cleanup) and, where the database offers a read-only user, `env.DB_READONLY_URL` for verification reads, both declared in `env/.env.example` and validated in `config/env.ts` (`config`). The names follow the house style (`API_URL`, `MAILPIT_URL`) rather than the ecosystem's `DATABASE_URL`. Query helpers read no env at all. A database without a read-only user sets `DB_READONLY_URL` to the `DB_URL` value; one pool per URL then makes `db.read` and `db.write` the same pool. Never `??` between them.
+- **Typed, parameterised queries.** The repo picks the driver (`pg`, `mysql2`, …); `db-client.ts` wraps it in a `query(sql, params): Promise<unknown[]>`, so nothing is `any`. Values always go in as parameters, never concatenated into SQL. Long queries get a named budget on `appConfig.timeouts`.
+- **Validate what you read.** Parse rows with their `z.strictObject` schema from `fixtures/db/schemas/app/` before asserting on them, as with an API response.
+- **Clean up what you write, and only that.** Delete by the ids the insert returned, children before parents (the database's version of jobs before workers), and tolerate zero rows deleted, as an API cleanup tolerates 404. Never delete by a name pattern: a `qa-%` match, even one scoped to the run, deletes rows that other tests and Playwright workers still use. A row the test updates but did not insert: read its old values first and restore them in `afterEach`/`afterAll`.
+- **One connection pool per URL per Playwright worker, closed at the end.** The `db` fixture calls that factory with `{ scope: 'worker' }` and closes the pools after `await use(...)`: a pool is expensive, shareable, and read-only in the sense `fixtures` means: the shared object holds no test data, and every row written through it is cleaned up per test. Never a module-level singleton, which has no teardown.
+- **A UI test asserts what the user sees.** Checking a UI result in the database hides the bug the UI would show; read the database only for state the UI cannot show.
+
 ## Anti-patterns
 
-- ❌ Declaring a Zod schema (`z.object`, `z.strictObject`, …) inside a helper file. Move it to `fixtures/api/schemas/app/<resource>.ts` and import the inferred type back.
-- ❌ Reading credentials or tokens inside a helper — `process.env` anywhere, or `env` / `tokens` outside the sanctioned auth-boundary helper (`helpers/util/keyCloak.ts` in the example app). The caller controls the token via `headers`.
+- ❌ Declaring a Zod schema (`z.object`, `z.strictObject`, …) inside a helper file. Move it to `fixtures/api/schemas/app/<resource>.ts` (a row schema to `fixtures/db/schemas/app/<resource>.ts`) and import the inferred type back.
+- ❌ Reading credentials or tokens inside a helper — `process.env` anywhere, or `env` / `tokens` outside the two sanctioned boundaries (the auth helper, `helpers/util/keyCloak.ts` in the example app, and the database connection, `helpers/util/db-client.ts`). The caller controls the token via `headers`.
 - ❌ Hardcoding URLs, paths, or uuids inside a helper. Paths come from `appConfig.api.X`, base URL from `appConfig.apiUrl`, uuids from `test-data/app/*.json` or `faker.string.uuid()`.
 - ❌ A new helper file in camelCase. Use kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). If your repo has camelCase helper files, they are drift; rename when next touched.
 - ❌ A cleanup helper that throws on 404. Use `Promise.allSettled` and tolerate already-deleted ids.
@@ -128,16 +149,17 @@ These are the cleanup invariants for helper authors. Generic guidance lives in `
 
 Before declaring a helper change done, verify:
 
-- [ ] File is under `helpers/app/<resource>.ts` (resource-scoped) or `helpers/util/<name>.ts` (cross-resource).
+- [ ] File is under `helpers/app/<resource>.ts` (resource-scoped), `helpers/app/db/<resource>.ts` (database) or `helpers/util/<name>.ts` (cross-resource).
 - [ ] Filename is kebab-case (or you are editing one of your repo's legacy camelCase files in place).
-- [ ] First parameter is `apiRequest: ApiRequestFn`; last optional parameter is `headers?: string`.
-- [ ] No `z.object` / `z.strictObject` / `z.<anything>` inside the helper file. Response types are imported from `fixtures/api/schemas/app/`.
-- [ ] No `process.env` reads inside the helper, and no `env` / `tokens` reads either unless the file IS the auth-boundary helper (`helpers/util/keyCloak.ts` in the example app, which reads `env.KEYCLOAK_*`).
+- [ ] An API helper's first parameter is `apiRequest: ApiRequestFn` and its last optional parameter is `headers?: string`; a database helper's first parameter is `db: DbClient`.
+- [ ] No `z.object` / `z.strictObject` / `z.<anything>` inside the helper file. Response types are imported from `fixtures/api/schemas/app/`, row types from `fixtures/db/schemas/app/`.
+- [ ] No `process.env` reads inside the helper, and no `env` / `tokens` reads either unless the file IS the auth-boundary helper (`helpers/util/keyCloak.ts` in the example app, which reads `env.KEYCLOAK_*`) or the database connection (`helpers/util/db-client.ts`, which reads `env.DB_URL` and `env.DB_READONLY_URL`).
 - [ ] Endpoint paths come from `appConfig.api.X`; base URL is `appConfig.apiUrl`.
 - [ ] If the helper is a body builder, the name carries a `qa-` prefix + faker suffix and `...overrides` is splat last.
 - [ ] If the helper is a cleanup, it uses `Promise.allSettled` and tolerates 404.
 - [ ] If the helper is assertion-style, it asserts `status` and runs `Schema.parse(body)` once and returns the typed payload — not `{ status, body }`.
 - [ ] If the helper is passthrough, it does not status-assert internally — the caller does.
+- [ ] If the helper touches the database: it is the last resort (no endpoint can), takes `db` from the `db` fixture, passes values as parameters, parses rows with a schema from `fixtures/db/schemas/app/`, reads through `db.read`, deletes only the ids it inserted (children first, zero rows tolerated), restores any row it updated, and no UI test uses it to check what the screen should show.
 - [ ] Cleanup paths for jobs with assigned workers use `cleanupWorkersAndJobs`; nothing else deletes workers-then-jobs.
 - [ ] If the helper sends an email, the recipient domain is `@<your-test-domain>`.
 - [ ] Helper choice (helper vs `apiRequest` vs fixture) was made via `api-testing` § Helpers, not by gut feel.
@@ -182,7 +204,7 @@ Walk:
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| My helper has a `z.object(...)` in it | Schema declared in the wrong layer | Move the schema to `fixtures/api/schemas/app/<resource>.ts`; export both the schema and the inferred type; import the inferred type back into the helper from that resource file (there is no `app/` schema barrel). See `api-testing` § Zod schema conventions. |
+| My helper has a `z.object(...)` in it | Schema declared in the wrong layer | Move the schema to `fixtures/api/schemas/app/<resource>.ts` (a row schema to `fixtures/db/schemas/app/<resource>.ts`); export both the schema and the inferred type; import the inferred type back into the helper from that resource file (there is no `app/` schema barrel). See `api-testing` § Zod schema conventions. |
 | Cleanup fails with `409 Conflict` deleting a worker | The worker is still assigned to a job — wrong delete order | Use `cleanupWorkersAndJobs(apiRequest, workerIds, jobIds, headers)` from `helpers/app/jobs.ts`. It deletes jobs first, workers second. |
 | ESLint complains about my helper filename | The file is camelCase (or otherwise not kebab-case) | Rename to kebab-case (`admin-tenants.ts`, not `adminTenants.ts`). The constitution's § Standard repo layout and naming is the source of truth; if your repo has legacy camelCase files, do not propagate them (the example app's are marked in § File locations and inventory). |
 | Cleanup throws and breaks the next test's setup | A delete returned 404 (already gone) and the helper threw | Wrap deletes in `Promise.allSettled`. Cleanup must tolerate 404 — never throw. See `cleanupWorkers` and `cleanupWorkersAndJobs`. |
@@ -190,7 +212,7 @@ Walk:
 | 401 test fails because `headers: ""` triggered a different error | Empty-string `headers` sends an `Authorization: Bearer ` request, not an unauthenticated request | **Omit the `headers` property entirely** in the helper call site. Never pass an empty string. |
 | I don't know whether to write a helper, call `apiRequest` directly, or build a fixture | Decision rule is not in this skill | Load `api-testing` § Helpers — three callable shapes / Two helper styles. This skill governs how to author the helper; that one governs whether you should. |
 | My new helper duplicates `generateTestEmail` / `generateUserData` / `getNextTestEmail` | Overlapping email/user generators (in the example app, across `dataGenerator.ts` and `mailpit.ts`) | Search before creating and consolidate when next touched. For any email a test creates, use `getNextTestEmail(baseEmail)` (in `helpers/util/mailpit.ts`) — `generateTestEmail` is the legacy overlap; Mailpit plus-addressing makes every address unique and catchable. |
-| A non-Keycloak helper reads `process.env.KEYCLOAK_*` (or `env.KEYCLOAK_*`) and gets `undefined` or the wrong value | A helper read env directly that should not have | Move the read up to the spec (`env.X` / `tokens.x()`) or an auth-bootstrap helper and pass the value in. The only sanctioned env reader in `helpers/` is the auth-boundary helper (`helpers/util/keyCloak.ts` in the example app), via `env.KEYCLOAK_*` from `config/env.ts` — every other helper takes the token via the `headers` parameter. |
+| A non-Keycloak helper reads `process.env.KEYCLOAK_*` (or `env.KEYCLOAK_*`) and gets `undefined` or the wrong value | A helper read env directly that should not have | Move the read up to the spec (`env.X` / `tokens.x()`) or an auth-bootstrap helper and pass the value in. The sanctioned env readers in `helpers/` are the auth-boundary helper (`helpers/util/keyCloak.ts` in the example app, via `env.KEYCLOAK_*` from `config/env.ts`) and the database connection (`helpers/util/db-client.ts`, via `env.DB_URL` and `env.DB_READONLY_URL`) — every other helper takes the token via the `headers` parameter, or the client via `db`. |
 
 ## See Also
 
@@ -199,7 +221,8 @@ Walk:
 - **`type-safety`** — Zod 3 schemas, `z.strictObject()`, `z.string().uuid()` defaults, type inference (`z.infer<typeof X>`), and env access through the config module (`env.X`, `tokens.full()` — never `process.env` outside `config/env.ts`). The strictness ladder for `.optional()` / `.nullable()` lives in `api-testing` § Zod schema conventions.
 - **`data-strategy`** — when to use JSON vs faker vs env vs API seeding. The three-tier rule for invalid-value arrays is in `api-testing` § Invalid-value arrays. Body builders in this skill seed from faker per § 8 of that skill.
 - **`enums`** — `SUITES.API_*`, statuses, message constants. Suites and messages are caller-side concerns; a helper may import a domain value it needs (e.g. a `JOB_STATUSES` member), but never a path or URL — resource path constants (`appConfig.api.X`) live in `config/app.ts` per the orchestrator's Sources of Truth rule.
-- **`config`** — `appConfig.api.X` for endpoint paths, `appConfig.apiUrl` for base URL, `appConfig.paths.X` for UI routes.
+- **`config`** — `appConfig.api.X` for endpoint paths, `appConfig.apiUrl` for base URL, `appConfig.paths.X` for UI routes; `DB_URL` and `DB_READONLY_URL` for the database connection.
+- **`common-tasks`** — the routing table: which skill owns adding a database helper or a row schema.
 - **`refactor-values`** — the workflow when a route constant or static `test-data/` value referenced by a helper needs to change.
 - **`debugging`** — failure-mode taxonomy when a helper-driven setup or teardown misbehaves.
 - **[`api-testing`](../api-testing/SKILL.md)** — non-negotiable invariants for API specs that consume these helpers.

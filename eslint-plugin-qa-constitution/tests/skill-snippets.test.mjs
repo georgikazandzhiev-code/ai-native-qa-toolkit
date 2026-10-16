@@ -300,6 +300,8 @@ const eslint = new ESLint({
   overrideConfigFile: 'smoke/eslint.config.mjs',
   overrideConfig: [
     { files: ['**/*.ts'], plugins: { playwright }, linterOptions: { reportUnusedDisableDirectives: 'off' } },
+    // A snippet is linted as if its path were from the repo root: the work dir is that root.
+    { files: ['**/*.ts'], rules: { 'qa-constitution/no-process-env-outside-config': ['error', { root: WORK_DIR }] } },
   ],
 });
 // Parse only, no rules: counter-examples and marked blocks must still be TypeScript.

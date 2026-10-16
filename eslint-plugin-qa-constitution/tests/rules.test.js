@@ -217,9 +217,9 @@ tester.run('no-pom-instantiation-in-test', plugin.rules['no-pom-instantiation-in
 
 tester.run('no-process-env-outside-config', plugin.rules['no-process-env-outside-config'], {
   valid: [
-    // the config module is the one reader
+    // the lint allows the whole top-level config/ folder; only config/env.ts should read process.env (config skill), the rest is review
     { code: `export const env = EnvSchema.parse(process.env);`, filename: 'config/env.ts' },
-    { code: `const v = process.env[name];`, filename: '/repo/config/env.ts' },
+    { code: `const v = process.env[name];`, filename: 'config/util/jobs-service.ts' },
     // the runner config reads ENVIRONMENT and CI from the shell
     { code: `const ci = !!process.env.CI;`, filename: 'playwright.config.ts' },
     // the setup project writes a run-time token: an assignment is not a read
@@ -639,6 +639,51 @@ tester.run('standard-layout', plugin.rules['standard-layout'], {
     // ordinary cases, so they get file names of their own — RuleTester rejects duplicate cases)
     { filename: at('e2e/drive-letter.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, errors: [{ messageId: 'place' }] },
     { filename: at('e2e/drive-letter-root.spec.ts').replace(/^([A-Z]):/, (_, d) => `${d.toLowerCase()}:`), code: BODY, options: [{ root: NESTED }], errors: [{ messageId: 'place' }] },
+  ],
+});
+
+/**
+ * `allow` is matched against the path from the layout root (the repo root, or `root` when set), not the absolute path (#83). The old
+ * default, `(^|/)config/` on the absolute path, let a spec in a service folder named `config`, or
+ * any file in a checkout whose path contains `/config/`, read process.env.
+ */
+const ENV_READ = `const token = process.env.API_TOKEN;`;
+// A checkout under a folder named config: a package.json root with no flat config above it.
+const CKOUT = `${require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'ckout-')).replace(/\\/g, '/')}/config/repo`;
+require('node:fs').mkdirSync(CKOUT, { recursive: true });
+require('node:fs').writeFileSync(`${CKOUT}/package.json`, '{ "private": true }');
+process.on('exit', () => require('node:fs').rmSync(CKOUT.replace(/\/config\/repo$/, ''), { recursive: true, force: true }));
+tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-process-env-outside-config'], {
+  valid: [
+    { filename: at('config/env.ts'), code: `export const env = EnvSchema.parse(process.env);` },
+    { filename: at('playwright.config.ts'), code: `const ci = !!process.env.CI;` },
+    { filename: at('playwright.config.mts'), code: ENV_READ },
+    { filename: at('playwright.config.js'), code: ENV_READ },
+    // a declared root moves the config module with the layout
+    { filename: at('qa/config/env.ts'), code: ENV_READ, options: [{ root: 'qa' }] },
+    // a file outside a declared root is not judged
+    { filename: at('tools/seed.ts'), code: ENV_READ, options: [{ root: 'qa' }] },
+    // a legacy config module, allowed by its path from the repo root until Config moves
+    { filename: at('src/config.ts'), code: ENV_READ, options: [{ allow: '^src/config\\.ts$' }] },
+    { filename: `${CKOUT}/config/env.ts`, code: ENV_READ },
+  ],
+  invalid: [
+    // a service folder named config is not the config module
+    { filename: at('tests/app/api/config/config.spec.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('helpers/app/config/jobs.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    // the runner config is the one at the root
+    { filename: at('tests/app/playwright.config.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    // nor is a checkout whose path contains /config/
+    { filename: `${CKOUT}/tests/app/api/jobs/jobs.spec.ts`, code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    // a legacy config module needs its allow entry
+    { filename: at('src/config.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    // inside a declared root, the layout is read from that root
+    { filename: at('qa/tests/app/api/jobs/jobs.spec.ts'), code: ENV_READ, options: [{ root: 'qa' }], errors: [{ messageId: 'outside' }] },
+    { filename: at('qa/config/env.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    // only the config/ folder and playwright.config.{js,ts,mjs,mts,cjs,cts} at the root
+    { filename: at('config.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('configs/x.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('playwright.config.tsx'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
   ],
 });
 

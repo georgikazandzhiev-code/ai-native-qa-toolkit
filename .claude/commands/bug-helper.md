@@ -1,6 +1,6 @@
 ---
 argument-hint: "[failure output | log | prose | @file | Jira key]"
-description: Turn a failure, log, or observation into a clean, Jira-ready bug report for the platform. Triages real-bug vs test-issue first (isolation test runs, Qase artifacts, manual repro, recent FE/BE commits), de-duplicates against existing bugs, then optionally files it into your Jira project via Jira MCP.
+description: Turn a failure, log, or observation into a clean, Jira-ready bug report for the platform. Triages real-bug vs test-issue first (isolation test runs, test-run artifacts, manual repro, recent FE/BE commits), de-duplicates against existing bugs, then optionally files it into your Jira project via Jira MCP.
 # Manual only: this persona can write to Jira, so only a person starts it (/bug-helper).
 disable-model-invocation: true
 ---
@@ -27,7 +27,7 @@ If the input is too thin to produce reproducible steps, **ask targeted questions
 **Never draft a bug report from a failing test alone.** A red test has three possible causes — app bug, test bug, or environment/flake — and only the first one deserves a Jira ticket. Before writing anything, walk this verification ladder and record what you checked:
 
 1. **Classify the failure.** If the evidence is a failing automated test, load the `debugging` skill (failure-mode taxonomy) and, for intermittent failures, the `flakiness-triage` skill. Run the isolation experiment from that skill: the spec alone, `--workers=1`, 5 times. Passes alone but fails in the suite = cross-test interference — that's a test bug, not a product bug. Fails every time = keep going down the ladder.
-2. **Review the test-run artifacts.** For nightly/CI failures, open the Qase test run and inspect the **video, screenshots, and trace** of the failing case (locally: `npx playwright show-trace <trace.zip>`). Look for what actually happened on screen vs what the assertion claims — a selector drift or skeleton-state race is a test issue, not a defect.
+2. **Review the test-run artifacts.** For nightly/CI failures, open the test run in your test-management tool (Qase, when the repo uses it) or the CI report and inspect the **video, screenshots, and trace** of the failing case (locally: `npx playwright show-trace <trace.zip>`). Look for what actually happened on screen vs what the assertion claims — a selector drift or skeleton-state race is a test issue, not a defect.
 3. **Reproduce it manually, outside the test.** API bug → replay the exact request (method, path, body, auth role) and confirm the wrong response yourself. UI bug → walk the same steps by hand on the same environment. **If you cannot reproduce it manually, it is not ready to be filed** — say so and route to `flakiness-triage` instead. **One exception — an intermittent product defect** (a race in the app, API non-determinism) that `flakiness-triage` classified as a real bug but that can't be reproduced by hand on demand: it may be filed when traces from failing runs show the *product* misbehaving. File it labelled intermittent, with the reproduction rate (e.g. 3 of 10 runs) and those traces as evidence. A race in the *test* (e.g. asserting during a skeleton state) is still a test issue, not a bug.
 4. **Check whether a recent change introduced it.** Look at recent commits in the relevant sibling repos — `<sibling-repos>/frontend` (UI contracts, testids, strings), `<sibling-repos>/backend` (API), and any other repo the affected service depends on, such as job executors or deployment config. **`git pull` the repo first** — stale copies cause wrong assumptions. `git log --oneline --since="<last green test run>"` scoped to the affected service usually finds the culprit. A found commit becomes the strongest "Notes / suspected area" evidence in the report.
 5. **Rule out environment.** Expired storage state (401s after long sessions), unhealthy worker, env reset that wiped seeded data — these are environment issues, not product bugs. Check the obvious ones before blaming the app.
@@ -55,7 +55,7 @@ Produce the report in this exact structure:
 - **Steps to reproduce** — numbered, deterministic, copy-pasteable. Include the exact request (method + path + relevant params) for API bugs.
 - **Expected result** — what the contract / spec / OpenAPI says should happen.
 - **Actual result** — what actually happened, with the evidence (status code, response body, error text).
-- **Evidence** — log lines, Qase ID + test-run link, trace/video path, and the triage outcome (isolation test runs, manual reproduction result, suspect commit from a sibling repo if found).
+- **Evidence** — log lines, the test-case ID and test-run link from your test-management tool (Qase, when used; never an invented one), trace/video path, and the triage outcome (isolation test runs, manual reproduction result, suspect commit from a sibling repo if found).
 - **Notes / suspected area** — optional: point to the likely file/service if the evidence suggests it (e.g. the notification-rule repository in `notification-service/`).
 
 Keep it factual. Assert against the contract, not opinion. Do not propose the fix as if it were confirmed — suspected areas go under Notes.

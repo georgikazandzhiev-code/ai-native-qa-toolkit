@@ -616,6 +616,46 @@ rules['no-pom-instantiation-in-test'] = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// The layout root, shared by the rules that read a file's place in the repo
+// ---------------------------------------------------------------------------
+
+/** A path with forward slashes and an upper-case drive letter, so `c:` and `C:` compare equal. */
+const normPath = (p) => p.replace(/\\/g, '/').replace(/^([a-z]):/, (_, d) => `${d.toUpperCase()}:`);
+const nodePath = require('node:path');
+const nodeFs = require('node:fs');
+const FLAT_CONFIGS = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', 'eslint.config.ts', 'eslint.config.mts', 'eslint.config.cts'];
+const nearest = new Map();
+/** The nearest folder at or above `dir` holding one of `names`, or null. Cached per folder and name list. */
+function nearestHolding(dir, names) {
+  const key = `${names[0]}|${dir}`;
+  if (nearest.has(key)) return nearest.get(key);
+  const parent = nodePath.dirname(dir);
+  const found = names.some((n) => nodeFs.existsSync(nodePath.join(dir, n))) ? dir : parent === dir ? null : nearestHolding(parent, names);
+  nearest.set(key, found);
+  return found;
+}
+/** The repo root for a folder: its nearest ESLint flat config, else its nearest package.json, else null. */
+const repoRootOf = (dir) => nearestHolding(dir, FLAT_CONFIGS) ?? nearestHolding(dir, ['package.json']);
+/**
+ * The file's path from the layout root, with forward slashes and no leading slash, or null when the
+ * file sits outside it. The repo root is the nearest folder above the file that holds an ESLint flat
+ * config (where the gate is configured), else a `package.json`, so the result does not depend on
+ * where ESLint was started; with neither above the file, the working directory is the root. `root`
+ * moves the start, absolute or relative to that repo root.
+ */
+function layoutPath(context, root) {
+  const cwd = normPath(context.cwd ?? context.getCwd()).replace(/\/+$/, '');
+  // The ESLint class and CLI pass absolute names; Linter#verify and RuleTester pass relative ones, or
+  // <input> when there is none, read from the working directory.
+  const file = normPath(nodePath.resolve(cwd, context.filename ?? context.getFilename()));
+  const found = repoRootOf(nodePath.dirname(file));
+  const base = found ? normPath(found) : cwd;
+  const rootDir = root !== undefined ? normPath(nodePath.resolve(base, root)) : base;
+  const prefix = `${rootDir.replace(/\/+$/, '')}/`;
+  return file.startsWith(prefix) ? file.slice(prefix.length) : null;
+}
+
 /**
  * MUST — Sources of Truth: only the config module reads process.env.
  *
@@ -626,7 +666,10 @@ rules['no-pom-instantiation-in-test'] = {
  *
  * Writes are not reads: the setup project assigns run-time tokens (`process.env.X = token`), so an
  * assignment target is allowed. Files matching `allow` (the config module, playwright.config.ts,
- * which must read ENVIRONMENT and CI from the shell) may read freely.
+ * which must read ENVIRONMENT and CI from the shell) may read freely. `allow` is matched against the
+ * path from the layout root (layoutPath), so only the top-level `config/` counts: a service folder
+ * named `config`, or a checkout path that contains `/config/`, does not open the gate. A file
+ * outside a declared `root` is not judged.
  */
 rules['no-process-env-outside-config'] = {
   meta: meta('Read environment variables only in the config module; everything else imports env / tokens / appConfig.', {
@@ -634,13 +677,13 @@ rules['no-process-env-outside-config'] = {
       outside:
         'process.env{{key}} read outside the config module. Import it instead: env.X for a value known at start, tokens.x() for a run-time token, appConfig for URLs. config/env.ts reads process.env once and validates it at load, so a missing variable fails the run at startup.',
     },
-    schema: [{ type: 'object', properties: { allow: { type: 'string' } }, additionalProperties: false }],
+    schema: [{ type: 'object', properties: { allow: { type: 'string' }, root: { type: 'string' } }, additionalProperties: false }],
   }),
   create(context) {
     const opt = context.options[0] ?? {};
-    const allow = new RegExp(opt.allow ?? '(^|/)config/|(^|/)playwright\\.config\\.[cm]?[jt]s$');
-    const filename = (context.filename ?? context.getFilename()).replace(/\\/g, '/');
-    if (allow.test(filename)) return {};
+    const allow = new RegExp(opt.allow ?? '^config/|^playwright\\.config\\.[cm]?[jt]s$');
+    const rel = layoutPath(context, opt.root);
+    if (rel === null || allow.test(rel)) return {};
     return {
       MemberExpression(node) {
         if (memberPath(node) !== 'process.env') return;
@@ -820,10 +863,9 @@ rules['no-disabled-test'] = {
  * and k6 scripts. Helpers, enums, schemas and test data are not recognisable from one file, so
  * they are left alone rather than guessed at.
  *
- * Paths are read relative to the repo root: the nearest folder above the file that holds an ESLint
- * flat config (where the gate is configured), or failing that a `package.json`, so the result does
- * not depend on where ESLint was started, and a k6 sub-project's own package.json in tests/perf/
- * does not move it as long as the repo root holds an `eslint.config.*`. With `--config <other
+ * Paths are read from the layout root (layoutPath, above): the nearest folder above the file that
+ * holds an ESLint flat config, or failing that a `package.json`, so a k6 sub-project's own
+ * package.json in tests/perf/ does not move it as long as the repo root holds an `eslint.config.*`. With `--config <other
  * name>`, or a config inside tests/perf/, the nearest package.json or config wins, so such a repo
  * sets `root` to its own folder. `root` sets where the layout starts, absolute or relative to
  * that repo root; a file outside it is not judged. The repo's
@@ -834,23 +876,6 @@ rules['no-disabled-test'] = {
  * An area leaves the list the moment its move PR deletes the entry.
  */
 const KEBAB = '[a-z0-9]+(?:-[a-z0-9]+)*';
-/** A path with forward slashes and an upper-case drive letter, so `c:` and `C:` compare equal. */
-const normPath = (p) => p.replace(/\\/g, '/').replace(/^([a-z]):/, (_, d) => `${d.toUpperCase()}:`);
-const nodePath = require('node:path');
-const nodeFs = require('node:fs');
-const FLAT_CONFIGS = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs', 'eslint.config.ts', 'eslint.config.mts', 'eslint.config.cts'];
-const nearest = new Map();
-/** The nearest folder at or above `dir` holding one of `names`, or null. Cached per folder and name list. */
-function nearestHolding(dir, names) {
-  const key = `${names[0]}|${dir}`;
-  if (nearest.has(key)) return nearest.get(key);
-  const parent = nodePath.dirname(dir);
-  const found = names.some((n) => nodeFs.existsSync(nodePath.join(dir, n))) ? dir : parent === dir ? null : nearestHolding(parent, names);
-  nearest.set(key, found);
-  return found;
-}
-/** The repo root for a folder: its nearest ESLint flat config, else its nearest package.json, else null. */
-const repoRootOf = (dir) => nearestHolding(dir, FLAT_CONFIGS) ?? nearestHolding(dir, ['package.json']);
 /** Vitest and node:test share the `*.test.ts` name, so one is a Playwright spec only when it imports Playwright or the barrel. */
 const PLAYWRIGHT_SOURCE = /^@playwright\/test$|(?:^|\/)test-options(?:\.[cm]?[jt]s)?$/;
 const importsPlaywright = (program) => program.body.some((n) => n.type === 'ImportDeclaration' && PLAYWRIGHT_SOURCE.test(String(n.source.value)));
@@ -872,14 +897,8 @@ rules['standard-layout'] = {
   }),
   create(context) {
     const opt = context.options[0] ?? {};
-    const cwd = normPath(context.cwd ?? context.getCwd()).replace(/\/+$/, '');
-    const file = normPath(context.filename ?? context.getFilename());
-    const found = repoRootOf(nodePath.dirname(file));
-    const base0 = found ? normPath(found) : cwd;
-    const rootDir = opt.root !== undefined ? normPath(nodePath.resolve(base0, opt.root)) : base0;
-    const root = `${rootDir.replace(/\/+$/, '')}/`;
-    if (!file.startsWith(root)) return {};
-    const rel = file.slice(root.length);
+    const rel = layoutPath(context, opt.root);
+    if (rel === null) return {};
     const drift = (opt.drift ?? []).map((d) => d.replace(/\\/g, '/').replace(/^\.\//, ''));
     const onDrift = drift.some((d) => (d.endsWith('/') ? rel.startsWith(d) : rel === d || rel.startsWith(`${d}/`)));
     // A misnamed file inside its standard folder waits only when its own path is listed.

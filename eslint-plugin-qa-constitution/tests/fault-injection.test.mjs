@@ -77,11 +77,9 @@ function configWith(id, rule) {
       rules: { [`qa-constitution/${id}`]: entry },
     },
   ];
-  // Mirrors smoke/eslint.config.mjs: each tree is a repo root of its own for the layout rule.
-  if (id === 'standard-layout') {
-    for (const tree of ['smoke/good', 'smoke/tests']) {
-      config.push({ files: [`${tree}/**/*.ts`], rules: { [`qa-constitution/${id}`]: ['error', { root: tree.replace('smoke/', '') }] } });
-    }
+  // Mirrors smoke/eslint.config.mjs: smoke/good is laid out from root 'good'; smoke/tests is read from smoke/.
+  if (id === 'standard-layout' || id === 'no-process-env-outside-config') {
+    config.push({ files: ['smoke/good/**/*.ts'], rules: { [`qa-constitution/${id}`]: ['error', { root: 'good' }] } });
   }
   return config;
 }

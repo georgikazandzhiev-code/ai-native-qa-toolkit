@@ -227,7 +227,7 @@ For a new resource/endpoint, you may also need:
 | `fixtures/api/schemas/app/<resource>.ts` | New API resource — Zod schemas for all responses |
 | `helpers/app/<resource>.ts` | New API resource — helper functions (CRUD + cleanup) |
 | `config/app.ts` | New API path constant |
-| `enums/app/qase-suites.ts` | New Qase suite ID |
+| `enums/app/qase-suites.ts` | New Qase suite name, when the repo uses Qase |
 | `pages/app/<Resource>Page.ts` | New UI page — page object class |
 | `fixtures/pom/page-object-fixture.ts` | New page object — register fixture |
 | `test-data/app/<resource>.json` | Shared test data (validation rules, dropdown options) |
@@ -244,7 +244,7 @@ After creating the spec, update the API or UI routing section of the repository'
 
 - [ ] Imports follow the project pattern exactly
 - [ ] Tags match the spec type, from the repo's whitelist (`@api`, `@e2e`, `@regression` in the standard set)
-- [ ] `qase.suite()` is the first line in every test
+- [ ] When the repo uses Qase, `qase.suite()` is the first line in every test; without it, no new `qase.*` lines
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
 - [ ] API test names follow `Verify <METHOD> <path> returns <status> [with <reason>]` (variants: `api-testing/http-method-coverage.md` § 14); E2E names describe the flow

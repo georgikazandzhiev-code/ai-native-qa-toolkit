@@ -127,6 +127,7 @@ const M = [
   ['test-body suppressions dropped', '  res.suppressed.push(...r.suppressed.filter(inTestRule).map(back));\n', ''],
   // the run
   ['eslint-plugin-playwright not registered', ' plugins: { playwright },', ''],
+  ['config-module root override dropped', "rules: { 'qa-constitution/no-process-env-outside-config': ['error', { root: WORK_DIR }] }", 'rules: {}'],
   ['reasonless eslint-disable accepted', 'else report.violations.push(`${rel}:${block.line} +${s.line}', 'else report.suppressed.push(`${rel}:${block.line} +${s.line}'],
   ['zero blocks found passes', 'if (found === 0) report.errors.push(', 'if (false) report.errors.push('],
 ];
