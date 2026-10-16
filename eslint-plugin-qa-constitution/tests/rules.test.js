@@ -69,6 +69,8 @@ tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
   valid: [
     // composable (the default): one type tag, any declared suite and trait tags, in the title or the option
     `test('@api creates a project', async () => { await go(); });`,
+    // a template-literal title with an expression may hold the type tag where the rule cannot read it
+    'test(`@functional supports ${m}`, { tag: "@regression" }, async () => {});',
     `test('creates a project', { tag: '@functional' }, async () => {});`,
     `test('creates a project', { tag: ['@functional', '@regression'] }, async () => {});`,
     `test('@api @regression @slow lists ten thousand projects', async () => {});`,
@@ -686,5 +688,24 @@ tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-pro
     { filename: at('playwright.config.tsx'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
   ],
 });
+
+/**
+ * single-tag-on-test's config errors (#90 review F13): a whitelist and categories together, and a
+ * category the taxonomy doesn't have. ESLint validates options against the schema before the rule
+ * runs, so these are checked through Linter, not RuleTester.
+ */
+{
+  const assert = require('node:assert');
+  const { Linter } = require('eslint');
+  const configError = (options) => new Linter().verify("test('@api a', async () => {});", {
+    plugins: { qa: plugin },
+    rules: { 'qa/single-tag-on-test': ['error', options] },
+  }, 'tests/app/api/x/a.spec.js');
+  assert.throws(() => configError({ whitelist: ['@Smoke'], categories: { trait: ['@security'] } }), /should NOT be valid/);
+  assert.throws(() => configError({ whitelist: [], categories: { trait: ['@security'] } }), /should NOT be valid/);
+  assert.throws(() => configError({ categories: { type: ['@ui'] } }), /Unexpected property "type"/);
+  assert.doesNotThrow(() => configError({ categories: { trait: ['@security'] } }));
+  assert.doesNotThrow(() => configError({ whitelist: ['@Smoke'] }));
+}
 
 console.log('all rule tests passed');

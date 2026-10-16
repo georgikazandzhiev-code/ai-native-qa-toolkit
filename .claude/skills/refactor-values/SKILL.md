@@ -137,7 +137,7 @@ Before committing a value refactor:
 - [ ] `~/.claude/skills/*`, `CLAUDE.md`, and `README.md` were checked for documentation references that name the value.
 - [ ] `npx tsc --noEmit` passes.
 - [ ] `npx eslint .` passes.
-- [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-regression`; with a kept set, the scripts of the mapped tags) or `npx playwright test <spec>` directly.
+- [ ] Affected tests pass — the matching script from `package.json` (`npm run app-api`, `npm run app-e2e`, `npm run app-functional`; with a kept set, the scripts of the mapped tags) or `npx playwright test <spec>` directly.
 - [ ] The change is a single atomic commit; no intermediate broken state.
 - [ ] Husky pre-commit hook passed without `--no-verify`.
 
@@ -196,7 +196,7 @@ Generic shape: a UI message enum's value changes (e.g. `"Invalid email or passwo
 | Qase report shows two separate suites after a `SUITES.*` value change | The old suite still has historical results; the new value created a fresh suite | Coordinate with the Qase project owner to merge or rename the suite directly in the Qase UI. Decide before merging the code change. |
 | Pagination test fails after editing `defaultPageSize` in `worker.json` | A spec hardcoded the integer (e.g. `expect(body.pageInfo.pageSize).toBe(10)`) instead of `workerData.defaultPageSize` | Replace the literal with the import. Add this finding to the PR description so the reviewer knows the cleanup happened. |
 | Husky pre-commit hook fails after a value rename | Lint/format/type issue in a touched file | Fix the underlying issue. Never `--no-verify`. |
-| `npm run app-api` passes but `npm run app-e2e` fails | The value also flows through end-to-end paths and the `--grep` filter on `@api` skipped them | Run `npm run app-e2e` and `npm run app-regression` too whenever the value spans multiple test types. |
+| `npm run app-api` passes but `npm run app-e2e` fails | The value also flows through end-to-end paths and the `--grep` filter on `@api` skipped them | Run `npm run app-e2e` and `npm run app-functional` too whenever the value spans multiple test types. |
 
 ## See Also
 

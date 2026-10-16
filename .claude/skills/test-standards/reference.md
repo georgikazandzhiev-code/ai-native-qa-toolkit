@@ -35,7 +35,7 @@ Companion file to [`SKILL.md`](SKILL.md). It shows the shape of a scenario inven
 | `@regression` | suite | `npm run app-regression` | The full regression run — the largest suite |
 | `@critical` | trait | `npm run app-critical` | 3–5 tests whose red means the build is broken |
 | `@slow` | trait | `npm run app-slow` | Tests slower than the run's time budget |
-| (all types) | | `npm run app-all` | Full nightly / pre-merge |
+| (all types) | | `npm run app-all` | Full nightly |
 
 Every test carries one type tag and any suite and trait tags it needs (`SKILL.md` § Tag taxonomy & npm scripts).
 

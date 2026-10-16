@@ -336,7 +336,7 @@ User says: *"Add a `SettingsPage` page object for `/settings` with a profile-sav
 5. **Step 5 — locators.** `getByRole('switch', { name: 'Dark mode' })` for the toggle (default priority); `getByLabel(...)` for form fields with labels; `fieldInput(path)` (the schema-form test-id) only for a field whose label is not associated. `MESSAGES.PROFILE_SAVED` from `enums/app` for the toast text.
 6. **Step 6 — actions.** `saveProfile(overrides)` waits on `PATCH /api/v1/user` + success toast. `toggleDarkMode()` waits on the toggle's `data-state="checked"` flip.
 7. **Step 7 — fixture.** Add `settingsPage: SettingsPage;` to `FrameworkFixtures` and the fixture body next to `runStatsPage`.
-8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `@regression` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
+8. **Step 8 — spec.** Author `tests/app/functional/tenant-service/settings.spec.ts` with `["@functional", "@regression"]` and a `qase.suite(SUITES.APP_SETTINGS)` — extend `enums/app/qase-suites.ts` if `APP_SETTINGS` doesn't exist yet.
 
 ### Example 2 — add `forgotPasswordLink` and `clickForgotPassword()` to `LoginPage`
 

@@ -281,14 +281,17 @@ rules['single-tag-on-test'] = {
 
     /**
      * Tags come from the title string (@Foo) and/or the `tag` option. `dynamic` is true when the
-     * option holds something the rule cannot read (a variable, a member, a spread), so the rule
-     * stays quiet about what it cannot see rather than guess.
+     * title is a template literal with expressions, or the option holds something the rule cannot
+     * read (a variable, a member, a spread); it only skips the missing-type check, and a test with no
+     * readable tag is still reported as having none.
      */
     function tagsOf(node) {
       const found = [];
       let dynamic = false;
       const title = stringValue(node.arguments[0]);
       if (title) for (const m of title.matchAll(/@[\w-]+/g)) found.push(m[0]);
+      // `@functional supports ${m}`: the type tag may sit in a part the rule cannot read.
+      else if (node.arguments[0] && node.arguments[0].type === 'TemplateLiteral') dynamic = true;
       for (const arg of node.arguments.slice(1)) {
         if (arg.type !== 'ObjectExpression') continue;
         for (const p of arg.properties) {

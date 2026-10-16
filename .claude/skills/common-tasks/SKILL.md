@@ -158,6 +158,7 @@ npx playwright test tests/app/functional/<domain>/<name>.spec.ts   # one file
 npm run app-regression                                     # whole tag group
 npm run app-api
 npm run app-e2e
+npm run app-functional
 npm run app-smoke
 npm run app-all                                            # full nightly union
 ```
@@ -221,10 +222,10 @@ User says: *"Add a `SettingsPage` page object for `/settings` and a functional s
 1. **Step 1 — categorize.** Two artifacts: a page object + a functional smoke test.
 2. **Step 2 — load deep skills.** `page-objects` (POM class structure), `selectors` (locator priority), `playwright-cli` (exploration), `test-standards` (spec structure + tag).
 3. **Step 3 — precondition.** Run `npx playwright open` against `/settings`. Capture form-field testids, dark-mode toggle role, success/error toast strings.
-4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `@regression` and `qase.suite(SUITES.APP_SETTINGS)`.
+4. **Step 4 — walk workflows.** `page-objects` 8-step workflow → `pages/app/SettingsPage.ts` extends `BasePage`, registered in `page-object-fixture.ts`. `test-standards` 9-step workflow → spec at `tests/app/functional/tenant-service/settings.spec.ts` with `["@functional", "@regression"]` and `qase.suite(SUITES.APP_SETTINGS)`.
 5. **Step 5 — Critical block.** Imports correct. No hardcoded strings (extend the `MESSAGES` enum). No `waitForTimeout`.
 6. **Step 6 — generate.** Both files produced.
-7. **Step 7 — self-review.** Tag is `@regression` (the example app uses the standard set), exactly as the `package.json` grep expects. POM registered. Action methods have built-in waits. Spec uses `test.step`.
+7. **Step 7 — self-review.** Tags are `["@functional", "@regression"]`: one type tag plus its suite, exactly as declared (the lint and Qase match tags exactly). POM registered. Action methods have built-in waits. Spec uses `test.step`.
 8. **Step 8 — run.** `npx playwright test tests/app/functional/tenant-service/settings.spec.ts` → green.
 9. **Step 9 — same-edit siblings.** `fixtures/pom/page-object-fixture.ts` updated; `enums/app/qase-suites.ts` extended with `APP_SETTINGS`; `enums/app/<file>.ts` extended with `MESSAGES.PROFILE_SAVED`; `config/app.ts` extended with `appConfig.paths.SETTINGS`.
 

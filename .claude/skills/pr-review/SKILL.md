@@ -57,7 +57,7 @@ Folder paths such as `tests/app/…`, `pages/app/…`, `helpers/app/…` and `fi
 Routed skill: [`test-standards`](../test-standards/SKILL.md). Walk every modified spec:
 
 - [ ] `import { test, expect } from "fixtures/pom/test-options"` — never from `@playwright/test`
-- [ ] Each `test(...)` has **exactly one** type tag, matching its folder, plus only declared suite and trait tags (`test-standards` § Tag taxonomy & npm scripts); a repo that already ran another set has exactly one tag from the set its project `CLAUDE.md` declares, and a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands. Every tag is cased exactly as declared — the standard taxonomy is all lowercase (`@regression`), matching the lint and Qase's exact filters. No tags on `test.describe(...)`.
+- [ ] Each `test(...)` has **exactly one** type tag, matching its folder (`@integration`: the folder of the layer it drives), plus only declared suite and trait tags (`test-standards` § Tag taxonomy & npm scripts); a repo that already ran another set has exactly one tag from the set its project `CLAUDE.md` declares, and a repo not yet moved off `@App-*` keeps its current `@App-*` tag until that move lands. Every tag is cased exactly as declared — the standard taxonomy is all lowercase (`@regression`), matching the lint and Qase's exact filters. No tags on `test.describe(...)`.
 - [ ] When the repo uses Qase, each `test(...)` body opens with `qase.suite(SUITES.<NAME>);`. If a Qase ID exists, `qase.id(N);` is present; if not, commented out (never deleted, never invented). Without Qase, the diff adds no `qase.*` lines (`test-standards` § Qase is optional).
 - [ ] Multi-step tests use `test.step("GIVEN/WHEN/THEN ...", ...)` for each phase.
 - [ ] Web-first assertions only (`expect(locator).toBeVisible()`, `.toHaveText()`, `.toHaveCount()`). **No `page.waitForTimeout(...)`.**
@@ -158,7 +158,7 @@ done
 npx playwright test tests/app/path/to/affected-spec.spec.ts --workers=<repo worker count>
 
 # Or the full tag for the affected layer
-npm run app-regression  # or app-api, app-e2e, app-smoke, app-sanity
+npm run app-regression  # or app-api, app-e2e, app-functional, app-smoke, app-sanity
 ```
 
 **A PR with failing tests is not ready to ship.** Per the framework's verification standard.

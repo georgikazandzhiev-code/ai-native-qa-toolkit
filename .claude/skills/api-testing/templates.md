@@ -73,7 +73,7 @@ import resourceData from "../../../../test-data/app/<resource>.json";
 // A spec with token aliases is tech debt; normalize it when next touching the file.
 
 // Tags stay inline (`{ tag: "@api" }`, or `{ tag: ["@api", "@regression"] }`) on every test: the tag lint rule
-// reads the literal, so a tag hoisted into a shared const reads as "no tag". The taxonomy is owned by `test-standards`.
+// reads the literal, so a tag hoisted into a shared const reads as "no tag", and one next to a literal tag skips the type check. The taxonomy is owned by `test-standards`.
 
 // ═══════════════════════════════════════════════════════════════
 // GET /<resource>s — List

@@ -184,7 +184,7 @@ For 2-3 branches with short bodies:
 
 4. Functional workflow:
    - Same imports as E2E
-   - Tag with the Functional tag (`@regression` in the standard set; a kept set's tag map otherwise).
+   - Tag with `@functional` plus its suites (`["@functional", "@regression"]`; a kept set's tag map otherwise).
 ````
 
 ### 3b — mermaid decision tree

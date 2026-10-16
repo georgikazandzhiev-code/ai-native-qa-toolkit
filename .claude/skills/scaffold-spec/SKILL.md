@@ -243,7 +243,7 @@ After creating the spec, update the API or UI routing section of the repository'
 ## Self-review checklist
 
 - [ ] Imports follow the project pattern exactly
-- [ ] Tags match the spec type, from the repo's whitelist (`@api`, `@e2e`, `@regression` in the standard set)
+- [ ] One type tag matching the spec type (`@api`, `@e2e`, `@functional`) plus only declared suite and trait tags; with a kept set, exactly one tag from its whitelist
 - [ ] When the repo uses Qase, `qase.suite()` is the first line in every test; without it, no new `qase.*` lines
 - [ ] Cleanup in `test.afterAll` — API-only for E2E, helper-based for API
 - [ ] Zod schema validation on every API response
@@ -528,7 +528,7 @@ Every functional test that opens a form/sheet must close it at the end — even 
 1. **Type** — API spec, so it lands under `tests/app/api/` and takes `@api` (or, with a kept set, the tag map's API tag).
 2. **Conventions** — read `api-testing` and `test-standards` before writing anything.
 3. **Contract first** — the OpenAPI document is the source of truth; enumerate 201, 400, 401, 403/404, 409 as a coverage-plan comment block.
-4. **Study a sibling** — open the nearest API spec at its standard location under `tests/app/api/` (never one on the drift table) and follow its shape where it agrees with `api-testing`: barrel import, one tag, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
+4. **Study a sibling** — open the nearest API spec at its standard location under `tests/app/api/` (never one on the drift table) and follow its shape where it agrees with `api-testing`: barrel import, one type tag plus its suites, `qase.suite(...)` as the first body line, `expect(Schema.parse(body)).toBeTruthy()`.
 5. **Negative matrix** — one test per required field omitted, plus an invalid-type loop. Not a single empty-body test.
 6. **Cleanup** — every created project deleted in `afterEach`/`afterAll`.
 7. **Run it.** Then report.

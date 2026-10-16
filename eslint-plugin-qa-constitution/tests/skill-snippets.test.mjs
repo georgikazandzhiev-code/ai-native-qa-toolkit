@@ -7,7 +7,7 @@
  * the skills, which teach far more code, never were.
  *
  * What is linted: every ```ts / ```typescript block under .claude/skills/, with the plugin's smoke
- * config (all rules at error, the real tag taxonomy). The run fails if no block is found at all,
+ * config (all rules at error, the standard tag taxonomy plus the smoke config's one @security trait). The run fails if no block is found at all,
  * because a parser that silently finds nothing would otherwise pass.
  *
  * Every block must parse as TypeScript, including the two kinds that are not linted:

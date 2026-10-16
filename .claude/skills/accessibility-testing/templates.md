@@ -1,6 +1,6 @@
 # Accessibility testing — templates
 
-Copy-paste skeletons for the [`accessibility-testing`](SKILL.md) skill. Paths, the fixtures barrel and the Qase suite are placeholders. Replace them with the project's real ones (see `fixtures`, `enums`). The tags are `["@functional", "@regression"]` from the standard taxonomy; a repo that declared its own set, or one still on the toolkit's earlier `@App-*` set (see `test-standards`), takes the one tag its tag map gives a functional test.
+Copy-paste skeletons for the [`accessibility-testing`](SKILL.md) skill. Paths, the fixtures barrel and the Qase suite are placeholders. Replace them with the project's real ones (see `fixtures`, `enums`). The tags are `["@functional", "@regression"]` from the standard taxonomy; a repo that declared its own set takes the one tag its tag map gives a functional test; a repo still on the toolkit's earlier `@App-*` set takes `@App-regression` (see `test-standards`).
 
 **Evidence: STATIC.** These follow Playwright's accessibility-testing guide and the `@axe-core/playwright` API. They have not been executed in this repository yet.
 
