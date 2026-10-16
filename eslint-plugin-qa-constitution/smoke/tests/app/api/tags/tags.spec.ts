@@ -18,3 +18,9 @@ test('@api @nope an undeclared tag', async () => {
 test('the same tag twice', { tag: ['@api', '@slow', '@slow'] }, async () => {
   expect(1).toBe(1);
 });
+
+test.describe('@regression a tag on a describe block', () => {
+  test('@api the test inside carries its own tag', async () => {
+    expect(1).toBe(1);
+  });
+});
