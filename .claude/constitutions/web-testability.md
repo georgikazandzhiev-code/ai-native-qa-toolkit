@@ -1,6 +1,6 @@
 # Web Testability Constitution — Playwright
 
-<!-- toolkit-version: 6.0.1 -->
+<!-- toolkit-version: 7.0.0 -->
 
 > **Audience: the engineer or coding agent writing the web application.** Not the QA automation repo.
 > Drop this in a **frontend product repo** as its `CLAUDE.md` (or merge it into an existing one) so the
