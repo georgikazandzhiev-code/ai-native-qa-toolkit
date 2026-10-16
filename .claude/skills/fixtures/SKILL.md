@@ -92,7 +92,7 @@ The example app uses **only `test` scope** — no Playwright-worker-scoped fixtu
 ## Framework notes (rationale for existing choices)
 
 - **Why `mailpit` builds its own `APIRequestContext`.** `apiRequest` is hard-wired to send `Authorization: Bearer <token>`; Mailpit needs `Authorization: Basic <base64>`. That auth-shape mismatch is why `mailpit-fixture.ts` calls `request.newContext(...)` itself — and why it **must** `await context.dispose()` in teardown. Do not try to route mailbox calls through `apiRequest`.
-- **`login.setup.ts` conventions.** The example app's setup file imports `test` from `fixtures/pom/test-options` (same runner/fixture surface as specs, so future setup tests can reach `apiRequest`/`mailpit` without changing the import) and calls `qase.ignore()` in **every** setup test — these are storage/token generators, not real test cases, and would otherwise pollute Qase signal. Any new setup test must do both.
+- **`login.setup.ts` conventions.** The example app's setup file imports `test` from `fixtures/pom/test-options` (same runner/fixture surface as specs, so future setup tests can reach `apiRequest`/`mailpit` without changing the import) and, because the example app uses Qase, calls `qase.ignore()` in **every** setup test — these are storage/token generators, not real test cases, and would otherwise pollute Qase signal. Any new setup test imports the same way, and calls `qase.ignore()` when the repo uses Qase (`test-standards` § Qase is optional).
 - **`resetStorageState` clears cookies + permissions only — NOT `localStorage`/`sessionStorage`.** If a spec depends on client-side storage being wiped (e.g. a "first visit" banner keyed off `localStorage`), clear it explicitly; `resetStorageState` will not.
 
 ## Anti-patterns
