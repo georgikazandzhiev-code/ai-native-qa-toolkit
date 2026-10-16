@@ -689,9 +689,10 @@ function layoutPath(context, root) {
  * Writes are not reads: the setup project assigns run-time tokens (`process.env.X = token`), so an
  * assignment target is allowed. Files matching `allow` (the config module, playwright.config.ts,
  * which must read ENVIRONMENT and CI from the shell) may read freely. `allow` is matched against the
- * path from the layout root (layoutPath), so only the top-level `config/` counts: a service folder
- * named `config`, or a checkout path that contains `/config/`, does not open the gate. A file
- * outside a declared `root` is not judged.
+ * path from the layout root (layoutPath), so only the top-level `config/env.ts` counts: `config/app.ts`
+ * and `config/util/<service>.ts` import `env` from it (#97), and a service folder named `config`, or a
+ * checkout path that contains `/config/`, does not open the gate. A file outside a declared `root` is
+ * not judged.
  */
 rules['no-process-env-outside-config'] = {
   meta: meta('Read environment variables only in the config module; everything else imports env / tokens / appConfig.', {
@@ -703,7 +704,7 @@ rules['no-process-env-outside-config'] = {
   }),
   create(context) {
     const opt = context.options[0] ?? {};
-    const allow = new RegExp(opt.allow ?? '^config/|^playwright\\.config\\.[cm]?[jt]s$');
+    const allow = new RegExp(opt.allow ?? '^config/env\\.[cm]?ts$|^playwright\\.config\\.[cm]?[jt]s$');
     const rel = layoutPath(context, opt.root);
     if (rel === null || allow.test(rel)) return {};
     return {
