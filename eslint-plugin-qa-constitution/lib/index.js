@@ -51,10 +51,18 @@ function isTestCall(node) {
   return c.type === 'Identifier' && (c.name === 'test' || c.name === 'it');
 }
 
+/**
+ * True for a describe block in any form: describe(...), test.describe(...), test.describe.serial(...),
+ * test.describe.only(...). Any `.describe` in the callee's chain makes it one (#104: walking to the
+ * leftmost name found `test`, so test.describe's tags were never read).
+ */
 function isDescribeCall(node) {
   if (node.type !== 'CallExpression') return false;
   let c = node.callee;
-  while (c.type === 'MemberExpression') c = c.object;
+  while (c.type === 'MemberExpression') {
+    if ((c.property.name ?? c.property.value) === 'describe') return true;
+    c = c.object;
+  }
   return c.type === 'Identifier' && c.name === 'describe';
 }
 

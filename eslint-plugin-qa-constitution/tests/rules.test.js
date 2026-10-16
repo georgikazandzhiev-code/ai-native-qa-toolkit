@@ -67,6 +67,9 @@ tester.run('no-page-evaluate', plugin.rules['no-page-evaluate'], {
 
 tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
   valid: [
+    // a describe block with no tag, and test.describe.configure(...), are not reported (#104)
+    `test.describe('projects', () => { test('@api lists', async () => {}); });`,
+    `test.describe.configure({ mode: 'serial' });`,
     // composable (the default): one type tag, any declared suite and trait tags, in the title or the option
     `test('@api creates a project', async () => { await go(); });`,
     // a template-literal title with an expression may hold the type tag where the rule cannot read it
@@ -104,6 +107,10 @@ tester.run('single-tag-on-test', plugin.rules['single-tag-on-test'], {
     // an unknown tag twice is one unknown and one duplicate, not two unknowns
     { code: `test('@api @nope @nope a', async () => {});`, errors: [{ messageId: 'unknown' }, { messageId: 'duplicate' }] },
     { code: `describe('@regression projects', () => {});`, errors: [{ messageId: 'onDescribe' }] },
+    // #104: the forms the skills use, which walking to the leftmost name (`test`) missed
+    { code: `test.describe('@regression projects', () => { test('@api lists', async () => {}); });`, errors: [{ messageId: 'onDescribe' }] },
+    { code: `test.describe('projects', { tag: '@regression' }, () => { test('@api lists', async () => {}); });`, errors: [{ messageId: 'onDescribe' }] },
+    { code: `test.describe.serial('@regression projects', () => { test('@api lists', async () => {}); });`, errors: [{ messageId: 'onDescribe' }] },
     // single-tag mode keeps its old rules
     { code: `test('@a @b creates', async () => {});`, options: [{ whitelist: ['@a', '@b'] }], errors: [{ messageId: 'many' }] },
     { code: `test('@Regression a', async () => {});`, options: [{ whitelist: ['@regression'] }], errors: [{ messageId: 'notWhitelisted' }] },
