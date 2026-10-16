@@ -84,7 +84,7 @@ A minimal `tsconfig.json`:
 | `single-tag-on-test` | MUST Tags | No tag, no type tag, two type tags, a tag in no declared category, the same tag twice, or a tag on a describe block in any form (`describe()`, `test.describe()`, `test.describe.serial()`). With a `whitelist` (a kept set or an `@App-*` repo): anything but exactly one tag from it. The id predates composable tags and is kept so existing configs keep working |
 | `require-strict-object` | MUST Schemas | `z.object(` — **autofixable** to `z.strictObject(` |
 | `schema-parse-idiom` | MUST Response Validation | `Schema.parse(body)` whose result is discarded instead of asserted, and `expect.soft(Schema.parse(body))`, which isn't soft (the loop form is `expect.soft(Schema.safeParse(body).success, label).toBe(true)`) |
-| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module (`config/` and `playwright.config.*` at the layout root: the repo root, or `root` when it is set; a service folder named `config` doesn't count). Which file inside `config/` reads it (`config/env.ts` only) stays a review responsibility. A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
+| `no-process-env-outside-config` | MUST Sources of Truth | Any `process.env` read outside the config module: `config/env.ts` and `playwright.config.*` at the layout root (the repo root, or `root` when it is set). `config/app.ts` and `config/util/<service>.ts` import `env` from `config/env.ts`, and a service folder named `config` doesn't count. A write, such as the setup project storing a run-time token, is allowed. Replaces `require-env-non-null`, whose `!` idiom only silenced the compiler |
 | `no-xpath` | WON'T No XPath | `locator('//…')`, `locator('xpath=…')`, `locator('(//…')` |
 | `no-hard-waits` | WON'T No hard waits | `waitForTimeout(…)` |
 | `no-page-evaluate` | WON'T No page.evaluate | `page.evaluate`, `$eval`, `$$eval` for DOM work |
@@ -124,7 +124,7 @@ Options go in a config object of their own, after the preset's object from § In
       // root: 'qa',                         // only if the layout starts below the repo root (relative to it, or absolute); a root that names no folder stops the lint
     }],
     'qa-constitution/no-process-env-outside-config': ['error', {
-      allow: '^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the layout root (root when set, else the repo root)
+      allow: '^config/env\\.[cm]?ts$|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$', // the default, plus a legacy config module until the Config move; matched against the path from the layout root (root when set, else the repo root)
       // root: 'qa',                         // only if the layout starts below the repo root, as for standard-layout
     }],
   },
@@ -139,7 +139,9 @@ Options go in a config object of their own, after the preset's object from § In
 
 During a migration the config module is often still a `src/config.ts`. `no-process-env-outside-config` doesn't read the drift table: widen its `allow` pattern for that file until Config moves. `allow` is matched against the path from the layout root — the repo root, or `root` when it is set — with forward slashes and no leading slash, so anchor it with `^` (with `root: 'qa'`, `qa/src/config.ts` is `^src/config\\.ts$`). A `root` that names no folder is a configuration error: the lint run stops and names the option, rather than skip every file and stay green.
 
-Upgrading from 0.6: replace a custom `allow` copied from the 0.6 README as a whole, starting from the 0.7 default: `^config/|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$`. Re-anchoring only its `/src/config\\.ts$` entry leaves `(^|/)config/` and `(^|/)playwright…`, which still let any nested `config/` folder or `playwright.config.*` read `process.env`, and nothing reports it. A layout that starts below the repo root (a `qa/` folder, or a Playwright package in a monorepo whose `eslint.config.*` sits at the monorepo root) passes this rule the same `root` it passes `standard-layout`, or its own config module is reported.
+Upgrading from 0.6: replace a custom `allow` copied from the 0.6 README as a whole, starting from the current default: `^config/env\\.[cm]?ts$|^playwright\\.config\\.[cm]?[jt]s$|^src/config\\.ts$`. Re-anchoring only its `/src/config\\.ts$` entry leaves `(^|/)config/` and `(^|/)playwright…`, which still let any nested `config/` folder or `playwright.config.*` read `process.env`, and nothing reports it. A layout that starts below the repo root (a `qa/` folder, or a Playwright package in a monorepo whose `eslint.config.*` sits at the monorepo root) passes this rule the same `root` it passes `standard-layout`, or its own config module is reported.
+
+Upgrading from 0.10: only `config/env.ts` reads `process.env` now, as the constitution says. A `config/app.ts` or `config/util/<service>.ts` that reads it fails: move the read into `config/env.ts` and import `env` (the `config` skill), or add the file to `allow` until it moves.
 
 ## False-green detection
 

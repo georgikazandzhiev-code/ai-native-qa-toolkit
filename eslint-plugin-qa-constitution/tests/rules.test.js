@@ -226,9 +226,9 @@ tester.run('no-pom-instantiation-in-test', plugin.rules['no-pom-instantiation-in
 
 tester.run('no-process-env-outside-config', plugin.rules['no-process-env-outside-config'], {
   valid: [
-    // the lint allows the whole top-level config/ folder; only config/env.ts should read process.env (config skill), the rest is review
+    // config/env.ts is the one reader (#97: config/app.ts and config/util/ import env from it)
     { code: `export const env = EnvSchema.parse(process.env);`, filename: 'config/env.ts' },
-    { code: `const v = process.env[name];`, filename: 'config/util/jobs-service.ts' },
+    { code: `const v = process.env[name];`, filename: 'config/env.ts' },
     // the runner config reads ENVIRONMENT and CI from the shell
     { code: `const ci = !!process.env.CI;`, filename: 'playwright.config.ts' },
     // the setup project writes a run-time token: an assignment is not a read
@@ -667,6 +667,7 @@ tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-pro
     { filename: at('config/env.ts'), code: `export const env = EnvSchema.parse(process.env);` },
     { filename: at('playwright.config.ts'), code: `const ci = !!process.env.CI;` },
     { filename: at('playwright.config.mts'), code: ENV_READ },
+    { filename: at('config/env.mts'), code: ENV_READ },
     { filename: at('playwright.config.js'), code: ENV_READ },
     // a declared root moves the config module with the layout
     { filename: at('qa/config/env.ts'), code: ENV_READ, options: [{ root: 'qa' }] },
@@ -689,7 +690,10 @@ tester.run('regression/env-allow-reads-the-repo-root-path', plugin.rules['no-pro
     // inside a declared root, the layout is read from that root
     { filename: at('qa/tests/app/api/jobs/jobs.spec.ts'), code: ENV_READ, options: [{ root: 'qa' }], errors: [{ messageId: 'outside' }] },
     { filename: at('qa/config/env.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
-    // only the config/ folder and playwright.config.{js,ts,mjs,mts,cjs,cts} at the root
+    // only config/env.ts and playwright.config.{js,ts,mjs,mts,cjs,cts} at the root (#97: not the rest of config/)
+    { filename: at('config/app.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('config/util/jobs-service.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
+    { filename: at('config/env.js'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
     { filename: at('config.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
     { filename: at('configs/x.ts'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
     { filename: at('playwright.config.tsx'), code: ENV_READ, errors: [{ messageId: 'outside' }] },
