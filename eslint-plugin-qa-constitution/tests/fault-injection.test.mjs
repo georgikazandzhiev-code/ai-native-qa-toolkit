@@ -162,6 +162,7 @@ const PINNED = {
     { rule: 'single-tag-on-test', at: "test('@api @e2e two type tags'" },
     { rule: 'single-tag-on-test', at: "test('@api @nope an undeclared tag'" },
     { rule: 'single-tag-on-test', at: "test('the same tag twice'" },
+    { rule: 'single-tag-on-test', at: "test.describe('@regression a tag on a describe block'" },
   ],
   // test.step declares no test (lib/index.js, CONFIG_CALLS). Steps in hooks are setup and stay
   // silent under all four rules that ask "which test is this in?"; the untagged, assertion-free
