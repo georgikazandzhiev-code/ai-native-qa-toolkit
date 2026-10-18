@@ -114,7 +114,7 @@ When a lesson depends on a detail the table doesn't cover, invent it inside this
 
 ## What CI refuses, and what it cannot
 
-Three jobs run on every push and every pull request (`.github/workflows/validate.yml`).
+Three jobs run on every pull request and on every push to `main` (`.github/workflows/validate.yml`).
 
 **The three jobs are required status checks on `main`**, enforced for everyone including administrators (GitHub's public API, checked 2026-10-01), so a red run blocks the merge. Whether code-owner review is also required is visible only to administrators; see § What this document cannot enforce.
 

@@ -174,7 +174,7 @@ Pair it with branch protection and a violation blocks the merge instead of annot
 
 The rules ship with 31 `RuleTester` suites and 121 invalid-case assertions. That proves each rule reports on a string of source handed straight to it, which is a weaker claim than it sounds: it says nothing about whether the rule still fires through the real ESLint CLI, on a real file, with the other seventeen rules loaded alongside it.
 
-So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every push and makes three assertions per rule:
+So the claim is now asserted rather than stated. `tests/fault-injection.test.mjs` runs on every pull request and every push to `main`, and makes three assertions per rule:
 
 | | Assertion | Why it is not redundant |
 |---|---|---|
