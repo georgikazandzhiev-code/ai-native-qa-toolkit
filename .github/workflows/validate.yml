@@ -1,9 +1,17 @@
 name: Validate
 
+# A pull request runs once (pull_request), and main once more after the merge (push). Pushing a
+# branch without a PR runs nothing: a branch push and its PR used to run every job twice, and the
+# private mirror pays for Actions minutes.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
+
+# A newer push to the same PR cancels the older run; runs on main always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   toolkit:
