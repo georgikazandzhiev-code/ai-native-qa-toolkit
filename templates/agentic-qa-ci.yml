@@ -49,6 +49,11 @@ on:
 
 # A second push to the same branch makes the first run's result irrelevant. Without this, a busy
 # branch queues runs that report on code nobody is looking at any more.
+# Read-only token: these jobs check out and test; none of them writes to the repository. A
+# repository whose default token is read-write still gets the least privilege here.
+permissions:
+  contents: read
+
 concurrency:
   group: qa-${{ github.ref }}
   cancel-in-progress: true
@@ -58,9 +63,9 @@ jobs:
     name: Constitution gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20 # NOT node-size — an unknown input is ignored, not rejected
           cache: npm # requires a committed package-lock.json
@@ -87,9 +92,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality-gate # do not spend browser minutes on code the gate already rejected
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -113,7 +118,7 @@ jobs:
       # whose trace you want, and it did not fail.
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-report-${{ github.run_attempt }}
           path: |
