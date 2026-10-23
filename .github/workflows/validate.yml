@@ -9,6 +9,11 @@ on:
   pull_request:
 
 # A newer push to the same PR cancels the older run; runs on main always finish.
+# Read-only token: these jobs check out and test; none of them writes to the repository. A
+# repository whose default token is read-write still gets the least privilege here.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -18,9 +23,9 @@ jobs:
     name: Toolkit structure
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 
@@ -97,14 +102,14 @@ jobs:
       run:
         working-directory: eslint-plugin-qa-constitution
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 
       - name: Install plugin dev dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       # The RuleTester suites, including a regression suite for every false positive the
       # lint-gate eval and the fault-injection harness have exposed.
@@ -165,11 +170,11 @@ jobs:
     name: Skill eval regression
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0   # check:bump needs history to diff against the base ref
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 

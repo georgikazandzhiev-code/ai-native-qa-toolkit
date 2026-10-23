@@ -28,7 +28,7 @@
     "eslint": ">=9.0.0"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/parser": "^8.71.2",
     "eslint": "^9.0.0",
     "eslint-plugin-playwright": "^2.11.0"
   }
