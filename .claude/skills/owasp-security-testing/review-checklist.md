@@ -1,6 +1,6 @@
 # Pre-release security review gate
 
-A condensed pass/flag checklist across both OWASP lists, for auditing a feature or PR **without writing tests**. Walk it against the diff or the story. Mark each line **PASS** (covered / not applicable with reason), **FLAG** (gap a QA test should close — point at the recipe), or **OUT OF SCOPE** (needs SAST / dependency scan / crypto / pen-test — name the tooling). Pair with the `pr-review` skill for the full pre-push gate.
+A condensed pass/flag checklist across the OWASP lists (web, API, LLM), for auditing a feature or PR **without writing tests**. Walk it against the diff or the story. Mark each line **PASS** (covered / not applicable with reason), **FLAG** (gap a QA test should close — point at the recipe), or **OUT OF SCOPE** (needs SAST / dependency scan / crypto / pen-test — name the tooling). Pair with the `pr-review` skill for the full pre-push gate.
 
 ## Access control (highest weight — most findings live here)
 - [ ] Every endpoint that takes an object id enforces ownership — a cross-principal request returns the documented deny status (`404` across tenants, `403` for a lower role), not `200` (BOLA / A01). → `api-top10.md` API1
@@ -25,6 +25,13 @@ A condensed pass/flag checklist across both OWASP lists, for auditing a feature 
 - [ ] Disabled verbs → `405`; no default credentials work.
 - [ ] Known deprecated/older-version/debug routes are gone or still enforce authz (API9).
 - [ ] Traffic is HTTPS; sensitive fields not returned in cleartext; cookies `Secure`/`HttpOnly` (A02 surface only).
+
+## LLM features and agents (when the change uses a model or an agent acts on what it reads)
+- [ ] Content the model reads (tickets, PRs, pages, files, tool results) cannot steer it: an embedded instruction triggers no tool call, no data from another principal, no write (LLM01). → `llm-top10.md` LLM01
+- [ ] Every write the agent can make is staged for human approval, and a read-only task cannot reach it (LLM06).
+- [ ] Model output is validated before use — schema-checked, rendered escaped, never executed as code, SQL, a URL or a path (LLM05).
+- [ ] No secret in the system prompt or the agent's context; responses are scanned for secret patterns (LLM02 / LLM07).
+- [ ] Model, packages, tools and MCP servers are pinned and allowlisted (LLM03).
 
 ## Out-of-QA-automation scope — flag with the owning tooling, never fake
 - [ ] Cryptographic strength / key management / at-rest encryption → security review (A02).
