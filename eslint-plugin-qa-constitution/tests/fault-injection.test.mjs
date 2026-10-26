@@ -169,9 +169,10 @@ const PINNED = {
   // test around a step is still reported by both test-level rules; and an if or a try/catch in a
   // step inside a test is still reported by the two in-test rules.
   // The file also sits in tests/app/ui/, which the standard layout doesn't have, so standard-layout
-  // reports it once, at its first statement.
+  // reports it once, on line 1: a whole-file finding, placed there whatever the parser takes as the
+  // start of the Program node (8.72 starts it before the leading comments, earlier versions at the first statement).
   'smoke/tests/app/ui/steps.spec.ts': [
-    { rule: 'standard-layout', at: "import { test, expect } from 'fixtures/pom/test-options';" },
+    { rule: 'standard-layout', at: '// Deliberately non-compliant fixture. Nothing here is an example to copy.' },
     { rule: 'single-tag-on-test', at: "test('opens the seeded project'" },
     { rule: 'require-assertion-in-test', at: "test('opens the seeded project'" },
     { rule: 'no-conditional-in-test', at: '    if (response.status() === 409)' },
