@@ -1,0 +1,21 @@
+# Dependabot keeps the two things this repo installs current: the GitHub Actions the workflows
+# pin by commit SHA (a pinned SHA never moves on its own, so without this it never gets fixes),
+# and the lint plugin's dev dependencies in its lockfile. Grouped and weekly, so an update is one
+# reviewable PR, not a stream.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /eslint-plugin-qa-constitution
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        dependency-type: development
