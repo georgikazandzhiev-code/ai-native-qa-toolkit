@@ -929,10 +929,15 @@ rules['standard-layout'] = {
     const pageBases = new Set(opt.pageBases ?? ['BasePage', 'DataTableBase']);
     const base = rel.split('/').pop();
 
+    // A whole-file finding sits on line 1. Where a Program node starts is the parser's choice:
+    // @typescript-eslint/parser 8.72 moved it from the first statement to the top of the file,
+    // past any leading comments, so a report on the node itself moves with the parser version.
+    const fileLoc = (node) => (node.type === 'Program' ? { loc: { line: 1, column: 0 } } : {});
+
     function check(node, kind, where, placeRe, nameRe, pattern) {
       if (!placeRe.test(rel)) {
-        if (!onDrift) context.report({ node, messageId: 'place', data: { kind, where } });
-      } else if (nameRe && !nameRe.test(base) && !exactDrift) context.report({ node, messageId: 'name', data: { kind, pattern } });
+        if (!onDrift) context.report({ node, ...fileLoc(node), messageId: 'place', data: { kind, where } });
+      } else if (nameRe && !nameRe.test(base) && !exactDrift) context.report({ node, ...fileLoc(node), messageId: 'name', data: { kind, pattern } });
     }
 
     return {
