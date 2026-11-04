@@ -12,6 +12,29 @@
             "statusMessage": "Checking the alternatives were built"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/constitution-gate.mjs", "write"],
+            "timeout": 60,
+            "statusMessage": "Checking the write against the constitution"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/constitution-gate.mjs", "shell"],
+            "timeout": 15
+          }
+        ]
       }
     ],
     "Stop": [
