@@ -40,7 +40,7 @@ CI runs all of these; running them locally first is faster than a round trip. Al
 | `npm run test:stamp` · `npm run test:bump` | A stale version stamp / a forgotten bump cannot pass |
 | `npm run test:cursorignore` | A missing `.cursorignore` is skipped, unless the repository ships `.cursor/`; a present one that does not exclude `node_modules` or `.env` gets a warning |
 | `npm run test:lock` | Vendored provenance is intact |
-| `npm run test:alternatives` · `npm run test:der` | The hooks and gates bite on the bad case and stay silent on the good one |
+| `npm run test:alternatives` · `npm run test:constitution-gate` · `npm run test:der` | The hooks and gates bite on the bad case and stay silent on the good one (`test:constitution-gate` needs `npm ci` in `eslint-plugin-qa-constitution/` first) |
 | `node eslint-plugin-qa-constitution/tests/rules.test.js` | *(if you touched a lint rule)* every rule has a `RuleTester` suite |
 | `node eslint-plugin-qa-constitution/tests/fault-injection.test.mjs` | *(if you touched a lint rule)* every rule actually bites — and nothing cries wolf |
 | `npm run eval:compare` | No eval regression beyond the noise floor |

@@ -350,6 +350,27 @@ Merge this into `~/.claude/settings.json` (don't overwrite the file — add to i
 
 Copying the whole `.claude/` folder into a repository instead needs no merge: the shipped `.claude/settings.json` points at `${CLAUDE_PROJECT_DIR}/.claude/hooks/`. Either way, open `/hooks` once (or restart Claude Code) so a running session picks it up. `npm run test:alternatives` proves the gate denies an unbuilt choice and lets a marked question through.
 
+Then the **constitution gate**, which refuses a write before the file exists instead of waiting for CI to refuse the merge. It does three things:
+
+- **The lint plugin, at write time.** In a repository whose `package.json` lists `eslint-plugin-qa-constitution`, a Write, Edit or MultiEdit is linted with that repository's own ESLint and config, on the file the call would produce. The call is denied when it adds a finding of the plugin's rules, and the denial names the rule and the line. A violation already in the file doesn't block an unrelated edit.
+- **Explore before generate.** In the same repositories, a new page object (`pages/app/`, `pages/util/`) or UI spec (`tests/app/e2e/`, `tests/app/functional/`) needs an exploration recorded for the repository in the last 240 minutes. Running `npx playwright open` through the agent's shell records it. When you explore in your own terminal, record it with `node ~/.claude/hooks/constitution-gate.mjs explored` in the repository; the agent may not run that command.
+- **Protected paths.** In every repository, the agent may not write `.claude/hooks/`, `.claude/settings.json` or `.claude/settings.local.json`, by a tool or by a shell command the gate recognises: they decide what the agent may do. You change them yourself, or you start Claude Code with `QA_GATE_ALLOW_PROTECTED=1` when you want the agent to.
+
+Copy the script:
+
+```bash
+cp ai-native-qa-toolkit/.claude/hooks/constitution-gate.mjs ~/.claude/hooks/
+```
+
+and add these two entries to `PreToolUse` in `~/.claude/settings.json`:
+
+```json
+{ "matcher": "Write|Edit|MultiEdit|NotebookEdit", "hooks": [{ "type": "command", "command": "node \"$HOME/.claude/hooks/constitution-gate.mjs\" write", "timeout": 60 }] },
+{ "matcher": "Bash|PowerShell", "hooks": [{ "type": "command", "command": "node \"$HOME/.claude/hooks/constitution-gate.mjs\" shell", "timeout": 15 }] }
+```
+
+Its limits, stated rather than hidden. The shell check reads the command text, so a write it doesn't recognise (an interpreter one-liner, an alias) gets through. The exploration record says that `npx playwright open` was started for the repository, not that it reached the app or what was seen there. Like the alternatives gate, it fails open: a repository without the plugin or without ESLint, a config that doesn't load, or a bug in the gate lets the write through, and CI still lints it. `npm run test:constitution-gate` proves each check bites on the bad case and stays silent on the good one; it needs `npm ci` in `eslint-plugin-qa-constitution/` first.
+
 The `review-pr` workflow is loaded from the `.claude/workflows/` folder of the repository you work in, so copy it into each repository where you want it. It needs Claude Code's Workflow tool and the GitHub CLI (`gh`), signed in with read access to the repository; it reviews GitHub pull requests only:
 
 ```bash

@@ -1,6 +1,6 @@
 ---
 name: playwright-cli
-version: 2.0.2
+version: 2.1.0
 description: Explore the live app with npx playwright open BEFORE authoring or modifying any page object, UI test, UI-derived selector, or schema — the mandatory explore-before-generate workflow with human-in-the-loop reporting. Triggers — "explore the page", "what does the UI look like", any new POM or UI spec. Never substitute codegen, browser MCP, or Cursor browser tools. Not for selector strategy (selectors) or running specs (debugging).
 metadata:
   category: running
@@ -20,6 +20,7 @@ metadata:
   - Hand-written assumptions from Figma mocks, screenshots, or design specs — no substitute for the live app.
 - **If the app cannot be reached, auth fails, or the storage state is missing**, **stop and notify the human** with the exact issue. Do not invent credentials, do not generate placeholder locators, do not substitute another tool.
 - **Exploration is human-in-the-loop in this workflow.** `npx playwright open` opens a real browser; the **human** interacts and observes. The model relies on the human's exploration report (captured strings, observed roles, form structure) — not direct shell-driven snapshots. (This is honest about a limitation; if shell-driven AI snapshots become necessary later, that's a future infra decision — see § Honest limits.)
+- **The constitution gate holds you to it.** Where the hook is installed and the repository uses the lint plugin, a **new** page object (`pages/app/`, `pages/util/`) or UI spec (`tests/app/e2e/`, `tests/app/functional/`) is refused until an exploration is recorded for the repository in the last 240 minutes. Running `npx playwright open` through the shell tool records it. When the human explored in their own terminal, they record it themselves with `node ~/.claude/hooks/constitution-gate.mjs explored` in the repository: you may not run that command, and the gate refuses it. A refused write means the exploration is missing; never route around the gate.
 - **Capture the exact rendered text** (case, punctuation, whitespace, trailing periods) for any string that needs to live in `enums/app/*` — never paraphrase. See the `enums` skill for the live-text capture rule.
 - **Reuse the test-suite storage state** with `--load-storage <path>` so authenticated flows work without re-typing credentials. The path lives in `playwright.config.ts` (in the example app, `.auth/app/appMainUserSession.json`).
 
