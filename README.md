@@ -190,7 +190,7 @@ The harness is verified the same way it verifies the rules. Neuter a rule and it
 
 ## Wire it into a pipeline
 
-The lint gate is only a gate once something refuses to merge past it. **[`templates/agentic-qa-ci.yml`](templates/agentic-qa-ci.yml)** is a drop-in workflow for the repository that holds the tests — constitution lint and typecheck first, Playwright only if that passed, report uploaded on every attempt.
+The lint gate is only a gate once something refuses to merge past it. **[`templates/agentic-qa-ci.yml`](templates/agentic-qa-ci.yml)** is a drop-in workflow for the repository that holds the tests — a Playwright version check, constitution lint and typecheck first; Playwright only if that passed, with the suite collected (`--list`) before any browser is downloaded; report uploaded on every attempt.
 
 It is a template rather than a workflow in this repo on purpose: the toolkit ships rules, skills and a lint plugin, and contains no Playwright suite. A `npx playwright test` step here would be red on every push.
 
