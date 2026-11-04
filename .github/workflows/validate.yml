@@ -140,6 +140,13 @@ jobs:
       - name: Smoke test — the compliant tree must pass the gate
         run: npx eslint --config smoke/eslint.config.mjs "smoke/good/**/*.ts" --max-warnings 0
 
+      # The constitution gate runs as a hook on every adopter's machine, where nobody sees it do
+      # nothing. It lints with the adopting repository's ESLint, so it is tested here, where the
+      # plugin's dev dependencies are installed: it must deny a write that adds a finding, a new
+      # page object with no exploration recorded and a write to a protected path, and allow the rest.
+      - name: Constitution gate — bites at write time, silent on compliant writes
+        run: node ../scripts/tests/constitution-gate.test.mjs
+
       # The learned-patterns memory file is read at the start of every session, and its purpose
       # is to teach. A bad pattern recorded there does not cause one bad test — it teaches every
       # future session, carrying the authority of "we learned this". Two of the three snippets
