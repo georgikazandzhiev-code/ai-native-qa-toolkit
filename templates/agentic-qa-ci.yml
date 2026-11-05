@@ -5,7 +5,7 @@
 # so a workflow that runs `npx playwright test` here would be red on every push. This repo's own
 # gate is `.github/workflows/validate.yml`.
 #
-# Five things in the obvious version of this file are wrong, and each one is worth knowing:
+# Seven things in the obvious version of this file are wrong or missing, and each one is worth knowing:
 #
 #   1. `node-size: 20`  — the input is `node-version`. `actions/setup-node` warns about an unknown
 #      input and carries on with the runner's default Node, so the workflow appears to work while
@@ -29,6 +29,15 @@
 #      `continue-on-error: true` so the log says "this did not gate" instead of "this passed".
 #   5. No artifact upload — a failed Playwright run whose trace is discarded costs a second run to
 #      diagnose. The report is uploaded on failure, which is when it is worth having.
+#   6. No version check — a repo that also lists `playwright` (or `playwright-core`) at a version
+#      other than `@playwright/test`'s gets two copies. `npx playwright` then runs the top-level one,
+#      so `npx playwright install` fetches browsers for a version the runner does not use. With
+#      `@playwright/test` 1.56.1 and `playwright` 1.55.1, `npx playwright --version` printed 1.55.1.
+#      The gate job fails on the mismatch, before any browser is downloaded.
+#   7. Browsers installed before anyone knows the suite loads — `npx playwright test --list` loads
+#      the config and every spec without a browser, and exits 1 on "No tests found" (measured on
+#      1.56.1). Run first, a broken import, a wrong `testDir` or a missing env variable fails in
+#      seconds instead of after `playwright install --with-deps`.
 #
 # What the repo needs for this file to run:
 #   - a `package-lock.json` (note 2);
@@ -73,6 +82,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Note 6: one Playwright version, or `npx playwright` and the runner disagree.
+      - name: Playwright versions match
+        run: |
+          node -e '
+            const version = (name) => { try { return require(`${name}/package.json`).version; } catch { return null; } };
+            const runner = version("@playwright/test");
+            if (!runner) { console.log("::error::@playwright/test is not installed"); process.exit(1); }
+            const off = ["playwright", "playwright-core"].filter((n) => version(n) && version(n) !== runner);
+            console.log(`@playwright/test ${runner}; playwright ${version("playwright")}; playwright-core ${version("playwright-core")}`);
+            if (off.length) {
+              console.log(`::error::${off.map((n) => `${n} ${version(n)}`).join(", ")} ${off.length === 1 ? "differs" : "differ"} from @playwright/test ${runner}. Pin them to the same version, or remove the direct dependency.`);
+              process.exit(1);
+            }'
+
       # The mechanically checkable half of the constitution. `--max-warnings 0` is what makes it a
       # gate: without it a violation configured as a warning is a comment nobody reads. The scope
       # is the whole repo (see note 3): a file outside the standard folders is what
@@ -101,6 +124,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Note 7: the config and every spec load, and at least one test is collected, before any
+      # browser is downloaded. The config module validates the environment at load, so this step
+      # gets the same variables as the test run.
+      - name: Collect tests
+        run: npx playwright test --list
+        env:
+          API_URL: ${{ vars.API_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps

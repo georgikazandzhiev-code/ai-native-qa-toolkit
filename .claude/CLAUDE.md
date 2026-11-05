@@ -1,6 +1,6 @@
 # QA Automation — Global Constitution
 
-<!-- toolkit-version: 7.0.0 -->
+<!-- toolkit-version: 7.1.0 -->
 
 **⚡ ROUTING CHECKPOINT — before your first edit in any area, open the matching skill from the Routed Skill Index below and read it. Working without the matched skill is the #1 source of pattern drift. If no skill matches, say so explicitly.**
 
@@ -54,9 +54,9 @@ Before touching any spec, page-object, helper, schema, or fixture file, answer e
 | **Cleanup** | Tests that mutate state revert it in `afterEach`/`afterAll`. Capture initial state in `beforeAll` for shared mutable resources. Leave the environment exactly as found |
 | **API Steps** | 2+ API calls in a test → each in its own `test.step()` with assertions inside |
 | **Coverage Plan** | Before API tests for a new endpoint: enumerate every status code from the contract (OpenAPI) as a comment block at the top of the spec. A status that can never be produced on purpose gets `// SKIP: <reason>` in the plan; a testable status that is blocked (missing token, open bug) gets its test written and commented out under `// TODO: FIXME: <TICKET>` |
-| **Explore Before Generate** | **API:** the contract (OpenAPI) is truth; live requests only when no docs exist. **UI:** explore via `npx playwright open` per the `playwright-cli` skill. If it can't reach the app or auth fails — stop and notify the human |
+| **Explore Before Generate** | **API:** the contract (OpenAPI) is truth; live requests only when no docs exist. **UI:** explore via `npx playwright open` per the `playwright-cli` skill. If it can't reach the app or auth fails — stop and notify the human. A new page object or UI spec is refused until an exploration is recorded for the repository (the constitution gate in `.claude/settings.json`) |
 | **Search Before Creating** | Grep helpers/pages/fixtures/enums/config for existing equivalents before adding anything new |
-| **Lint & Format** | Zero lint/format warnings. Pre-commit hooks must pass — never bypass with `--no-verify` |
+| **Lint & Format** | Zero lint/format warnings. Pre-commit hooks must pass — never bypass with `--no-verify`. The constitution gate refuses a write that adds a finding of the lint plugin, and an agent write to `.claude/hooks/` or `.claude/settings*.json` |
 | **Verification** | Added/modified tests are **run** before reporting complete. See Verification Standard |
 | **Alternatives, not questions** | When the task is clear but there are several ways to do it (approach A or B, helper or inline, one PR or two), **build every way** — each on its own local `alt/<topic>/<option>` branch, never pushed — then ask only which to keep, naming the branches, and delete the rest. Applies to unattended runs too. Ask instead only when building cannot answer it, and say why: `[human-only: outward]` (push, PR, comment, merge, delete), `[human-only: fact]` (something only a person knows), `[human-only: requirement]` (what to build is unclear). Enforced by the hook in `.claude/settings.json`. See `build-alternatives` skill |
 

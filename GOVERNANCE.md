@@ -127,11 +127,12 @@ Three jobs run on every pull request and on every push to `main` (`.github/workf
 | `node tests/skill-snippets.harness.test.mjs` — the snippet lint's own cases: planted defects must fail the run, labelled counter-examples must pass | |
 | `node tests/skill-snippets.mutation.test.mjs` — every listed mutant of the snippet lint must be killed by the harness; a survivor, or a mutant whose target text is gone, fails the run | |
 | The known-bad fixture must still be rejected by the ESLint CLI, and the compliant one must still pass clean | Category outside the canonical four |
+| `npm run test:constitution-gate` — the write-time hook must deny a write that adds a plugin finding, a new page object or UI spec with no exploration recorded, and an agent write to a protected path, and must allow the compliant write, the unrelated edit and the repository without the plugin | |
 | `npm run eval:compare` — a recorded score drop beyond the noise floor | A declared version disagreeing with the newest history entry |
 
 `check:bump` is advisory **on purpose**. Failing CI over a forgotten patch bump trains people to bump meaninglessly, and a version people bump to silence a robot carries no information. What it protects against is not a missing bump but a version quietly ceasing to describe its file.
 
-**What no gate here can check**, and therefore what a reviewer owes attention to: whether a selector is the right one (needs the real DOM), whether a coverage plan is complete (needs the contract), whether cleanup actually restores state, whether the author explored before generating, whether a test was ever run. Roughly half the constitution is mechanically checkable. The plugin claims exactly that half and no more — a linter that claims more than it checks is worse than none, because it converts an unchecked rule into a checked-looking one.
+**What no gate here can check**, and therefore what a reviewer owes attention to: whether a selector is the right one (needs the real DOM), whether a coverage plan is complete (needs the contract), whether cleanup actually restores state, what the author saw when they explored before generating, whether a test was ever run. The constitution gate (`.claude/hooks/constitution-gate.mjs`) checks only that an exploration was started for the repository in the last 240 minutes before a new page object or UI spec is written; it runs on the agent's machine, not in CI, and fails open. Roughly half the constitution is mechanically checkable. The plugin claims exactly that half and no more — a linter that claims more than it checks is worse than none, because it converts an unchecked rule into a checked-looking one.
 
 ## Pattern promotion
 
